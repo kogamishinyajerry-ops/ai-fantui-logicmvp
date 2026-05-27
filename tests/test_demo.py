@@ -885,6 +885,19 @@ class DemoIntentLayerTests(unittest.TestCase):
             self.assertNotIn(legacy, html,
                              f"slim demo.html must NOT contain legacy: {legacy}")
 
+    def test_demo_html_supports_scoped_codex_light_embed_palette(self):
+        """The demo reconstruction iframe can opt into light presentation without changing default demo.html."""
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+
+        self.assertIn("palette=codex-light", html)
+        self.assertIn("is-codex-light-demo", html)
+        self.assertIn("data-console-palette", html)
+        self.assertIn("html.is-codex-light-demo", css)
+        self.assertIn("--fan-bg:          #f7f8fb", css)
+        self.assertIn("--fan-panel:       #ffffff", css)
+        self.assertIn("#fan-arr-idle path", css)
+
     def test_demo_js_posts_to_lever_snapshot(self):
         """demo.js should talk to /api/lever-snapshot with debounced POST."""
         js = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")

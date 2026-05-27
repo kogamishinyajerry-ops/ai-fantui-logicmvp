@@ -20,6 +20,11 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
+from well_harness.agent_review_packet import (
+    CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE,
+    CandidateReviewPacketError,
+    load_candidate_review_packet_export,
+)
 from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
@@ -68,6 +73,7 @@ from well_harness.requirements_intake import (
     analyze_requirements_text,
     build_local_preparse_payload,
     build_logic_drawing,
+    build_streamed_logic_authoring_session,
     extract_document_text_from_payload,
     interpret_logic_change,
     prepare_fault_injection,
@@ -230,6 +236,7 @@ REQUIREMENTS_LOCAL_PREPARSE_PATH = "/api/requirements-intake/local-preparse"
 REQUIREMENTS_LOGIC_DRAWING_PATH = "/api/requirements-intake/draw-logic"
 REQUIREMENTS_LOGIC_CHANGE_INTERPRET_PATH = "/api/requirements-intake/interpret-logic-change"
 REQUIREMENTS_LOGIC_UPDATE_PATH = "/api/requirements-intake/update-logic-drawing"
+REQUIREMENTS_STREAMED_AUTHORING_PROPOSAL_PATH = "/api/requirements-intake/streamed-authoring/proposal"
 REQUIREMENTS_FAULT_INJECTION_PREPARE_PATH = "/api/requirements-intake/prepare-fault-injection"
 REQUIREMENTS_FAULT_INJECTION_SANDBOX_PATH = "/api/requirements-intake/prepare-fault-injection/sandbox"
 REQUIREMENTS_LIVE_DEMO_REPLAY_PATH = "/api/requirements-intake/deepseek-live-demo-replay"
@@ -620,6 +627,18 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     },
                 )
             return
+        if parsed.path == CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE:
+            try:
+                self._send_json(200, load_candidate_review_packet_export())
+            except (FileNotFoundError, OSError, json.JSONDecodeError, CandidateReviewPacketError) as exc:
+                self._send_json(
+                    500,
+                    {
+                        "error": "candidate_review_packet_export_unavailable",
+                        "detail": str(exc),
+                    },
+                )
+            return
 
         # Default entry: unified landing page with 2x3 card grid
         # (Phase A: chat.html shelved; Phase UI-C: root now serves index.html
@@ -899,6 +918,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             REQUIREMENTS_LOGIC_DRAWING_PATH,
             REQUIREMENTS_LOGIC_CHANGE_INTERPRET_PATH,
             REQUIREMENTS_LOGIC_UPDATE_PATH,
+            REQUIREMENTS_STREAMED_AUTHORING_PROPOSAL_PATH,
             REQUIREMENTS_FAULT_INJECTION_PREPARE_PATH,
             REQUIREMENTS_FAULT_INJECTION_SANDBOX_PATH,
             DIAGNOSIS_RUN_PATH,
@@ -1116,6 +1136,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == REQUIREMENTS_LOGIC_UPDATE_PATH:
             response_payload, error_payload, status_code = build_requirements_logic_update_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_STREAMED_AUTHORING_PROPOSAL_PATH:
+            response_payload, error_payload, status_code = build_requirements_streamed_authoring_proposal_response(request_payload)
             if error_payload is not None:
                 self._send_json(status_code, error_payload)
                 return
@@ -5709,6 +5737,43 @@ def build_requirements_logic_update_response(
                 "details": exc.details,
             }
             return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def build_requirements_streamed_authoring_proposal_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    requirements_payload = request_payload.get("requirements_payload")
+    if not isinstance(requirements_payload, dict):
+        return None, {
+            "error": "invalid_requirements_payload",
+            "field": "requirements_payload",
+            "message": "requirements_payload must be an object.",
+        }, 400
+    drawing_payload = request_payload.get("drawing_payload")
+    if not isinstance(drawing_payload, dict):
+        return None, {
+            "error": "invalid_drawing_payload",
+            "field": "drawing_payload",
+            "message": "drawing_payload must be an object.",
+        }, 400
+    decision_history = request_payload.get("decision_history", [])
+    if decision_history is None:
+        decision_history = []
+    if not isinstance(decision_history, list):
+        return None, {
+            "error": "invalid_decision_history",
+            "field": "decision_history",
+            "message": "decision_history must be a list when present.",
+        }, 400
+    try:
+        payload = build_streamed_logic_authoring_session(
+            requirements_payload,
+            drawing_payload,
+            decision_history=decision_history,
+        )
+    except RequirementsIntakeError as exc:
         return None, exc.to_payload(), exc.status_code
     return payload, None, 200
 

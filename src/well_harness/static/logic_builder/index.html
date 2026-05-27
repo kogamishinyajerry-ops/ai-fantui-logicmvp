@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/logic_builder/logic_builder.css?v=workflow4">
 <script src="/logic_builder/logic_builder.js?v=workflow2" defer></script>
 </head>
-<body class="unified-nav-enabled" data-nav-current="logic-builder" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup">
+<body class="unified-nav-enabled" data-nav-current="logic-builder" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup" data-logic-presentation-mode="workbench" data-logic-interaction-mode="natural-language">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
   <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
   <div class="unified-nav-groups">
@@ -47,7 +47,7 @@
   </div>
 </header>
 
-<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 30-docx-template-generated-canvas 31-running-signal-propagation 32-parameter-drawer-final 38-panel-state-strategy-final" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
+<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-console-palette="codex-light" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-workbench-input-model="natural-language" data-presentation-mode="workbench" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 30-docx-template-generated-canvas 31-running-signal-propagation 32-parameter-drawer-final 38-panel-state-strategy-final" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
   <div class="logic-cockpit-canopy" data-cockpit-role="canopy-frame" aria-hidden="true">
     <span class="logic-cockpit-canopy-window"></span>
     <span class="logic-cockpit-canopy-window"></span>
@@ -224,8 +224,12 @@
       </section>
     </aside>
 
-    <section class="logic-canvas-wrap logic-cockpit-primary-display" data-cockpit-role="primary-display" data-experience="annotation-stream" data-workstation-surface="primary-canvas-stage" data-workstation-stage="primary-canvas" data-blueprint29-rhythm="primary-canvas-stage">
+    <section class="logic-canvas-wrap logic-cockpit-primary-display" data-cockpit-role="primary-display" data-experience="annotation-stream" data-workstation-surface="primary-canvas-stage" data-workstation-stage="primary-canvas" data-blueprint29-rhythm="primary-canvas-stage" data-demo-canvas-reference="src/well_harness/static/demo.html#fan-chain-svg">
       <div id="logic-canvas-compact-toolbar" class="logic-canvas-compact-toolbar" aria-label="画布工具区">
+        <div id="logic-natural-language-control" class="logic-natural-language-control" data-visible-action-limit="3" aria-label="自然语言控制">
+          <input id="logic-natural-language-input" type="text" autocomplete="off" placeholder="直接描述你要调整的节点或连线">
+          <button id="logic-natural-language-send" type="button" disabled>发送</button>
+        </div>
         <span id="logic-canvas-counts" class="logic-canvas-counts">0 nodes · 0 edges · 0 panels</span>
         <div id="logic-provenance-filter" class="logic-provenance-filter" role="toolbar" aria-label="来源筛选" hidden>
           <button type="button" data-provenance-filter="all" aria-pressed="true">
@@ -246,7 +250,15 @@
           </button>
         </div>
         <span id="logic-canvas-source" class="logic-canvas-source">来源待确认</span>
+        <button id="logic-presentation-mode-toggle" type="button" class="logic-presentation-mode-toggle" aria-controls="logic-canvas logic-presentation-controls" aria-pressed="false" aria-label="进入纯画布展示模式" title="纯画布">⛶</button>
+        <button id="logic-streamed-panel-toggle" type="button" class="logic-streamed-panel-toggle" aria-controls="logic-streamed-authoring-panel" aria-expanded="false" aria-label="打开候选确认面板" title="候选确认">✓</button>
         <button id="logic-command-palette-open" type="button" class="logic-command-palette-trigger" data-blueprint-advanced-entry="command-palette" aria-haspopup="dialog" aria-controls="logic-command-palette" aria-label="打开命令面板">⌘K</button>
+      </div>
+      <div id="logic-presentation-controls" class="logic-presentation-controls" data-presentation-controls="hidden" aria-label="纯画布展示控制" hidden>
+        <button id="logic-presentation-zoom-out" type="button" aria-label="缩小电路图" title="缩小">−</button>
+        <button id="logic-presentation-zoom-reset" type="button" aria-label="还原电路图缩放" title="还原">1:1</button>
+        <button id="logic-presentation-zoom-in" type="button" aria-label="放大电路图" title="放大">+</button>
+        <button id="logic-presentation-exit" type="button" aria-label="退出纯画布展示模式" title="退出">×</button>
       </div>
       <nav id="logic-mode-dock" class="logic-mode-dock" data-workstation-surface="default-mode-dock" data-blueprint27-rhythm="five-entry-dock" aria-label="默认五入口">
         <button type="button" data-logic-mode="canvas" aria-pressed="true">画布</button>
@@ -301,6 +313,67 @@
           <li class="logic-stream-event is-empty">等待图纸生成过程。</li>
         </ol>
       </section>
+      <section id="logic-streamed-authoring-panel" class="logic-streamed-authoring-panel" data-streamed-authoring="m21" data-panel-visibility="collapsed" data-natural-language-step-confirmation="waiting" data-demo-html-aesthetic-reference="src/well_harness/static/demo.html#fan-chain-svg" aria-label="工程师在场流式建模" hidden>
+        <div class="logic-stream-head">
+          <p class="logic-kicker">M21 STREAM</p>
+          <strong id="logic-streamed-status">等待候选图纸</strong>
+        </div>
+        <div id="logic-streamed-current" class="logic-streamed-current" data-candidate-edit="current">
+          <span id="logic-streamed-sequence">--</span>
+          <div>
+            <h2 id="logic-streamed-title">当前候选编辑</h2>
+            <p id="logic-streamed-explanation">图纸生成后，模型会一次提出一个节点或连线候选。</p>
+          </div>
+        </div>
+        <div id="logic-streamed-queue" class="logic-streamed-queue" data-candidate-queue-status="waiting">
+          <span id="logic-streamed-queue-count">0/0 已确认</span>
+          <span id="logic-streamed-queue-next">等待下一候选</span>
+        </div>
+        <section id="logic-streamed-revision-receipt" class="logic-streamed-revision-receipt" data-feedback-revision-state="idle" hidden>
+          <strong id="logic-streamed-revision-status">等待修改意见</strong>
+          <p id="logic-streamed-revision-feedback">反馈后会在这里显示重算依据。</p>
+          <span id="logic-streamed-revision-boundary">candidate graph only · truth_effect:none</span>
+        </section>
+        <dl class="logic-streamed-evidence">
+          <div>
+            <dt>需求原文</dt>
+            <dd id="logic-streamed-source">等待来源片段。</dd>
+          </div>
+          <div>
+            <dt>上游 / 下游</dt>
+            <dd id="logic-streamed-neighborhood">等待候选对象。</dd>
+          </div>
+          <div>
+            <dt>边界</dt>
+            <dd>candidate graph only · truth_effect:none</dd>
+          </div>
+        </dl>
+        <div class="logic-streamed-gates" data-m21-gate-summary="dual-gate">
+          <section data-m21-gate="candidate-recalc" data-gate-status="ready">
+            <strong>闸门 1 · 候选图纸重算</strong>
+            <p id="logic-streamed-candidate-gate">确认只记录当前节点/连线判断；填写反馈后只重算候选编辑。</p>
+          </section>
+          <section data-m21-gate="requirements-doc" data-gate-status="locked">
+            <strong>闸门 2 · 需求文档授权编辑</strong>
+            <p id="logic-streamed-requirements-gate">未授权：不会自动修改需求文档，也不会写入 controller.py。</p>
+          </section>
+        </div>
+        <label for="logic-streamed-feedback">反馈后重算</label>
+        <textarea id="logic-streamed-feedback" rows="2" placeholder="写下修正意见；只用于重算候选图纸，不修改需求文档或控制器。"></textarea>
+        <label class="logic-streamed-doc-edit-toggle" for="logic-streamed-doc-edit-request">
+          <input id="logic-streamed-doc-edit-request" type="checkbox">
+          这条反馈还需要生成需求文档候选补丁
+        </label>
+        <input id="logic-streamed-doc-edit-authorization" class="logic-streamed-doc-edit-authorization" type="text" placeholder="输入 AUTHORIZE_REQUIREMENTS_EDIT 才记录需求文档授权" disabled>
+        <div class="logic-streamed-actions">
+          <button id="logic-streamed-start" type="button" class="secondary" data-ux-action-tier="secondary">开始逐步确认</button>
+          <button id="logic-streamed-confirm" type="button" disabled>确认候选，不写需求</button>
+          <button id="logic-streamed-revise" type="button" class="secondary" data-ux-action-tier="secondary" disabled>反馈后重算候选</button>
+        </div>
+        <ol id="logic-streamed-history" class="logic-streamed-history" data-stream-replay="ordered-confirmed-edits" aria-label="已确认和已反馈的候选编辑">
+          <li>尚未开始。</li>
+        </ol>
+      </section>
       <section id="logic-annotation-popover" class="logic-annotation-popover" data-annotation-mode="multi-target" aria-label="选中对象批注" hidden>
         <div class="logic-annotation-popover-head">
           <p class="logic-kicker">ANNOTATE</p>
@@ -351,7 +424,7 @@
           <button id="logic-context-comment-shortcut" type="button" class="logic-context-comment-shortcut" data-ux-action-tier="secondary">在此对象上标注</button>
         </section>
       </aside>
-      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" data-blueprint30-surface="docx-template-circuit" aria-label="模型生成的逻辑链路图" tabindex="-1">
+      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" data-blueprint30-surface="docx-template-circuit" data-canvas-visual-contract="demo-html-chain-svg" data-default-display="logic-circuit-only" aria-label="模型生成的逻辑链路图" tabindex="-1">
         <section id="logic-template-entry" class="logic-template-entry" data-blueprint-surface="blank-canvas-template-entry" data-blueprint29-rhythm="blank-canvas-template-entry" aria-label="空白画布模板入口">
           <div class="logic-template-copy">
             <p class="logic-kicker">BLANK CANVAS</p>

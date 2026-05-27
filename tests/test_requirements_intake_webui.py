@@ -13,6 +13,14 @@ from pathlib import Path
 
 import pytest
 
+from well_harness.agent_output_contract import validate_agent_output_contract
+from well_harness.agent_execution_plan import validate_execution_plan
+from well_harness.agent_execution_shell import validate_execution_evidence_package
+from well_harness.agent_review_packet import (
+    validate_candidate_review_packet,
+    validate_candidate_review_packet_export,
+)
+from well_harness.agent_task_contract import validate_agent_task_package
 from well_harness import demo_server
 from well_harness.demo_server import DemoRequestHandler
 from well_harness.requirements_intake import (
@@ -20,6 +28,7 @@ from well_harness.requirements_intake import (
     analyze_requirements_text,
     build_local_preparse_payload,
     build_logic_drawing,
+    build_streamed_logic_authoring_session,
     interpret_logic_change,
     prepare_fault_injection,
     prepare_fault_injection_sandbox_plan,
@@ -256,6 +265,24 @@ def _ready_drawing_payload() -> dict:
         ],
         "drawing_notes": ["输入在左，逻辑在中。"],
     }
+
+
+def _streamed_decision(
+    session: dict,
+    proposal: dict,
+    decision: str = "confirm",
+    **overrides,
+) -> dict:
+    payload = {
+        "proposal_id": proposal["id"],
+        "target_type": proposal["target_type"],
+        "target_id": proposal["target_id"],
+        "decision": decision,
+        "source_requirements_sha256": session["source_requirements_sha256"],
+        "source_drawing_sha256": session["source_drawing_sha256"],
+    }
+    payload.update(overrides)
+    return payload
 
 
 def _ready_fault_preparation_payload() -> dict:
@@ -839,6 +866,35 @@ def test_docx_l1_l4_preparse_recovers_empty_model_output(monkeypatch):
     assert "故障注入按源文档暂缓" in result["reading_burden"]["key_outputs_zh"]
 
 
+def test_local_preparse_attaches_requirement_analyst_agent_output_contract():
+    docx_text = "\n".join(
+        [
+            "工作逻辑1 L1：当 RA<6ft 且 SW1 进入 TRA [-1.4,-6.2] 区间，输出 TLS 115VAC。",
+            "工作逻辑2 L2：当 SW2 有效且 TRA 区间满足时，输出 ETRAC 540VDC。",
+            "工作逻辑3 L3：TLS/PLS 反馈满足后，驱动 PDU motor 并等待 VDT。",
+            "工作逻辑4 L4：当 VDT 达到 90% deploy 且 TRA<=-11.74°，THR_LOCK release。",
+        ]
+    )
+
+    result = build_local_preparse_payload(docx_text, document_name="logic.docx")
+
+    packet = result["agent_output_contract_v0_1"]["requirement_analyst"]
+    validate_agent_output_contract(packet)
+    agent_output = packet["agent_output"]
+    assert agent_output["agent_name"] == "RequirementAnalystAgent"
+    assert agent_output["boundary"] == {
+        "candidate_state": "requirements_candidate",
+        "truth_effect": "none",
+        "controller_truth_modified": False,
+        "certification_claim": "none",
+    }
+    assert agent_output["validation"]["schema_valid"] is True
+    assert agent_output["payload"]["ready_for_logic_builder"] is True
+    assert agent_output["payload"]["requirement_counts"]["concept_nodes"] >= 12
+    assert result["truth_effect"] == "none"
+    assert result["controller_truth_modified"] is False
+
+
 def test_upstream_http_error_details_are_redacted(monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-secret")
 
@@ -1131,6 +1187,93 @@ def test_build_logic_drawing_attaches_circuit_view_for_l1_l4_preparse(monkeypatc
     assert len(result["circuit_view"]["wires"]) >= 12
 
 
+def test_logic_drawing_attaches_logic_ir_agent_contract_and_deterministic_reports():
+    requirements = _l1_l4_requirements_payload_for_circuit()
+    raw_drawing = {
+        "summary_zh": "模型草图已生成。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": node["id"],
+                "label": node["label"],
+                "node_kind": node["node_kind"],
+                "x": 80 + (index % 4) * 260,
+                "y": 80 + (index // 4) * 112,
+                "width": 190,
+                "height": 78,
+                "description_zh": node.get("description_zh", ""),
+            }
+            for index, node in enumerate(requirements["concept_logic_nodes"])
+        ],
+        "edges": [
+            {
+                "id": edge["id"],
+                "source": edge["source"],
+                "target": edge["target"],
+                "label": edge["label"],
+                "route": [{"x": 240, "y": 120 + index * 12}, {"x": 420, "y": 120 + index * 12}],
+            }
+            for index, edge in enumerate(requirements["concept_edges"])
+        ],
+        "parameter_panels": [],
+        "drawing_notes": ["保留模型草图，同时生成确定性电路视图。"],
+    }
+
+    result = _normalize_logic_drawing(json.dumps(raw_drawing, ensure_ascii=False), requirements)
+
+    contracts = result["agent_output_contract_v0_1"]
+    logic_packet = contracts["logic_ir"]
+    validate_agent_output_contract(logic_packet)
+    assert logic_packet["agent_output"]["agent_name"] == "LogicIRAgent"
+    assert logic_packet["agent_output"]["boundary"] == {
+        "candidate_state": "logic_ir_candidate",
+        "truth_effect": "none",
+        "controller_truth_modified": False,
+        "certification_claim": "none",
+    }
+    assert logic_packet["agent_output"]["payload"]["logic_ir"]["id"] == "REQ_INTAKE_LOGIC_DRAWING_CANDIDATE"
+
+    safety_report = contracts["safety_guardian"]
+    assert safety_report["agent_name"] == "SafetyGuardianAgent"
+    assert safety_report["source_agent_name"] == "LogicIRAgent"
+    assert safety_report["boundary"]["truth_effect"] == "none"
+
+    evidence_report = contracts["evidence"]
+    assert evidence_report["agent_name"] == "EvidenceAgent"
+    assert evidence_report["source_agent_name"] == "LogicIRAgent"
+    assert evidence_report["trace_matrix"]
+    assert evidence_report["coverage"]["requirements"]["total"] >= 1
+    task_package = result["chief_engineer_task_package_v0_1"]
+    validate_agent_task_package(task_package)
+    assert task_package["chief_engineer"]["agent_name"] == "ChiefEngineerAgent"
+    assert task_package["chief_engineer"]["status"] == "no_tasks_required"
+    assert task_package["tasks"] == []
+    execution_plan = result["execution_plan_v0_1"]
+    validate_execution_plan(execution_plan)
+    assert execution_plan["planner"]["agent_name"] == "DeterministicExecutorAgent"
+    assert execution_plan["planner"]["status"] == "no_task_available"
+    assert execution_plan["dry_run_only"] is True
+    assert execution_plan["execution_allowed"] is False
+    execution_evidence = result["execution_evidence_package_v0_1"]
+    validate_execution_evidence_package(execution_evidence)
+    assert execution_evidence["executor"]["agent_name"] == "ApprovedTaskExecutionShell"
+    assert execution_evidence["executor"]["status"] == "no_task_available"
+    assert execution_evidence["approval"]["status"] == "missing"
+    assert execution_evidence["execution_boundary"]["restricted_execution_performed"] is False
+    assert execution_evidence["execution_boundary"]["controller_truth_modified"] is False
+    review_packet = result["candidate_review_packet_v0_1"]
+    validate_candidate_review_packet(review_packet)
+    assert review_packet["reviewer"]["agent_name"] == "CandidateReviewPacketAgent"
+    assert review_packet["reviewer"]["status"] == "no_findings"
+    assert review_packet["source_artifacts"]["task_package_status"] == "no_tasks_required"
+    assert review_packet["source_artifacts"]["execution_plan_status"] == "no_task_available"
+    assert review_packet["source_artifacts"]["execution_evidence_status"] == "no_task_available"
+    assert review_packet["finding_chains"] == []
+    assert review_packet["summary"]["open_findings"] == []
+    assert result["truth_effect"] == "none"
+    assert result["controller_truth_modified"] is False
+
+
 def test_build_logic_drawing_rejects_edges_without_model_route(monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-secret")
 
@@ -1363,6 +1506,1918 @@ def test_interpret_logic_change_summarizes_multi_target_annotation_batch(monkeyp
     assert result["annotation_groups"][0]["group_label"] == "RA 门限"
     assert result["selected_nodes"] == ["RA"]
     assert result["selected_edges"] == ["RA->L1"]
+
+
+def test_streamed_logic_authoring_session_proposes_one_atomic_edit_with_source_context():
+    requirements_payload = _ready_requirements_payload()
+    drawing_payload = _ready_drawing_payload()
+    drawing_payload["nodes"][0]["source_anchors"] = [
+        {
+            "id": "REQ-RA",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "当无线电高度小于 6ft 时，L1 可进入下一逻辑。",
+        }
+    ]
+
+    result = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+
+    assert result["kind"] == "ai-fantui-streamed-logic-authoring-session"
+    assert result["status"] == "awaiting_user_confirmation"
+    assert result["truth_effect"] == "none"
+    assert result["controller_truth_modified"] is False
+    assert result["requirements_document_edit"]["requires_explicit_authorization"] is True
+    proposal = result["active_proposal"]
+    assert proposal["target_type"] == "node"
+    assert proposal["target_id"] == "RA"
+    assert proposal["edit_type"] == "add_node"
+    assert proposal["requires_user_confirmation"] is True
+    assert proposal["source_excerpt"] == "当无线电高度小于 6ft 时，L1 可进入下一逻辑。"
+    assert proposal["source_anchor_ids"] == ["REQ-RA"]
+    assert proposal["graph_diff"] == {
+        "operation": "add_node",
+        "node_ids_added": ["RA"],
+        "wire_ids_added": [],
+        "truth_effect": "none",
+    }
+
+
+def test_streamed_logic_authoring_session_advances_after_confirm_and_revises_after_feedback():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+
+    second = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[
+            {
+                **_streamed_decision(first, first_proposal, "confirm"),
+            }
+        ],
+    )
+
+    assert second["accepted_edit_ids"] == [first_proposal["id"]]
+    assert second["active_proposal"]["id"] != first_proposal["id"]
+    assert second["active_proposal"]["sequence_index"] == 2
+
+    revised = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[
+            {
+                **_streamed_decision(first, first_proposal, "request_revision"),
+                "feedback_text": "需要明确这是候选节点，不要写入控制器。",
+            }
+        ],
+    )
+
+    revised_proposal = revised["active_proposal"]
+    assert revised["rejected_edit_ids"] == [first_proposal["id"]]
+    assert revised["truth_effect"] == "none"
+    assert revised["controller_truth_modified"] is False
+    assert revised["certification_claim"] == "none"
+    assert revised_proposal["proposal_status"] == "revised_proposal_ready"
+    assert revised_proposal["revision_of"] == first_proposal["id"]
+    assert revised_proposal["revision_index"] == 1
+    assert revised_proposal["user_feedback"] == "需要明确这是候选节点，不要写入控制器。"
+    assert revised_proposal["feedback_applied"]["proposal_id"] == first_proposal["id"]
+    assert revised_proposal["feedback_applied"]["feedback_text"] == "需要明确这是候选节点，不要写入控制器。"
+    assert revised_proposal["feedback_applied"]["feedback_sha256"]
+    assert revised_proposal["revision_gate"]["status"] == "revision_candidate_ready"
+    assert revised_proposal["target_id"] == first_proposal["target_id"]
+    assert revised["requirements_document_edit"]["authorized"] is False
+
+
+def test_streamed_logic_authoring_session_returns_ordered_replay_and_committed_candidate_graph():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+
+    second = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[
+            {
+                **_streamed_decision(first, first_proposal, "confirm"),
+                "decided_at": "2026-05-22T08:00:00Z",
+            }
+        ],
+    )
+
+    replay = second["stream_replay"]
+    assert len(replay) == 1
+    assert replay[0]["event_type"] == "candidate_edit_committed"
+    assert replay[0]["decision_index"] == 1
+    assert replay[0]["proposal_id"] == first_proposal["id"]
+    assert replay[0]["committed"] is True
+    assert replay[0]["graph_diff"] == first_proposal["graph_diff"]
+    assert replay[0]["source_excerpt"] == first_proposal["source_excerpt"]
+    assert replay[0]["truth_effect"] == "none"
+    assert replay[0]["controller_truth_modified"] is False
+    assert replay[0]["requirements_document_modified"] is False
+
+    committed_graph = second["committed_candidate_graph"]
+    assert committed_graph["status"] == "one_edit_committed"
+    assert committed_graph["commit_boundary"] == "one_confirmed_candidate_edit_per_user_decision"
+    assert committed_graph["committed_edit_count"] == 1
+    assert committed_graph["committed_edit_ids"] == [first_proposal["id"]]
+    assert committed_graph["node_ids_added"] == first_proposal["graph_diff"]["node_ids_added"]
+    assert committed_graph["wire_ids_added"] == []
+    assert committed_graph["truth_effect"] == "none"
+    assert committed_graph["controller_truth_modified"] is False
+    assert committed_graph["requirements_document_modified"] is False
+
+
+def test_streamed_logic_authoring_session_ignores_stale_or_duplicate_decisions():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    confirmed = _streamed_decision(first, first_proposal, "confirm")
+    stale = {
+        **confirmed,
+        "proposal_id": "stale-proposal",
+        "source_requirements_sha256": "stale-requirements",
+        "source_drawing_sha256": "stale-drawing",
+    }
+
+    second = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[stale, confirmed, confirmed],
+    )
+
+    assert second["accepted_edit_ids"] == [first_proposal["id"]]
+    assert len(second["stream_replay"]) == 1
+    assert second["stream_replay"][0]["proposal_id"] == first_proposal["id"]
+    assert second["committed_candidate_graph"]["committed_edit_count"] == 1
+    assert second["committed_candidate_graph"]["committed_edit_ids"] == [first_proposal["id"]]
+
+
+def test_streamed_logic_authoring_session_blocks_requirements_document_edit_without_authorization():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    feedback_text = "需求文档应补充：RA 节点是候选解释，不是控制器真值。"
+
+    blocked = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[
+            {
+                **_streamed_decision(first, first_proposal, "request_revision"),
+                "feedback_text": feedback_text,
+                "requirements_document_edit_requested": True,
+                "requirements_document_patch": {
+                    "operation": "candidate_requirements_text_revision",
+                    "proposed_text_zh": feedback_text,
+                },
+            }
+        ],
+    )
+
+    edit = blocked["requirements_document_edit"]
+    assert edit["status"] == "authorization_required"
+    assert edit["requires_explicit_authorization"] is True
+    assert edit["authorized"] is False
+    assert edit["authorization_record"] is None
+    assert edit["write_effect"] == "none"
+    assert edit["truth_effect"] == "none"
+    assert edit["controller_truth_modified"] is False
+    assert edit["requirements_document_modified"] is False
+    assert edit["authorization_gate"]["status"] == "blocked_without_explicit_authorization"
+    assert edit["pending_candidate_patch"]["proposed_text_zh"] == feedback_text
+    assert edit["pending_candidate_patch"]["requires_explicit_authorization"] is True
+    assert "requirements_document_edit" not in blocked["active_proposal"]["graph_diff"]
+    assert blocked["active_proposal"]["graph_diff"]["truth_effect"] == "none"
+
+    authorized = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[
+            {
+                **_streamed_decision(first, first_proposal, "request_revision"),
+                "feedback_text": feedback_text,
+                "requirements_document_edit_requested": True,
+                "requirements_document_edit_authorized": True,
+                "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+                "requirements_document_patch": {
+                    "operation": "candidate_requirements_text_revision",
+                    "proposed_text_zh": feedback_text,
+                },
+            }
+        ],
+    )
+
+    authorized_edit = authorized["requirements_document_edit"]
+    assert authorized_edit["status"] == "authorized_candidate_patch"
+    assert authorized_edit["authorized"] is True
+    assert authorized_edit["write_effect"] == "none"
+    assert authorized_edit["requirements_document_modified"] is False
+    assert authorized_edit["authorization_record"]["proposal_id"] == first_proposal["id"]
+    assert authorized_edit["authorization_gate"]["provided_phrase_matches"] is True
+
+
+def test_streamed_logic_authoring_session_replays_revision_and_authorized_doc_patch():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    feedback_text = "RA 节点说明应写明这是候选解释，并补一个需求文档候选补丁。"
+    decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+
+    revised = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[decision],
+    )
+
+    event = revised["stream_replay"][0]
+    assert event["event_type"] == "candidate_edit_revision_requested"
+    assert event["committed"] is False
+    assert event["candidate_recalculation"]["status"] == "revision_candidate_ready"
+    assert event["candidate_recalculation"]["feedback_text"] == feedback_text
+    assert event["candidate_recalculation"]["feedback_sha256"]
+    assert event["requirements_document_patch_status"] == "authorized_candidate_patch"
+    assert event["requirements_document_authorization_gate"]["status"] == "authorized"
+    assert event["requirements_document_authorization_gate"]["provided_phrase_matches"] is True
+    assert event["requirements_document_patch"]["proposed_text_zh"] == feedback_text
+    assert event["requirements_document_patch_sha256"]
+    assert event["requirements_document_modified"] is False
+    assert event["truth_effect"] == "none"
+    assert event["controller_truth_modified"] is False
+
+    edit = revised["requirements_document_edit"]
+    assert edit["status"] == "authorized_candidate_patch"
+    assert edit["pending_candidate_patch"]["proposed_text_zh"] == feedback_text
+    assert edit["pending_candidate_patch_sha256"] == event["requirements_document_patch_sha256"]
+    assert revised["active_proposal"]["proposal_status"] == "revised_proposal_ready"
+    assert revised["active_proposal"]["revision_gate"]["status"] == "revision_candidate_ready"
+
+
+def test_streamed_logic_authoring_session_confirms_revised_candidate_and_advances_queue():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    feedback_text = "RA 节点说明应写明这是候选解释，并补一个需求文档候选补丁。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    confirm_revised = _streamed_decision(revised, revised_proposal, "confirm")
+
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[revision_decision, confirm_revised],
+    )
+
+    assert [event["event_type"] for event in after_revised_confirm["stream_replay"]] == [
+        "candidate_edit_revision_requested",
+        "candidate_edit_committed",
+    ]
+    assert after_revised_confirm["stream_replay"][1]["commits_revision"] is True
+    assert after_revised_confirm["stream_replay"][1]["confirmed_revision_of"] == first_proposal["id"]
+    assert after_revised_confirm["accepted_edit_ids"] == [revised_proposal["id"]]
+    assert after_revised_confirm["rejected_edit_ids"] == [first_proposal["id"]]
+    assert after_revised_confirm["committed_candidate_graph"]["committed_edit_count"] == 1
+    assert after_revised_confirm["committed_candidate_graph"]["confirmed_revision_pairs"] == [
+        {
+            "committed_proposal_id": revised_proposal["id"],
+            "revision_of": first_proposal["id"],
+            "target_key": "node:RA",
+        }
+    ]
+    assert after_revised_confirm["committed_candidate_graph"]["node_ids_added"] == ["RA"]
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+    next_node = after_revised_confirm["active_proposal"]
+    assert next_node["proposal_status"] == "candidate_proposal_ready"
+    assert next_node["target_type"] == "node"
+    assert next_node["target_id"] == "L1"
+    assert next_node["sequence_index"] == 2
+    queue = after_revised_confirm["candidate_queue"]
+    assert queue["status"] == "candidate_queue_active"
+    assert queue["total_candidate_count"] == 3
+    assert queue["accepted_count"] == 1
+    assert queue["rejected_count"] == 1
+    assert queue["replay_event_count"] == 2
+    assert queue["active_target_key"] == "node:L1"
+    assert queue["next_candidate_kind"] == "node"
+    assert queue["can_continue_after_revision"] is True
+    assert queue["truth_effect"] == "none"
+    assert queue["controller_truth_modified"] is False
+
+    confirm_next_node = _streamed_decision(after_revised_confirm, next_node, "confirm")
+    after_second_confirm = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[revision_decision, confirm_revised, confirm_next_node],
+    )
+
+    assert after_second_confirm["committed_candidate_graph"]["status"] == "multiple_edits_committed"
+    assert after_second_confirm["committed_candidate_graph"]["committed_edit_count"] == 2
+    assert after_second_confirm["committed_candidate_graph"]["node_ids_added"] == ["RA", "L1"]
+    assert len(after_second_confirm["stream_replay"]) == 3
+    next_wire = after_second_confirm["active_proposal"]
+    assert next_wire["target_type"] == "wire"
+    assert next_wire["target_id"] == "RA->L1"
+    assert next_wire["sequence_index"] == 3
+    wire_queue = after_second_confirm["candidate_queue"]
+    assert wire_queue["accepted_count"] == 2
+    assert wire_queue["active_sequence_index"] == 3
+    assert wire_queue["active_target_key"] == "wire:RA->L1"
+    assert wire_queue["next_candidate_kind"] == "wire"
+    assert wire_queue["pending_count"] == 1
+
+
+def test_streamed_logic_authoring_session_rejects_stale_original_confirm_after_revision():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": "RA 节点说明应写明这是候选解释。",
+    }
+    stale_original_confirm = _streamed_decision(first, first_proposal, "confirm")
+
+    session = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[revision_decision, stale_original_confirm],
+    )
+
+    assert session["accepted_edit_ids"] == []
+    assert session["rejected_edit_ids"] == [first_proposal["id"]]
+    assert [event["event_type"] for event in session["stream_replay"]] == [
+        "candidate_edit_revision_requested"
+    ]
+    assert session["committed_candidate_graph"]["committed_edit_count"] == 0
+    assert session["candidate_queue"]["status"] == "revision_candidate_ready"
+    assert session["candidate_queue"]["active_target_key"] == "node:RA"
+    assert session["candidate_queue"]["accepted_count"] == 0
+    assert session["active_proposal"]["proposal_status"] == "revised_proposal_ready"
+    assert session["active_proposal"]["id"] != first_proposal["id"]
+    assert session["active_proposal"]["revision_of"] == first_proposal["id"]
+
+
+def _c919_etras_raw_requirement_text() -> str:
+    return "\n".join(
+        [
+            "C919 E-TRAS 原始需求片段。",
+            "R-C919-WOW: 当 WOW 双通道有效且反推手柄进入解锁区间时，ETRAS 可进入预位。",
+            "R-C919-ARM: ETRAS 仅在 WOW 有效且手柄解锁区间成立后进入预位。",
+            "R-C919-GATE: WOW 有效是 ETRAS 预位的前置门限。",
+            "边界: 本片段只用于候选解释，不修改控制器，不构成冻结版或认证声明。",
+        ]
+    )
+
+
+def _c919_etras_raw_streamed_requirements_payload() -> dict:
+    return build_local_preparse_payload(
+        _c919_etras_raw_requirement_text(),
+        document_name="c919-etras-raw-intake.txt",
+    )
+
+
+def _c919_etras_real_doc_streamed_requirements_payload() -> dict:
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    return build_local_preparse_payload(
+        document_path.read_text(encoding="utf-8"),
+        document_name=document_path.name,
+    )
+
+
+def _c919_etras_real_doc_cmd2_drawing_payload() -> dict:
+    return {
+        "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+        "kind": "ai-fantui-logic-link-drawing",
+        "version": 1,
+        "status": "draft_ready",
+        "truth_effect": "none",
+        "candidate_state": "concept_logic_drawing",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "summary_zh": "C919 ETRAS V0.9 CMD2 候选链路。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": "mlg_wow",
+                "label": "MLG_WOW",
+                "node_kind": "input",
+                "x": 80,
+                "y": 120,
+                "width": 180,
+                "height": 92,
+                "description_zh": "主轮载荷/WOW 已解析单路输入。",
+            },
+            {
+                "id": "cmd2_active",
+                "label": "CMD2 单相解锁",
+                "node_kind": "logic",
+                "x": 360,
+                "y": 120,
+                "width": 220,
+                "height": 96,
+                "description_zh": "TLS 与吊挂锁 115VAC 单相解锁供电候选节点。",
+            },
+        ],
+        "edges": [
+            {
+                "id": "c919_v09_cmd2_edge",
+                "source": "mlg_wow",
+                "target": "cmd2_active",
+                "label": "CMD2 ground gate",
+                "route": [{"x": 260, "y": 168}, {"x": 360, "y": 168}],
+            }
+        ],
+        "parameter_panels": [],
+        "drawing_notes": ["真实 V0.9 文档 raw intake gate。"],
+    }
+
+
+def _c919_etras_real_doc_cmd3_apwtla_drawing_payload() -> dict:
+    return {
+        "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+        "kind": "ai-fantui-logic-link-drawing",
+        "version": 1,
+        "status": "draft_ready",
+        "truth_effect": "none",
+        "candidate_state": "concept_logic_drawing",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "summary_zh": "C919 ETRAS V0.9 CMD3/APWTLA 候选链路。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": "apwtla",
+                "label": "APWTLA/SW2",
+                "node_kind": "input",
+                "x": 80,
+                "y": 120,
+                "width": 180,
+                "height": 92,
+                "description_zh": "TRA 经过 SW2 窗口后的三相作动请求。",
+            },
+            {
+                "id": "cmd3_output",
+                "label": "CMD3 三相作动",
+                "node_kind": "logic",
+                "x": 360,
+                "y": 120,
+                "width": 220,
+                "height": 96,
+                "description_zh": "TRCU 115VAC 三相作动供电 SR 锁存输出。",
+            },
+        ],
+        "edges": [
+            {
+                "id": "c919_v09_cmd3_apwtla_edge",
+                "source": "apwtla",
+                "target": "cmd3_output",
+                "label": "SW2 set gate",
+                "route": [{"x": 260, "y": 168}, {"x": 360, "y": 168}],
+            }
+        ],
+        "parameter_panels": [],
+        "drawing_notes": ["真实 V0.9 文档 CMD3/APWTLA raw intake gate。"],
+    }
+
+
+def _c919_etras_real_doc_deploy_cmd1_drawing_payload() -> dict:
+    return {
+        "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+        "kind": "ai-fantui-logic-link-drawing",
+        "version": 1,
+        "status": "draft_ready",
+        "truth_effect": "none",
+        "candidate_state": "concept_logic_drawing",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "summary_zh": "C919 ETRAS V0.9 Deploy CMD1 相邻阶段候选链路。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": "cmd3_output",
+                "label": "CMD3 三相作动",
+                "node_kind": "logic",
+                "x": 80,
+                "y": 120,
+                "width": 220,
+                "height": 96,
+                "description_zh": "TRCU 115VAC 三相作动供电 SR 锁存输出。",
+            },
+            {
+                "id": "deploy_cmd1_active",
+                "label": "Deploy CMD1",
+                "node_kind": "logic",
+                "x": 400,
+                "y": 120,
+                "width": 220,
+                "height": 96,
+                "description_zh": "FADEC 展开命令候选节点。",
+            },
+        ],
+        "edges": [
+            {
+                "id": "c919_v09_deploy_cmd1_edge",
+                "source": "cmd3_output",
+                "target": "deploy_cmd1_active",
+                "label": "Deploy CMD1 evaluation after CMD3",
+                "route": [{"x": 300, "y": 168}, {"x": 400, "y": 168}],
+            }
+        ],
+        "parameter_panels": [],
+        "drawing_notes": ["真实 V0.9 文档 Deploy CMD1 raw intake gate。"],
+    }
+
+
+def _c919_etras_real_doc_thr_idle_lock_release_drawing_payload() -> dict:
+    return {
+        "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+        "kind": "ai-fantui-logic-link-drawing",
+        "version": 1,
+        "status": "draft_ready",
+        "truth_effect": "none",
+        "candidate_state": "concept_logic_drawing",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "summary_zh": "C919 ETRAS V0.9 Deploy 后续展开确认/慢车锁释放候选链路。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": "deploy_cmd1_active",
+                "label": "Deploy CMD1",
+                "node_kind": "logic",
+                "x": 80,
+                "y": 120,
+                "width": 220,
+                "height": 96,
+                "description_zh": "FADEC 展开命令候选节点。",
+            },
+            {
+                "id": "thr_idle_lock_release",
+                "label": "慢车锁释放",
+                "node_kind": "output",
+                "x": 400,
+                "y": 120,
+                "width": 220,
+                "height": 96,
+                "description_zh": "TR 展开确认后释放油门慢车电子锁。",
+            },
+        ],
+        "edges": [
+            {
+                "id": "c919_v09_thr_idle_lock_release_edge",
+                "source": "deploy_cmd1_active",
+                "target": "thr_idle_lock_release",
+                "label": "TR deployed confirmation",
+                "route": [{"x": 300, "y": 168}, {"x": 400, "y": 168}],
+            }
+        ],
+        "parameter_panels": [],
+        "drawing_notes": ["真实 V0.9 文档慢车锁释放 raw intake gate。"],
+    }
+
+
+def test_local_preparse_handles_c919_etras_raw_requirement_packet_for_streamed_queue():
+    payload = _c919_etras_raw_streamed_requirements_payload()
+
+    assert payload["status"] == "ready_for_logic_builder"
+    assert payload["ready_for_logic_builder"] is True
+    assert payload["llm"]["provider"] == "local-preparse"
+    assert payload["llm"]["model"] == "deterministic-c919-etras"
+    assert payload["llm"]["response_source"] == "deterministic_preparse"
+    assert payload["deterministic_preparse"]["applied"] is True
+    assert payload["deterministic_preparse"]["strategy"] == "c919_etras_rule_preparse"
+    assert payload["truth_effect"] == "none"
+    assert payload["candidate_state"] == "concept_only"
+    assert payload["certification_claim"] == "none"
+    assert payload["controller_truth_modified"] is False
+    assert payload["source_scope"]["c919_etras"]["status"] == "candidate_only"
+    assert "冻结版或认证声明" in payload["source_scope"]["c919_etras"]["reason_zh"]
+
+    nodes_by_id = {node["id"]: node for node in payload["concept_logic_nodes"]}
+    assert {"wow_valid", "etras_armed", "handle_unlock_range"}.issubset(nodes_by_id)
+    assert nodes_by_id["wow_valid"]["source_anchors"][0]["id"] == "C919-ETRAS-WOW"
+    assert nodes_by_id["wow_valid"]["source_anchors"][0]["origin"] == "c919_etras_doc"
+    assert "WOW 双通道有效" in nodes_by_id["wow_valid"]["source_anchors"][0]["quote_zh"]
+    assert nodes_by_id["etras_armed"]["source_anchors"][0]["id"] == "C919-ETRAS-ARM"
+    assert "ETRAS 仅在" in nodes_by_id["etras_armed"]["source_anchors"][0]["quote_zh"]
+    assert "候选解释" in nodes_by_id["etras_armed"]["description_zh"]
+
+    edges_by_id = {edge["id"]: edge for edge in payload["concept_edges"]}
+    assert edges_by_id["c919_e1"]["source"] == "wow_valid"
+    assert edges_by_id["c919_e1"]["target"] == "etras_armed"
+    assert edges_by_id["c919_e1"]["label"] == "WOW gating"
+    assert edges_by_id["c919_e1"]["source_anchors"][0]["id"] == "C919-ETRAS-WOW-EDGE"
+    validate_agent_output_contract(payload["agent_output_contract_v0_1"]["requirement_analyst"])
+
+
+def test_local_preparse_handles_c919_etras_v09_real_document_for_cmd2_gate():
+    payload = _c919_etras_real_doc_streamed_requirements_payload()
+
+    assert payload["source_document"]["name"] == "requirements_v0_9.md"
+    assert payload["status"] == "ready_for_logic_builder"
+    assert payload["ready_for_logic_builder"] is True
+    assert payload["llm"]["provider"] == "local-preparse"
+    assert payload["llm"]["model"] == "deterministic-c919-etras-v09"
+    assert payload["deterministic_preparse"]["strategy"] == "c919_etras_v09_rule_preparse"
+    assert payload["truth_effect"] == "none"
+    assert payload["candidate_state"] == "concept_only"
+    assert payload["certification_claim"] == "none"
+    assert payload["controller_truth_modified"] is False
+    assert payload["source_scope"]["c919_etras"]["status"] == "candidate_only"
+    assert payload["source_scope"]["engineering_inference"]["status"] == "source_declared"
+
+    nodes_by_id = {node["id"]: node for node in payload["concept_logic_nodes"]}
+    assert {
+        "mlg_wow",
+        "cmd2_active",
+        "apwtla",
+        "cmd3_output",
+        "deploy_cmd1_active",
+        "thr_idle_lock_release",
+    }.issubset(nodes_by_id)
+    assert "etras_armed" not in nodes_by_id
+    assert nodes_by_id["mlg_wow"]["source_anchors"][0]["id"] == "C919-V09-MLG-WOW"
+    assert "`mlg_wow`" in nodes_by_id["mlg_wow"]["source_anchors"][0]["quote_zh"]
+    assert "主轮载荷" in nodes_by_id["mlg_wow"]["source_anchors"][0]["quote_zh"]
+    apwtla_anchor_ids = {
+        anchor["id"] for anchor in nodes_by_id["apwtla"]["source_anchors"]
+    }
+    assert {"C919-V09-APWTLA", "C919-V09-CMD3-SET-APWTLA"}.issubset(apwtla_anchor_ids)
+
+    edge = next(
+        item
+        for item in payload["concept_edges"]
+        if item["source"] == "mlg_wow" and item["target"] == "cmd2_active"
+    )
+    assert edge["label"] == "CMD2 ground gate"
+    edge_quotes = " ".join(anchor["quote_zh"] for anchor in edge["source_anchors"])
+    assert "`mlg_wow`" in edge_quotes
+    assert "TRUE" in edge_quotes
+    assert "WOW 双通道有效且反推手柄进入解锁区间" not in json.dumps(
+        payload,
+        ensure_ascii=False,
+    )
+    cmd3_edge = next(
+        item
+        for item in payload["concept_edges"]
+        if item["source"] == "apwtla" and item["target"] == "cmd3_output"
+    )
+    assert cmd3_edge["id"] == "c919_v09_e4"
+    assert cmd3_edge["label"] == "SW2 set gate"
+    cmd3_edge_anchor_ids = {anchor["id"] for anchor in cmd3_edge["source_anchors"]}
+    assert {
+        "C919-V09-CMD3-SET",
+        "C919-V09-CMD3-SET-APWTLA",
+        "C919-V09-CMD3-SR-OUTPUT",
+        "C919-V09-CMD3-RESET-PRIORITY",
+    }.issubset(cmd3_edge_anchor_ids)
+    cmd3_edge_quotes = " ".join(anchor["quote_zh"] for anchor in cmd3_edge["source_anchors"])
+    assert "CMD3 Set" in cmd3_edge_quotes
+    assert "`apwtla`" in cmd3_edge_quotes
+    assert "ThreePhaseTRCUPower_On = cmd3_output" in cmd3_edge_quotes
+    assert "Reset 优先" in cmd3_edge_quotes
+    deploy_edge = next(
+        item
+        for item in payload["concept_edges"]
+        if item["source"] == "cmd3_output" and item["target"] == "deploy_cmd1_active"
+    )
+    assert deploy_edge["id"] == "c919_v09_e5"
+    assert deploy_edge["label"] == "Deploy CMD1 evaluation after CMD3"
+    assert deploy_edge["label"] != "TRCU power before deploy"
+    deploy_edge_anchor_ids = {anchor["id"] for anchor in deploy_edge["source_anchors"]}
+    assert {
+        "C919-V09-CMD3-SR-OUTPUT",
+        "C919-V09-DEPLOY-CMD1-OUTPUT",
+        "C919-V09-DEPLOY-CMD1-ENGINE",
+        "C919-V09-DEPLOY-CMD1-INHIBITED",
+        "C919-V09-DEPLOY-CMD1-LOCKS",
+        "C919-V09-DEPLOY-CMD1-TR-WOW",
+        "C919-V09-DEPLOY-CMD1-N1K",
+        "C919-V09-DEPLOY-CMD1-TRA",
+        "C919-V09-EVAL-CMD3-SR-OUTPUT",
+        "C919-V09-EVAL-DEPLOY-CMD1",
+    }.issubset(deploy_edge_anchor_ids)
+    deploy_edge_quotes = " ".join(anchor["quote_zh"] for anchor in deploy_edge["source_anchors"])
+    assert "FADEC_Deploy_Command = deploy_cmd1_active" in deploy_edge_quotes
+    assert "locks_unlocked_or_confirmed" in deploy_edge_quotes
+    assert "max_n1k_deploy_limit_pct" in deploy_edge_quotes
+    assert "tra_deg" in deploy_edge_quotes
+    assert "6. 评估 CMD3 SR 锁存输出" in deploy_edge_quotes
+    assert "8. 评估 Deploy CMD1" in deploy_edge_quotes
+    thr_idle_edge = next(
+        item
+        for item in payload["concept_edges"]
+        if item["source"] == "deploy_cmd1_active" and item["target"] == "thr_idle_lock_release"
+    )
+    assert thr_idle_edge["id"] == "c919_v09_e6"
+    assert thr_idle_edge["label"] == "TR deployed confirmation"
+    assert thr_idle_edge["label"] != "Deploy CMD1 directly releases THR idle lock"
+    thr_idle_edge_anchor_ids = {anchor["id"] for anchor in thr_idle_edge["source_anchors"]}
+    assert {
+        "C919-V09-DEPLOY-CMD1-OUTPUT",
+        "C919-V09-DEPLOY-CMD1-ENGINE",
+        "C919-V09-DEPLOY-CMD1-INHIBITED",
+        "C919-V09-DEPLOY-CMD1-LOCKS",
+        "C919-V09-DEPLOY-CMD1-TR-WOW",
+        "C919-V09-DEPLOY-CMD1-N1K",
+        "C919-V09-DEPLOY-CMD1-TRA",
+        "C919-V09-THR-IDLE-OUTPUT",
+        "C919-V09-THR-IDLE-TR-DEPLOYED",
+        "C919-V09-THR-IDLE-POS-CONF",
+    }.issubset(thr_idle_edge_anchor_ids)
+    thr_idle_edge_quotes = " ".join(anchor["quote_zh"] for anchor in thr_idle_edge["source_anchors"])
+    assert "FADEC_Deploy_Command = deploy_cmd1_active" in thr_idle_edge_quotes
+    assert "`tr_deployed_confirmed`" in thr_idle_edge_quotes
+    assert "TR_Position ≥ 80%" in thr_idle_edge_quotes
+    assert "持续 0.5s" in thr_idle_edge_quotes
+
+
+def test_local_preparse_c919_etras_v09_fails_closed_without_cmd2_mlg_wow_condition():
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    partial_text = document_path.read_text(encoding="utf-8").replace(
+        "| ① | `mlg_wow` | == | TRUE |",
+        "| ① | `mlg_wow` | 待确认 | TRUE |",
+    )
+
+    payload = build_local_preparse_payload(
+        partial_text,
+        document_name="requirements_v0_9_missing_cmd2_condition.md",
+    )
+
+    assert payload["status"] == "needs_clarification"
+    assert payload["ready_for_logic_builder"] is False
+    assert payload["deterministic_preparse"]["reason"] == "c919_etras_v09_coverage_not_found"
+    assert "cmd2_active" in payload["deterministic_preparse"]["present_signal_ids"]
+    assert "cmd2_mlg_wow_condition" not in payload["deterministic_preparse"]["present_signal_ids"]
+    assert payload["concept_logic_nodes"] == []
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_local_preparse_c919_etras_v09_fails_closed_without_cmd3_apwtla_condition():
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    partial_text = document_path.read_text(encoding="utf-8").replace(
+        "| ④ | `apwtla` | == | TRUE |",
+        "| ④ | `apwtla` | 待确认 | TRUE |",
+    )
+
+    payload = build_local_preparse_payload(
+        partial_text,
+        document_name="requirements_v0_9_missing_cmd3_apwtla_condition.md",
+    )
+
+    assert payload["status"] == "needs_clarification"
+    assert payload["ready_for_logic_builder"] is False
+    assert payload["deterministic_preparse"]["reason"] == "c919_etras_v09_coverage_not_found"
+    assert "cmd3_output" in payload["deterministic_preparse"]["present_signal_ids"]
+    assert "cmd3_apwtla_condition" not in payload["deterministic_preparse"]["present_signal_ids"]
+    assert payload["concept_logic_nodes"] == []
+    assert payload["concept_edges"] == []
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_local_preparse_c919_etras_v09_fails_closed_without_deploy_output():
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    partial_text = document_path.read_text(encoding="utf-8").replace(
+        "**输出**: `FADEC_Deploy_Command = deploy_cmd1_active`",
+        "**输出**: `FADEC_Deploy_Command = 待确认`",
+    )
+
+    payload = build_local_preparse_payload(
+        partial_text,
+        document_name="requirements_v0_9_missing_deploy_output.md",
+    )
+
+    assert payload["status"] == "needs_clarification"
+    assert payload["ready_for_logic_builder"] is False
+    assert payload["deterministic_preparse"]["reason"] == "c919_etras_v09_coverage_not_found"
+    assert "deploy_cmd1_active" in payload["deterministic_preparse"]["present_signal_ids"]
+    assert "deploy_cmd1_output" not in payload["deterministic_preparse"]["present_signal_ids"]
+    assert payload["concept_logic_nodes"] == []
+    assert payload["concept_edges"] == []
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_local_preparse_c919_etras_v09_fails_closed_without_deploy_locks_condition():
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    partial_text = document_path.read_text(encoding="utf-8").replace(
+        "| ③ | `locks_unlocked_or_confirmed` | == | TRUE | TLS + 两吊挂锁解锁（见 5.5a）|",
+        "| ③ | `locks_unlocked_or_confirmed` | 待确认 | TRUE | TLS + 两吊挂锁解锁（见 5.5a）|",
+    )
+
+    payload = build_local_preparse_payload(
+        partial_text,
+        document_name="requirements_v0_9_missing_deploy_locks_condition.md",
+    )
+
+    assert payload["status"] == "needs_clarification"
+    assert payload["ready_for_logic_builder"] is False
+    assert payload["deterministic_preparse"]["reason"] == "c919_etras_v09_coverage_not_found"
+    assert "deploy_cmd1_active" in payload["deterministic_preparse"]["present_signal_ids"]
+    assert "deploy_cmd1_locks_condition" not in payload["deterministic_preparse"]["present_signal_ids"]
+    assert payload["concept_logic_nodes"] == []
+    assert payload["concept_edges"] == []
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_local_preparse_c919_etras_v09_fails_closed_without_thr_idle_output():
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    partial_text = document_path.read_text(encoding="utf-8").replace(
+        "**输出**: `thr_idle_lock_release`",
+        "**输出**: `thr_idle_release_pending`",
+    )
+
+    payload = build_local_preparse_payload(
+        partial_text,
+        document_name="requirements_v0_9_missing_thr_idle_output.md",
+    )
+
+    assert payload["status"] == "needs_clarification"
+    assert payload["ready_for_logic_builder"] is False
+    assert payload["deterministic_preparse"]["reason"] == "c919_etras_v09_coverage_not_found"
+    assert "thr_idle_lock_release" in payload["deterministic_preparse"]["present_signal_ids"]
+    assert "thr_idle_output" not in payload["deterministic_preparse"]["present_signal_ids"]
+    assert payload["concept_logic_nodes"] == []
+    assert payload["concept_edges"] == []
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_local_preparse_c919_etras_v09_fails_closed_without_thr_idle_deployed_condition():
+    document_path = REPO_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md"
+    partial_text = document_path.read_text(encoding="utf-8").replace(
+        "| ① | `tr_deployed_confirmed` | == | TRUE |",
+        "| ① | `tr_deployed_confirmed` | 待确认 | TRUE |",
+    )
+
+    payload = build_local_preparse_payload(
+        partial_text,
+        document_name="requirements_v0_9_missing_thr_idle_deployed_condition.md",
+    )
+
+    assert payload["status"] == "needs_clarification"
+    assert payload["ready_for_logic_builder"] is False
+    assert payload["deterministic_preparse"]["reason"] == "c919_etras_v09_coverage_not_found"
+    assert "thr_idle_lock_release" in payload["deterministic_preparse"]["present_signal_ids"]
+    assert "thr_idle_tr_deployed_condition" not in payload["deterministic_preparse"]["present_signal_ids"]
+    assert payload["concept_logic_nodes"] == []
+    assert payload["concept_edges"] == []
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_local_preparse_keeps_l1_l4_mainline_when_c919_background_is_mixed_in():
+    mixed_text = "\n".join(
+        [
+            "背景说明：C919 E-TRAS 与 WOW 术语只作为跨域参考，不是本文档主链路。",
+            "工作逻辑1 L1：当 RA<6ft 且 SW1 进入 TRA [-1.4,-6.2] 区间，输出 TLS 115VAC。",
+            "工作逻辑2 L2：当 SW2 有效且 TRA 区间满足时，输出 ETRAC 540VDC。",
+            "工作逻辑3 L3：TLS/PLS 反馈满足后，驱动 PDU motor 并等待 VDT。",
+            "工作逻辑4 L4：当 VDT 达到 90% deploy 且 TRA<=-11.74°，THR_LOCK release。",
+            "附录：当 WOW 双通道有效且反推手柄进入解锁区间时，ETRAS 可进入预位。",
+        ]
+    )
+
+    payload = build_local_preparse_payload(mixed_text, document_name="mixed-c919-l1-l4.docx")
+
+    assert payload["status"] == "ready_for_logic_builder"
+    assert payload["deterministic_preparse"]["strategy"] == "docx_l1_l4_rule_preparse"
+    node_ids = {node["id"] for node in payload["concept_logic_nodes"]}
+    assert {"logic1", "logic2", "logic3", "logic4", "ra_lt_6ft", "thr_lock_release"}.issubset(
+        node_ids
+    )
+    assert "wow_valid" not in node_ids
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def _c919_etras_streamed_requirements_payload() -> dict:
+    return {
+        "$schema": "https://well-harness.local/json_schema/requirements_intake_analysis_v1.schema.json",
+        "kind": "ai-fantui-requirements-intake-analysis",
+        "version": 1,
+        "status": "ready_for_logic_builder",
+        "summary_zh": "C919 ETRAS 候选链路已解析。",
+        "open_questions": [],
+        "concept_logic_nodes": [
+            {
+                "id": "wow_valid",
+                "label": "WOW 有效",
+                "node_kind": "input",
+                "description_zh": "双通道地面信号一致。",
+                "source_anchors": [
+                    {
+                        "id": "C919-ETRAS-WOW",
+                        "kind": "需求条款",
+                        "origin": "c919_etras_doc",
+                        "quote_zh": "当 WOW 双通道有效且反推手柄进入解锁区间时，ETRAS 可进入预位。",
+                    }
+                ],
+            },
+            {
+                "id": "etras_armed",
+                "label": "ETRAS 预位",
+                "node_kind": "logic",
+                "description_zh": "反推预位候选逻辑。",
+            },
+        ],
+        "concept_edges": [
+            {
+                "id": "c919_e1",
+                "source": "wow_valid",
+                "target": "etras_armed",
+                "label": "WOW gating",
+            }
+        ],
+        "ready_for_logic_builder": True,
+        "truth_effect": "none",
+        "candidate_state": "concept_only",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+    }
+
+
+def _c919_etras_streamed_drawing_payload() -> dict:
+    return {
+        "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+        "kind": "ai-fantui-logic-link-drawing",
+        "version": 1,
+        "status": "draft_ready",
+        "truth_effect": "none",
+        "candidate_state": "concept_logic_drawing",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "summary_zh": "C919 ETRAS 候选链路。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": "wow_valid",
+                "label": "WOW 有效",
+                "node_kind": "input",
+                "x": 80,
+                "y": 120,
+                "width": 180,
+                "height": 92,
+                "description_zh": "双通道地面信号一致。",
+            },
+            {
+                "id": "etras_armed",
+                "label": "ETRAS 预位",
+                "node_kind": "logic",
+                "x": 360,
+                "y": 120,
+                "width": 190,
+                "height": 96,
+                "description_zh": "反推预位候选逻辑。",
+            },
+        ],
+        "edges": [
+            {
+                "id": "c919_edge",
+                "source": "wow_valid",
+                "target": "etras_armed",
+                "label": "WOW gating",
+                "route": [{"x": 260, "y": 168}, {"x": 360, "y": 168}],
+            }
+        ],
+        "parameter_panels": [],
+        "drawing_notes": ["C919 ETRAS 第二域 fixture。"],
+    }
+
+
+def test_streamed_logic_authoring_session_c919_etras_confirms_revised_candidate_and_advances_queue():
+    first = build_streamed_logic_authoring_session(
+        _c919_etras_streamed_requirements_payload(),
+        _c919_etras_streamed_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    feedback_text = "WOW 有效节点说明应写明这是 C919 ETRAS 候选解释。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        _c919_etras_streamed_requirements_payload(),
+        _c919_etras_streamed_drawing_payload(),
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        _c919_etras_streamed_requirements_payload(),
+        _c919_etras_streamed_drawing_payload(),
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+        ],
+    )
+    next_node = after_revised_confirm["active_proposal"]
+    after_second_confirm = build_streamed_logic_authoring_session(
+        _c919_etras_streamed_requirements_payload(),
+        _c919_etras_streamed_drawing_payload(),
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+            _streamed_decision(after_revised_confirm, next_node, "confirm"),
+        ],
+    )
+
+    assert first_proposal["target_id"] == "wow_valid"
+    assert revised_proposal["id"] == "m21-node-wow_valid-revision-1"
+    assert after_revised_confirm["stream_replay"][1]["commits_revision"] is True
+    assert after_revised_confirm["stream_replay"][1]["confirmed_revision_of"] == first_proposal["id"]
+    assert after_revised_confirm["committed_candidate_graph"]["committed_edit_ids"] == [
+        revised_proposal["id"]
+    ]
+    assert after_revised_confirm["candidate_queue"]["active_target_key"] == "node:etras_armed"
+    assert after_revised_confirm["active_proposal"]["target_id"] == "etras_armed"
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+
+    next_wire = after_second_confirm["active_proposal"]
+    assert next_wire["target_type"] == "wire"
+    assert next_wire["target_id"] == "wow_valid->etras_armed"
+    assert after_second_confirm["candidate_queue"]["active_target_key"] == "wire:wow_valid->etras_armed"
+    assert after_second_confirm["candidate_queue"]["accepted_count"] == 2
+    assert after_second_confirm["candidate_queue"]["pending_count"] == 1
+    assert after_second_confirm["truth_effect"] == "none"
+    assert after_second_confirm["controller_truth_modified"] is False
+
+
+def test_streamed_logic_authoring_session_c919_raw_intake_payload_advances_queue():
+    requirements_payload = _c919_etras_raw_streamed_requirements_payload()
+    first = build_streamed_logic_authoring_session(
+        requirements_payload,
+        _c919_etras_streamed_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    feedback_text = "WOW 有效节点说明应写明这是 C919 ETRAS 原始需求候选解释。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        requirements_payload,
+        _c919_etras_streamed_drawing_payload(),
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        _c919_etras_streamed_drawing_payload(),
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+        ],
+    )
+    next_node = after_revised_confirm["active_proposal"]
+    after_second_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        _c919_etras_streamed_drawing_payload(),
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+            _streamed_decision(after_revised_confirm, next_node, "confirm"),
+        ],
+    )
+
+    assert first["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+    assert first_proposal["target_id"] == "wow_valid"
+    assert first_proposal["source_anchor_ids"] == ["C919-ETRAS-WOW"]
+    assert "WOW 双通道有效" in first_proposal["source_excerpt"]
+    assert revised_proposal["proposal_status"] == "revised_proposal_ready"
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+    assert after_revised_confirm["candidate_queue"]["active_target_key"] == "node:etras_armed"
+    assert after_revised_confirm["active_proposal"]["target_id"] == "etras_armed"
+    assert after_second_confirm["active_proposal"]["target_type"] == "wire"
+    assert after_second_confirm["active_proposal"]["target_id"] == "wow_valid->etras_armed"
+    assert after_second_confirm["candidate_queue"]["accepted_count"] == 2
+    assert after_second_confirm["candidate_queue"]["pending_count"] == 1
+    assert after_second_confirm["truth_effect"] == "none"
+    assert after_second_confirm["controller_truth_modified"] is False
+
+
+def test_streamed_logic_authoring_session_c919_real_doc_raw_intake_advances_cmd2_queue():
+    requirements_payload = _c919_etras_real_doc_streamed_requirements_payload()
+    drawing_payload = _c919_etras_real_doc_cmd2_drawing_payload()
+    first = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+    first_proposal = first["active_proposal"]
+    feedback_text = "MLG_WOW 节点说明应写明这是 C919 ETRAS V0.9 原文候选解释。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+        ],
+    )
+    next_node = after_revised_confirm["active_proposal"]
+    after_second_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+            _streamed_decision(after_revised_confirm, next_node, "confirm"),
+        ],
+    )
+
+    assert first["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+    assert first_proposal["target_id"] == "mlg_wow"
+    assert first_proposal["source_anchor_ids"] == ["C919-V09-MLG-WOW"]
+    assert "`mlg_wow`" in first_proposal["source_excerpt"]
+    assert "主轮载荷" in first_proposal["source_excerpt"]
+    assert revised_proposal["proposal_status"] == "revised_proposal_ready"
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+    assert after_revised_confirm["candidate_queue"]["active_target_key"] == "node:cmd2_active"
+    assert after_revised_confirm["active_proposal"]["target_id"] == "cmd2_active"
+    assert after_second_confirm["active_proposal"]["target_type"] == "wire"
+    assert after_second_confirm["active_proposal"]["target_id"] == "mlg_wow->cmd2_active"
+    assert "C919-V09-CMD2-MLG-WOW" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-CMD2" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert after_second_confirm["candidate_queue"]["accepted_count"] == 2
+    assert after_second_confirm["candidate_queue"]["pending_count"] == 1
+    assert after_second_confirm["truth_effect"] == "none"
+    assert after_second_confirm["controller_truth_modified"] is False
+
+
+def test_streamed_logic_authoring_session_c919_real_doc_raw_intake_advances_cmd3_apwtla_queue():
+    requirements_payload = _c919_etras_real_doc_streamed_requirements_payload()
+    drawing_payload = _c919_etras_real_doc_cmd3_apwtla_drawing_payload()
+    first = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+    first_proposal = first["active_proposal"]
+    feedback_text = "APWTLA 节点说明应写明这是 CMD3 Set 的 SW2 置位候选解释。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+        ],
+    )
+    next_node = after_revised_confirm["active_proposal"]
+    after_second_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+            _streamed_decision(after_revised_confirm, next_node, "confirm"),
+        ],
+    )
+
+    assert first["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+    assert first_proposal["target_id"] == "apwtla"
+    assert "C919-V09-CMD3-SET-APWTLA" in first_proposal["source_anchor_ids"]
+    assert "`apwtla`" in first_proposal["source_excerpt"]
+    assert "微动开关 2" in first_proposal["source_excerpt"]
+    assert revised["active_proposal"]["proposal_status"] == "revised_proposal_ready"
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+    assert after_revised_confirm["candidate_queue"]["active_target_key"] == "node:cmd3_output"
+    assert after_revised_confirm["active_proposal"]["target_id"] == "cmd3_output"
+    assert after_second_confirm["active_proposal"]["target_type"] == "wire"
+    assert after_second_confirm["active_proposal"]["target_id"] == "apwtla->cmd3_output"
+    assert "C919-V09-CMD3-SET" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-CMD3-SET-APWTLA" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-CMD3-SR-OUTPUT" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-CMD3-RESET-PRIORITY" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "CMD3 Set" in after_second_confirm["active_proposal"]["source_excerpt"]
+    assert after_second_confirm["candidate_queue"]["accepted_count"] == 2
+    assert after_second_confirm["candidate_queue"]["pending_count"] == 1
+    assert after_second_confirm["truth_effect"] == "none"
+    assert after_second_confirm["controller_truth_modified"] is False
+
+
+def test_streamed_logic_authoring_session_c919_real_doc_raw_intake_advances_deploy_cmd1_queue():
+    requirements_payload = _c919_etras_real_doc_streamed_requirements_payload()
+    drawing_payload = _c919_etras_real_doc_deploy_cmd1_drawing_payload()
+    first = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+    first_proposal = first["active_proposal"]
+    feedback_text = "Deploy CMD1 连线说明应写明这是相邻评估阶段候选解释，不是布尔门限。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+        ],
+    )
+    next_node = after_revised_confirm["active_proposal"]
+    after_second_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+            _streamed_decision(after_revised_confirm, next_node, "confirm"),
+        ],
+    )
+
+    assert first["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+    assert first_proposal["target_id"] == "cmd3_output"
+    assert "C919-V09-CMD3-SR-OUTPUT" in first_proposal["source_anchor_ids"]
+    assert "ThreePhaseTRCUPower_On = cmd3_output" in first_proposal["source_excerpt"]
+    assert revised["active_proposal"]["proposal_status"] == "revised_proposal_ready"
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+    assert after_revised_confirm["candidate_queue"]["active_target_key"] == "node:deploy_cmd1_active"
+    assert after_revised_confirm["active_proposal"]["target_id"] == "deploy_cmd1_active"
+    assert after_second_confirm["active_proposal"]["target_type"] == "wire"
+    assert after_second_confirm["active_proposal"]["target_id"] == "cmd3_output->deploy_cmd1_active"
+    assert "C919-V09-CMD3-SR-OUTPUT" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-DEPLOY-CMD1-OUTPUT" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-DEPLOY-CMD1-ENGINE" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-DEPLOY-CMD1-INHIBITED" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "ThreePhaseTRCUPower_On = cmd3_output" in after_second_confirm["active_proposal"]["source_excerpt"]
+    assert after_second_confirm["candidate_queue"]["accepted_count"] == 2
+    assert after_second_confirm["candidate_queue"]["pending_count"] == 1
+    assert after_second_confirm["truth_effect"] == "none"
+    assert after_second_confirm["controller_truth_modified"] is False
+
+
+def test_streamed_logic_authoring_session_c919_real_doc_raw_intake_advances_thr_idle_lock_release_queue():
+    requirements_payload = _c919_etras_real_doc_streamed_requirements_payload()
+    drawing_payload = _c919_etras_real_doc_thr_idle_lock_release_drawing_payload()
+    first = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+    first_proposal = first["active_proposal"]
+    feedback_text = "慢车锁释放说明应写明这是展开确认候选链路，不是 Deploy CMD1 的直接布尔门限。"
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": feedback_text,
+        "requirements_document_edit_requested": True,
+        "requirements_document_edit_authorized": True,
+        "requirements_document_authorization_phrase": "AUTHORIZE_REQUIREMENTS_EDIT",
+        "requirements_document_patch": {
+            "operation": "candidate_requirements_text_revision",
+            "target": "requirements_document",
+            "proposed_text_zh": feedback_text,
+        },
+    }
+    revised = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[revision_decision],
+    )
+    revised_proposal = revised["active_proposal"]
+    after_revised_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+        ],
+    )
+    next_node = after_revised_confirm["active_proposal"]
+    after_second_confirm = build_streamed_logic_authoring_session(
+        requirements_payload,
+        drawing_payload,
+        decision_history=[
+            revision_decision,
+            _streamed_decision(revised, revised_proposal, "confirm"),
+            _streamed_decision(after_revised_confirm, next_node, "confirm"),
+        ],
+    )
+
+    assert first["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+    assert first_proposal["target_id"] == "deploy_cmd1_active"
+    assert "C919-V09-DEPLOY-CMD1-OUTPUT" in first_proposal["source_anchor_ids"]
+    assert "FADEC_Deploy_Command = deploy_cmd1_active" in first_proposal["source_excerpt"]
+    assert revised["active_proposal"]["proposal_status"] == "revised_proposal_ready"
+    assert after_revised_confirm["requirements_document_edit"]["status"] == "authorized_candidate_patch"
+    assert after_revised_confirm["requirements_document_edit"]["requirements_document_modified"] is False
+    assert after_revised_confirm["candidate_queue"]["active_target_key"] == "node:thr_idle_lock_release"
+    assert after_revised_confirm["active_proposal"]["target_id"] == "thr_idle_lock_release"
+    assert after_second_confirm["active_proposal"]["target_type"] == "wire"
+    assert after_second_confirm["active_proposal"]["target_id"] == "deploy_cmd1_active->thr_idle_lock_release"
+    assert "C919-V09-THR-IDLE-OUTPUT" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-THR-IDLE-TR-DEPLOYED" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-THR-IDLE-POS-CONF" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "C919-V09-DEPLOY-CMD1-OUTPUT" in after_second_confirm["active_proposal"]["source_anchor_ids"]
+    assert "`thr_idle_lock_release`" in after_second_confirm["active_proposal"]["source_excerpt"]
+    assert after_second_confirm["candidate_queue"]["accepted_count"] == 2
+    assert after_second_confirm["candidate_queue"]["pending_count"] == 1
+    assert after_second_confirm["truth_effect"] == "none"
+    assert after_second_confirm["controller_truth_modified"] is False
+
+
+def test_streamed_logic_authoring_session_accepts_c919_etras_style_candidate_without_truth_promotion():
+    requirements_payload = {
+        "$schema": "https://well-harness.local/json_schema/requirements_intake_analysis_v1.schema.json",
+        "kind": "ai-fantui-requirements-intake-analysis",
+        "version": 1,
+        "status": "ready_for_logic_builder",
+        "summary_zh": "C919 ETRAS 候选链路已解析。",
+        "open_questions": [],
+        "concept_logic_nodes": [
+            {
+                "id": "wow_valid",
+                "label": "WOW 有效",
+                "node_kind": "input",
+                "description_zh": "双通道地面信号一致。",
+                "source_anchors": [
+                    {
+                        "id": "C919-ETRAS-WOW",
+                        "kind": "需求条款",
+                        "origin": "c919_etras_doc",
+                        "quote_zh": "当 WOW 双通道有效且反推手柄进入解锁区间时，ETRAS 可进入预位。",
+                    }
+                ],
+            },
+            {"id": "etras_armed", "label": "ETRAS 预位", "node_kind": "logic", "description_zh": "反推预位候选逻辑。"},
+        ],
+        "concept_edges": [
+            {
+                "id": "c919_e1",
+                "source": "wow_valid",
+                "target": "etras_armed",
+                "label": "WOW gating",
+            }
+        ],
+        "ready_for_logic_builder": True,
+        "truth_effect": "none",
+        "candidate_state": "concept_only",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+    }
+    drawing_payload = {
+        "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+        "kind": "ai-fantui-logic-link-drawing",
+        "version": 1,
+        "status": "draft_ready",
+        "truth_effect": "none",
+        "candidate_state": "concept_logic_drawing",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "summary_zh": "C919 ETRAS 候选链路。",
+        "canvas": {"width": 1280, "height": 760},
+        "nodes": [
+            {
+                "id": "wow_valid",
+                "label": "WOW 有效",
+                "node_kind": "input",
+                "x": 80,
+                "y": 120,
+                "width": 180,
+                "height": 96,
+                "description_zh": "双通道地面信号一致。",
+            },
+            {
+                "id": "etras_armed",
+                "label": "ETRAS 预位",
+                "node_kind": "logic",
+                "x": 420,
+                "y": 120,
+                "width": 190,
+                "height": 104,
+                "description_zh": "反推预位候选逻辑。",
+            },
+        ],
+        "edges": [{"id": "c919_edge", "source": "wow_valid", "target": "etras_armed", "label": "WOW gating"}],
+        "parameter_panels": [],
+        "drawing_notes": [],
+    }
+
+    result = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+
+    assert result["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+    assert result["truth_effect"] == "none"
+    assert result["controller_truth_modified"] is False
+    assert result["certification_claim"] == "none"
+    assert result["active_proposal"]["target_id"] == "wow_valid"
+    assert result["active_proposal"]["source_anchor_ids"] == ["C919-ETRAS-WOW"]
+    assert "WOW 双通道有效" in result["active_proposal"]["source_excerpt"]
+
+
+def test_demo_server_streamed_logic_authoring_endpoint_returns_candidate_proposal():
+    server, thread = _start_server()
+    try:
+        status, payload = _post(
+            server,
+            "/api/requirements-intake/streamed-authoring/proposal",
+            {
+                "requirements_payload": _ready_requirements_payload(),
+                "drawing_payload": _ready_drawing_payload(),
+                "decision_history": [],
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert status == 200
+    assert payload["kind"] == "ai-fantui-streamed-logic-authoring-session"
+    assert payload["status"] == "awaiting_user_confirmation"
+    assert payload["active_proposal"]["requires_user_confirmation"] is True
+    assert payload["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+
+
+def test_demo_server_streamed_logic_authoring_endpoint_returns_replay_after_confirm():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    server, thread = _start_server()
+    try:
+        status, payload = _post(
+            server,
+            "/api/requirements-intake/streamed-authoring/proposal",
+            {
+                "requirements_payload": _ready_requirements_payload(),
+                "drawing_payload": _ready_drawing_payload(),
+                "decision_history": [
+                    {
+                        **_streamed_decision(first, first_proposal, "confirm"),
+                    }
+                ],
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert status == 200
+    assert payload["stream_replay"][0]["event_type"] == "candidate_edit_committed"
+    assert payload["stream_replay"][0]["committed"] is True
+    assert payload["committed_candidate_graph"]["committed_edit_count"] == 1
+    assert payload["committed_candidate_graph"]["truth_effect"] == "none"
+    assert payload["committed_candidate_graph"]["controller_truth_modified"] is False
+
+
+def test_demo_server_streamed_logic_authoring_endpoint_advances_after_revised_confirm():
+    first = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    first_proposal = first["active_proposal"]
+    revision_decision = {
+        **_streamed_decision(first, first_proposal, "request_revision"),
+        "feedback_text": "RA 节点说明应写明这是候选解释。",
+    }
+    revised = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        decision_history=[revision_decision],
+    )
+    confirm_revised = _streamed_decision(revised, revised["active_proposal"], "confirm")
+    server, thread = _start_server()
+    try:
+        status, payload = _post(
+            server,
+            "/api/requirements-intake/streamed-authoring/proposal",
+            {
+                "requirements_payload": _ready_requirements_payload(),
+                "drawing_payload": _ready_drawing_payload(),
+                "decision_history": [revision_decision, confirm_revised],
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert status == 200
+    assert payload["stream_replay"][0]["event_type"] == "candidate_edit_revision_requested"
+    assert payload["stream_replay"][1]["event_type"] == "candidate_edit_committed"
+    assert payload["stream_replay"][1]["confirmed_revision_of"] == first_proposal["id"]
+    assert payload["committed_candidate_graph"]["committed_edit_ids"] == [
+        revised["active_proposal"]["id"]
+    ]
+    assert payload["candidate_queue"]["active_target_key"] == "node:L1"
+    assert payload["candidate_queue"]["active_sequence_index"] == 2
+    assert payload["candidate_queue"]["can_continue_after_revision"] is True
+    assert payload["active_proposal"]["target_id"] == "L1"
+    assert payload["truth_effect"] == "none"
+    assert payload["controller_truth_modified"] is False
+
+
+def test_logic_builder_static_page_exposes_streamed_authoring_controls():
+    html = (STATIC_ROOT / "logic_builder" / "index.html").read_text(encoding="utf-8")
+    js = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+    css = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    revision_gate = (
+        REPO_ROOT / "scripts" / "verify_m21_streamed_authoring_revision_browser_gate.py"
+    ).read_text(encoding="utf-8")
+    closeout_script = (
+        REPO_ROOT / "scripts" / "run_customer_demo_mvp_closeout.py"
+    ).read_text(encoding="utf-8")
+    owner_packet_script = (
+        REPO_ROOT / "scripts" / "run_project_owner_acceptance_review_packet.py"
+    ).read_text(encoding="utf-8")
+    closeout_doc = (
+        REPO_ROOT / "docs" / "coordination" / "customer-demo-mvp-closeout.md"
+    ).read_text(encoding="utf-8")
+    owner_packet_doc = (
+        REPO_ROOT / "docs" / "coordination" / "project-owner-acceptance-review-packet.md"
+    ).read_text(encoding="utf-8")
+
+    assert "logic-streamed-authoring-panel" in html
+    assert 'data-demo-html-aesthetic-reference="src/well_harness/static/demo.html#fan-chain-svg"' in html
+    assert 'data-demo-canvas-reference="src/well_harness/static/demo.html#fan-chain-svg"' in html
+    assert 'data-canvas-visual-contract="demo-html-chain-svg"' in html
+    assert 'data-default-display="logic-circuit-only"' in html
+    assert 'data-console-palette="codex-light"' in html
+    assert 'id="logic-streamed-panel-toggle"' in html
+    assert 'id="logic-presentation-mode-toggle"' in html
+    assert 'id="logic-presentation-controls"' in html
+    assert 'data-presentation-mode="workbench"' in html
+    assert 'data-logic-interaction-mode="natural-language"' in html
+    assert 'data-workbench-input-model="natural-language"' in html
+    assert 'id="logic-natural-language-control"' in html
+    assert 'id="logic-natural-language-input"' in html
+    assert 'id="logic-natural-language-send"' in html
+    assert 'data-natural-language-step-confirmation="waiting"' in html
+    assert 'data-panel-visibility="collapsed"' in html
+    assert "logic-streamed-confirm" in html
+    assert "logic-streamed-feedback" in html
+    assert 'id="logic-streamed-revision-receipt"' in html
+    assert 'id="logic-streamed-revision-status"' in html
+    assert 'id="logic-streamed-revision-feedback"' in html
+    assert "logic-streamed-queue" in html
+    assert 'data-stream-replay="ordered-confirmed-edits"' in html
+    assert 'data-m21-gate-summary="dual-gate"' in html
+    assert 'data-m21-gate="candidate-recalc"' in html
+    assert 'data-m21-gate="requirements-doc"' in html
+    assert 'data-gate-status="locked"' in html
+    assert "确认候选，不写需求" in html
+    assert "反馈后重算候选" in html
+    assert "/api/requirements-intake/streamed-authoring/proposal" in js
+    assert "is-streamed-authoring-active" in js
+    assert "stream_replay" in js
+    assert "candidate_edit_committed" in js
+    assert "candidate_edit_revision_requested" in js
+    assert "requirements_document_patch_status" in js
+    assert "requirements_document_patch_sha256" in js
+    assert "committed_candidate_graph" in js
+    assert "candidate_queue" in js
+    assert "syncStreamedAuthoringQueue" in js
+    assert "dataset.activeTargetKey" in js
+    assert "dataset.proposalStatus" in js
+    assert "source_requirements_sha256" in js
+    assert "source_drawing_sha256" in js
+    assert "streamedAuthoringInFlight" in js
+    assert "requirements_document_edit_authorized" in js
+    assert "setStreamedAuthoringPanelVisibility" in js
+    assert "setLogicPresentationMode" in js
+    assert "logicPresentationModeToggle" in js
+    assert "naturalLanguageInput" in js
+    assert "handleNaturalLanguageSubmit" in js
+    assert "handleNaturalLanguageStreamedAuthoringSubmit" in js
+    assert "streamedAuthoringLaunchPrompt" in js
+    assert "natural_language_prompt" in js
+    assert "dataset.launchSource = \"natural-language\"" in js
+    assert "dataset.naturalLanguageConfirmation" in js
+    assert "dataset.revisionFlow" in js
+    assert "dataset.feedbackRevisionState" in js
+    assert "feedback_applied" in js
+    assert "dataset.sourceHighlight = \"active\"" in js
+    assert "dataset.logicHighlight = \"active\"" in js
+    assert "document.body.dataset.logicPresentationMode" in js
+    assert "--logic-presentation-zoom" in js
+    assert ".slice(-5)" not in js
+    assert ".is-streamed-authoring-active" in css
+    assert ".logic-streamed-history [data-stream-replay-event]" in css
+    assert ".logic-streamed-revision-receipt" in css
+    assert ".logic-streamed-queue" in css
+    assert '[data-candidate-queue-status="candidate_queue_active"]' in css
+    assert '[data-requirements-patch-status="authorized_candidate_patch"]' in css
+    assert ".logic-streamed-authoring-panel[data-demo-html-aesthetic-reference]" in css
+    assert ".logic-streamed-gates" in css
+    assert '[data-gate-status="locked"]' in css
+    assert '.logic-canvas[data-canvas-visual-contract="demo-html-chain-svg"]' in css
+    assert ".logic-canvas[data-canvas-visual-contract=\"demo-html-chain-svg\"] .logic-node" in css
+    assert ".logic-canvas[data-canvas-visual-contract=\"demo-html-chain-svg\"] .logic-wire" in css
+    assert ".logic-canvas[data-canvas-visual-contract=\"demo-html-chain-svg\"] .logic-junction" in css
+    assert "var(--logic-demo-chain-bg)" in css
+    assert "stroke-linejoin: miter;" in css
+    assert "stroke-linecap: butt;" in css
+    assert 'font-family: "Courier New", monospace;' in css
+    assert "logic-demo-chain-arrow-idle" in js
+    assert 'polyline.setAttribute("marker-end", "url(#logic-demo-chain-arrow-idle)")' in js
+    assert 'element.dataset.defaultDetail = "hidden"' in js
+    assert '<div class="logic-node-desc">' not in js
+    assert '<div class="logic-node-anchor">' not in js
+    assert "<code>${escapeText(node.id)}</code>" not in js
+    assert "label.textContent = sourceAnchorLabel(anchorsForEdge(edge))" not in js
+    assert "renderEdgeJunctions" in js
+    assert 'dot.classList.add("logic-junction")' in js
+    assert 'dot.classList.add("logic-endpoint-dot")' not in js
+    assert '--logic-bg: #f7f8fb' in css
+    assert '.logic-shell[data-console-palette="codex-light"] .logic-streamed-authoring-panel' in css
+    assert 'body[data-logic-presentation-mode="circuit-only"] .unified-nav' in css
+    assert 'body[data-logic-presentation-mode="circuit-only"] #logic-page-system-strip' in css
+    assert 'body[data-logic-presentation-mode="circuit-only"] .logic-inspector' in css
+    assert 'body[data-logic-presentation-mode="circuit-only"] #logic-bottom-run-strip' in css
+    assert 'body[data-logic-presentation-mode="circuit-only"] #logic-presentation-controls' in css
+    assert 'body[data-logic-interaction-mode="natural-language"] .unified-nav' in css
+    assert 'body[data-logic-interaction-mode="natural-language"] #logic-page-system-strip' in css
+    assert 'body[data-logic-interaction-mode="natural-language"] .logic-inspector' in css
+    assert 'body[data-logic-interaction-mode="natural-language"] #logic-command-palette-open' in css
+    assert 'body[data-logic-interaction-mode="natural-language"] #logic-mode-dock' in css
+    assert 'body[data-logic-interaction-mode="natural-language"] #logic-bottom-run-strip' in css
+    assert ".logic-natural-language-control" in css
+    assert 'background: rgba(255,255,255,0.96)' in css
+    assert (
+        'body[data-logic-interaction-mode="natural-language"] '
+        '.logic-shell[data-blueprint-phase="phase-1-shell"] .logic-canvas-wrap'
+    ) in css
+    assert (
+        'body[data-logic-interaction-mode="natural-language"] '
+        '.logic-shell[data-blueprint-phase="phase-1-shell"] .logic-layout'
+    ) in css
+    assert "minmax(420px, 1fr)" in css
+    assert "m21-streamed-authoring-revision-gate" in makefile
+    assert "m21-streamed-authoring-multistep-queue-gate" in makefile
+    assert "m21-streamed-authoring-c919-queue-gate" in makefile
+    assert "m21-streamed-authoring-c919-raw-intake-gate" in makefile
+    assert "m21-streamed-authoring-c919-real-doc-raw-intake-gate" in makefile
+    assert "m21-streamed-authoring-c919-cmd3-apwtla-real-doc-raw-intake-gate" in makefile
+    assert "m21-streamed-authoring-c919-deploy-cmd1-real-doc-raw-intake-gate" in makefile
+    assert "m21-streamed-authoring-c919-deploy-cmd1-thr-idle-lock-release-real-doc-raw-intake-gate" in makefile
+    assert "m21-streamed-authoring-c919-mlg-wow-cmd2-cmd3-fanout-real-doc-raw-intake-gate" in makefile
+    assert "m21-streamed-authoring-demo-fanout-junction-gate" in makefile
+    assert "M21_STREAMED_AUTHORING_REVISION_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_MULTISTEP_QUEUE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_QUEUE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_RAW_INTAKE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_CMD3_APWTLA_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_DEPLOY_CMD1_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_DEPLOY_CMD1_THR_IDLE_LOCK_RELEASE_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_C919_MLG_WOW_CMD2_CMD3_FANOUT_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR" in makefile
+    assert "M21_STREAMED_AUTHORING_DEMO_FANOUT_JUNCTION_GATE_ARTIFACT_DIR" in makefile
+    assert "--scenario c919_etras" in makefile
+    assert "--scenario c919_etras_raw_intake" in makefile
+    assert "--scenario c919_etras_real_doc_raw_intake" in makefile
+    assert "--scenario c919_etras_cmd3_apwtla_real_doc_raw_intake" in makefile
+    assert "--scenario c919_etras_deploy_cmd1_real_doc_raw_intake" in makefile
+    assert "--scenario c919_etras_deploy_cmd1_thr_idle_lock_release_real_doc_raw_intake" in makefile
+    assert "--scenario c919_etras_mlg_wow_cmd2_cmd3_fanout_real_doc_raw_intake" in makefile
+    assert "--scenario fantui_demo_fanout_junction" in makefile
+    test_target_line = next(line for line in makefile.splitlines() if line.startswith("test: "))
+    assert "m21-streamed-authoring-c919-queue-gate" in test_target_line
+    assert "m21-streamed-authoring-c919-raw-intake-gate" in test_target_line
+    assert "m21-streamed-authoring-c919-real-doc-raw-intake-gate" in test_target_line
+    assert "m21-streamed-authoring-c919-cmd3-apwtla-real-doc-raw-intake-gate" not in test_target_line
+    assert "m21-streamed-authoring-c919-deploy-cmd1-real-doc-raw-intake-gate" not in test_target_line
+    assert "m21-streamed-authoring-c919-deploy-cmd1-thr-idle-lock-release-real-doc-raw-intake-gate" not in test_target_line
+    assert "m21-streamed-authoring-c919-mlg-wow-cmd2-cmd3-fanout-real-doc-raw-intake-gate" not in test_target_line
+    assert "m21-streamed-authoring-demo-fanout-junction-gate" not in test_target_line
+    assert "verify_m21_streamed_authoring_revision_browser_gate.py --format json" in makefile
+    assert "c919_etras" in revision_gate
+    assert "c919_etras_raw_intake" in revision_gate
+    assert "c919_etras_real_doc_raw_intake" in revision_gate
+    assert "c919_etras_cmd3_apwtla_real_doc_raw_intake" in revision_gate
+    assert "c919_etras_deploy_cmd1_real_doc_raw_intake" in revision_gate
+    assert "c919_etras_deploy_cmd1_thr_idle_lock_release_real_doc_raw_intake" in revision_gate
+    assert "c919_etras_mlg_wow_cmd2_cmd3_fanout_real_doc_raw_intake" in revision_gate
+    assert "c919_v09_mlg_wow_fanout" in revision_gate
+    assert "fantui_demo_fanout_junction" in revision_gate
+    assert "requires_fanout_junction" in revision_gate
+    assert "expected_chain_junction_count" in revision_gate
+    assert "fanout_junction_contract" in revision_gate
+    assert "confirm_until_active_target_key" in revision_gate
+    assert "requirements_v0_9.md" in revision_gate
+    assert "mlg_wow" in revision_gate
+    assert "cmd2_active" in revision_gate
+    assert "apwtla" in revision_gate
+    assert "cmd3_output" in revision_gate
+    assert "deploy_cmd1_active" in revision_gate
+    assert "thr_idle_lock_release" in revision_gate
+    assert "demo_html_canvas_contract" in revision_gate
+    assert "circuit_only_default_display_contract" in revision_gate
+    assert "streamed_panel_collapsed_for_screenshot_contract" in revision_gate
+    assert "pure_canvas_presentation_contract" in revision_gate
+    assert "presentation_mode_for_screenshot" in revision_gate
+    assert "unified_nav_display_for_presentation" in revision_gate
+    assert "system_strip_display_for_presentation" in revision_gate
+    assert "bottom_run_strip_display_for_presentation" in revision_gate
+    assert "presentation_controls_display_for_screenshot" in revision_gate
+    assert "pure_canvas_framing_contract" in revision_gate
+    assert "presentation_scale_for_screenshot" in revision_gate
+    assert "presentation_offset_x_for_screenshot" in revision_gate
+    assert "presentation_offset_y_for_screenshot" in revision_gate
+    assert "natural_language_workbench_contract" in revision_gate
+    assert "natural_language_visible_button_count" in revision_gate
+    assert "natural_language_input_visible" in revision_gate
+    assert "natural_language_command_trigger_display" in revision_gate
+    assert "natural_language_streamed_confirmation_contract" in revision_gate
+    assert "one_candidate_per_natural_language_submit_contract" in revision_gate
+    assert "natural_language_streamed_highlight_count" in revision_gate
+    assert "natural_language_streamed_source_highlight" in revision_gate
+    assert "natural_language_streamed_launch_source" in revision_gate
+    assert "natural_language_canvas_height_after_submit" in revision_gate
+    assert "natural_language_active_target_visible_in_canvas" in revision_gate
+    assert "natural_language_active_target_hit_test_visible" in revision_gate
+    assert "natural_language_step_screenshot_clip" in revision_gate
+    assert "natural_language_step_visual_framing_contract" in revision_gate
+    assert "natural_language_step_confirmation_screenshot" in revision_gate
+    assert "step_confirmation_screenshot" in revision_gate
+    assert "feedback_revision_frontstage_contract" in revision_gate
+    assert "feedback_revision_confirmation_screenshot" in revision_gate
+    assert "revision_confirmation_screenshot" in revision_gate
+    assert "feedback_revision_panel_flow" in revision_gate
+    assert "feedback_revision_feedback_matches" in revision_gate
+    assert "feedback_revision_active_target_hit_test_visible" in revision_gate
+    assert "streamed_panel_visibility_for_screenshot" in revision_gate
+    assert "streamed_panel_display_for_screenshot" in revision_gate
+    assert "reconstruction_panel_display_for_screenshot" in revision_gate
+    assert "annotation_submit_bar_display_for_screenshot" in revision_gate
+    assert "demo_canvas_reference" in revision_gate
+    assert "canvas_visual_contract" in revision_gate
+    assert "canvas_default_display" in revision_gate
+    assert "chain_wire_visible_label_count" in revision_gate
+    assert "chain_node_code_count" in revision_gate
+    assert "chain_node_desc_count" in revision_gate
+    assert "chain_node_anchor_count" in revision_gate
+    assert "chain_wire_linejoin" in revision_gate
+    assert "chain_node_font_family" in revision_gate
+    assert "chain_wire_marker_end" in revision_gate
+    assert "chain_wire_count" in revision_gate
+    assert "chain_wires_with_marker_count" in revision_gate
+    assert "chain_wire_marker_end_values" in revision_gate
+    assert "all_wires_marker_contract" in revision_gate
+    assert "m21_logic_circuit_presentation" in closeout_script
+    assert "m21_pure_canvas_acceptance" in closeout_script
+    assert "m21_c919_pure_canvas_gate" in closeout_script
+    assert "m21_demo_fanout_pure_canvas_gate" in closeout_script
+    assert "pure_canvas_presentation_contract" in closeout_script
+    assert "pure_canvas_framing_contract" in closeout_script
+    assert "m21_pure_canvas_evidence" in owner_packet_script
+    assert "M21 Pure Canvas Evidence" in closeout_doc
+    assert "M21 Pure Canvas Evidence" in owner_packet_doc
+    assert "default-display: logic-circuit-only" in closeout_doc
+    assert "pure_canvas_presentation_contract" in owner_packet_doc
+    assert "chain_arrow_marker_count" in revision_gate
+    assert "chain_endpoint_dot_count" in revision_gate
+    assert "chain_unclassified_circle_count" in revision_gate
+    assert "chain_junction_count" in revision_gate
+    assert "CMD2 ground gate" in revision_gate
+    assert "CMD3 ground gate" in revision_gate
+    assert "C919-V09-CMD2-MLG-WOW" in revision_gate
+    assert "C919-V09-CMD3" in revision_gate
+    assert "SW2 set gate" in revision_gate
+    assert "Deploy CMD1 evaluation after CMD3" in revision_gate
+    assert "TR deployed confirmation" in revision_gate
+    assert "TRCU power before deploy" in revision_gate
+    assert "C919-V09-CMD3-SET-APWTLA" in revision_gate
+    assert "C919-V09-CMD3-SR-OUTPUT" in revision_gate
+    assert "C919-V09-CMD3-RESET-PRIORITY" in revision_gate
+    assert "C919-V09-DEPLOY-CMD1-OUTPUT" in revision_gate
+    assert "C919-V09-DEPLOY-CMD1-LOCKS" in revision_gate
+    assert "C919-V09-DEPLOY-CMD1-TR-WOW" in revision_gate
+    assert "C919-V09-DEPLOY-CMD1-N1K" in revision_gate
+    assert "C919-V09-DEPLOY-CMD1-TRA" in revision_gate
+    assert "C919-V09-EVAL-DEPLOY-CMD1" in revision_gate
+    assert "C919-V09-THR-IDLE-OUTPUT" in revision_gate
+    assert "C919-V09-THR-IDLE-TR-DEPLOYED" in revision_gate
+    assert "C919-V09-THR-IDLE-POS-CONF" in revision_gate
+    assert "C919-V09-EVAL-THR-IDLE-LOCK" in revision_gate
+    assert "C919-V09-ACCEPT-THR-IDLE-LOCK" in revision_gate
+    assert "requirement_anchor_ids" in revision_gate
+    assert "requirement_edge_ids" in revision_gate
+    assert "drawing_from_raw_preparse" in revision_gate
+    assert "raw_preparse_payload" in revision_gate
+    assert "raw_preparse_payload_artifact" in revision_gate
+    assert "raw_preparse_payload_sha256" in revision_gate
+    assert "drawing_source_requirements_sha256" in revision_gate
+    assert "/api/requirements-intake/local-preparse" in revision_gate
+    assert "endpoint_http_status" in revision_gate
+    assert "raw_intake_payload" in revision_gate
+    assert "c919_etras_rule_preparse" in revision_gate
+    assert "c919_etras_v09_rule_preparse" in revision_gate
+    assert "C919-ETRAS-WOW" in revision_gate
+    assert "scenario_fixture" in revision_gate
+    assert "server_revision_candidate" in revision_gate
+    assert "server_requirements_patch_authorized" in revision_gate
+    assert "revised_candidate_confirmed" in revision_gate
+    assert "multi_step_queue_advance" in revision_gate
+    assert "restricted_diff_after" in revision_gate
+    assert "requirements_document_diff_after" in revision_gate
+    assert '"docs/c919_etras"' in revision_gate
+    assert "docs/thrust_reverser/requirements_supplement.md" in revision_gate
+    panel_html = html[html.index("logic-streamed-authoring-panel"):html.index("logic-annotation-popover")]
+    assert 'data-state="active"' not in panel_html
 
 
 def test_update_logic_drawing_calls_model_for_full_updated_drawing(monkeypatch):
@@ -2221,6 +4276,26 @@ def _get(server, path: str):
 
 def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def test_logic_builder_candidate_review_packet_export_endpoint_serves_reference_packet():
+    server, thread = _start_server()
+    try:
+        status, payload = _get(server, "/logic-builder/candidate-review-packet.json")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert status == 200
+    validate_candidate_review_packet_export(payload)
+    validate_candidate_review_packet(payload["review_packet"])
+    assert payload["kind"] == "ai-fantui-candidate-review-packet-export"
+    assert payload["exporter"]["source_route"] == "/logic-builder"
+    assert payload["exporter"]["export_route"] == "/logic-builder/candidate-review-packet.json"
+    assert payload["review_packet"]["summary"]["open_findings"] == [
+        "CHECK_SAFETY_PRIORITY_001"
+    ]
+    assert payload["boundary"]["controller_truth_modified"] is False
 
 
 def test_demo_server_deepseek_live_replay_endpoint_reads_artifacts(monkeypatch, tmp_path):
@@ -3778,6 +5853,23 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
         assert legacy_href in html
 
 
+def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
+    html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="home-first-phase-mvp"' in html
+    assert 'data-first-phase-deliverable="demo-html-reconstruction-mvp"' in html
+    assert 'id="home-first-phase-demo-entry"' in html
+    assert 'href="/demo-reconstruction"' in html
+    assert 'data-home-priority="first-phase-mvp"' in html
+    assert "第一阶段可演示交付物" in html
+    assert "demo.html 复刻 MVP 控制台" in html
+    assert "20/20 节点" in html
+    assert "23/23 连线" in html
+    assert "make demo-html-reconstruction-mvp" in html
+    assert "make demo-html-reconstruction-browser-acceptance" in html
+    assert html.index('id="home-first-phase-mvp"') < html.index('id="home-default-mode-grid"')
+
+
 def test_deepseek_subproject_primary_nav_does_not_promote_canvas_workbench():
     html_paths = [
         STATIC_ROOT / "requirements_intake" / "index.html",
@@ -4026,7 +6118,7 @@ def test_deepseek_low_cognitive_load_guardrails_mark_flow_and_action_tiers():
             assert 'data-primary-next-action="true"' not in button_tag, (path, button_id)
 
     demo_html = (STATIC_ROOT / "demo_reconstruction" / "index.html").read_text(encoding="utf-8")
-    assert 'data-ux-page-role="comparison"' in demo_html
+    assert 'data-ux-page-role="demo-mvp-console"' in demo_html
     assert 'data-primary-next-action="true"' not in demo_html
 
 
@@ -4127,7 +6219,7 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert ".logic-reconstruction-mode-panel" in stylesheet
 
 
-def test_demo_reconstruction_comparison_page_is_productized_and_routed():
+def test_demo_reconstruction_page_is_productized_main_mvp_console():
     html_path = STATIC_ROOT / "demo_reconstruction" / "index.html"
     script_path = STATIC_ROOT / "demo_reconstruction" / "demo_reconstruction.js"
     stylesheet_path = STATIC_ROOT / "demo_reconstruction" / "demo_reconstruction.css"
@@ -4138,15 +6230,19 @@ def test_demo_reconstruction_comparison_page_is_productized_and_routed():
 
     assert "/demo-reconstruction" in server_source
     assert 'data-nav-current="demo-reconstruction"' in html
-    assert 'id="demo-reconstruction-original-frame"' in html
-    assert 'src="/demo.html?embed=1"' in html
-    assert 'id="demo-reconstruction-current-panel"' in html
+    assert 'data-ux-page-role="demo-mvp-console"' in html
+    assert 'data-demo-mvp-console="true"' in html
+    assert 'data-console-palette="codex-light"' in html
+    assert 'id="demo-reconstruction-console-frame"' in html
+    assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
+    assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-fidelity"' in html
-    assert 'id="demo-reconstruction-comparison-table"' in html
     assert 'id="demo-reconstruction-node-list"' in html
     assert 'id="demo-reconstruction-wire-list"' in html
-    assert "原版 demo.html" in html
-    assert "当前复刻" in html
+    assert "demo.html 复刻 MVP 控制台" in html
+    assert "<h2>原版 demo.html</h2>" not in html
+    assert "<h2>当前复刻</h2>" not in html
+    assert "demo-reconstruction-comparison-table" not in html
     assert "复刻度：20/20 节点 · 23/23 连线" in html
 
     for label in ["节点", "连线", "预设场景", "状态输出"]:
@@ -4160,7 +6256,11 @@ def test_demo_reconstruction_comparison_page_is_productized_and_routed():
     assert "/api/requirements-intake/deepseek-live-demo-replay" in script
     assert "20/20 节点" in script
     assert "23/23 连线" in script
-    assert ".demo-reconstruction-compare-grid" in stylesheet
+    assert ".demo-reconstruction-console-stage" in stylesheet
+    assert "#demo-reconstruction-console-frame" in stylesheet
+    assert "--demo-bg: #f7f8fb" in stylesheet
+    assert '.demo-reconstruction-shell[data-console-palette="codex-light"]' in stylesheet
+    assert "background: #ffffff" in stylesheet
 
     server, thread = _start_server()
     try:
@@ -4175,7 +6275,7 @@ def test_demo_reconstruction_comparison_page_is_productized_and_routed():
         thread.join(timeout=2)
 
     assert response.status == 200
-    assert "demo-reconstruction-original-frame" in body
+    assert "demo-reconstruction-console-frame" in body
 
 
 def test_sandbox_review_page_has_current_conclusion_decision_board():

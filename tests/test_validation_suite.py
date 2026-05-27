@@ -28,7 +28,7 @@ class ValidationSuiteTests(unittest.TestCase):
         self.assertEqual(DEFAULT_PYTHON_COMMAND, commands[0].argv[0])
 
     def test_default_timeout_budget_covers_repo_wide_pytest_runtime(self):
-        self.assertGreaterEqual(DEFAULT_TIMEOUT_SECONDS, 420.0)
+        self.assertGreaterEqual(DEFAULT_TIMEOUT_SECONDS, 480.0)
 
     def test_build_default_commands_contains_expected_checks(self):
         commands = build_default_commands("/usr/bin/python3")

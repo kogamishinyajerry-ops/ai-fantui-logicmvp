@@ -143,6 +143,62 @@
   .home-command-palette-hint strong {
     color: var(--home-active);
   }
+  .home-first-phase-mvp {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    border: 1px solid rgba(0,229,160,0.42);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(0,229,160,0.10), rgba(0,200,245,0.06));
+    margin: 0 0 18px;
+    padding: 16px 18px;
+  }
+  .home-first-phase-mvp h2 {
+    margin: 0 0 6px;
+    color: var(--home-text);
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .home-first-phase-mvp p {
+    margin: 0;
+    color: var(--home-dim);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .home-first-phase-evidence {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .home-first-phase-evidence span {
+    border: 1px solid rgba(0,200,245,0.24);
+    border-radius: 999px;
+    color: var(--home-text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  .home-first-phase-demo-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border: 1px solid rgba(0,229,160,0.76);
+    border-radius: 6px;
+    background: rgba(0,229,160,0.18);
+    color: var(--home-text);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 14px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .home-first-phase-demo-link:hover {
+    border-color: var(--home-active);
+    background: rgba(0,229,160,0.26);
+  }
   @media (max-width: 960px) {
     .home-default-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -315,6 +371,8 @@
     text-transform: uppercase;
   }
   @media (max-width: 720px) {
+    .home-first-phase-mvp { grid-template-columns: 1fr; }
+    .home-first-phase-demo-link { width: 100%; white-space: normal; }
     .home-primary-action { grid-template-columns: 1fr; }
     .home-primary-next { width: 100%; white-space: normal; }
   }
@@ -558,7 +616,7 @@
     }
     body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .home-main {
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto minmax(0, 1fr);
       gap: 16px;
       max-width: none;
       height: 100vh;
@@ -575,6 +633,11 @@
     body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .home-hero p {
       max-width: 980px;
       font-size: 12px;
+    }
+    body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .home-first-phase-mvp {
+      align-self: start;
+      margin: 0;
+      padding: 14px 18px;
     }
     body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .home-default-mode-grid {
       align-items: stretch;
@@ -650,6 +713,21 @@
       <span class="home-shell-pill">certification_claim:none</span>
       <span class="home-shell-pill">controller_truth_modified:false</span>
     </div>
+  </section>
+
+  <section id="home-first-phase-mvp" class="home-first-phase-mvp" data-first-phase-deliverable="demo-html-reconstruction-mvp" aria-labelledby="home-first-phase-title">
+    <div>
+      <h2 id="home-first-phase-title">第一阶段可演示交付物</h2>
+      <p>
+        当前先交付 <strong>demo.html 复刻 MVP 控制台</strong>：
+        复刻老版数字孪生反推控制台，稳定验证 20/20 节点、23/23 连线、5 个预设和 6 类状态输出。
+      </p>
+      <div class="home-first-phase-evidence" aria-label="第一阶段验收命令">
+        <span>make demo-html-reconstruction-mvp</span>
+        <span>make demo-html-reconstruction-browser-acceptance</span>
+      </div>
+    </div>
+    <a id="home-first-phase-demo-entry" class="home-first-phase-demo-link" href="/demo-reconstruction" data-home-priority="first-phase-mvp">打开 demo.html 复刻 MVP 控制台</a>
   </section>
 
   <section id="home-default-mode-grid" class="home-default-mode-grid" aria-label="默认五入口">

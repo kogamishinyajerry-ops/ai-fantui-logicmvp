@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/demo_html_reconstruction_mvp_v0_1.schema.json",
+  "title": "demo.html Reconstruction MVP",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "$schema",
+    "kind",
+    "mvp_id",
+    "status",
+    "golden_reference",
+    "replica_surface",
+    "homepage_entry",
+    "contract",
+    "deterministic_gates",
+    "observed",
+    "review_boundaries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/demo_html_reconstruction_mvp_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-demo-html-reconstruction-mvp"
+    },
+    "mvp_id": {
+      "const": "demo-html-reconstruction-mvp-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "golden_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "path", "svg_id", "source_role"],
+      "properties": {
+        "route": {"const": "/demo.html"},
+        "path": {"const": "src/well_harness/static/demo.html"},
+        "svg_id": {"const": "fan-chain-svg"},
+        "source_role": {"const": "canonical_reverse_logic_cockpit_reference"}
+      }
+    },
+    "replica_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "path", "surface_role"],
+      "properties": {
+        "route": {"const": "/demo-reconstruction"},
+        "path": {"const": "src/well_harness/static/demo_reconstruction/index.html"},
+        "surface_role": {"const": "mvp_reconstruction_console_surface"}
+      }
+    },
+    "homepage_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "element_id", "priority", "label"],
+      "properties": {
+        "route": {"const": "/demo-reconstruction"},
+        "element_id": {"const": "home-first-phase-demo-entry"},
+        "priority": {"const": "first_phase_mvp"},
+        "label": {"const": "demo.html 复刻 MVP 控制台"}
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_canvas",
+        "expected_node_count",
+        "expected_wire_count",
+        "expected_preset_count",
+        "expected_status_output_count",
+        "expected_output_card_count",
+        "required_node_ids",
+        "required_status_output_ids",
+        "required_output_card_ids",
+        "required_preset_ids"
+      ],
+      "properties": {
+        "expected_canvas": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": {"const": 900},
+            "height": {"const": 400}
+          }
+        },
+        "expected_node_count": {"type": "integer", "minimum": 0},
+        "expected_wire_count": {"type": "integer", "minimum": 0},
+        "expected_preset_count": {"type": "integer", "minimum": 0},
+        "expected_status_output_count": {"type": "integer", "minimum": 0},
+        "expected_output_card_count": {"type": "integer", "minimum": 0},
+        "required_node_ids": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {"type": "string"}
+        },
+        "required_status_output_ids": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {"type": "string"}
+        },
+        "required_output_card_ids": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "string"}
+        },
+        "required_preset_ids": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": {"enum": ["pass", "fail"]}
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "truth_effect",
+        "certification_claim"
+      ],
+      "properties": {
+        "controller_truth_modified": {"const": false},
+        "ui_layout_modified": {"const": false},
+        "truth_effect": {"const": "none"},
+        "certification_claim": {"const": "none"}
+      }
+    }
+  }
+}

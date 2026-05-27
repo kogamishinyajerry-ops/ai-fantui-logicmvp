@@ -18,6 +18,10 @@
       var isEmbedded = window.self !== window.top
         || /[?&]embed=1\b/.test(window.location.search);
       if (isEmbedded) document.documentElement.classList.add('is-iframe-embed');
+      if (/[?&]palette=codex-light\b/.test(window.location.search)) {
+        document.documentElement.classList.add('is-codex-light-demo');
+        document.documentElement.setAttribute('data-console-palette', 'codex-light');
+      }
     } catch (e) {
       document.documentElement.classList.add('is-iframe-embed');
     }

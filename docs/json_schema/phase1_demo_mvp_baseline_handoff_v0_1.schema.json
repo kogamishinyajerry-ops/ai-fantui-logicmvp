@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/phase1_demo_mvp_baseline_handoff_v0_1.schema.json",
+  "title": "Phase 1 Demo MVP Baseline Handoff v0.1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "baseline_summary",
+    "artifact_contract",
+    "entrypoints",
+    "deterministic_gates",
+    "review_boundaries",
+    "artifact_paths",
+    "mismatches"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/phase1_demo_mvp_baseline_handoff_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-phase1-demo-mvp-baseline-handoff"
+    },
+    "package_id": {
+      "const": "phase1-demo-mvp-baseline-handoff-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "effort_unit", "claim"],
+      "properties": {
+        "id": {"const": "M13"},
+        "name": {"const": "Phase 1 Demo MVP Baseline Handoff"},
+        "effort_unit": {"const": "施工队工时"},
+        "claim": {"const": "demo-only baseline handoff"}
+      }
+    },
+    "baseline_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readiness_status",
+        "canonical_reference",
+        "route",
+        "node_count",
+        "wire_count",
+        "deliverable_claim",
+        "non_claims"
+      ],
+      "properties": {
+        "readiness_status": {"const": "ready_for_phase1_demo_review"},
+        "canonical_reference": {"const": "demo.html"},
+        "route": {"const": "/demo-reconstruction"},
+        "node_count": {"const": 20},
+        "wire_count": {"const": 23},
+        "deliverable_claim": {"const": "stable demo MVP console baseline"},
+        "non_claims": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "no controller truth promotion"},
+            {"const": "no certification claim"},
+            {"const": "no production readiness claim"}
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "artifact_contract": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["artifact_name", "machine_entry", "gate_artifact_dir"],
+      "properties": {
+        "artifact_name": {"const": "phase1-demo-mvp-review-package"},
+        "machine_entry": {"const": "phase1_demo_mvp_gate_summary.json"},
+        "gate_artifact_dir": {"type": "string"}
+      }
+    },
+    "entrypoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_gate",
+        "external_artifact_gate",
+        "gate_summary_verifier",
+        "release_summary_verifier",
+        "focused_regression"
+      ],
+      "properties": {
+        "local_gate": {"const": "make phase1-demo-mvp-gate"},
+        "external_artifact_gate": {"const": "make verify-phase1-demo-mvp-gate-artifact"},
+        "gate_summary_verifier": {"type": "string"},
+        "release_summary_verifier": {"type": "string"},
+        "focused_regression": {"const": "PYTHONPATH=src:. python3 -m pytest -q tests/test_phase1_demo_mvp_review_package.py"}
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_artifact_verification",
+        "artifact_contract",
+        "entrypoints",
+        "human_handoff_doc",
+        "boundary"
+      ],
+      "properties": {
+        "gate_artifact_verification": {"const": "pass"},
+        "artifact_contract": {"const": "pass"},
+        "entrypoints": {"const": "pass"},
+        "human_handoff_doc": {"const": "pass"},
+        "boundary": {"const": "pass"}
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "dal_claim",
+        "production_readiness_claim",
+        "controller_truth_promotion",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "truth_effect": {"const": "none"},
+        "certification_claim": {"const": "none"},
+        "dal_claim": {"const": "none"},
+        "production_readiness_claim": {"const": "none"},
+        "controller_truth_promotion": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "ui_layout_modified": {"const": false}
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["handoff_package", "human_handoff_doc"],
+      "properties": {
+        "handoff_package": {"type": "string"},
+        "human_handoff_doc": {"type": "string"}
+      }
+    },
+    "mismatches": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

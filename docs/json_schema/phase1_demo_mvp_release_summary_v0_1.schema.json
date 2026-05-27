@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/phase1_demo_mvp_release_summary_v0_1.schema.json",
+  "title": "Phase 1 Demo MVP Release Summary",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "status",
+    "release_status",
+    "route",
+    "artifact_dir",
+    "demo_surface",
+    "deterministic_gates",
+    "checks",
+    "artifact_paths",
+    "review_boundaries",
+    "mismatches"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/phase1_demo_mvp_release_summary_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-phase1-demo-mvp-release-summary"
+    },
+    "version": {
+      "const": 1
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "release_status": {
+      "enum": ["pass", "fail"]
+    },
+    "route": {
+      "const": "/demo-reconstruction"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "artifact_dir": {
+      "type": "string"
+    },
+    "demo_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route",
+        "title",
+        "node_count",
+        "wire_count",
+        "preset_count",
+        "status_output_count",
+        "output_card_count"
+      ],
+      "properties": {
+        "route": {"const": "/demo-reconstruction"},
+        "title": {"const": "demo.html 复刻 MVP 控制台"},
+        "node_count": {"const": 20},
+        "wire_count": {"const": 23},
+        "preset_count": {"const": 5},
+        "status_output_count": {"const": 6},
+        "output_card_count": {"const": 4}
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "browser_acceptance",
+        "review_package",
+        "review_package_verification",
+        "ci_artifact",
+        "documentation",
+        "boundary"
+      ],
+      "properties": {
+        "browser_acceptance": {"enum": ["pass", "fail"]},
+        "review_package": {"enum": ["pass", "fail"]},
+        "review_package_verification": {"enum": ["pass", "fail"]},
+        "ci_artifact": {"enum": ["pass", "fail"]},
+        "documentation": {"enum": ["pass", "fail"]},
+        "boundary": {"enum": ["pass", "fail"]}
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "browser_acceptance",
+        "review_package",
+        "review_package_verification",
+        "ci_artifact",
+        "documentation"
+      ]
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "release_summary",
+        "package",
+        "markdown_report",
+        "demo_gate_json",
+        "browser_acceptance_json",
+        "screenshots"
+      ],
+      "properties": {
+        "release_summary": {"type": "string"},
+        "package": {"type": "string"},
+        "markdown_report": {"type": "string"},
+        "demo_gate_json": {"type": "string"},
+        "browser_acceptance_json": {"type": "string"},
+        "screenshots": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "truth_effect": {"const": "none"},
+        "certification_claim": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "ui_layout_modified": {"const": false}
+      }
+    },
+    "mismatches": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

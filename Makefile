@@ -48,6 +48,7 @@ PHASE1_DEMO_MVP_REVIEW_PACKAGE_ARTIFACT_DIR ?= /tmp/ai-fantui-phase1-demo-mvp-re
 PHASE1_DEMO_MVP_CI_ARTIFACT_DIR ?= /tmp/ai-fantui-phase1-demo-mvp-ci-artifact
 PHASE1_DEMO_MVP_RELEASE_ARTIFACT_DIR ?= /tmp/ai-fantui-phase1-demo-mvp-release-checklist
 PHASE1_DEMO_MVP_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-phase1-demo-mvp-gate
+PHASE1_DEMO_MVP_BASELINE_HANDOFF_ARTIFACT_DIR ?= /tmp/ai-fantui-phase1-demo-mvp-baseline-handoff
 M21_STREAMED_AUTHORING_REVISION_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-m21-streamed-authoring-revision-gate
 M21_STREAMED_AUTHORING_MULTISTEP_QUEUE_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-m21-streamed-authoring-multistep-queue-gate
 M21_STREAMED_AUTHORING_C919_QUEUE_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-m21-streamed-authoring-c919-queue-gate
@@ -67,6 +68,7 @@ PROJECT_OWNER_FINAL_DECISION_PATH ?= /tmp/ai-fantui-project-owner-external-revie
 MULTI_AGENT_M21_STREAMED_LOGIC_AUTHORING_PLAN_ARTIFACT_DIR ?= /tmp/ai-fantui-multi-agent-m21-streamed-logic-authoring-plan
 
 .PHONY: dev test demo-html-reconstruction-mvp demo-html-reconstruction-browser-acceptance phase1-demo-mvp-review-package verify-phase1-demo-mvp-review-package verify-phase1-demo-mvp-ci-artifact phase1-demo-mvp-release-checklist phase1-demo-mvp-gate verify-phase1-demo-mvp-gate-artifact review-packet-export-regression first-candidate-repair-slice evidence-candidate-repair-slice missing-test-result-candidate-repair-slice evidence-unknown-requirement-candidate-repair-slice evidence-unknown-trace-candidate-repair-slice safety-transition-endpoint-candidate-repair-slice safety-unreachable-state-candidate-repair-slice safety-output-command-conflict-candidate-repair-slice approved-repair-slices verify-approved-repair-slices-artifact multi-agent-construction-readiness approved-candidate-task-queue verify-approved-candidate-task-queue-artifact verify-approved-candidate-task-queue-expansion-contract approved-candidate-task-queue-v0-2 verify-approved-candidate-task-queue-v0-2-artifact approved-candidate-task-queue-v0-3 verify-approved-candidate-task-queue-v0-3-artifact approved-candidate-task-queue-v0-4 verify-approved-candidate-task-queue-v0-4-artifact approved-candidate-task-queue-v0-5 verify-approved-candidate-task-queue-v0-5-artifact approved-candidate-task-queue-v0-6 verify-approved-candidate-task-queue-v0-6-artifact approved-candidate-task-queue-v0-7 verify-approved-candidate-task-queue-v0-7-artifact approved-candidate-task-queue-v0-8 verify-approved-candidate-task-queue-v0-8-artifact approved-candidate-task-queue-v0-9 verify-approved-candidate-task-queue-v0-9-artifact multi-agent-queue-run-ledger verify-multi-agent-queue-run-ledger multi-agent-queue-cursor-state verify-multi-agent-queue-cursor-state multi-agent-queue-cursor-resume-state verify-multi-agent-queue-cursor-resume-state multi-agent-queue-run-ledger-v0-2 verify-multi-agent-queue-run-ledger-v0-2 multi-agent-queue-cursor-state-v0-2 verify-multi-agent-queue-cursor-state-v0-2 multi-agent-queue-cursor-resume-state-v0-2 verify-multi-agent-queue-cursor-resume-state-v0-2 project-manager-status-summary project-visibility-mvp-gate m21-streamed-authoring-revision-gate m21-streamed-authoring-multistep-queue-gate m21-streamed-authoring-c919-queue-gate m21-streamed-authoring-c919-raw-intake-gate m21-streamed-authoring-c919-real-doc-raw-intake-gate m21-streamed-authoring-c919-cmd3-apwtla-real-doc-raw-intake-gate m21-streamed-authoring-c919-deploy-cmd1-real-doc-raw-intake-gate m21-streamed-authoring-c919-deploy-cmd1-thr-idle-lock-release-real-doc-raw-intake-gate m21-streamed-authoring-c919-mlg-wow-cmd2-cmd3-fanout-real-doc-raw-intake-gate m21-streamed-authoring-demo-fanout-junction-gate customer-demo-mvp-closeout project-owner-acceptance-review-packet project-owner-external-review-handoff project-owner-external-review-result project-owner-final-decision multi-agent-m21-streamed-logic-authoring-plan multi-agent-m1-review-package multi-agent-m2-requirement-to-ir-demo multi-agent-m3-safety-evidence-value-pack multi-agent-m4-external-review-handoff multi-agent-construction-control-plane multi-agent-queue-extension-template multi-agent-fast-construction-gate ultrawork-monitor-dashboard verify-ultrawork-monitor-dashboard multi-agent-operator-cockpit verify-multi-agent-operator-cockpit multi-agent-packaging-consolidation verify-multi-agent-packaging-consolidation multi-agent-pr-preflight verify-multi-agent-pr-preflight multi-agent-validation-evidence verify-multi-agent-validation-evidence multi-agent-merge-readiness verify-multi-agent-merge-readiness help
+.PHONY: phase1-demo-mvp-baseline-handoff verify-phase1-demo-mvp-baseline-handoff
 
 help:
 	@echo "Targets:"
@@ -78,6 +80,7 @@ help:
 	@echo "  make phase1-demo-mvp-release-checklist — run the single-entry Phase 1 demo MVP release gate"
 	@echo "  make phase1-demo-mvp-gate — run the local/CI Phase 1 demo MVP gate and final summary"
 	@echo "  make verify-phase1-demo-mvp-gate-artifact — validate a downloaded Phase 1 demo MVP gate artifact directory"
+	@echo "  make phase1-demo-mvp-baseline-handoff — generate and verify the Phase 1 demo MVP baseline handoff"
 	@echo "  make review-packet-export-regression — verify candidate review packet export route"
 	@echo "  make first-candidate-repair-slice   — run first approved candidate repair slice"
 	@echo "  make evidence-candidate-repair-slice — run approved Evidence candidate repair slice"
@@ -192,6 +195,13 @@ phase1-demo-mvp-gate:
 
 verify-phase1-demo-mvp-gate-artifact:
 	@PYTHONPATH=src:. python3 scripts/verify_phase1_demo_mvp_gate_artifact.py --format json --artifact-dir "$(PHASE1_DEMO_MVP_GATE_ARTIFACT_DIR)"
+
+phase1-demo-mvp-baseline-handoff:
+	@PYTHONPATH=src:. python3 scripts/run_phase1_demo_mvp_baseline_handoff.py --format json --artifact-dir "$(PHASE1_DEMO_MVP_BASELINE_HANDOFF_ARTIFACT_DIR)" --gate-artifact-dir "$(PHASE1_DEMO_MVP_GATE_ARTIFACT_DIR)"
+	@PYTHONPATH=src:. python3 scripts/verify_phase1_demo_mvp_baseline_handoff.py --format json --package "$(PHASE1_DEMO_MVP_BASELINE_HANDOFF_ARTIFACT_DIR)/phase1_demo_mvp_baseline_handoff_v0_1.json"
+
+verify-phase1-demo-mvp-baseline-handoff:
+	@PYTHONPATH=src:. python3 scripts/verify_phase1_demo_mvp_baseline_handoff.py --format json --package "$(PHASE1_DEMO_MVP_BASELINE_HANDOFF_ARTIFACT_DIR)/phase1_demo_mvp_baseline_handoff_v0_1.json"
 
 review-packet-export-regression:
 	@PYTHONPATH=src:. python3 scripts/verify_candidate_review_packet_export.py --format json

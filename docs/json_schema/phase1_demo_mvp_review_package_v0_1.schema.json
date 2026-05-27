@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/phase1_demo_mvp_review_package_v0_1.schema.json",
+  "title": "Phase 1 Demo MVP Review Package",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "demo_surface",
+    "homepage_entry",
+    "deterministic_gates",
+    "artifact_paths",
+    "demo_gate",
+    "browser_acceptance",
+    "residual_risks",
+    "non_certification_declaration",
+    "review_boundaries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/phase1_demo_mvp_review_package_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-phase1-demo-mvp-review-package"
+    },
+    "package_id": {
+      "const": "phase1-demo-mvp-review-package-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "demo_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route",
+        "title",
+        "node_count",
+        "wire_count",
+        "preset_count",
+        "status_output_count",
+        "output_card_count"
+      ],
+      "properties": {
+        "route": {"const": "/demo-reconstruction"},
+        "title": {"const": "demo.html 复刻 MVP 控制台"},
+        "node_count": {"const": 20},
+        "wire_count": {"const": 23},
+        "preset_count": {"const": 5},
+        "status_output_count": {"const": 6},
+        "output_card_count": {"const": 4}
+      }
+    },
+    "homepage_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "element_id", "priority", "label"],
+      "properties": {
+        "route": {"const": "/demo-reconstruction"},
+        "element_id": {"const": "home-first-phase-demo-entry"},
+        "priority": {"const": "first_phase_mvp"},
+        "label": {"const": "demo.html 复刻 MVP 控制台"}
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "demo_html_reconstruction_mvp",
+        "browser_acceptance",
+        "screenshots",
+        "markdown_report",
+        "boundary"
+      ],
+      "properties": {
+        "demo_html_reconstruction_mvp": {"enum": ["pass", "fail"]},
+        "browser_acceptance": {"enum": ["pass", "fail"]},
+        "screenshots": {"enum": ["pass", "fail"]},
+        "markdown_report": {"enum": ["pass", "fail"]},
+        "boundary": {"enum": ["pass", "fail"]}
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "required": ["package", "markdown_report", "demo_gate_json", "browser_acceptance_json"]
+    },
+    "demo_gate": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "deterministic_gates", "observed"]
+    },
+    "browser_acceptance": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "deterministic_gates",
+        "screenshots",
+        "first_screen_review",
+        "pixel_visibility",
+        "interactions"
+      ]
+    },
+    "residual_risks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "summary", "mitigation"],
+        "properties": {
+          "id": {"type": "string"},
+          "severity": {"enum": ["low", "medium", "high", "critical"]},
+          "summary": {"type": "string"},
+          "mitigation": {"type": "string"}
+        }
+      }
+    },
+    "non_certification_declaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certification_claim",
+        "dal_claim",
+        "production_readiness_claim",
+        "controller_truth_promotion"
+      ],
+      "properties": {
+        "certification_claim": {"const": "none"},
+        "dal_claim": {"const": "none"},
+        "production_readiness_claim": {"const": "none"},
+        "controller_truth_promotion": {"const": "none"}
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "truth_effect": {"const": "none"},
+        "certification_claim": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "ui_layout_modified": {"const": false}
+      }
+    }
+  }
+}

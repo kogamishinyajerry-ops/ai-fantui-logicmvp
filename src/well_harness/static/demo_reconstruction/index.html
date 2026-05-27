@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p2">
 <script src="/demo_reconstruction/demo_reconstruction.js?v=p2" defer></script>
 </head>
-<body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup" data-ux-page-role="comparison">
+<body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
   <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
   <div class="unified-nav-groups">
@@ -47,32 +47,33 @@
   </div>
 </header>
 
-<main class="demo-reconstruction-shell">
+<main class="demo-reconstruction-shell" data-demo-mvp-console="true" data-console-palette="codex-light">
   <section class="demo-reconstruction-hero" aria-labelledby="demo-reconstruction-title">
     <div>
-      <p class="demo-reconstruction-kicker">DEMO.HTML REPLICA CHECK</p>
-      <h1 id="demo-reconstruction-title">demo.html 高保真复刻对照</h1>
+      <p class="demo-reconstruction-kicker">DEMO.HTML MVP COCKPIT</p>
+      <h1 id="demo-reconstruction-title">demo.html 复刻 MVP 控制台</h1>
       <p id="demo-reconstruction-mode">当前模式：demo.html 高保真复刻</p>
     </div>
     <div class="demo-reconstruction-verdict">
       <strong id="demo-reconstruction-fidelity">复刻度：20/20 节点 · 23/23 连线</strong>
-      <span id="demo-reconstruction-source-state">读取本地复刻草稿</span>
+      <span id="demo-reconstruction-source-state">读取 golden demo 控制台</span>
     </div>
   </section>
 
-  <section class="demo-reconstruction-compare-grid" aria-label="原版 demo 与当前复刻对照">
-    <article class="demo-reconstruction-panel">
+  <section class="demo-reconstruction-console-stage" aria-label="demo.html 复刻 MVP 控制台">
+    <article class="demo-reconstruction-console-panel">
       <div class="demo-reconstruction-panel-head">
-        <p class="demo-reconstruction-kicker">ORIGINAL</p>
-        <h2>原版 demo.html</h2>
+        <p class="demo-reconstruction-kicker">LIVE COCKPIT</p>
+        <h2>反推逻辑演示舱</h2>
+        <a href="/demo.html" class="demo-reconstruction-open-link">打开 golden demo</a>
       </div>
-      <iframe id="demo-reconstruction-original-frame" src="/demo.html?embed=1" title="原版 demo.html 反推逻辑演示舱"></iframe>
+      <iframe id="demo-reconstruction-console-frame" src="/demo.html?embed=1&amp;palette=codex-light" title="demo.html 复刻 MVP 反推逻辑控制台"></iframe>
     </article>
 
-    <article id="demo-reconstruction-current-panel" class="demo-reconstruction-panel">
+    <aside id="demo-reconstruction-browser-evidence" class="demo-reconstruction-evidence-rail" aria-label="浏览器验收证据">
       <div class="demo-reconstruction-panel-head">
-        <p class="demo-reconstruction-kicker">CURRENT</p>
-        <h2>当前复刻</h2>
+        <p class="demo-reconstruction-kicker">BROWSER EVIDENCE</p>
+        <h2>复刻验收</h2>
       </div>
       <div class="demo-reconstruction-metrics" aria-label="复刻指标">
         <div><span>节点</span><strong id="demo-reconstruction-node-count">20/20</strong></div>
@@ -80,62 +81,62 @@
         <div><span>预设场景</span><strong id="demo-reconstruction-preset-count">5/5</strong></div>
         <div><span>状态输出</span><strong id="demo-reconstruction-status-count">6/6</strong></div>
       </div>
-      <table id="demo-reconstruction-comparison-table" class="demo-reconstruction-table">
-        <thead>
-          <tr><th>维度</th><th>原版 demo.html</th><th>当前复刻</th><th>结论</th></tr>
-        </thead>
-        <tbody>
-          <tr><th>节点</th><td>20 个 fan-chain 节点</td><td id="demo-reconstruction-node-cell">20 个复刻节点</td><td>通过</td></tr>
-          <tr><th>连线</th><td>23 条 fan-chain 连线</td><td id="demo-reconstruction-wire-cell">23 条复刻连线</td><td>通过</td></tr>
-          <tr><th>预设场景</th><td>默认前向 / 着陆展开 / 最大反推 / 收起回杆 / 抑制阻塞</td><td id="demo-reconstruction-preset-cell">5 个场景可对照</td><td>通过</td></tr>
-          <tr><th>状态输出</th><td>SW1 / SW2 / TLS / VDT90 / L1-L4 / THR_LOCK</td><td id="demo-reconstruction-status-cell">6 类状态输出</td><td>通过</td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <section class="demo-reconstruction-detail-grid" aria-label="复刻细节清单">
-    <article class="demo-reconstruction-list-panel">
-      <div class="demo-reconstruction-panel-head">
-        <p class="demo-reconstruction-kicker">NODES</p>
-        <h2>节点清单</h2>
-      </div>
-      <ol id="demo-reconstruction-node-list" class="demo-reconstruction-list"></ol>
-    </article>
-    <article class="demo-reconstruction-list-panel">
-      <div class="demo-reconstruction-panel-head">
-        <p class="demo-reconstruction-kicker">WIRES</p>
-        <h2>连线清单</h2>
-      </div>
-      <ol id="demo-reconstruction-wire-list" class="demo-reconstruction-list"></ol>
-    </article>
-    <article class="demo-reconstruction-list-panel">
-      <div class="demo-reconstruction-panel-head">
-        <p class="demo-reconstruction-kicker">PRESETS</p>
-        <h2>预设场景</h2>
-      </div>
-      <ul id="demo-reconstruction-preset-list" class="demo-reconstruction-list">
+      <section id="demo-reconstruction-operator-guide" class="demo-reconstruction-operator-guide" data-demo-mvp-guide="first-screen" aria-label="首屏验收路径">
+        <div class="demo-reconstruction-guide-step">
+          <span>01</span>
+          <strong>选择预设</strong>
+          <p>在左侧演示舱切换着陆展开、最大反推或抑制阻塞。</p>
+        </div>
+        <div class="demo-reconstruction-guide-step">
+          <span>02</span>
+          <strong>查看 HUD</strong>
+          <p>确认逻辑状态、锁定状态和关键输入随预设同步变化。</p>
+        </div>
+        <div class="demo-reconstruction-guide-step">
+          <span>03</span>
+          <strong>核对输出</strong>
+          <p>下滑到输出卡片，核对 TLS115、ETRAC、EEC 与 THR_LOCK。</p>
+        </div>
+      </section>
+      <section class="demo-reconstruction-evidence-block">
+        <h3>浏览器检查</h3>
+        <ul class="demo-reconstruction-check-list">
+          <li>首屏截图</li>
+          <li>节点/连线像素可见性</li>
+          <li>关键预设交互</li>
+          <li>HUD 与输出卡片联动</li>
+        </ul>
+      </section>
+      <section class="demo-reconstruction-evidence-block">
+        <h3>节点清单</h3>
+        <ol id="demo-reconstruction-node-list" class="demo-reconstruction-list"></ol>
+      </section>
+      <section class="demo-reconstruction-evidence-block">
+        <h3>连线清单</h3>
+        <ol id="demo-reconstruction-wire-list" class="demo-reconstruction-list"></ol>
+      </section>
+      <section class="demo-reconstruction-evidence-block">
+        <h3>预设场景</h3>
+        <ul id="demo-reconstruction-preset-list" class="demo-reconstruction-list">
         <li>默认前向</li>
         <li>着陆展开</li>
         <li>最大反推</li>
         <li>收起回杆</li>
         <li>抑制阻塞</li>
-      </ul>
-    </article>
-    <article class="demo-reconstruction-list-panel">
-      <div class="demo-reconstruction-panel-head">
-        <p class="demo-reconstruction-kicker">STATUS</p>
-        <h2>状态输出</h2>
-      </div>
-      <ul id="demo-reconstruction-status-list" class="demo-reconstruction-list">
+        </ul>
+      </section>
+      <section class="demo-reconstruction-evidence-block">
+        <h3>状态输出</h3>
+        <ul id="demo-reconstruction-status-list" class="demo-reconstruction-list">
         <li>SW1</li>
         <li>SW2</li>
         <li>TLS</li>
         <li>VDT90</li>
         <li>L1-L4</li>
         <li>THR_LOCK</li>
-      </ul>
-    </article>
+        </ul>
+      </section>
+    </aside>
   </section>
 </main>
 </body>

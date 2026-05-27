@@ -108,7 +108,7 @@
     try {
       const replay = await loadReplayCircuit();
       if (replay) {
-        renderCircuit(replay, "读取 DeepSeek live replay 回放");
+        renderCircuit(replay, "读取 golden demo 控制台");
         return;
       }
     } catch (error) {
