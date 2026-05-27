@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_queue_run_ledger_v0_2.schema.json",
+  "title": "Multi-Agent Queue Run Ledger v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "status",
+    "gate_id",
+    "ledger_id",
+    "source_queue_id",
+    "source_queue_gate_id",
+    "selected_queue_item_id",
+    "selected_task_id",
+    "run_count",
+    "scheduler_decision",
+    "append_only",
+    "run_records",
+    "deterministic_gates",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_queue_run_ledger_v0_2.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-queue-run-ledger"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "gate_id": {
+      "const": "multi-agent-queue-run-ledger"
+    },
+    "ledger_id": {
+      "const": "multi-agent-queue-run-ledger-v0.2"
+    },
+    "source_queue_id": {
+      "const": "approved-candidate-task-queue-v0.9"
+    },
+    "source_queue_gate_id": {
+      "const": "approved-candidate-task-queue-v0-9"
+    },
+    "selected_queue_item_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selected_task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "scheduler_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "decision_status",
+        "selected_queue_item_id",
+        "selected_record_id",
+        "reason"
+      ],
+      "properties": {
+        "policy_id": {
+          "const": "latest-approved-append-only-item-v0.2"
+        },
+        "decision_status": {
+          "enum": ["selected_approved_candidate", "blocked"]
+        },
+        "selected_queue_item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selected_record_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "append_only": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_queue_id",
+        "source_queue_order",
+        "record_sequence_preserves_queue_order",
+        "append_mode"
+      ],
+      "properties": {
+        "source_queue_id": {
+          "const": "approved-candidate-task-queue-v0.9"
+        },
+        "source_queue_order": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "record_sequence_preserves_queue_order": {
+          "type": "boolean"
+        },
+        "append_mode": {
+          "const": "ledger_records_append_only_v0.2"
+        }
+      }
+    },
+    "run_records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/run_record"
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_queue_v0_9_checker",
+        "scheduler_selection",
+        "approved_task_shell_records",
+        "child_review_exports",
+        "boundary",
+        "local_gate"
+      ],
+      "properties": {
+        "source_queue_v0_9_checker": {
+          "enum": ["pass", "fail"]
+        },
+        "scheduler_selection": {
+          "enum": ["pass", "fail"]
+        },
+        "approved_task_shell_records": {
+          "enum": ["pass", "fail"]
+        },
+        "child_review_exports": {
+          "enum": ["pass", "fail"]
+        },
+        "boundary": {
+          "enum": ["pass", "fail"]
+        },
+        "local_gate": {
+          "enum": ["pass", "fail"]
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_count",
+        "source_queue_task_count",
+        "executed_limited",
+        "converged",
+        "child_review_exports_valid",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "open_findings",
+        "ledger_append_only"
+      ],
+      "properties": {
+        "record_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_queue_task_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "executed_limited": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "converged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "child_review_exports_valid": {
+          "type": "boolean"
+        },
+        "controller_truth_modified": {
+          "type": "boolean"
+        },
+        "ui_layout_modified": {
+          "type": "boolean"
+        },
+        "open_findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ledger_append_only": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ledger", "source_queue_summary"],
+      "properties": {
+        "ledger": {
+          "type": "string"
+        },
+        "source_queue_summary": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "run_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id",
+        "sequence",
+        "queue_item_id",
+        "slice_id",
+        "source_finding_code",
+        "task",
+        "preflight",
+        "approved_task_shell",
+        "repair",
+        "review_export",
+        "boundary"
+      ],
+      "properties": {
+        "record_id": {
+          "type": "string",
+          "pattern": "^RUN-QUEUE-[0-9]{3}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "queue_item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "slice_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_finding_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "target_agent", "task_type"],
+          "properties": {
+            "task_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "target_agent": {
+              "type": "string",
+              "minLength": 1
+            },
+            "task_type": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "preflight": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["command", "gate_id", "returncode", "status"],
+          "properties": {
+            "command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "gate_id": {
+              "type": "string"
+            },
+            "returncode": {
+              "type": "integer"
+            },
+            "status": {
+              "enum": ["pass", "fail"]
+            }
+          }
+        },
+        "approved_task_shell": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "approval_status", "selected_task_id"],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "approval_status": {
+              "type": "string"
+            },
+            "selected_task_id": {
+              "type": "string"
+            }
+          }
+        },
+        "repair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reviewer_status", "finding_chain_statuses"],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "reviewer_status": {
+              "type": "string"
+            },
+            "finding_chain_statuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "review_export": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "reviewer_status", "finding_chain_statuses"],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "reviewer_status": {
+              "type": "string"
+            },
+            "finding_chain_statuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "truth_effect",
+            "controller_truth_modified",
+            "ui_layout_modified"
+          ],
+          "properties": {
+            "truth_effect": {
+              "const": "none"
+            },
+            "controller_truth_modified": {
+              "type": "boolean"
+            },
+            "ui_layout_modified": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

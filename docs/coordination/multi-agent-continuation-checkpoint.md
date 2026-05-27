@@ -16,26 +16,29 @@ truth, not the prior transcript.
 - Contract source:
   `docs/coordination/multi-agent-control-logic-engineering-system-mvp.md`
 - Current ledger source:
-  `approved-candidate-task-queue-v0.8`
+  `approved-candidate-task-queue-v0.9`
 - Latest queue-summary package:
   `approved-candidate-task-queue-v0.9`
 - Last completed queue record:
-  `RUN-QUEUE-010`
+  `RUN-QUEUE-011`
 - Last completed queue item:
-  `queue-safety-unreachable-state-repair`
+  `queue-safety-output-command-conflict-repair`
 - Last completed task:
-  `TASK-CE-CHECK-UNREACHABLE-STATE-001`
-- Cursor state after M20:
+  `TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001`
+- Cursor state after M27:
   `state_status=idle_no_open_approved_items`
-- Resume policy after M20:
+- Resume policy after M27:
   `resume_policy.next_action=wait_for_append_only_queue_growth`
 - Latest appended queue item after M26:
   `RUN-QUEUE-011` / `queue-safety-output-command-conflict-repair`
 - M26 validation:
   `make verify-approved-candidate-task-queue-v0-9-artifact` reports `status=pass`
+- M27 validation:
+  `make verify-multi-agent-queue-run-ledger-v0-2` and
+  `make verify-multi-agent-queue-cursor-state-v0-2` report `status=pass`
 - Next durable resume upgrade:
-  promote v0.9 into `multi-agent-queue-run-ledger` and
-  `multi-agent-queue-cursor-state` as a schema-versioned M27 slice.
+  refresh the read-only status surfaces so UltraWork Monitor, operator cockpit,
+  packaging, and PR preflight consume the v0.2 ledger/cursor baseline.
 
 ## Boundary
 
@@ -52,7 +55,7 @@ truth, not the prior transcript.
 Run from this worktree:
 
 ```bash
-MULTI_AGENT_QUEUE_CURSOR_RESUME_STATE_ARTIFACT_DIR=artifacts/multi-agent-continuation/current AI_FANTUI_QUEUE_PREFLIGHT_MODE=fixture make verify-multi-agent-queue-cursor-resume-state
+MULTI_AGENT_QUEUE_CURSOR_STATE_V0_2_ARTIFACT_DIR=artifacts/multi-agent-continuation/current AI_FANTUI_QUEUE_PREFLIGHT_MODE=fixture make verify-multi-agent-queue-cursor-state-v0-2
 ```
 
 Expected result:
@@ -61,9 +64,9 @@ Expected result:
 - checker reports `status=pass`
 - `mismatches=[]`
 - generated cursor:
-  `artifacts/multi-agent-continuation/current/multi_agent_queue_cursor_state_v0_1.json`
+  `artifacts/multi-agent-continuation/current/multi_agent_queue_cursor_state_v0_2.json`
 - generated source ledger:
-  `artifacts/multi-agent-continuation/current/source-multi-agent-queue-run-ledger-ready-to-resume/multi_agent_queue_run_ledger_v0_1.json`
+  `artifacts/multi-agent-continuation/current/source-multi-agent-queue-run-ledger/multi_agent_queue_run_ledger_v0_2.json`
 
 ## New Session Resume Procedure
 
@@ -73,18 +76,17 @@ Expected result:
 4. Continue only if it says:
    - `status=pass`
    - `state_status=idle_no_open_approved_items`
-   - `cursor_position.last_completed_record_id=RUN-QUEUE-010`
+   - `cursor_position.last_completed_record_id=RUN-QUEUE-011`
    - `open_records=[]`
-5. If the proof passes, the next engineering action is to append a new queue
-   item through the queue extension contract, or when v0.9 is already present,
-   promote `approved-candidate-task-queue-v0.9` into the ledger/cursor chain as
-   the next schema-versioned slice.
+5. If the proof passes, the next engineering action is to refresh the
+   read-only status/packaging surfaces to consume the v0.2 ledger/cursor
+   baseline.
 
 ## Stop If
 
 - The refresh command exits non-zero.
 - The checker reports any mismatch.
-- `last_completed_record_id` is not `RUN-QUEUE-010`.
+- `last_completed_record_id` is not `RUN-QUEUE-011`.
 - `open_records` is non-empty without a matching append-only queue contract.
 - `git diff --name-only -- src/well_harness/controller.py src/well_harness/editable_control_model.py src/well_harness/static/requirements_intake`
   prints any path.
