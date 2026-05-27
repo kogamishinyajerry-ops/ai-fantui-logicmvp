@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_validation_evidence_v0_1.schema.json",
+  "title": "Multi-Agent Validation Evidence v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "evidence_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "inputs",
+    "summary",
+    "pathspec_packages",
+    "validation_plan",
+    "validation_results",
+    "stage_commands",
+    "excluded_paths",
+    "blockers",
+    "pr_evidence_note",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_validation_evidence_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-validation-evidence"
+    },
+    "evidence_id": {
+      "const": "multi-agent-validation-evidence-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim"],
+      "properties": {
+        "id": {
+          "const": "M25"
+        },
+        "name": {
+          "const": "Validation Evidence Capture"
+        },
+        "claim": {
+          "const": "read_only_pre_commit_validation_evidence"
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preflight_schema", "preflight_status", "preflight_id"],
+      "properties": {
+        "preflight_schema": {
+          "const": "https://well-harness.local/json_schema/multi_agent_pr_preflight_v0_1.schema.json"
+        },
+        "preflight_status": {
+          "enum": ["pass", "fail"]
+        },
+        "preflight_id": {
+          "const": "multi-agent-pr-preflight-v0.1"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dirty_worktree_policy",
+        "executed_command_count",
+        "failed_command_count",
+        "package_count",
+        "passed_command_count",
+        "stage_command_count",
+        "validation_command_count"
+      ],
+      "properties": {
+        "dirty_worktree_policy": {
+          "const": "ignore_unrelated_dirty_files_and_stage_only_listed_pathspecs"
+        },
+        "executed_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "package_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "passed_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stage_command_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "validation_command_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "pathspec_packages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/pathspec_package"
+      }
+    },
+    "validation_plan": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/validation_command"
+      }
+    },
+    "validation_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/validation_result"
+      }
+    },
+    "stage_commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "excluded_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "pr_evidence_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_json", "evidence_markdown", "evidence_html"],
+      "properties": {
+        "evidence_json": {
+          "type": "string"
+        },
+        "evidence_markdown": {
+          "type": "string"
+        },
+        "evidence_html": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "pathspec_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_id",
+        "label",
+        "depends_on",
+        "pathspec_count",
+        "forced_pathspec_count",
+        "ready_for_pathspec_staging"
+      ],
+      "properties": {
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pathspec_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "forced_pathspec_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_for_pathspec_staging": {
+          "type": "boolean"
+        }
+      }
+    },
+    "validation_command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "package_id",
+        "depends_on",
+        "command",
+        "evidence_required",
+        "execution_mode"
+      ],
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_required": {
+          "const": "exit_code_0_with_fresh_output_before_commit"
+        },
+        "execution_mode": {
+          "const": "manual_or_operator_run"
+        }
+      }
+    },
+    "validation_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "package_id",
+        "command",
+        "status",
+        "exit_code",
+        "duration_seconds",
+        "output_tail"
+      ],
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["pass", "fail"]
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "duration_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "output_tail": {
+          "type": "string"
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker_id", "status", "message"],
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["external_blocker", "local_blocker"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

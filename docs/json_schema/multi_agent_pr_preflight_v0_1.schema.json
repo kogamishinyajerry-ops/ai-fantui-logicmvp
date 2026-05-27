@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_pr_preflight_v0_1.schema.json",
+  "title": "Multi-Agent PR Preflight v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "preflight_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "summary",
+    "inputs",
+    "pathspec_packages",
+    "validation_plan",
+    "stage_commands",
+    "browser_geometry_gate",
+    "excluded_paths",
+    "blockers",
+    "pr_body",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_pr_preflight_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-pr-preflight"
+    },
+    "preflight_id": {
+      "const": "multi-agent-pr-preflight-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim"],
+      "properties": {
+        "id": {
+          "const": "M24"
+        },
+        "name": {
+          "const": "PR Preflight"
+        },
+        "claim": {
+          "const": "read_only_validation_and_pr_body_preparation"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_count",
+        "validation_command_count",
+        "stage_command_count",
+        "next_action",
+        "dirty_worktree_policy"
+      ],
+      "properties": {
+        "package_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "validation_command_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stage_command_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "next_action": {
+          "const": "run_validations_then_stage_with_explicit_pathspecs"
+        },
+        "dirty_worktree_policy": {
+          "const": "ignore_unrelated_dirty_files_and_stage_only_listed_pathspecs"
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packaging_schema", "packaging_status", "packaging_package_id"],
+      "properties": {
+        "packaging_schema": {
+          "const": "https://well-harness.local/json_schema/multi_agent_packaging_consolidation_v0_1.schema.json"
+        },
+        "packaging_status": {
+          "enum": ["pass", "fail"]
+        },
+        "packaging_package_id": {
+          "const": "multi-agent-packaging-consolidation-v0.1"
+        }
+      }
+    },
+    "pathspec_packages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/pathspec_package"
+      }
+    },
+    "validation_plan": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/validation_command"
+      }
+    },
+    "stage_commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "browser_geometry_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_artifact", "required_markers", "viewports"],
+      "properties": {
+        "target_artifact": {
+          "const": "multi_agent_pr_preflight_v0_1.html"
+        },
+        "required_markers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "viewports": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/viewport"
+          }
+        }
+      }
+    },
+    "excluded_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "pr_body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "body", "notion_blocker_note"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notion_blocker_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preflight_json", "preflight_markdown", "preflight_html"],
+      "properties": {
+        "preflight_json": {
+          "type": "string"
+        },
+        "preflight_markdown": {
+          "type": "string"
+        },
+        "preflight_html": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "pathspec_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_id",
+        "label",
+        "depends_on",
+        "pathspec_count",
+        "forced_pathspec_count",
+        "ready_for_pathspec_staging"
+      ],
+      "properties": {
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pathspec_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "forced_pathspec_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_for_pathspec_staging": {
+          "type": "boolean"
+        }
+      }
+    },
+    "validation_command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "package_id",
+        "depends_on",
+        "command",
+        "evidence_required",
+        "execution_mode"
+      ],
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_required": {
+          "const": "exit_code_0_with_fresh_output_before_commit"
+        },
+        "execution_mode": {
+          "const": "manual_or_operator_run"
+        }
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "width", "height"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker_id", "status", "message"],
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["external_blocker", "local_blocker"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

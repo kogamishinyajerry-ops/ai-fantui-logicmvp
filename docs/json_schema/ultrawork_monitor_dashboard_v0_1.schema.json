@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/ultrawork_monitor_dashboard_v0_1.schema.json",
+  "title": "UltraWork Monitor Dashboard v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "dashboard_id",
+    "status",
+    "generated_at",
+    "source_cursor_id",
+    "source_state_status",
+    "ultrawork_mode",
+    "summary",
+    "selected_next_record",
+    "agent_lanes",
+    "gates",
+    "blockers",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/ultrawork_monitor_dashboard_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-ultrawork-monitor-dashboard"
+    },
+    "dashboard_id": {
+      "const": "ultrawork-monitor-dashboard-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_cursor_id": {
+      "type": "string"
+    },
+    "source_state_status": {
+      "type": "string"
+    },
+    "ultrawork_mode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode_id",
+        "official_claude_code_feature_claim",
+        "subagent_config_dir",
+        "parallelism_model",
+        "operator_role"
+      ],
+      "properties": {
+        "mode_id": {
+          "const": "claude-code-ultrawork-style-v0.1"
+        },
+        "official_claude_code_feature_claim": {
+          "const": "none"
+        },
+        "subagent_config_dir": {
+          "const": ".claude/agents"
+        },
+        "parallelism_model": {
+          "const": "queue_cursor_plus_project_subagents"
+        },
+        "operator_role": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "next_action",
+        "reason",
+        "completed_count",
+        "open_approved_count",
+        "blocked_count",
+        "ready_for_resume"
+      ],
+      "properties": {
+        "status": {
+          "enum": ["idle", "ready_to_resume", "blocked"]
+        },
+        "next_action": {
+          "enum": ["wait_for_append_only_queue_growth", "resume_next_open_record", "stop_for_review"]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "completed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_approved_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_for_resume": {
+          "type": "boolean"
+        }
+      }
+    },
+    "selected_next_record": {
+      "$ref": "#/$defs/agent_lane"
+    },
+    "agent_lanes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agent_lane"
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ledger_checker",
+        "cursor_monotonicity",
+        "resume_selection",
+        "boundary",
+        "local_gate"
+      ],
+      "properties": {
+        "source_ledger_checker": {
+          "enum": ["pass", "fail"]
+        },
+        "cursor_monotonicity": {
+          "enum": ["pass", "fail"]
+        },
+        "resume_selection": {
+          "enum": ["pass", "fail"]
+        },
+        "boundary": {
+          "enum": ["pass", "fail"]
+        },
+        "local_gate": {
+          "enum": ["pass", "fail"]
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["blocker_id", "status", "message"],
+        "properties": {
+          "blocker_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": ["external_blocker", "local_blocker"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dashboard_json", "dashboard_html", "source_cursor"],
+      "properties": {
+        "dashboard_json": {
+          "type": "string"
+        },
+        "dashboard_html": {
+          "type": "string"
+        },
+        "source_cursor": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "agent_lane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id",
+        "queue_item_id",
+        "task_id",
+        "agent",
+        "status"
+      ],
+      "properties": {
+        "record_id": {
+          "type": "string"
+        },
+        "queue_item_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "agent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "needs_operator_action": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
