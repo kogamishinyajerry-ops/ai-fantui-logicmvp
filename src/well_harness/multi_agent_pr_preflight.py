@@ -195,7 +195,7 @@ def build_multi_agent_pr_preflight(
             "target_artifact": HTML_NAME,
             "required_markers": [
                 "Multi-Agent PR Preflight",
-                "multi-agent-cursor-baseline",
+                "multi-agent-cursor-baseline-v0-2",
                 "ultrawork-monitor",
                 "m23-packaging-consolidation",
                 NOTION_BLOCKER_ID,

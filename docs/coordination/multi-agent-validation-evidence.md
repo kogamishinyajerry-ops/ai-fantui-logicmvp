@@ -9,7 +9,7 @@ This package captures the M24 preflight validation plan as auditable command evi
 
 The packet answers three questions:
 
-1. Did the 18 validation commands actually run?
+1. Did the 19 validation commands actually run?
 2. Which commands passed or failed, with bounded output evidence?
 3. Which latest explicit pathspec commands should be used after evidence capture?
 
@@ -33,7 +33,7 @@ make verify-multi-agent-validation-evidence
 
 ## Package Order
 
-1. `multi-agent-cursor-baseline`
+1. `multi-agent-cursor-baseline-v0-2`
 2. `project-manager-status`
 3. `ultrawork-monitor`
 4. `m22-operator-cockpit`
@@ -41,7 +41,7 @@ make verify-multi-agent-validation-evidence
 6. `m24-pr-preflight`
 7. `m25-validation-evidence`
 
-The generated artifact contains 18 validation commands, 18 command results, 8 explicit stage commands, and a PR evidence note. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
+The generated artifact contains 19 validation commands, 19 command results, 8 explicit stage commands, and a PR evidence note. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
 
 ## Excluded Dirty Context
 
@@ -81,4 +81,4 @@ make multi-agent-validation-evidence
 make verify-multi-agent-validation-evidence
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Validation Evidence`, `multi-agent-cursor-baseline-01`, `m24-pr-preflight-03`, `m25-validation-evidence`, `notion-control-plane-404`, and `18 validation commands passed` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Validation Evidence`, `multi-agent-cursor-baseline-v0-2-01`, `m24-pr-preflight-03`, `m25-validation-evidence`, `notion-control-plane-404`, and `19 validation commands passed` without desktop or mobile layout overflow.

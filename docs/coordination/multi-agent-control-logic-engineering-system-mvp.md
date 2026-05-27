@@ -70,9 +70,10 @@ gates decide what survives.`
 | M26 approved queue v0.9 item | Chief Engineer Queue Runner + LogicIRRepairAgent | `make approved-candidate-task-queue-v0-9` | v0.8 queue prefix preserved, `RUN-QUEUE-011` / `CHECK_OUTPUT_COMMAND_CONFLICT_001` resolves only the seeded candidate output-command conflict by marking the conflicting transition as safety-priority and converges through fast-gate preflight, approved shell, repair loop, and review export |
 | M27 ledger/cursor v0.2 promotion | Chief Engineer Queue Scheduler + Resume Cursor | `make multi-agent-queue-cursor-state-v0-2` | v0.9 queue execution is transformed into an eleven-record `multi_agent_queue_run_ledger_v0_2`; the cursor records `RUN-QUEUE-011` as the latest completed record and the ready-to-resume fixture can expose `RUN-QUEUE-011` as the approved open resume target |
 | M22 operator cockpit package | Chief Engineer Operator Cockpit | `make multi-agent-operator-cockpit` | Project Manager Status + UltraWork Monitor + queue/cursor health + Notion external blocker + pathspec boundary collected into one read-only JSON/Markdown/HTML cockpit |
-| M23 packaging consolidation gate | Chief Engineer Packaging Gate | `make multi-agent-packaging-consolidation` | Multi-agent cursor baseline, project-manager status, UltraWork Monitor, M22 cockpit, and M23 packaging docs are ordered into explicit pathspec staging groups with excluded dirty-context guards |
-| M24 validation/PR preflight gate | Chief Engineer PR Preflight Gate | `make multi-agent-pr-preflight` | M23 package order plus the M24 preflight package are converted into 18 validation commands, 7 explicit stage commands, browser geometry markers, Notion blocker text, and a copy-ready PR body |
-| M25 validation evidence capture gate | Chief Engineer Evidence Gate | `make multi-agent-validation-evidence` | M24's 18 validation commands are executed and recorded into bounded JSON/Markdown/HTML evidence, then the latest 8 explicit stage commands add the M25 evidence package without touching excluded dirty paths |
+| M23 packaging consolidation gate | Chief Engineer Packaging Gate | `make multi-agent-packaging-consolidation` | v0.2 multi-agent cursor baseline, project-manager status, UltraWork Monitor, M22 cockpit, and M23 packaging docs are ordered into explicit pathspec staging groups with excluded dirty-context guards |
+| M24 validation/PR preflight gate | Chief Engineer PR Preflight Gate | `make multi-agent-pr-preflight` | M23 package order plus the M24 preflight package are converted into 19 validation commands, 7 explicit stage commands, browser geometry markers, Notion blocker text, and a copy-ready PR body |
+| M25 validation evidence capture gate | Chief Engineer Evidence Gate | `make multi-agent-validation-evidence` | M24's 19 validation commands are executed and recorded into bounded JSON/Markdown/HTML evidence, then the latest 8 explicit stage commands add the M25 evidence package without touching excluded dirty paths |
+| M28 v0.2 status-surface refresh | Chief Engineer Packaging Gate | `make multi-agent-pr-preflight` | Project Manager Status, Project Visibility, UltraWork Monitor, M22 cockpit, M23 packaging, M24 preflight, and M25 validation evidence now consume the v0.2 ledger/cursor baseline with `RUN-QUEUE-011` as the current queue cursor |
 
 ## Contract Boundary
 
@@ -1123,12 +1124,10 @@ not a multi-agent engineering-chain code blocker.
 
 ## Next Step
 
-M27 closes the durable resume upgrade by promoting v0.9 into
-`multi_agent_queue_run_ledger_v0_2` and
-`multi_agent_queue_cursor_state_v0_2`. The next work should refresh the
-read-only status surfaces (UltraWork Monitor, M22 operator cockpit, M23
-packaging, M24 preflight, and M25 validation evidence) so they consume the v0.2
-ledger/cursor baseline instead of the previous v0.8 cursor.
+M28 closes the read-only status-surface refresh. The next work should run the
+full focused validation evidence capture, browser geometry gate, and explicit
+pathspec packaging pass, then commit the M28 slice without touching unrelated
+dirty worktree state.
 
 For compact-failure-safe continuation, read
 `docs/coordination/multi-agent-continuation-checkpoint.md` first and refresh

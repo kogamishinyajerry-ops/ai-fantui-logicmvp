@@ -25,13 +25,13 @@ SUMMARY_KIND = "ai-fantui-project-manager-status-summary"
 SUMMARY_ID = "project-manager-status-summary-v0.1"
 PROJECT_VISIBILITY_GATE_COMMAND = "make project-visibility-mvp-gate"
 CURRENT_MVP_NAME = "Multi-Agent Candidate Repair Pipeline MVP"
-CURRENT_QUEUE_ID = "approved-candidate-task-queue-v0.8"
-LAST_COMPLETED_RECORD_ID = "RUN-QUEUE-010"
-LAST_COMPLETED_TASK_ID = "TASK-CE-CHECK-UNREACHABLE-STATE-001"
-LAST_COMPLETED_QUEUE_ITEM_ID = "queue-safety-unreachable-state-repair"
-LAST_COMPLETED_SOURCE_FINDING_CODE = "CHECK_UNREACHABLE_STATE_001"
+CURRENT_QUEUE_ID = "approved-candidate-task-queue-v0.9"
+LAST_COMPLETED_RECORD_ID = "RUN-QUEUE-011"
+LAST_COMPLETED_TASK_ID = "TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001"
+LAST_COMPLETED_QUEUE_ITEM_ID = "queue-safety-output-command-conflict-repair"
+LAST_COMPLETED_SOURCE_FINDING_CODE = "CHECK_OUTPUT_COMMAND_CONFLICT_001"
 EXPECTED_STATE_STATUS = "idle_no_open_approved_items"
-EXPECTED_COMPLETED_COUNT = 10
+EXPECTED_COMPLETED_COUNT = 11
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -66,7 +66,7 @@ def _run_cursor(artifact_dir: Path) -> dict[str, Any]:
     result = subprocess.run(
         [
             sys.executable,
-            "scripts/run_multi_agent_queue_cursor_state.py",
+            "scripts/run_multi_agent_queue_cursor_state_v0_2.py",
             "--format",
             "json",
             "--artifact-dir",

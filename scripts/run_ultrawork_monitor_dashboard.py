@@ -19,7 +19,7 @@ from well_harness.ultrawork_monitor_dashboard import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT_DIR = Path("/tmp/ai-fantui-ultrawork-monitor-dashboard")
-CURSOR_NAME = "multi_agent_queue_cursor_state_v0_1.json"
+CURSOR_NAME = "multi_agent_queue_cursor_state_v0_2.json"
 
 
 def _parse_args() -> argparse.Namespace:
@@ -36,7 +36,7 @@ def _parse_args() -> argparse.Namespace:
         "--cursor",
         type=Path,
         default=None,
-        help="Existing multi_agent_queue_cursor_state_v0_1.json to render.",
+        help="Existing multi_agent_queue_cursor_state_v0_2.json to render.",
     )
     parser.add_argument(
         "--resume-mode",
@@ -69,7 +69,7 @@ def _run_cursor(*, artifact_dir: Path, resume_mode: str) -> Path:
     cursor_artifact_dir = artifact_dir / "source-cursor"
     command = [
         sys.executable,
-        "scripts/run_multi_agent_queue_cursor_state.py",
+        "scripts/run_multi_agent_queue_cursor_state_v0_2.py",
         "--artifact-dir",
         str(cursor_artifact_dir),
         "--resume-mode",

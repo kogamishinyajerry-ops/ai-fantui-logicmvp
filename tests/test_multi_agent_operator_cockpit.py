@@ -42,10 +42,10 @@ def _project_status_payload(tmp_path: Path) -> dict:
         "status": "pass",
         "recommended_next_step": "Do not continue M21 immediately. Use the project-owner acceptance review packet.",
         "completed": {
-            "completed_count": 10,
-            "last_completed_record_id": "RUN-QUEUE-010",
-            "last_completed_task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001",
-            "last_completed_queue_item_id": "queue-safety-unreachable-state-repair",
+            "completed_count": 11,
+            "last_completed_record_id": "RUN-QUEUE-011",
+            "last_completed_task_id": "TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001",
+            "last_completed_queue_item_id": "queue-safety-output-command-conflict-repair",
         },
         "cursor": {
             "status": "pass",
@@ -69,7 +69,7 @@ def _ultrawork_payload(tmp_path: Path) -> dict:
             "open_approved_count": 1,
         },
         "selected_next_record": {
-            "record_id": "RUN-QUEUE-010",
+            "record_id": "RUN-QUEUE-011",
         },
         "gates": {
             "source_ledger_checker": "pass",
@@ -105,8 +105,8 @@ def test_multi_agent_operator_cockpit_schema_validates_payload(tmp_path: Path) -
     jsonschema.Draft202012Validator(_schema()).validate(cockpit)
     assert cockpit["status"] == "pass"
     assert cockpit["milestone"]["id"] == "M22"
-    assert cockpit["summary"]["completed_count"] == 10
-    assert cockpit["summary"]["selected_next_record_id"] == "RUN-QUEUE-010"
+    assert cockpit["summary"]["completed_count"] == 11
+    assert cockpit["summary"]["selected_next_record_id"] == "RUN-QUEUE-011"
     assert cockpit["dependency_boundary"]["controller_truth_modified"] is False
     assert cockpit["dependency_boundary"]["ui_layout_modified"] is False
 
@@ -122,7 +122,7 @@ def test_multi_agent_operator_cockpit_html_exposes_operator_views(tmp_path: Path
     assert "Multi-Agent Operator Cockpit" in html
     assert "Project Manager Status" in html
     assert "UltraWork Monitor" in html
-    assert "RUN-QUEUE-010" in html
+    assert "RUN-QUEUE-011" in html
     assert "notion-control-plane-404" in html
     assert "src/well_harness/controller.py" in html
     assert "src/well_harness/demo_server.py" in html

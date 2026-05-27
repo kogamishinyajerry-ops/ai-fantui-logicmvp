@@ -29,8 +29,8 @@ RESTRICTED_PATHS = [
 REQUIRED_TEXT = [
     "Project Manager Status Summary",
     "Multi-Agent Candidate Repair Pipeline MVP",
-    "RUN-QUEUE-010",
-    "CHECK_UNREACHABLE_STATE_001",
+    "RUN-QUEUE-011",
+    "CHECK_OUTPUT_COMMAND_CONFLICT_001",
     "Project Visibility MVP",
     "Do not continue M21 immediately.",
     "On track",
@@ -102,8 +102,8 @@ def _acceptance_doc_check() -> dict[str, Any]:
         "Project Visibility MVP Acceptance",
         "make project-visibility-mvp-gate",
         "project_manager_status_summary.html",
-        "RUN-QUEUE-010",
-        "CHECK_UNREACHABLE_STATE_001",
+        "RUN-QUEUE-011",
+        "CHECK_OUTPUT_COMMAND_CONFLICT_001",
     ]
     mismatches = [f"missing marker: {marker}" for marker in markers if marker not in text]
     return {

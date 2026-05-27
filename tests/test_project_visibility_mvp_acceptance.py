@@ -82,8 +82,8 @@ def test_project_visibility_mvp_acceptance_is_documented_and_wired() -> None:
     assert "Project Visibility MVP Acceptance" in doc
     assert "make project-visibility-mvp-gate" in doc
     assert "project_manager_status_summary.html" in doc
-    assert "RUN-QUEUE-010" in doc
-    assert "CHECK_UNREACHABLE_STATE_001" in doc
+    assert "RUN-QUEUE-011" in doc
+    assert "CHECK_OUTPUT_COMMAND_CONFLICT_001" in doc
     assert "Do not continue M21 immediately" in doc
     assert "PROJECT_VISIBILITY_MVP_ACCEPTANCE_ARTIFACT_DIR" in makefile
     assert "project-visibility-mvp-gate" in makefile

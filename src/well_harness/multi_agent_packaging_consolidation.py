@@ -36,34 +36,39 @@ EXCLUDED_PATHS = [
 
 PACKAGE_ORDER: list[dict[str, Any]] = [
     {
-        "package_id": "multi-agent-cursor-baseline",
-        "label": "M10-M12 Queue Ledger/Cursor Baseline",
+        "package_id": "multi-agent-cursor-baseline-v0-2",
+        "label": "M27 Queue Ledger/Cursor v0.2 Baseline",
         "depends_on": [],
-        "claim": "existing multi-agent queue state can be regenerated and verified",
+        "claim": (
+            "v0.9 multi-agent queue state can be regenerated and verified "
+            "through the v0.2 ledger/cursor baseline"
+        ),
         "pathspecs": [
-            "docs/json_schema/multi_agent_queue_cursor_state_v0_1.schema.json",
-            "docs/json_schema/multi_agent_queue_run_ledger_v0_1.schema.json",
-            "scripts/run_multi_agent_queue_cursor_state.py",
-            "scripts/verify_multi_agent_queue_cursor_state.py",
-            "scripts/run_multi_agent_queue_run_ledger.py",
-            "scripts/verify_multi_agent_queue_run_ledger.py",
-            "tests/fixtures/multi_agent_queue_cursor_state_ready_to_resume_v0_1.json",
-            "tests/fixtures/multi_agent_queue_cursor_state_v0_1.json",
-            "tests/fixtures/multi_agent_queue_run_ledger_v0_1.json",
-            "tests/test_multi_agent_queue_cursor_state.py",
-            "tests/test_multi_agent_queue_run_ledger.py",
+            "Makefile",
+            "docs/coordination/multi-agent-continuation-checkpoint.md",
+            "docs/json_schema/multi_agent_queue_cursor_state_v0_2.schema.json",
+            "docs/json_schema/multi_agent_queue_run_ledger_v0_2.schema.json",
+            "scripts/run_multi_agent_queue_cursor_state_v0_2.py",
+            "scripts/verify_multi_agent_queue_cursor_state_v0_2.py",
+            "scripts/run_multi_agent_queue_run_ledger_v0_2.py",
+            "scripts/verify_multi_agent_queue_run_ledger_v0_2.py",
+            "src/well_harness/agent_task_contract.py",
+            "tests/test_agent_task_contract.py",
+            "tests/test_multi_agent_queue_cursor_state_v0_2.py",
+            "tests/test_multi_agent_queue_run_ledger_v0_2.py",
         ],
         "forced_pathspecs": [],
         "validation_commands": [
-            "PYTHONPATH=src:. python3 -m pytest -q tests/test_multi_agent_queue_run_ledger.py tests/test_multi_agent_queue_cursor_state.py",
-            "make multi-agent-queue-cursor-state",
-            "make verify-multi-agent-queue-cursor-state",
+            "PYTHONPATH=src:. python3 -m pytest -q tests/test_multi_agent_queue_run_ledger_v0_2.py tests/test_multi_agent_queue_cursor_state_v0_2.py tests/test_agent_task_contract.py",
+            "AI_FANTUI_QUEUE_PREFLIGHT_MODE=fixture make verify-multi-agent-queue-run-ledger-v0-2",
+            "AI_FANTUI_QUEUE_PREFLIGHT_MODE=fixture make verify-multi-agent-queue-cursor-state-v0-2",
+            "AI_FANTUI_QUEUE_PREFLIGHT_MODE=fixture make verify-multi-agent-queue-cursor-resume-state-v0-2",
         ],
     },
     {
         "package_id": "project-manager-status",
         "label": "Project Manager Status Package",
-        "depends_on": ["multi-agent-cursor-baseline"],
+        "depends_on": ["multi-agent-cursor-baseline-v0-2"],
         "claim": "project owner can inspect a generated status artifact before M21 activation",
         "pathspecs": [
             "docs/coordination/project-manager-status-panel.md",
@@ -83,7 +88,7 @@ PACKAGE_ORDER: list[dict[str, Any]] = [
     {
         "package_id": "ultrawork-monitor",
         "label": "UltraWork Monitor Package",
-        "depends_on": ["multi-agent-cursor-baseline"],
+        "depends_on": ["multi-agent-cursor-baseline-v0-2"],
         "claim": "Claude Code subagent-style monitor is exposed through a read-only local HTML artifact",
         "pathspecs": [
             "docs/coordination/ultrawork-monitor-pathspec-package.md",

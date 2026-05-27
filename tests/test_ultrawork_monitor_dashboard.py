@@ -17,10 +17,7 @@ from well_harness.ultrawork_monitor_dashboard import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PROJECT_ROOT / "docs" / "json_schema" / "ultrawork_monitor_dashboard_v0_1.schema.json"
-IDLE_CURSOR_FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "multi_agent_queue_cursor_state_v0_1.json"
-READY_CURSOR_FIXTURE = (
-    PROJECT_ROOT / "tests" / "fixtures" / "multi_agent_queue_cursor_state_ready_to_resume_v0_1.json"
-)
+CURSOR_RUN_SCRIPT = PROJECT_ROOT / "scripts" / "run_multi_agent_queue_cursor_state_v0_2.py"
 RUN_SCRIPT = PROJECT_ROOT / "scripts" / "run_ultrawork_monitor_dashboard.py"
 VERIFY_SCRIPT = PROJECT_ROOT / "scripts" / "verify_ultrawork_monitor_dashboard.py"
 AGENT_DIR = PROJECT_ROOT / ".claude" / "agents"
@@ -44,11 +41,36 @@ def _schema() -> dict:
     return _load_json(SCHEMA_PATH)
 
 
-def test_ultrawork_dashboard_schema_validates_ready_resume_payload() -> None:
-    cursor = _load_json(READY_CURSOR_FIXTURE)
+def _run_cursor(tmp_path: Path, *, resume_mode: str) -> tuple[dict, Path]:
+    artifact_dir = tmp_path / f"cursor-{resume_mode}"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CURSOR_RUN_SCRIPT),
+            "--artifact-dir",
+            str(artifact_dir),
+            "--resume-mode",
+            resume_mode,
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=420,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    return payload, Path(payload["artifact_paths"]["cursor_state"])
+
+
+def test_ultrawork_dashboard_schema_validates_ready_resume_payload(tmp_path: Path) -> None:
+    cursor, cursor_path = _run_cursor(tmp_path, resume_mode="ready-to-resume")
     dashboard = build_ultrawork_monitor_dashboard(
         cursor,
-        source_cursor_path=str(READY_CURSOR_FIXTURE),
+        source_cursor_path=str(cursor_path),
         generated_at="2026-05-27T00:00:00Z",
     )
 
@@ -56,7 +78,7 @@ def test_ultrawork_dashboard_schema_validates_ready_resume_payload() -> None:
     jsonschema.Draft202012Validator(_schema()).validate(dashboard)
     assert dashboard["summary"]["status"] == "ready_to_resume"
     assert dashboard["summary"]["next_action"] == "resume_next_open_record"
-    assert dashboard["selected_next_record"]["record_id"] == "RUN-QUEUE-010"
+    assert dashboard["selected_next_record"]["record_id"] == "RUN-QUEUE-011"
     assert dashboard["selected_next_record"]["agent"] == "LogicIRRepairAgent"
     assert any(
         blocker["blocker_id"] == "notion-control-plane-404"
@@ -65,33 +87,33 @@ def test_ultrawork_dashboard_schema_validates_ready_resume_payload() -> None:
     )
 
 
-def test_ultrawork_dashboard_schema_validates_idle_payload() -> None:
-    cursor = _load_json(IDLE_CURSOR_FIXTURE)
+def test_ultrawork_dashboard_schema_validates_idle_payload(tmp_path: Path) -> None:
+    cursor, cursor_path = _run_cursor(tmp_path, resume_mode="idle")
     dashboard = build_ultrawork_monitor_dashboard(
         cursor,
-        source_cursor_path=str(IDLE_CURSOR_FIXTURE),
+        source_cursor_path=str(cursor_path),
         generated_at="2026-05-27T00:00:00Z",
     )
 
     jsonschema.Draft202012Validator(_schema()).validate(dashboard)
     assert dashboard["summary"]["status"] == "idle"
     assert dashboard["summary"]["next_action"] == "wait_for_append_only_queue_growth"
-    assert dashboard["summary"]["completed_count"] == 10
+    assert dashboard["summary"]["completed_count"] == 11
     assert dashboard["summary"]["open_approved_count"] == 0
     assert all(not lane["needs_operator_action"] for lane in dashboard["agent_lanes"])
 
 
-def test_ultrawork_dashboard_html_exposes_lanes_gates_and_blockers() -> None:
-    cursor = _load_json(READY_CURSOR_FIXTURE)
+def test_ultrawork_dashboard_html_exposes_lanes_gates_and_blockers(tmp_path: Path) -> None:
+    cursor, cursor_path = _run_cursor(tmp_path, resume_mode="ready-to-resume")
     dashboard = build_ultrawork_monitor_dashboard(
         cursor,
-        source_cursor_path=str(READY_CURSOR_FIXTURE),
+        source_cursor_path=str(cursor_path),
         generated_at="2026-05-27T00:00:00Z",
     )
     html = render_ultrawork_dashboard_html(dashboard)
 
     assert "UltraWork Monitor" in html
-    assert "RUN-QUEUE-010" in html
+    assert "RUN-QUEUE-011" in html
     assert "LogicIRRepairAgent" in html
     assert "notion-control-plane-404" in html
     assert "source_ledger_checker" in html
@@ -104,7 +126,7 @@ def test_ultrawork_dashboard_runner_and_checker_round_trip(tmp_path: Path) -> No
             sys.executable,
             str(RUN_SCRIPT),
             "--cursor",
-            str(READY_CURSOR_FIXTURE),
+            str(_run_cursor(tmp_path, resume_mode="ready-to-resume")[1]),
             "--artifact-dir",
             str(tmp_path),
             "--format",

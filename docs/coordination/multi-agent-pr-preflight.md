@@ -33,14 +33,14 @@ make verify-multi-agent-pr-preflight
 
 ## Package Order
 
-1. `multi-agent-cursor-baseline`
+1. `multi-agent-cursor-baseline-v0-2`
 2. `project-manager-status`
 3. `ultrawork-monitor`
 4. `m22-operator-cockpit`
 5. `m23-packaging-consolidation`
 6. `m24-pr-preflight`
 
-The generated artifact contains 18 validation commands, 7 explicit stage commands, and the copy-ready PR body. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
+The generated artifact contains 19 validation commands, 7 explicit stage commands, and the copy-ready PR body. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
 
 ## Excluded Dirty Context
 
@@ -80,4 +80,4 @@ make multi-agent-pr-preflight
 make verify-multi-agent-pr-preflight
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent PR Preflight`, `multi-agent-cursor-baseline`, `ultrawork-monitor`, `m23-packaging-consolidation`, `notion-control-plane-404`, and `git add -f --` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent PR Preflight`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m23-packaging-consolidation`, `notion-control-plane-404`, and `git add -f --` without desktop or mobile layout overflow.

@@ -74,20 +74,20 @@ def test_multi_agent_validation_evidence_schema_validates_payload() -> None:
     assert payload["milestone"]["id"] == "M25"
     assert payload["summary"] == {
         "dirty_worktree_policy": "ignore_unrelated_dirty_files_and_stage_only_listed_pathspecs",
-        "executed_command_count": 18,
+        "executed_command_count": 19,
         "failed_command_count": 0,
         "package_count": 7,
-        "passed_command_count": 18,
+        "passed_command_count": 19,
         "stage_command_count": 8,
-        "validation_command_count": 18,
+        "validation_command_count": 19,
     }
     assert payload["inputs"]["preflight_id"] == "multi-agent-pr-preflight-v0.1"
-    assert payload["validation_results"][0]["command_id"] == "multi-agent-cursor-baseline-01"
+    assert payload["validation_results"][0]["command_id"] == "multi-agent-cursor-baseline-v0-2-01"
     assert payload["validation_results"][-1]["command_id"] == "m24-pr-preflight-03"
     assert any("git add -f --" in command for command in payload["stage_commands"])
     assert any("multi-agent-validation-evidence.md" in command for command in payload["stage_commands"])
     assert "notion-control-plane-404" in payload["pr_evidence_note"]
-    assert "18 validation commands passed" in payload["pr_evidence_note"]
+    assert "19 validation commands passed" in payload["pr_evidence_note"]
     assert payload["blockers"][0]["status"] == "external_blocker"
 
 
@@ -100,11 +100,11 @@ def test_multi_agent_validation_evidence_html_exposes_results_and_blocker() -> N
     html = render_multi_agent_validation_evidence_html(payload)
 
     assert "Multi-Agent Validation Evidence" in html
-    assert "multi-agent-cursor-baseline-01" in html
+    assert "multi-agent-cursor-baseline-v0-2-01" in html
     assert "m24-pr-preflight-03" in html
     assert "m25-validation-evidence" in html
     assert "notion-control-plane-404" in html
-    assert "18 validation commands passed" in html
+    assert "19 validation commands passed" in html
 
 
 def test_multi_agent_validation_evidence_runner_and_checker_round_trip(tmp_path: Path) -> None:
@@ -177,7 +177,7 @@ def test_multi_agent_validation_evidence_is_wired_into_docs_and_makefile() -> No
     assert "scripts/run_multi_agent_validation_evidence.py --format json" in makefile
     assert "scripts/verify_multi_agent_validation_evidence.py --format json" in makefile
 
-    assert "18 validation commands" in doc
+    assert "19 validation commands" in doc
     assert "8 explicit stage commands" in doc
     assert "m25-validation-evidence" in doc
     assert "notion-control-plane-404" in doc

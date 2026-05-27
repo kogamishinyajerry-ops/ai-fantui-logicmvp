@@ -140,7 +140,7 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
             "Project Manager Status",
             "UltraWork Monitor",
             "notion-control-plane-404",
-            "RUN-QUEUE-010",
+            "RUN-QUEUE-011",
         ]:
             if marker not in html:
                 mismatches.append(f"cockpit HTML missing marker: {marker}")

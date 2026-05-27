@@ -31,7 +31,7 @@ make verify-multi-agent-packaging-consolidation
 
 ## Package Order
 
-1. `multi-agent-cursor-baseline`
+1. `multi-agent-cursor-baseline-v0-2`
 2. `project-manager-status`
 3. `ultrawork-monitor`
 4. `m22-operator-cockpit`
@@ -77,4 +77,4 @@ make multi-agent-packaging-consolidation
 make verify-multi-agent-packaging-consolidation
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline`, `ultrawork-monitor`, `m22-operator-cockpit`, and `notion-control-plane-404` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m22-operator-cockpit`, and `notion-control-plane-404` without desktop or mobile layout overflow.

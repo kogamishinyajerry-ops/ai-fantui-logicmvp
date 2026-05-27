@@ -32,7 +32,7 @@ MVP_DOC_PATH = (
 
 
 EXPECTED_ORDER = [
-    "multi-agent-cursor-baseline",
+    "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
     "ultrawork-monitor",
     "m22-operator-cockpit",
@@ -62,13 +62,14 @@ def test_multi_agent_pr_preflight_schema_validates_payload() -> None:
     assert payload["status"] == "pass"
     assert payload["milestone"]["id"] == "M24"
     assert payload["summary"]["package_count"] == 6
-    assert payload["summary"]["validation_command_count"] == 18
+    assert payload["summary"]["validation_command_count"] == 19
     assert payload["summary"]["stage_command_count"] == 7
     assert [package["package_id"] for package in payload["pathspec_packages"]] == EXPECTED_ORDER
-    assert [item["package_id"] for item in payload["validation_plan"][:3]] == [
-        "multi-agent-cursor-baseline",
-        "multi-agent-cursor-baseline",
-        "multi-agent-cursor-baseline",
+    assert [item["package_id"] for item in payload["validation_plan"][:4]] == [
+        "multi-agent-cursor-baseline-v0-2",
+        "multi-agent-cursor-baseline-v0-2",
+        "multi-agent-cursor-baseline-v0-2",
+        "multi-agent-cursor-baseline-v0-2",
     ]
     assert any("git add -f --" in command for command in payload["stage_commands"])
     assert any("tests/test_multi_agent_pr_preflight.py" in command for command in payload["stage_commands"])
@@ -95,7 +96,7 @@ def test_multi_agent_pr_preflight_html_exposes_validation_and_pr_body() -> None:
     html = render_multi_agent_pr_preflight_html(payload)
 
     assert "Multi-Agent PR Preflight" in html
-    assert "multi-agent-cursor-baseline-01" in html
+    assert "multi-agent-cursor-baseline-v0-2-01" in html
     assert "ultrawork-monitor" in html
     assert "m23-packaging-consolidation" in html
     assert "m24-pr-preflight" in html
@@ -169,7 +170,7 @@ def test_multi_agent_pr_preflight_is_wired_into_docs_and_makefile() -> None:
 
     for marker in EXPECTED_ORDER:
         assert marker in doc
-    assert "18 validation commands" in doc
+    assert "19 validation commands" in doc
     assert "git add -f --" in doc
     assert "notion-control-plane-404" in doc
     assert "src/well_harness/controller.py" in doc

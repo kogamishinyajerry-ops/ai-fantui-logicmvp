@@ -32,7 +32,7 @@ MVP_DOC_PATH = (
 
 
 EXPECTED_ORDER = [
-    "multi-agent-cursor-baseline",
+    "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
     "ultrawork-monitor",
     "m22-operator-cockpit",

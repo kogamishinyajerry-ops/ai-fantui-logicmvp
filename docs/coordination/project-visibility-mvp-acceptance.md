@@ -1,6 +1,6 @@
 # Project Visibility MVP Acceptance
 
-Date: 2026-05-22
+Date: 2026-05-27
 Status: formal project-owner entrypoint gate
 
 ## Purpose
@@ -25,8 +25,8 @@ The Project Visibility MVP is accepted when the gate proves all of these:
 - The HTML entrypoint exists and renders in a browser from a `file://` URL.
 - A desktop screenshot is captured and is non-empty.
 - The rendered page shows `Multi-Agent Candidate Repair Pipeline MVP`.
-- The rendered page shows `RUN-QUEUE-010`.
-- The rendered page shows `CHECK_UNREACHABLE_STATE_001`.
+- The rendered page shows `RUN-QUEUE-011`.
+- The rendered page shows `CHECK_OUTPUT_COMMAND_CONFLICT_001`.
 - The rendered page shows `Project Visibility MVP` as the recommended next
   visibility option.
 - The rendered page shows the current decision: do not continue M21 immediately.

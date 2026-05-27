@@ -15,7 +15,7 @@ DEFAULT_ARTIFACT_DIR = Path("/tmp/ai-fantui-multi-agent-packaging-consolidation"
 PACKAGE_NAME = "multi_agent_packaging_consolidation_v0_1.json"
 SCHEMA_NAME = "multi_agent_packaging_consolidation_v0_1.schema.json"
 EXPECTED_ORDER = [
-    "multi-agent-cursor-baseline",
+    "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
     "ultrawork-monitor",
     "m22-operator-cockpit",
@@ -139,7 +139,7 @@ def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, 
         html = Path(str(artifact_paths["package_html"])).read_text(encoding="utf-8")
         for marker in [
             "Multi-Agent Packaging Consolidation",
-            "multi-agent-cursor-baseline",
+            "multi-agent-cursor-baseline-v0-2",
             "ultrawork-monitor",
             "m22-operator-cockpit",
             "notion-control-plane-404",

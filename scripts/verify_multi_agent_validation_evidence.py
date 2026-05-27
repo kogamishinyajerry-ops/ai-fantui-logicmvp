@@ -15,7 +15,7 @@ DEFAULT_ARTIFACT_DIR = Path("/tmp/ai-fantui-multi-agent-validation-evidence")
 PACKAGE_NAME = "multi_agent_validation_evidence_v0_1.json"
 SCHEMA_NAME = "multi_agent_validation_evidence_v0_1.schema.json"
 EXPECTED_PACKAGES = [
-    "multi-agent-cursor-baseline",
+    "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
     "ultrawork-monitor",
     "m22-operator-cockpit",
@@ -84,10 +84,10 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
 
     validation_plan = payload.get("validation_plan", [])
     validation_results = payload.get("validation_results", [])
-    if len(validation_plan) != 18:
-        mismatches.append("validation_plan must contain 18 commands")
-    if len(validation_results) != 18:
-        mismatches.append("validation_results must contain 18 command results")
+    if len(validation_plan) != 19:
+        mismatches.append("validation_plan must contain 19 commands")
+    if len(validation_results) != 19:
+        mismatches.append("validation_results must contain 19 command results")
     plan_by_id = {
         item.get("command_id"): item
         for item in validation_plan
@@ -108,8 +108,8 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
 
     summary = payload.get("summary", {})
     if isinstance(summary, dict):
-        if summary.get("passed_command_count") != 18:
-            mismatches.append("passed_command_count must be 18")
+        if summary.get("passed_command_count") != 19:
+            mismatches.append("passed_command_count must be 19")
         if summary.get("failed_command_count") != 0:
             mismatches.append("failed_command_count must be 0")
         if summary.get("stage_command_count") != 8:
@@ -153,7 +153,7 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
         mismatches.append("Notion 404 must remain an external blocker")
 
     note = payload.get("pr_evidence_note", "")
-    for marker in ["18 validation commands passed", "notion-control-plane-404"]:
+    for marker in ["19 validation commands passed", "notion-control-plane-404"]:
         if marker not in note:
             mismatches.append(f"PR evidence note missing marker: {marker}")
 
@@ -170,11 +170,11 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
         html = Path(str(artifact_paths["evidence_html"])).read_text(encoding="utf-8")
         for marker in [
             "Multi-Agent Validation Evidence",
-            "multi-agent-cursor-baseline-01",
+            "multi-agent-cursor-baseline-v0-2-01",
             "m24-pr-preflight-03",
             "m25-validation-evidence",
             "notion-control-plane-404",
-            "18 validation commands passed",
+            "19 validation commands passed",
         ]:
             if marker not in html:
                 mismatches.append(f"evidence HTML missing marker: {marker}")

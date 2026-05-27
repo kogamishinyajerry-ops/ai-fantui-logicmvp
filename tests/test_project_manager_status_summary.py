@@ -63,7 +63,7 @@ def test_project_manager_status_summary_runner_emits_owner_readable_artifacts(
     assert payload["kind"] == "ai-fantui-project-manager-status-summary"
     assert payload["summary_id"] == "project-manager-status-summary-v0.1"
     assert payload["status"] == "pass"
-    assert payload["as_of"] == "2026-05-22"
+    assert payload["as_of"] == "2026-05-27"
     assert payload["entrypoint"]["status"] == "formal_project_visibility_mvp_entrypoint"
     assert payload["entrypoint"]["acceptance_gate"] == "make project-visibility-mvp-gate"
     assert payload["entrypoint"]["html"].endswith("project_manager_status_summary.html")
@@ -71,10 +71,10 @@ def test_project_manager_status_summary_runner_emits_owner_readable_artifacts(
     assert payload["current_mvp"]["state"] == (
         "engineering_pipeline_mvp_complete_product_mvp_not_closed"
     )
-    assert payload["completed"]["completed_count"] == 10
-    assert payload["completed"]["last_completed_record_id"] == "RUN-QUEUE-010"
+    assert payload["completed"]["completed_count"] == 11
+    assert payload["completed"]["last_completed_record_id"] == "RUN-QUEUE-011"
     assert payload["completed"]["last_completed_task_id"] == (
-        "TASK-CE-CHECK-UNREACHABLE-STATE-001"
+        "TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001"
     )
     assert payload["cursor"]["state_status"] == "idle_no_open_approved_items"
     assert payload["cursor"]["ready_for_resume"] is False
@@ -109,8 +109,8 @@ def test_project_manager_status_summary_runner_emits_owner_readable_artifacts(
     assert payload["next_stage_choices"][1]["m21_queue_unblocked"] is False
     assert payload["next_stage_choices"][2]["name"] == "Return to Demo Polish"
     assert any(
-        record["record_id"] == "RUN-QUEUE-010"
-        and record["source_finding_code"] == "CHECK_UNREACHABLE_STATE_001"
+        record["record_id"] == "RUN-QUEUE-011"
+        and record["source_finding_code"] == "CHECK_OUTPUT_COMMAND_CONFLICT_001"
         for record in payload["completed"]["records"]
     )
 
@@ -128,8 +128,8 @@ def test_project_manager_status_summary_runner_emits_owner_readable_artifacts(
 
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "# Project Manager Status Summary" in markdown
-    assert "RUN-QUEUE-010" in markdown
-    assert "TASK-CE-CHECK-UNREACHABLE-STATE-001" in markdown
+    assert "RUN-QUEUE-011" in markdown
+    assert "TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001" in markdown
     assert "Do not continue M21 immediately." in markdown
     assert "Acceptance gate: `make project-visibility-mvp-gate`" in markdown
     assert (
@@ -145,8 +145,8 @@ def test_project_manager_status_summary_runner_emits_owner_readable_artifacts(
     assert "Accept Customer Demo Evidence" in html
     assert "M21 queue unblocked: True" in html
     assert "Return to Demo Polish" in html
-    assert "RUN-QUEUE-010" in html
-    assert "CHECK_UNREACHABLE_STATE_001" in html
+    assert "RUN-QUEUE-011" in html
+    assert "CHECK_OUTPUT_COMMAND_CONFLICT_001" in html
     assert "Acceptance gate: make project-visibility-mvp-gate" in html
     assert "Needs attention" not in html
     assert "On track" in html
@@ -173,12 +173,12 @@ def test_project_manager_status_summary_rejects_last_task_or_finding_drift(
             "task_id": f"TASK-{index:03d}",
             "status": "converged",
         }
-        for index in range(1, 10)
+        for index in range(1, 11)
     ]
     completed_records.append(
         {
-            "record_id": "RUN-QUEUE-010",
-            "queue_item_id": "queue-safety-unreachable-state-repair",
+            "record_id": "RUN-QUEUE-011",
+            "queue_item_id": "queue-safety-output-command-conflict-repair",
             "task_id": "DRIFTED-TASK-ID",
             "status": "converged",
         }
@@ -187,8 +187,8 @@ def test_project_manager_status_summary_rejects_last_task_or_finding_drift(
         "status": "pass",
         "state_status": "idle_no_open_approved_items",
         "cursor_position": {
-            "last_completed_record_id": "RUN-QUEUE-010",
-            "last_completed_queue_item_id": "queue-safety-unreachable-state-repair",
+            "last_completed_record_id": "RUN-QUEUE-011",
+            "last_completed_queue_item_id": "queue-safety-output-command-conflict-repair",
         },
         "completed_records": completed_records,
         "resume_policy": {
@@ -199,7 +199,7 @@ def test_project_manager_status_summary_rejects_last_task_or_finding_drift(
             "source_ledger": str(tmp_path / "ledger.json"),
         },
         "aggregate": {
-            "completed_count": 10,
+            "completed_count": 11,
             "open_approved_count": 0,
             "ready_for_resume": False,
             "controller_truth_modified": False,
@@ -209,7 +209,7 @@ def test_project_manager_status_summary_rejects_last_task_or_finding_drift(
     ledger_payload = {
         "run_records": [
             {
-                "record_id": "RUN-QUEUE-010",
+                "record_id": "RUN-QUEUE-011",
                 "source_finding_code": "DRIFTED_FINDING_CODE",
             }
         ]
@@ -238,9 +238,9 @@ def test_project_manager_status_summary_rejects_last_task_or_finding_drift(
     assert payload["deterministic_gates"]["summary_artifacts"] == "pass"
     assert payload["deterministic_gates"]["local_gate"] == "fail"
     assert payload["checks"]["queue_progress"] == {
-        "expected_last_completed_record_id": "RUN-QUEUE-010",
-        "expected_last_completed_task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001",
-        "expected_last_completed_source_finding_code": "CHECK_UNREACHABLE_STATE_001",
+        "expected_last_completed_record_id": "RUN-QUEUE-011",
+        "expected_last_completed_task_id": "TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001",
+        "expected_last_completed_source_finding_code": "CHECK_OUTPUT_COMMAND_CONFLICT_001",
         "observed_last_completed_task_id": "DRIFTED-TASK-ID",
         "observed_last_completed_source_finding_code": "DRIFTED_FINDING_CODE",
     }

@@ -88,4 +88,4 @@ make multi-agent-operator-cockpit
 make verify-multi-agent-operator-cockpit
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`, `UltraWork Monitor`, `RUN-QUEUE-010`, and `notion-control-plane-404` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`, `UltraWork Monitor`, `RUN-QUEUE-011`, and `notion-control-plane-404` without desktop or mobile layout overflow.

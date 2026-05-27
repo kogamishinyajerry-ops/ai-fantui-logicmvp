@@ -36,9 +36,10 @@ truth, not the prior transcript.
 - M27 validation:
   `make verify-multi-agent-queue-run-ledger-v0-2` and
   `make verify-multi-agent-queue-cursor-state-v0-2` report `status=pass`
-- Next durable resume upgrade:
-  refresh the read-only status surfaces so UltraWork Monitor, operator cockpit,
-  packaging, and PR preflight consume the v0.2 ledger/cursor baseline.
+- Current status-surface baseline:
+  M28 refreshes Project Manager Status, Project Visibility, UltraWork Monitor,
+  operator cockpit, packaging, PR preflight, and validation evidence to consume
+  the v0.2 ledger/cursor baseline.
 
 ## Boundary
 
@@ -78,9 +79,9 @@ Expected result:
    - `state_status=idle_no_open_approved_items`
    - `cursor_position.last_completed_record_id=RUN-QUEUE-011`
    - `open_records=[]`
-5. If the proof passes, the next engineering action is to refresh the
-   read-only status/packaging surfaces to consume the v0.2 ledger/cursor
-   baseline.
+5. If the proof passes, the next engineering action is to run the focused M28
+   validation evidence and browser geometry gates, then stage only the explicit
+   M28 pathspec set.
 
 ## Stop If
 

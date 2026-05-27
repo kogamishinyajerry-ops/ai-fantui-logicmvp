@@ -15,7 +15,7 @@ DEFAULT_ARTIFACT_DIR = Path("/tmp/ai-fantui-multi-agent-pr-preflight")
 PACKAGE_NAME = "multi_agent_pr_preflight_v0_1.json"
 SCHEMA_NAME = "multi_agent_pr_preflight_v0_1.schema.json"
 EXPECTED_ORDER = [
-    "multi-agent-cursor-baseline",
+    "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
     "ultrawork-monitor",
     "m22-operator-cockpit",
@@ -88,8 +88,8 @@ def verify_multi_agent_pr_preflight(package_path: Path) -> dict[str, Any]:
         for item in validation_plan
         if isinstance(item, dict)
     ]
-    if len(validation_plan) != 18:
-        mismatches.append("validation_plan must contain 18 commands")
+    if len(validation_plan) != 19:
+        mismatches.append("validation_plan must contain 19 commands")
     if len(command_ids) != len(set(command_ids)):
         mismatches.append("validation command ids must be unique")
     if not all(
@@ -154,7 +154,7 @@ def verify_multi_agent_pr_preflight(package_path: Path) -> dict[str, Any]:
         html = Path(str(artifact_paths["preflight_html"])).read_text(encoding="utf-8")
         for marker in [
             "Multi-Agent PR Preflight",
-            "multi-agent-cursor-baseline",
+            "multi-agent-cursor-baseline-v0-2",
             "ultrawork-monitor",
             "m23-packaging-consolidation",
             "notion-control-plane-404",

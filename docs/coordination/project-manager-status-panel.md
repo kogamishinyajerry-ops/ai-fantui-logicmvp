@@ -1,6 +1,6 @@
 # Project Manager Status Panel
 
-Date: 2026-05-22
+Date: 2026-05-27
 Status: project-owner control surface
 Worktree: `/Users/Zhuanz/AI-FANTUI-LogicMVP-Workspace/worktrees/multi-agent-active-route-wiring`
 
@@ -38,11 +38,11 @@ Current source of truth:
 - Recovery checkpoint:
   `docs/coordination/multi-agent-continuation-checkpoint.md`
 - Latest approved queue:
-  `approved-candidate-task-queue-v0.8`
+  `approved-candidate-task-queue-v0.9`
 - Latest completed run:
-  `RUN-QUEUE-010`
+  `RUN-QUEUE-011`
 - Latest completed task:
-  `TASK-CE-CHECK-UNREACHABLE-STATE-001`
+  `TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001`
 - Cursor status:
   `idle_no_open_approved_items`
 
@@ -213,7 +213,7 @@ requirements-change authorization, evidence gates, and external review.
 
 ### Queue Progress
 
-The append-only queue has completed 10 candidate repair records:
+The append-only queue has completed 11 candidate repair records:
 
 | Record | Queue item | Finding | Result |
 | --- | --- | --- | --- |
@@ -227,24 +227,25 @@ The append-only queue has completed 10 candidate repair records:
 | RUN-QUEUE-008 | unknown IR trace repair | `EV_IR_TRACE_UNKNOWN_REQUIREMENT` | converged |
 | RUN-QUEUE-009 | transition endpoint repair | `CHECK_TRANSITION_ENDPOINT_001` | converged |
 | RUN-QUEUE-010 | unreachable state repair | `CHECK_UNREACHABLE_STATE_001` | converged |
+| RUN-QUEUE-011 | output command conflict repair | `CHECK_OUTPUT_COMMAND_CONFLICT_001` | converged |
 
 ### Latest Slice
 
-M20 added the smallest safe repair for unreachable candidate states.
+M27 promoted the v0.9 queue into the current v0.2 ledger/cursor baseline.
 
-The repair removes only the seeded orphan candidate state
-`UNREACHABLE_REVIEW`. It does not add transitions, change guards, or introduce
-new controller truth.
+The latest completed queue item is the output-command conflict repair. It
+marks the seeded conflicting transition as safety-priority, keeps the repair
+candidate-only, and does not promote controller truth.
 
 ### Verification State
 
 Latest focused verification passed:
 
-- targeted pytest set: `56 passed`
-- M20 slice gate: pass
-- v0.8 approved queue artifact: pass
-- queue run ledger: pass
-- queue cursor state: pass
+- targeted pytest set: `24 passed`
+- M26 output-command conflict slice gate: pass
+- v0.9 approved queue artifact: pass
+- v0.2 queue run ledger: pass
+- v0.2 queue cursor state: pass
 - compact-safe checkpoint proof: pass
 - syntax compile: pass
 - `git diff --check`: pass
