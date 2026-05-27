@@ -871,6 +871,7 @@
   function renderReconstructionMode(payload, circuitView) {
     const hasCircuitView = Boolean(circuitView && circuitView.kind);
     if (reconstructionModePanel) {
+      reconstructionModePanel.hidden = false;
       reconstructionModePanel.dataset.mode = hasCircuitView ? "demo-reconstruction" : "concept";
     }
     if (reconstructionMode) {
@@ -2096,7 +2097,7 @@
     templateEntry.dataset.templateState = hasDrawing ? "hidden" : "ready";
     if (message) templateEntry.dataset.templateMessage = message;
     if (drawingStreamTimeline) drawingStreamTimeline.hidden = !hasDrawing;
-    if (reconstructionModePanel) reconstructionModePanel.hidden = true;
+    if (reconstructionModePanel) reconstructionModePanel.hidden = !hasDrawing;
     if (annotationSubmitBar) annotationSubmitBar.hidden = true;
   }
 

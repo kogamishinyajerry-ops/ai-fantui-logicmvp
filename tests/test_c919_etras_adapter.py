@@ -42,6 +42,10 @@ from well_harness.adapters.c919_etras_adapter import (
 from well_harness.adapters.c919_etras_intake_packet import (
     build_c919_etras_intake_packet,
 )
+from well_harness.adapters.c919_etras_requirements_adapter import (
+    C919ETRASRequirementsPreparseAdapter,
+    build_c919_etras_requirements_preparse,
+)
 from well_harness.controller_adapter import (
     CONTROLLER_TRUTH_ADAPTER_METADATA_SCHEMA_ID,
 )
@@ -663,6 +667,19 @@ class IntakePacketTests(unittest.TestCase):
         self.assertEqual("truth_source", roles["c919-etras-adapter-001"])
         self.assertEqual("requirement_reference", roles["c919-etras-requirement-pdf-001"])
         self.assertEqual("hardware_spec", roles["c919-etras-hardware-yaml-001"])
+
+    def test_requirements_preparse_adapter_emits_candidate_only_v09_graph(self):
+        adapter = C919ETRASRequirementsPreparseAdapter()
+        payload = build_c919_etras_requirements_preparse(
+            (PROJECT_ROOT / "docs" / "c919_etras" / "requirements_v0_9.md").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual("c919-etras", adapter.system_id)
+        self.assertEqual("none", adapter.truth_effect)
+        self.assertTrue(payload["available"])
+        self.assertEqual("c919_etras_v09_rule_preparse", payload["strategy"])
+        self.assertEqual("candidate_only", payload["source_scope"]["c919_etras"]["status"])
+        self.assertIn("mlg_wow", {node["id"] for node in payload["nodes"]})
 
 
 # =============================================================================
