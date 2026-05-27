@@ -20,6 +20,11 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
+from well_harness.agent_review_packet import (
+    CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE,
+    CandidateReviewPacketError,
+    load_candidate_review_packet_export,
+)
 from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
@@ -616,6 +621,18 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     500,
                     {
                         "error": "deepseek_live_demo_replay_invalid",
+                        "detail": str(exc),
+                    },
+                )
+            return
+        if parsed.path == CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE:
+            try:
+                self._send_json(200, load_candidate_review_packet_export())
+            except (FileNotFoundError, OSError, json.JSONDecodeError, CandidateReviewPacketError) as exc:
+                self._send_json(
+                    500,
+                    {
+                        "error": "candidate_review_packet_export_unavailable",
                         "detail": str(exc),
                     },
                 )
