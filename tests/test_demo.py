@@ -208,6 +208,48 @@ class DemoIntentLayerTests(unittest.TestCase):
                 self.assertEqual(exit_code, 0)
                 self.assertEqual([], [f"{list(error.path)}: {error.message}" for error in errors])
 
+    def test_demo_server_imports_without_jsonschema_runtime_extra(self):
+        code = r'''
+import importlib.abc
+import json
+import sys
+
+
+class BlockJsonschema(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "jsonschema" or fullname.startswith("jsonschema."):
+            raise ModuleNotFoundError("No module named 'jsonschema'")
+        return None
+
+
+sys.meta_path.insert(0, BlockJsonschema())
+from well_harness import demo_server
+from well_harness.requirements_intake.analysis import build_local_preparse_payload
+
+payload = build_local_preparse_payload(
+    "C919 ETRAS WOW signal shall gate reverse thrust deployment.",
+    document_name="runtime.txt",
+)
+contract = payload["agent_output_contract_v0_1"]["requirement_analyst"]
+boundary = contract["agent_output"]["boundary"]
+assert boundary["truth_effect"] == "none"
+assert boundary["controller_truth_modified"] is False
+print(json.dumps({"module": demo_server.__name__, "status": "pass"}))
+'''
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=PROJECT_ROOT,
+            env=demo_answer_schema_script_env(),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertIn('"status": "pass"', result.stdout)
+
     def test_demo_answer_schema_standalone_script_smoke(self):
         result = subprocess.run(
             [sys.executable, str(DEMO_ANSWER_SCHEMA_VALIDATION_SCRIPT_PATH)],

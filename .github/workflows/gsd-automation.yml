@@ -50,9 +50,9 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        # Install all [dev] extras from pyproject.toml so CI matches local runs.
-        # Previously only installed jsonschema + pytest, missing pytest-subtests / numpy / pyyaml.
-        run: pip install -e '.[dev]'
+        # Install dev + e2e extras because the validation artifact lane invokes
+        # Playwright's CLI before running browser-backed gates.
+        run: pip install -e '.[dev,e2e]'
 
       - name: Install Playwright Chromium
         run: python3 -m playwright install --with-deps chromium

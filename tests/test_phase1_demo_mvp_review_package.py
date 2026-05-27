@@ -509,6 +509,7 @@ def test_phase1_demo_mvp_review_package_make_target_is_wired() -> None:
 def test_phase1_demo_mvp_gate_is_the_ci_entrypoint_after_standalone_demo_preflight() -> None:
     workflow = GSD_AUTOMATION_WORKFLOW_PATH.read_text(encoding="utf-8")
 
+    assert "pip install -e '.[dev,e2e]'" in workflow
     assert "Install Playwright Chromium" in workflow
     assert "python3 -m playwright install --with-deps chromium" in workflow
     assert "Verify demo.html reconstruction MVP" in workflow

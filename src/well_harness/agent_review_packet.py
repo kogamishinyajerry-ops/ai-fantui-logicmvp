@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
-
 
 CANDIDATE_REVIEW_PACKET_SCHEMA_ID = (
     "https://well-harness.local/json_schema/candidate_review_packet_v0_1.schema.json"
@@ -24,6 +22,51 @@ CANDIDATE_REVIEW_PACKET_EXPORT_ID = "latest-candidate-review-packet"
 CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE = "/logic-builder/candidate-review-packet.json"
 CANDIDATE_REVIEW_PACKET_SOURCE_ROUTE = "/logic-builder"
 CANDIDATE_REVIEW_PACKET_EXPORT_SCHEMA_VERSION = "0.1"
+REQUIRED_REVIEW_PACKET_FIELDS = {
+    "$schema",
+    "kind",
+    "reviewer",
+    "boundary",
+    "source_artifacts",
+    "summary",
+    "finding_chains",
+    "human_review_required",
+}
+REQUIRED_REVIEWER_FIELDS = {"agent_name", "status", "loop_count"}
+REQUIRED_REVIEW_BOUNDARY_FIELDS = {
+    "candidate_state",
+    "truth_effect",
+    "controller_truth_modified",
+    "certification_claim",
+}
+REQUIRED_REVIEW_SUMMARY_FIELDS = {
+    "total_findings",
+    "loop_count",
+    "converged_loops",
+    "blocked_loops",
+    "needs_followup_loops",
+    "open_findings",
+}
+REQUIRED_REVIEW_PACKET_EXPORT_FIELDS = {
+    "$schema",
+    "kind",
+    "exporter",
+    "review_packet_ref",
+    "boundary",
+    "review_packet",
+    "machine_readable",
+    "human_review_required",
+}
+REQUIRED_REVIEW_PACKET_EXPORTER_FIELDS = {
+    "agent_name",
+    "schema_version",
+    "export_id",
+    "source_route",
+    "export_route",
+    "storage",
+    "status",
+}
+REQUIRED_REVIEW_PACKET_REF_FIELDS = {"schema", "kind", "reviewer_status"}
 
 
 class CandidateReviewPacketError(ValueError):
@@ -49,6 +92,14 @@ def _load_schema(schema_name: str) -> dict[str, Any]:
 
 
 def _schema_validate(packet: dict[str, Any], *, schema_name: str, label: str) -> None:
+    try:
+        import jsonschema
+    except ModuleNotFoundError as exc:
+        if exc.name not in {None, "jsonschema"}:
+            raise
+        _fallback_schema_validate(packet, schema_name=schema_name, label=label)
+        return
+
     schema = _load_schema(schema_name)
     try:
         jsonschema.Draft202012Validator(schema).validate(packet)
@@ -58,6 +109,108 @@ def _schema_validate(packet: dict[str, Any], *, schema_name: str, label: str) ->
         raise CandidateReviewPacketError(
             f"{label} schema validation failed{location}: {exc.message}"
         ) from exc
+
+
+def _missing_fields(
+    value: dict[str, Any],
+    required: set[str],
+    label: str,
+) -> None:
+    missing = sorted(required - set(value))
+    if missing:
+        raise CandidateReviewPacketError(
+            f"{label} missing required field(s): {', '.join(missing)}"
+        )
+
+
+def _validate_candidate_boundary(boundary: Any, label: str) -> None:
+    if not isinstance(boundary, dict):
+        raise CandidateReviewPacketError(f"{label} boundary must be an object")
+    _missing_fields(boundary, REQUIRED_REVIEW_BOUNDARY_FIELDS, f"{label} boundary")
+    if boundary.get("truth_effect") != "none":
+        raise CandidateReviewPacketError(f"{label} truth_effect must remain none")
+    if boundary.get("controller_truth_modified") is not False:
+        raise CandidateReviewPacketError(f"{label} may not modify controller truth")
+    if boundary.get("certification_claim") != "none":
+        raise CandidateReviewPacketError(f"{label} may not claim certification")
+
+
+def _fallback_review_packet_validate(packet: dict[str, Any], label: str) -> None:
+    if packet.get("$schema") != CANDIDATE_REVIEW_PACKET_SCHEMA_ID:
+        raise CandidateReviewPacketError(f"{label} $schema is invalid")
+    if packet.get("kind") != CANDIDATE_REVIEW_PACKET_KIND:
+        raise CandidateReviewPacketError(f"{label} kind is invalid")
+    _missing_fields(packet, REQUIRED_REVIEW_PACKET_FIELDS, label)
+
+    reviewer = packet.get("reviewer")
+    if not isinstance(reviewer, dict):
+        raise CandidateReviewPacketError(f"{label} reviewer must be an object")
+    _missing_fields(reviewer, REQUIRED_REVIEWER_FIELDS, f"{label} reviewer")
+    if reviewer.get("agent_name") != REVIEWER_AGENT_NAME:
+        raise CandidateReviewPacketError(f"{label} reviewer.agent_name is invalid")
+
+    _validate_candidate_boundary(packet.get("boundary"), label)
+
+    for field_name in ("source_artifacts", "summary"):
+        if not isinstance(packet.get(field_name), dict):
+            raise CandidateReviewPacketError(f"{label} {field_name} must be an object")
+    _missing_fields(packet["summary"], REQUIRED_REVIEW_SUMMARY_FIELDS, f"{label} summary")
+    if not isinstance(packet["summary"].get("open_findings"), list):
+        raise CandidateReviewPacketError(f"{label} summary.open_findings must be a list")
+    if not isinstance(packet.get("finding_chains"), list):
+        raise CandidateReviewPacketError(f"{label} finding_chains must be a list")
+    if not isinstance(packet.get("human_review_required"), bool):
+        raise CandidateReviewPacketError(f"{label} human_review_required must be a boolean")
+
+
+def _fallback_review_packet_export_validate(packet: dict[str, Any], label: str) -> None:
+    if packet.get("$schema") != CANDIDATE_REVIEW_PACKET_EXPORT_SCHEMA_ID:
+        raise CandidateReviewPacketError(f"{label} $schema is invalid")
+    if packet.get("kind") != CANDIDATE_REVIEW_PACKET_EXPORT_KIND:
+        raise CandidateReviewPacketError(f"{label} kind is invalid")
+    _missing_fields(packet, REQUIRED_REVIEW_PACKET_EXPORT_FIELDS, label)
+
+    exporter = packet.get("exporter")
+    if not isinstance(exporter, dict):
+        raise CandidateReviewPacketError(f"{label} exporter must be an object")
+    _missing_fields(exporter, REQUIRED_REVIEW_PACKET_EXPORTER_FIELDS, f"{label} exporter")
+    if exporter.get("agent_name") != CANDIDATE_REVIEW_PACKET_EXPORT_AGENT_NAME:
+        raise CandidateReviewPacketError(f"{label} exporter.agent_name is invalid")
+
+    ref = packet.get("review_packet_ref")
+    if not isinstance(ref, dict):
+        raise CandidateReviewPacketError(f"{label} review_packet_ref must be an object")
+    _missing_fields(ref, REQUIRED_REVIEW_PACKET_REF_FIELDS, f"{label} review_packet_ref")
+    if ref.get("schema") != CANDIDATE_REVIEW_PACKET_SCHEMA_ID:
+        raise CandidateReviewPacketError(f"{label} review_packet_ref schema mismatch")
+    if ref.get("kind") != CANDIDATE_REVIEW_PACKET_KIND:
+        raise CandidateReviewPacketError(f"{label} review_packet_ref kind mismatch")
+
+    _validate_candidate_boundary(packet.get("boundary"), label)
+    review_packet = packet.get("review_packet")
+    if not isinstance(review_packet, dict):
+        raise CandidateReviewPacketError(f"{label} review_packet must be an object")
+    _fallback_review_packet_validate(review_packet, "candidate review packet")
+    if packet.get("machine_readable") is not True:
+        raise CandidateReviewPacketError(f"{label} machine_readable must be true")
+    if not isinstance(packet.get("human_review_required"), bool):
+        raise CandidateReviewPacketError(f"{label} human_review_required must be a boolean")
+
+
+def _fallback_schema_validate(
+    packet: dict[str, Any],
+    *,
+    schema_name: str,
+    label: str,
+) -> None:
+    """Runtime-safe structural checks used when optional jsonschema is absent."""
+    if schema_name == CANDIDATE_REVIEW_PACKET_SCHEMA_NAME:
+        _fallback_review_packet_validate(packet, label)
+        return
+    if schema_name == CANDIDATE_REVIEW_PACKET_EXPORT_SCHEMA_NAME:
+        _fallback_review_packet_export_validate(packet, label)
+        return
+    raise CandidateReviewPacketError(f"unsupported fallback schema: {schema_name}")
 
 
 def _logic_ir_packet(agent_outputs: dict[str, Any]) -> dict[str, Any]:

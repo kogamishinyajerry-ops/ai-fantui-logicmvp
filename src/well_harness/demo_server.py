@@ -39,9 +39,6 @@ from well_harness.document_intake import (
     intake_template_payload,
 )
 from well_harness.fantui_tick import FantuiTickSystem, parse_pilot_inputs
-from well_harness.editable_workbench_run import build_workbench_sandbox_run_response
-from well_harness.hardware_evidence_report import build_hardware_evidence_report
-from well_harness.hardware_registry import HardwareRegistryError
 # P56-04 (2026-04-28): C919 sim engine. The c919_etras_panel/index.html
 # POSTs /api/tick on every 100ms timer; until this phase that path 404'd
 # on the unified server, so the panel's ▶仿真 button silently no-op'd.
@@ -59,7 +56,6 @@ from well_harness.timeline_engine import (
     ValidationError as TimelineValidationError,
     parse_timeline,
 )
-from well_harness.timeline_engine.executors.fantui import FantuiExecutor
 from well_harness.workbench_bundle import (
     SandboxEscapeError,
     archive_workbench_bundle,
@@ -1095,6 +1091,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, response_payload)
             return
         if parsed.path == WORKBENCH_EDITABLE_SANDBOX_RUN_PATH:
+            from well_harness.editable_workbench_run import (
+                build_workbench_sandbox_run_response,
+            )
+
             response_payload, error_payload = build_workbench_sandbox_run_response(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
@@ -1293,6 +1293,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_hardware_evidence(self, system_id: str = "thrust-reverser") -> None:
         """Return read-only hardware evidence report metadata."""
+        try:
+            from well_harness.hardware_evidence_report import build_hardware_evidence_report
+            from well_harness.hardware_registry import HardwareRegistryError
+        except Exception as exc:
+            self._send_json(500, {"error": str(exc)})
+            return
+
         try:
             self._send_json(200, build_hardware_evidence_report(system_id=system_id))
         except HardwareRegistryError:
@@ -4415,6 +4422,8 @@ def _handle_timeline_simulate(request_payload: dict) -> dict:
         }
 
     try:
+        from well_harness.timeline_engine.executors.fantui import FantuiExecutor
+
         executor = FantuiExecutor()
         trace = TimelinePlayer(timeline, executor).run()
     except (ValueError, TypeError) as exc:

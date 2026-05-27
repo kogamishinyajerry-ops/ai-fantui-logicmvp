@@ -6,8 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
-
 from well_harness.agent_execution_plan import build_execution_plan_from_task_package
 from well_harness.agent_task_contract import validate_agent_task_package
 
@@ -17,6 +15,47 @@ AGENT_EXECUTION_EVIDENCE_SCHEMA_ID = (
 )
 AGENT_EXECUTION_EVIDENCE_SCHEMA_NAME = "agent_execution_evidence_v0_1.schema.json"
 AGENT_EXECUTION_EVIDENCE_KIND = "ai-fantui-agent-execution-evidence"
+REQUIRED_EXECUTION_EVIDENCE_FIELDS = {
+    "$schema",
+    "kind",
+    "executor",
+    "approval",
+    "execution_boundary",
+    "selected_task",
+    "file_operations",
+    "deterministic_gates",
+    "verification_commands",
+    "evidence_package",
+}
+REQUIRED_EXECUTOR_FIELDS = {
+    "agent_name",
+    "source_task_package_id",
+    "status",
+    "selected_task_id",
+}
+REQUIRED_APPROVAL_FIELDS = {
+    "status",
+    "approval_id",
+    "approved_task_id",
+    "approved_by",
+    "approved_at",
+}
+REQUIRED_EXECUTION_BOUNDARY_FIELDS = {
+    "restricted_execution",
+    "restricted_execution_performed",
+    "workspace_writes_performed",
+    "controller_truth_modified",
+    "ui_layout_modified",
+}
+REQUIRED_EVIDENCE_PACKAGE_FIELDS = {
+    "task_package_hash",
+    "execution_plan_hash",
+    "evidence_material_hash",
+    "machine_readable",
+    "human_review_required",
+    "verification_summary",
+    "notes",
+}
 
 
 class AgentExecutionShellError(ValueError):
@@ -33,6 +72,14 @@ def _load_schema() -> dict[str, Any]:
 
 
 def _schema_validate(evidence: dict[str, Any]) -> None:
+    try:
+        import jsonschema
+    except ModuleNotFoundError as exc:
+        if exc.name not in {None, "jsonschema"}:
+            raise
+        _fallback_schema_validate(evidence)
+        return
+
     schema = _load_schema()
     try:
         jsonschema.Draft202012Validator(schema).validate(evidence)
@@ -42,6 +89,56 @@ def _schema_validate(evidence: dict[str, Any]) -> None:
         raise AgentExecutionShellError(
             f"agent execution evidence schema validation failed{location}: {exc.message}"
         ) from exc
+
+
+def _missing_fields(value: dict[str, Any], required: set[str], label: str) -> None:
+    missing = sorted(required - set(value))
+    if missing:
+        raise AgentExecutionShellError(f"{label} missing required field(s): {', '.join(missing)}")
+
+
+def _fallback_schema_validate(evidence: dict[str, Any]) -> None:
+    """Runtime-safe structural checks used when optional jsonschema is absent."""
+    if evidence.get("$schema") != AGENT_EXECUTION_EVIDENCE_SCHEMA_ID:
+        raise AgentExecutionShellError("agent execution evidence $schema is invalid")
+    if evidence.get("kind") != AGENT_EXECUTION_EVIDENCE_KIND:
+        raise AgentExecutionShellError("agent execution evidence kind is invalid")
+    _missing_fields(evidence, REQUIRED_EXECUTION_EVIDENCE_FIELDS, "agent execution evidence")
+
+    executor = evidence.get("executor")
+    if not isinstance(executor, dict):
+        raise AgentExecutionShellError("executor must be an object")
+    _missing_fields(executor, REQUIRED_EXECUTOR_FIELDS, "executor")
+    if executor.get("agent_name") != "ApprovedTaskExecutionShell":
+        raise AgentExecutionShellError("executor.agent_name is invalid")
+
+    approval = evidence.get("approval")
+    if not isinstance(approval, dict):
+        raise AgentExecutionShellError("approval must be an object")
+    _missing_fields(approval, REQUIRED_APPROVAL_FIELDS, "approval")
+
+    boundary = evidence.get("execution_boundary")
+    if not isinstance(boundary, dict):
+        raise AgentExecutionShellError("execution_boundary must be an object")
+    _missing_fields(boundary, REQUIRED_EXECUTION_BOUNDARY_FIELDS, "execution_boundary")
+    for field_name in REQUIRED_EXECUTION_BOUNDARY_FIELDS:
+        if not isinstance(boundary.get(field_name), bool):
+            raise AgentExecutionShellError(f"execution_boundary.{field_name} must be a boolean")
+
+    for field_name in ("file_operations", "deterministic_gates", "verification_commands"):
+        if not isinstance(evidence.get(field_name), list):
+            raise AgentExecutionShellError(f"{field_name} must be a list")
+
+    evidence_package = evidence.get("evidence_package")
+    if not isinstance(evidence_package, dict):
+        raise AgentExecutionShellError("evidence_package must be an object")
+    _missing_fields(evidence_package, REQUIRED_EVIDENCE_PACKAGE_FIELDS, "evidence_package")
+    if evidence_package.get("machine_readable") is not True:
+        raise AgentExecutionShellError("evidence_package.machine_readable must be true")
+    if not isinstance(evidence_package.get("human_review_required"), bool):
+        raise AgentExecutionShellError("evidence_package.human_review_required must be a boolean")
+    if not isinstance(evidence_package.get("notes"), list):
+        raise AgentExecutionShellError("evidence_package.notes must be a list")
 
 
 def _hash_json(value: Any) -> str:

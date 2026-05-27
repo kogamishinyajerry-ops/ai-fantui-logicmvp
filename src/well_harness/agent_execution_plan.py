@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
-
 from well_harness.agent_task_contract import validate_agent_task_package
 
 
@@ -16,6 +14,26 @@ AGENT_EXECUTION_PLAN_SCHEMA_ID = (
 AGENT_EXECUTION_PLAN_SCHEMA_NAME = "agent_execution_plan_v0_1.schema.json"
 AGENT_EXECUTION_PLAN_KIND = "ai-fantui-agent-execution-plan"
 DEFAULT_SOURCE_TASK_PACKAGE_ID = "CHIEF_ENGINEER_TASK_PACKAGE_v0.1"
+REQUIRED_EXECUTION_PLAN_FIELDS = {
+    "$schema",
+    "kind",
+    "planner",
+    "dry_run_only",
+    "execution_allowed",
+    "selected_task",
+    "boundary_verdict",
+    "planned_steps",
+    "file_operations",
+    "verification_commands",
+}
+REQUIRED_PLANNER_FIELDS = {
+    "agent_name",
+    "source_task_package_id",
+    "status",
+    "selected_task_id",
+}
+REQUIRED_BOUNDARY_VERDICT_FIELDS = {"status", "violations"}
+REQUIRED_FILE_OPERATION_FIELDS = {"operation", "path", "allowed", "reason"}
 
 
 class AgentExecutionPlanError(ValueError):
@@ -32,6 +50,14 @@ def _load_schema() -> dict[str, Any]:
 
 
 def _schema_validate(plan: dict[str, Any]) -> None:
+    try:
+        import jsonschema
+    except ModuleNotFoundError as exc:
+        if exc.name not in {None, "jsonschema"}:
+            raise
+        _fallback_schema_validate(plan)
+        return
+
     schema = _load_schema()
     try:
         jsonschema.Draft202012Validator(schema).validate(plan)
@@ -43,6 +69,49 @@ def _schema_validate(plan: dict[str, Any]) -> None:
         raise AgentExecutionPlanError(
             f"agent execution plan schema validation failed{location}: {exc.message}"
         ) from exc
+
+
+def _missing_fields(value: dict[str, Any], required: set[str], label: str) -> None:
+    missing = sorted(required - set(value))
+    if missing:
+        raise AgentExecutionPlanError(f"{label} missing required field(s): {', '.join(missing)}")
+
+
+def _fallback_schema_validate(plan: dict[str, Any]) -> None:
+    """Runtime-safe structural checks used when optional jsonschema is absent."""
+    if plan.get("$schema") != AGENT_EXECUTION_PLAN_SCHEMA_ID:
+        raise AgentExecutionPlanError("agent execution plan $schema is invalid")
+    if plan.get("kind") != AGENT_EXECUTION_PLAN_KIND:
+        raise AgentExecutionPlanError("agent execution plan kind is invalid")
+    _missing_fields(plan, REQUIRED_EXECUTION_PLAN_FIELDS, "agent execution plan")
+    if plan.get("dry_run_only") is not True or plan.get("execution_allowed") is not False:
+        raise AgentExecutionPlanError("execution plan must remain dry-run only")
+
+    planner = plan.get("planner")
+    if not isinstance(planner, dict):
+        raise AgentExecutionPlanError("planner must be an object")
+    _missing_fields(planner, REQUIRED_PLANNER_FIELDS, "planner")
+    if planner.get("agent_name") != "DeterministicExecutorAgent":
+        raise AgentExecutionPlanError("planner.agent_name is invalid")
+
+    boundary = plan.get("boundary_verdict")
+    if not isinstance(boundary, dict):
+        raise AgentExecutionPlanError("boundary_verdict must be an object")
+    _missing_fields(boundary, REQUIRED_BOUNDARY_VERDICT_FIELDS, "boundary_verdict")
+    if not isinstance(boundary.get("violations"), list):
+        raise AgentExecutionPlanError("boundary_verdict.violations must be a list")
+
+    for field_name in ("planned_steps", "file_operations", "verification_commands"):
+        if not isinstance(plan.get(field_name), list):
+            raise AgentExecutionPlanError(f"{field_name} must be a list")
+    for index, operation in enumerate(plan.get("file_operations", [])):
+        if not isinstance(operation, dict):
+            raise AgentExecutionPlanError(f"file_operations[{index}] must be an object")
+        _missing_fields(operation, REQUIRED_FILE_OPERATION_FIELDS, f"file_operations[{index}]")
+        if operation.get("operation") != "candidate_patch_plan":
+            raise AgentExecutionPlanError(f"file_operations[{index}].operation is invalid")
+        if not isinstance(operation.get("allowed"), bool):
+            raise AgentExecutionPlanError(f"file_operations[{index}].allowed must be a boolean")
 
 
 def _source_task_package_id(task_package: dict[str, Any]) -> str:
