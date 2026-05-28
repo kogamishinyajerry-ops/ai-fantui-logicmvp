@@ -18,14 +18,7 @@ RESPONSIVE_VIEWPORTS = [
     {"name": "desktop", "width": 1366, "height": 768},
     {"name": "mobile", "width": 390, "height": 844},
 ]
-REQUIRED_TEXT = [
-    "UltraWork Monitor",
-    "five_agent_context_cap",
-    "RUN-QUEUE-011",
-    "LogicIRRepairAgent",
-    "PackagingPRReadinessAgent",
-    "No active blockers",
-]
+INVARIANT_REQUIRED_TEXT = ["UltraWork Monitor"]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -68,7 +61,48 @@ def _dashboard_path(*, artifact_dir: Path, dashboard_path: Path | None) -> Path:
     return artifact_dir / DASHBOARD_NAME
 
 
-def _browser_state(html_path: Path, screenshot_dir: Path, *, expected_lane_count: int) -> dict[str, Any]:
+def _required_browser_text(payload: dict[str, Any]) -> list[str]:
+    required = list(INVARIANT_REQUIRED_TEXT)
+    agent_team = payload.get("agent_team", {}) if isinstance(payload.get("agent_team"), dict) else {}
+    mode = str(agent_team.get("mode", ""))
+    if mode:
+        required.append(mode)
+    for agent in agent_team.get("active_agents", []):
+        if isinstance(agent, dict) and agent.get("name"):
+            required.append(str(agent["name"]))
+
+    selected = (
+        payload.get("selected_next_record", {})
+        if isinstance(payload.get("selected_next_record"), dict)
+        else {}
+    )
+    if selected.get("status") not in {None, "", "none"}:
+        for key in ("record_id", "queue_item_id", "task_id", "agent"):
+            value = str(selected.get(key, ""))
+            if value:
+                required.append(value)
+
+    blockers = payload.get("blockers", [])
+    if isinstance(blockers, list) and blockers:
+        for blocker in blockers:
+            if not isinstance(blocker, dict):
+                continue
+            for key in ("blocker_id", "status", "message"):
+                value = str(blocker.get(key, ""))
+                if value:
+                    required.append(value)
+    else:
+        required.append("No active blockers")
+    return list(dict.fromkeys(required))
+
+
+def _browser_state(
+    html_path: Path,
+    screenshot_dir: Path,
+    *,
+    expected_lane_count: int,
+    required_text: list[str],
+) -> dict[str, Any]:
     def fail(message: str) -> dict[str, Any]:
         return {
             "status": "fail",
@@ -138,7 +172,7 @@ def _browser_state(html_path: Path, screenshot_dir: Path, *, expected_lane_count
                                 scrollContainers,
                             };
                         }""",
-                        REQUIRED_TEXT,
+                        required_text,
                     )
                     screenshot_path = screenshot_dir / f"ultrawork-monitor-dashboard-{viewport['name']}.png"
                     page.screenshot(path=str(screenshot_path), full_page=True)
@@ -241,6 +275,7 @@ def verify_ultrawork_monitor_dashboard(
                 html_path,
                 dashboard_path.parent / "screenshots",
                 expected_lane_count=expected_lane_count,
+                required_text=_required_browser_text(payload),
             )
             mismatches.extend(browser["mismatches"])
         else:

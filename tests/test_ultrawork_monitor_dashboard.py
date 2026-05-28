@@ -185,6 +185,34 @@ def test_ultrawork_dashboard_runner_and_checker_round_trip(tmp_path: Path) -> No
     assert verify_payload["mismatches"] == []
 
 
+def test_ultrawork_browser_required_text_is_derived_from_payload(tmp_path: Path) -> None:
+    ready_cursor, ready_cursor_path = _run_cursor(tmp_path, resume_mode="ready-to-resume")
+    ready_dashboard = build_ultrawork_monitor_dashboard(
+        ready_cursor,
+        source_cursor_path=str(ready_cursor_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+    ready_required = ultrawork_verifier._required_browser_text(ready_dashboard)
+
+    assert "RUN-QUEUE-011" in ready_required
+    assert "LogicIRRepairAgent" in ready_required
+    assert "five_agent_context_cap" in ready_required
+    assert "No active blockers" in ready_required
+
+    idle_cursor, idle_cursor_path = _run_cursor(tmp_path, resume_mode="idle")
+    idle_dashboard = build_ultrawork_monitor_dashboard(
+        idle_cursor,
+        source_cursor_path=str(idle_cursor_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+    idle_required = ultrawork_verifier._required_browser_text(idle_dashboard)
+
+    assert "RUN-QUEUE-011" not in idle_required
+    assert "LogicIRRepairAgent" in idle_required
+    assert "five_agent_context_cap" in idle_required
+    assert "No active blockers" in idle_required
+
+
 def test_ultrawork_browser_gate_reports_chromium_launch_failure(monkeypatch, tmp_path: Path) -> None:
     class BrokenPlaywright:
         def __enter__(self):
@@ -205,6 +233,7 @@ def test_ultrawork_browser_gate_reports_chromium_launch_failure(monkeypatch, tmp
         tmp_path / "ultrawork_monitor_dashboard_v0_1.html",
         tmp_path / "screenshots",
         expected_lane_count=0,
+        required_text=["UltraWork Monitor"],
     )
 
     assert result["status"] == "fail"
@@ -272,6 +301,54 @@ def test_ultrawork_dashboard_browser_gate_captures_geometry(tmp_path: Path) -> N
         item["hasInternalOverflow"]
         for item in browser["states"]["mobile"]["scrollContainers"]
     )
+
+
+@pytest.mark.e2e
+def test_ultrawork_dashboard_browser_gate_accepts_idle_payload(tmp_path: Path) -> None:
+    run_result = subprocess.run(
+        [
+            sys.executable,
+            str(RUN_SCRIPT),
+            "--resume-mode",
+            "idle",
+            "--artifact-dir",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert run_result.returncode == 0, run_result.stderr
+    payload = json.loads(run_result.stdout)
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--dashboard",
+            payload["artifact_paths"]["dashboard_json"],
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    assert verify_payload["browser"]["states"]["desktop"]["requiredTextPresent"] is True
+    assert verify_payload["browser"]["states"]["desktop"]["missingText"] == []
 
 
 def test_ultrawork_monitor_local_entry_and_pathspec_package_are_bounded() -> None:
