@@ -171,6 +171,28 @@ def test_multi_agent_review_closure_blocks_current_codex_thread_without_clean_re
     assert payload["summary"]["recommended_next_action"] == "fix_current_actionable_review_threads"
 
 
+def test_multi_agent_review_closure_requires_review_request_for_current_head() -> None:
+    pr_status = _pr_status()
+    pr_status["comments"] = [
+        {
+            "author": {"login": "chatgpt-codex-connector"},
+            "createdAt": "2026-05-28T07:51:10Z",
+            "body": "Codex Review: Didn't find any major issues. :+1:",
+        }
+    ]
+
+    payload = build_multi_agent_review_closure(
+        pr_status=pr_status,
+        review_threads=[],
+        generated_at="2026-05-28T08:00:00Z",
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gates"]["latest_head_review"] == "fail"
+    assert payload["summary"]["latest_codex_review_request_found"] is False
+    assert payload["summary"]["latest_clean_codex_result_found"] is False
+
+
 def test_multi_agent_review_closure_html_exposes_owner_handoff() -> None:
     payload = build_multi_agent_review_closure(
         pr_status=_pr_status(),

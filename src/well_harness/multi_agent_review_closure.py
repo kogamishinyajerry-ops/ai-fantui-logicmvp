@@ -191,10 +191,14 @@ def build_multi_agent_review_closure(
         reviews = []
     head_ref_oid = str(pr_status.get("headRefOid", ""))
     review_request = _latest_codex_review_request(comments, head_ref_oid)
-    clean_result = _latest_clean_codex_result_after(
-        comments=comments,
-        reviews=reviews,
-        after_created_at=_created_at(review_request or {}),
+    clean_result = (
+        _latest_clean_codex_result_after(
+            comments=comments,
+            reviews=reviews,
+            after_created_at=_created_at(review_request),
+        )
+        if review_request is not None
+        else None
     )
     latest_clean_review = clean_result is not None
     classified_threads = [
