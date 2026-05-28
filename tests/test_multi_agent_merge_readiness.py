@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_merge_readiness import (
     SCHEMA_ID,
@@ -288,9 +289,59 @@ def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path)
     assert "repo_github_local_artifacts" in html
     assert "MERGEABLE" in html
     assert "no_checks_reported" in html
+    assert "no_reviews_or_comments" in html
+    assert "request_review_or_wait_for_remote_checks" in html
+    assert 'class="gate-row"' in html
+    assert 'class="agent-row"' in html
+    assert 'class="geometry-row"' in html
 
 
 def test_multi_agent_merge_readiness_writer_and_checker_round_trip(tmp_path: Path) -> None:
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=_validation_evidence(),
+        pr_status=_pr_status(),
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+    written = write_multi_agent_merge_readiness_artifacts(
+        payload,
+        artifact_dir=tmp_path / "readiness",
+    )
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            written["artifact_paths"]["readiness_json"],
+            "--format",
+            "json",
+            "--skip-browser",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["package_path"] == written["artifact_paths"]["readiness_json"]
+    assert verify_payload["schema_valid"] is True
+    assert verify_payload["html_exists"] is True
+    assert verify_payload["markdown_exists"] is True
+    assert verify_payload["browser_valid"] is False
+    assert verify_payload["browser"]["status"] == "skipped"
+    assert verify_payload["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_multi_agent_merge_readiness_browser_gate_captures_geometry(
+    tmp_path: Path,
+) -> None:
     payload = build_multi_agent_merge_readiness(
         validation_evidence=_validation_evidence(),
         pr_status=_pr_status(),
@@ -319,16 +370,38 @@ def test_multi_agent_merge_readiness_writer_and_checker_round_trip(tmp_path: Pat
         check=False,
         timeout=120,
     )
+
     assert verify_result.returncode == 0, verify_result.stderr
     verify_payload = json.loads(verify_result.stdout)
-    assert verify_payload == {
-        "html_exists": True,
-        "markdown_exists": True,
-        "mismatches": [],
-        "package_path": written["artifact_paths"]["readiness_json"],
-        "schema_valid": True,
-        "status": "pass",
-    }
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["gateRowCount"] == len(payload["gates"])
+    assert browser["states"]["mobile"]["agentRowCount"] == payload["agent_team"]["team_size"]
+    assert browser["states"]["desktop"]["geometryRowCount"] == len(payload["geometry_results"])
+
+
+def test_multi_agent_merge_readiness_runner_ignores_local_artifacts_dirty_paths(
+    monkeypatch,
+) -> None:
+    module = _load_runner_module()
+
+    class Result:
+        returncode = 0
+        stdout = " M scripts/run_multi_agent_merge_readiness.py\n?? artifacts/docx-to-circuit-review-links/report.json\n"
+
+    monkeypatch.setattr(module.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert module._changed_paths_from_worktree() == [
+        "scripts/run_multi_agent_merge_readiness.py",
+    ]
 
 
 def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status(
@@ -364,7 +437,7 @@ def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status
     assert Path(payload["artifact_paths"]["readiness_json"]).exists()
 
 
-def test_multi_agent_merge_readiness_changed_paths_include_dirty_worktree(
+def test_multi_agent_merge_readiness_changed_paths_include_dirty_source_not_artifacts(
     monkeypatch,
 ) -> None:
     module = _load_runner_module()
@@ -376,6 +449,8 @@ def test_multi_agent_merge_readiness_changed_paths_include_dirty_worktree(
             self.stderr = ""
 
     def fake_run(command, **_kwargs):
+        if command == ["git", "rev-parse", "HEAD"]:
+            return Result(0, "abc123\n")
         if command[:3] == ["git", "diff", "--name-only"]:
             return Result(0, "docs/coordination/multi-agent-merge-readiness.md\n")
         if command[:3] == ["git", "status", "--porcelain=v1"]:
@@ -389,12 +464,40 @@ def test_multi_agent_merge_readiness_changed_paths_include_dirty_worktree(
 
     monkeypatch.setattr(module.subprocess, "run", fake_run)
 
-    assert module._changed_paths_from_pr_status({"baseRefName": "main"}) == [
+    assert module._changed_paths_from_pr_status(
+        {"baseRefName": "main", "headRefOid": "abc123"},
+    ) == [
         "docs/coordination/multi-agent-merge-readiness.md",
         "src/well_harness/demo_server.py",
         "tests/test_multi_agent_merge_readiness.py",
-        "artifacts/local-screenshot.png",
     ]
+
+
+def test_multi_agent_merge_readiness_ignores_stale_pr_diff_for_current_worktree(
+    monkeypatch,
+) -> None:
+    module = _load_runner_module()
+
+    class Result:
+        def __init__(self, returncode: int, stdout: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, **_kwargs):
+        if command == ["git", "rev-parse", "HEAD"]:
+            return Result(0, "current-head\n")
+        if command[:3] == ["git", "diff", "--name-only"]:
+            return Result(0, "README.md\n")
+        if command[:3] == ["git", "status", "--porcelain=v1"]:
+            return Result(0, " M scripts/run_multi_agent_merge_readiness.py\n")
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    assert module._changed_paths_from_pr_status(
+        {"baseRefName": "main", "headRefOid": "stale-pr-head"},
+    ) == ["scripts/run_multi_agent_merge_readiness.py"]
 
 
 def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:

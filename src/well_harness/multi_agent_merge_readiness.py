@@ -344,14 +344,14 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
     """Render a responsive HTML merge-readiness packet."""
     summary = payload["summary"]
     gate_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"gate-row\">"
         f"<td>{_escape(name.replace('_', ' '))}</td>"
         f"<td><span class=\"badge badge-{_escape(status)}\">{_escape(status)}</span></td>"
         "</tr>"
         for name, status in payload["gates"].items()
     )
     geometry_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"geometry-row\">"
         f"<td>{_escape(item['page'])}</td>"
         f"<td>{_escape(item['viewport'])}</td>"
         f"<td>{_escape(item['status'])}</td>"
@@ -362,7 +362,7 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
     )
     risks = "\n".join(f"<li>{_escape(item)}</li>" for item in payload["risk_notes"])
     team_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"agent-row\">"
         f"<td>{_escape(item['name'])}</td>"
         f"<td>{_escape(item['scope'])}</td>"
         "</tr>"
@@ -430,8 +430,8 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
     }}
     .metric strong {{
       display: block;
-      font-size: 22px;
-      line-height: 1.2;
+      font-size: 15px;
+      line-height: 1.25;
       overflow-wrap: anywhere;
     }}
     .table-scroll {{ overflow-x: auto; }}
@@ -496,6 +496,7 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
       <h2>PR Snapshot</h2>
       <p>PR <code>{_escape(payload['pr_status']['number'])}</code>: <code>{_escape(payload['pr_status']['url'])}</code></p>
       <p>Head <code>{_escape(payload['pr_status']['headRefOid'])}</code></p>
+      <p>Review state <code>{_escape(summary['review_state'])}</code>; next action <code>{_escape(summary['recommended_next_action'])}</code></p>
       <p>Reviews <code>{_escape(payload['pr_status']['review_count'])}</code>, comments <code>{_escape(payload['pr_status']['comment_count'])}</code>, checks <code>{_escape(payload['pr_status']['statusCheckRollup_count'])}</code></p>
       <p>Latest queue marker: <code>RUN-QUEUE-011</code>; validation note: <code>21 validation commands passed</code>.</p>
     </section>
