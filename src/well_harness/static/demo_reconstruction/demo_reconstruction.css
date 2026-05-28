@@ -345,6 +345,15 @@ h2 { margin-bottom: 0; font-size: 18px; }
   font-size: 11px;
   line-height: 1.35;
 }
+button.demo-reconstruction-chip {
+  border-style: solid;
+  cursor: pointer;
+}
+button.demo-reconstruction-chip:hover,
+button.demo-reconstruction-chip:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
 .demo-reconstruction-node-chip {
   background: #eff6ff;
   color: #1d4ed8;

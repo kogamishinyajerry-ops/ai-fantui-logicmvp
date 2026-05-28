@@ -131,7 +131,7 @@
     container.appendChild(group);
   }
 
-  function renderInlineChips(container, values, className, emptyText) {
+  function renderInlineChips(container, values, className, emptyText, highlightKind) {
     if (!container) return;
     container.innerHTML = "";
     if (!Array.isArray(values) || values.length === 0) {
@@ -142,9 +142,15 @@
       return;
     }
     values.forEach((value) => {
-      const chip = document.createElement("span");
+      const chip = document.createElement(highlightKind ? "button" : "span");
       chip.className = `demo-reconstruction-chip ${className}`;
       chip.textContent = value;
+      if (highlightKind) {
+        chip.type = "button";
+        chip.dataset.traceFocusKind = highlightKind;
+        chip.dataset.traceFocusId = value;
+        chip.addEventListener("click", () => applyEmbeddedTraceFocus(highlightKind, value));
+      }
       container.appendChild(chip);
     });
   }
@@ -216,6 +222,42 @@
     return { nodeCount, wireCount, ready: true };
   }
 
+  function applyEmbeddedTraceFocus(kind, id) {
+    if (!consoleFrame || !id) return { matchCount: 0, ready: false };
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument || !frameDocument.querySelector("#fan-chain-svg")) {
+      setText(embeddedHighlightStatus, "等待电路图同步");
+      return { matchCount: 0, ready: false };
+    }
+    ensureEmbeddedTraceStyle(frameDocument);
+    frameDocument
+      .querySelectorAll("#fan-chain-svg [data-docx-trace-selected]")
+      .forEach((element) => element.removeAttribute("data-docx-trace-selected"));
+
+    let selector = "";
+    let label = "对象";
+    if (kind === "node") {
+      selector = `#fan-chain-svg [data-node="${id}"]`;
+      label = "节点";
+    } else if (kind === "wire") {
+      selector = embeddedWireSelector(id);
+      label = "连线";
+    }
+    if (!selector) {
+      setText(embeddedHighlightStatus, `${label}未匹配：${id}`);
+      return { matchCount: 0, ready: true };
+    }
+
+    let matchCount = 0;
+    frameDocument.querySelectorAll(selector).forEach((element) => {
+      element.setAttribute("data-docx-trace-selected", "true");
+      matchCount += 1;
+    });
+    const unit = kind === "wire" ? "条匹配" : "个匹配";
+    setText(embeddedHighlightStatus, `聚焦${label}：${id} · ${matchCount} ${unit}`);
+    return { matchCount, ready: true };
+  }
+
   function setSelectedTrace(step) {
     if (!step || typeof step !== "object") return;
     currentTraceStep = step;
@@ -225,8 +267,8 @@
     setText(selectedAnchor, step.anchor || "P035");
     setText(selectedTitle, step.title || "工作过程片段");
     setText(selectedText, step.source_text || "");
-    renderInlineChips(selectedNodes, step.node_ids, "demo-reconstruction-node-chip", "无节点");
-    renderInlineChips(selectedWires, step.wire_ids, "demo-reconstruction-wire-chip", "无连线");
+    renderInlineChips(selectedNodes, step.node_ids, "demo-reconstruction-node-chip", "无节点", "node");
+    renderInlineChips(selectedWires, step.wire_ids, "demo-reconstruction-wire-chip", "无连线", "wire");
     renderInlineChips(selectedFolded, step.folded_predicates, "demo-reconstruction-folded-chip", "无折叠谓词");
     applyEmbeddedTraceHighlight(step);
   }

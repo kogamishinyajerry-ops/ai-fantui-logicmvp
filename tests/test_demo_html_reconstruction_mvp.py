@@ -174,13 +174,16 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "setSelectedTrace" in script
     assert "TRACE_WIRE_ENDPOINTS" in script
     assert "applyEmbeddedTraceHighlight" in script
+    assert "applyEmbeddedTraceFocus" in script
     assert "data-docx-trace-selected" in script
+    assert "traceFocusKind" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
     assert ".demo-reconstruction-trace-board" in stylesheet
     assert ".demo-reconstruction-trace-card" in stylesheet
     assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
+    assert "button.demo-reconstruction-chip" in stylesheet
 
 
 def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> None:
@@ -292,6 +295,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["embedded_trace_highlight_review"]["selectedWireCount"] == 3
     assert payload["embedded_trace_highlight_review"]["stylePresent"] is True
     assert "P035-S05" in payload["embedded_trace_highlight_review"]["statusText"]
+    assert payload["embedded_trace_chip_focus_review"]["focusNodeChipPresent"] is True
+    assert payload["embedded_trace_chip_focus_review"]["focusWireChipPresent"] is True
+    assert payload["embedded_trace_chip_focus_review"]["focusedNodeCount"] == 0
+    assert payload["embedded_trace_chip_focus_review"]["focusedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["embedded_trace_chip_focus_review"]["statusText"]
     assert payload["responsive_geometry"]["desktop"]["noHorizontalOverflow"] is True
     assert payload["responsive_geometry"]["mobile"]["noHorizontalOverflow"] is True
     assert payload["embedded_palette"]["html_class"] is True
@@ -310,6 +318,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "docx_sentence_circuit_map": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
+        "embedded_trace_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
         "node_wire_pixels": "pass",
