@@ -37,6 +37,11 @@ Verifier:
 make verify-multi-agent-merge-readiness
 ```
 
+The verifier also opens the generated readiness HTML in desktop and mobile
+browser viewports, captures screenshots, and fails on missing readiness labels
+or page-level horizontal overflow. Unit tests can disable this local browser
+path with `--skip-browser`; the Makefile gate keeps it enabled.
+
 ## Pathspec Package
 
 Stage this slice only with explicit pathspecs:
@@ -73,6 +78,15 @@ tools/run_gsd_validation_suite.py
 .planning/**
 ```
 
+The readiness runner ignores local `artifacts/**` files when deriving current
+worktree changes because those files are preserved as operator evidence, not PR
+pathspecs. Source and configuration changes still have to fit the explicit
+stage boundary.
+
+When the configured GitHub PR head does not match the local `HEAD`, the runner
+does not import that stale PR diff into the pathspec-boundary check; it falls
+back to the current worktree changes.
+
 ## Control-Plane Boundary
 
 Repo/GitHub/local artifacts are the active control surfaces for this readiness
@@ -97,4 +111,5 @@ make verify-multi-agent-merge-readiness
 Browser gate: open the generated HTML and verify it shows `Multi-Agent Merge
 Readiness`, `five_agent_context_cap`, `PackagingPRReadinessAgent`,
 `RUN-QUEUE-011`, `21 validation commands passed`, `repo_github_local_artifacts`,
-and `MERGEABLE` without desktop or mobile layout overflow.
+and `MERGEABLE` with desktop/mobile screenshots and no horizontal layout
+overflow.

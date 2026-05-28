@@ -26,6 +26,7 @@ DEFAULT_VALIDATION_EVIDENCE_PATH = (
     / "multi_agent_validation_evidence_v0_1.json"
 )
 DEFAULT_GEOMETRY_DIR = Path("/tmp/ai-fantui-m29-merge-readiness-geometry")
+IGNORED_WORKTREE_DIRTY_PREFIXES = ("artifacts/",)
 
 
 GEOMETRY_PAGES = [
@@ -130,8 +131,15 @@ def _load_pr_status(pr_status_json: Path | None, *, pr_number: int) -> dict[str,
 
 def _changed_paths_from_pr_status(pr_status: dict[str, Any]) -> list[str]:
     paths: list[str] = []
+    current_head_oid = _current_head_oid()
+    pr_head_oid = pr_status.get("headRefOid")
+    pr_head_matches_current = (
+        isinstance(pr_head_oid, str)
+        and bool(pr_head_oid)
+        and pr_head_oid == current_head_oid
+    )
     base_ref = pr_status.get("baseRefName")
-    if isinstance(base_ref, str) and base_ref:
+    if pr_head_matches_current and isinstance(base_ref, str) and base_ref:
         for candidate in (f"origin/{base_ref}", base_ref):
             result = subprocess.run(
                 ["git", "diff", "--name-only", f"{candidate}...HEAD"],
@@ -147,7 +155,7 @@ def _changed_paths_from_pr_status(pr_status: dict[str, Any]) -> list[str]:
                 break
 
     files = pr_status.get("files", [])
-    if not paths and isinstance(files, list):
+    if pr_head_matches_current and not paths and isinstance(files, list):
         paths.extend(
             str(item.get("path"))
             for item in files
@@ -156,6 +164,21 @@ def _changed_paths_from_pr_status(pr_status: dict[str, Any]) -> list[str]:
 
     paths.extend(_changed_paths_from_worktree())
     return _dedupe_paths(paths)
+
+
+def _current_head_oid() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=PROJECT_ROOT,
+        env=_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
 
 
 def _changed_paths_from_worktree() -> list[str]:
@@ -178,6 +201,8 @@ def _changed_paths_from_worktree() -> list[str]:
         if " -> " in path:
             path = path.rsplit(" -> ", 1)[1]
         path = path.strip('"')
+        if path.startswith(IGNORED_WORKTREE_DIRTY_PREFIXES):
+            continue
         if path:
             paths.append(path)
     return paths
