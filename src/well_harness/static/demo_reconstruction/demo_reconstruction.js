@@ -55,6 +55,8 @@
   const playbackActiveStep = $("demo-reconstruction-playback-active-step");
   const playbackNodeCount = $("demo-reconstruction-playback-node-count");
   const playbackWireCount = $("demo-reconstruction-playback-wire-count");
+  const ladderSummary = $("demo-reconstruction-ladder-summary");
+  const ladderList = $("demo-reconstruction-ladder-list");
   const provenanceObject = $("demo-reconstruction-provenance-object");
   const provenanceSourceCount = $("demo-reconstruction-provenance-source-count");
   const provenanceStepCount = $("demo-reconstruction-provenance-step-count");
@@ -69,6 +71,8 @@
   let activePlaybackIndex = -1;
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
+  let nodeLabelMap = new Map();
+  let nodeKindMap = new Map();
 
   function readJson(value) {
     try {
@@ -198,11 +202,32 @@
     });
   }
 
+  function updateNodeMetadataFromNodes(nodes) {
+    nodeLabelMap = new Map();
+    nodeKindMap = new Map();
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach((node) => {
+      if (!node || !node.id) return;
+      nodeLabelMap.set(node.id, itemLabel(node, node.id));
+      if (node.node_kind) nodeKindMap.set(node.id, node.node_kind);
+    });
+  }
+
+  function ladderMilestoneLabel(nodeId) {
+    return nodeLabelMap.get(nodeId) || nodeId;
+  }
+
+  function isLadderMilestoneNode(nodeId) {
+    const kind = nodeKindMap.get(nodeId);
+    return kind ? kind !== "input" : true;
+  }
+
   function wireEndpointsForId(wireId) {
     return wireEndpointMap.get(wireId) || [];
   }
 
   function refreshEmbeddedReviewFromCircuit() {
+    if (traceSteps.length) renderCircuitCompletionLadder(traceSteps);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
       renderObjectProvenance(currentCircuitFocus.kind, currentCircuitFocus.id);
       applyEmbeddedTraceFocus(currentCircuitFocus.kind, currentCircuitFocus.id);
@@ -400,6 +425,62 @@
     });
     if (steps.length) updateStepPlaybackSummary(cumulativeTraceContract(selectedTraceIndex >= 0 ? selectedTraceIndex : 0));
     if (stepPlayback) stepPlayback.dataset.stepPlaybackReady = steps.length ? "true" : "false";
+  }
+
+  function ladderMilestonesForStep(step) {
+    const nodeIds = Array.isArray(step && step.node_ids) ? step.node_ids : [];
+    return nodeIds.filter(isLadderMilestoneNode).map(ladderMilestoneLabel);
+  }
+
+  function renderCircuitCompletionLadder(steps) {
+    if (!ladderList) return;
+    ladderList.innerHTML = "";
+    if (!Array.isArray(steps) || steps.length === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "完成阶梯暂无数据";
+      ladderList.appendChild(empty);
+      setText(ladderSummary, "0/5 步 · 0/20 节点 · 0/23 连线");
+      return;
+    }
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-ladder-item";
+      li.dataset.ladderStep = step.anchor || "";
+      li.dataset.ladderComplete = contract.node_ids.length === EXPECTED_NODE_COUNT
+        && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+        ? "true"
+        : "false";
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("p");
+      title.textContent = step.title || "工作过程片段";
+
+      const metrics = document.createElement("div");
+      metrics.className = "demo-reconstruction-ladder-metrics";
+      [`${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`, `${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        metrics.appendChild(chip);
+      });
+
+      const milestones = document.createElement("div");
+      milestones.className = "demo-reconstruction-ladder-milestones";
+      ladderMilestonesForStep(step).forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        milestones.appendChild(chip);
+      });
+
+      li.append(anchor, title, metrics, milestones);
+      ladderList.appendChild(li);
+    });
+    const finalContract = cumulativeTraceContract(steps.length - 1);
+    setText(
+      ladderSummary,
+      `${steps.length}/5 步 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
   }
 
   function objectProvenanceRecords(kind, id) {
@@ -833,6 +914,7 @@
     });
     setSelectedTrace(steps[0], {writeHash: false});
     renderStepPlaybackRail(steps);
+    renderCircuitCompletionLadder(steps);
   }
 
   function renderSourceEntries(entries) {
@@ -956,6 +1038,7 @@
     setText(statusCell, `${STATUS_OUTPUTS.length} 类状态输出：${STATUS_OUTPUTS.join(" / ")}`);
     renderList(nodeList, nodes, (item, index) => `${String(index).padStart(2, "0")} · ${itemLabel(item, `node_${index}`)}`);
     renderList(wireList, wires, wireLabel);
+    updateNodeMetadataFromNodes(nodes);
     updateWireEndpointMapFromWires(wires);
     refreshEmbeddedReviewFromCircuit();
   }
