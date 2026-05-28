@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/approved_candidate_task_queue_expansion_contract_v0_1.schema.json",
+  "title": "Approved Candidate Task Queue Expansion Contract v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "current_queue_contract",
+    "expansion_policy",
+    "forbidden_files",
+    "verification_commands"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/approved_candidate_task_queue_expansion_contract_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-approved-candidate-task-queue-expansion-contract"
+    },
+    "current_queue_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queue_id",
+        "summary_schema",
+        "summary_artifact_name",
+        "fixed_item_count",
+        "mutable"
+      ],
+      "properties": {
+        "queue_id": {
+          "const": "approved-candidate-task-queue-v0.1"
+        },
+        "summary_schema": {
+          "const": "https://well-harness.local/json_schema/approved_candidate_task_queue_summary_v0_1.schema.json"
+        },
+        "summary_artifact_name": {
+          "const": "approved_candidate_task_queue_summary.json"
+        },
+        "fixed_item_count": {
+          "const": 3
+        },
+        "mutable": {
+          "const": false
+        }
+      }
+    },
+    "expansion_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "append_only",
+        "next_queue_id",
+        "new_task_requires",
+        "review_rule"
+      ],
+      "properties": {
+        "append_only": {
+          "const": true
+        },
+        "next_queue_id": {
+          "const": "approved-candidate-task-queue-v0.2"
+        },
+        "new_task_requires": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "schema_update"
+            },
+            {
+              "const": "fixture_update"
+            },
+            {
+              "const": "checker_update"
+            },
+            {
+              "const": "focused_test"
+            },
+            {
+              "const": "make_target"
+            },
+            {
+              "const": "ci_checker_step"
+            },
+            {
+              "const": "child_review_packet_export"
+            },
+            {
+              "const": "readiness_preflight"
+            },
+            {
+              "const": "approved_task_shell"
+            },
+            {
+              "const": "boundary_check"
+            }
+          ],
+          "minItems": 10,
+          "maxItems": 10
+        },
+        "review_rule": {
+          "const": "new approved queue items must be added by versioned contract, never by weakening v0.1 checks"
+        }
+      }
+    },
+    "forbidden_files": {
+      "type": "array",
+      "minItems": 3,
+      "contains": {
+        "const": "src/well_harness/controller.py"
+      },
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "verification_commands": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "x-well-harness-approved-candidate-task-queue-expansion": {
+    "schema_version": "0.1",
+    "scope": "append-only expansion contract for approved candidate task queues",
+    "current_fixed_queue_version": "approved-candidate-task-queue-v0.1",
+    "truth_effect": "none",
+    "controller_truth_modified": false
+  }
+}

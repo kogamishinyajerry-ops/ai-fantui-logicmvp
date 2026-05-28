@@ -1,0 +1,511 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_m3_safety_evidence_value_pack_v0_1.schema.json",
+  "title": "Multi-Agent M3 Safety/Evidence Value Pack v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "finding_classes",
+    "slice_order",
+    "slices",
+    "review_exports",
+    "deterministic_gates",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_m3_safety_evidence_value_pack_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-m3-safety-evidence-value-pack"
+    },
+    "package_id": {
+      "const": "multi-agent-m3-safety-evidence-value-pack-v0.1"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "budget",
+        "effort_unit",
+        "claim"
+      ],
+      "properties": {
+        "id": {
+          "const": "M3"
+        },
+        "name": {
+          "const": "Safety/Evidence 工程价值增强包"
+        },
+        "budget": {
+          "const": 48
+        },
+        "effort_unit": {
+          "const": "施工队工时"
+        },
+        "claim": {
+          "const": "candidate-only deterministic finding value pack"
+        }
+      }
+    },
+    "finding_classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "safety",
+        "evidence"
+      ],
+      "properties": {
+        "safety": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "CHECK_SAFETY_PRIORITY_001"
+            },
+            {
+              "const": "CHECK_UNDEFINED_SIGNAL_001"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "evidence": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "EV_SIMULATION_RESULT_FAILED"
+            },
+            {
+              "const": "EV_TEST_RESULT_MISSING"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "slice_order": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "m3-safety-priority-repair"
+        },
+        {
+          "const": "m3-safety-undefined-signal-repair"
+        },
+        {
+          "const": "m3-evidence-simulation-result-failed-repair"
+        },
+        {
+          "const": "m3-evidence-test-result-missing-repair"
+        }
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "slices": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/childSliceSummary"
+            },
+            {
+              "properties": {
+                "slice_id": {
+                  "const": "m3-safety-priority-repair"
+                },
+                "selected_task_id": {
+                  "const": "TASK-CE-CHECK-SAFETY-PRIORITY-001"
+                },
+                "selected_task_agent": {
+                  "const": "LogicIRRepairAgent"
+                },
+                "selected_finding_code": {
+                  "const": "CHECK_SAFETY_PRIORITY_001"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/childSliceSummary"
+            },
+            {
+              "properties": {
+                "slice_id": {
+                  "const": "m3-safety-undefined-signal-repair"
+                },
+                "selected_task_id": {
+                  "const": "TASK-CE-CHECK-UNDEFINED-SIGNAL-001"
+                },
+                "selected_task_agent": {
+                  "const": "LogicIRRepairAgent"
+                },
+                "selected_finding_code": {
+                  "const": "CHECK_UNDEFINED_SIGNAL_001"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/childSliceSummary"
+            },
+            {
+              "properties": {
+                "slice_id": {
+                  "const": "m3-evidence-simulation-result-failed-repair"
+                },
+                "selected_task_id": {
+                  "const": "TASK-CE-EV-SIMULATION-RESULT-FAILED"
+                },
+                "selected_task_agent": {
+                  "const": "SimulationTestRepairAgent"
+                },
+                "selected_finding_code": {
+                  "const": "EV_SIMULATION_RESULT_FAILED"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/childSliceSummary"
+            },
+            {
+              "properties": {
+                "slice_id": {
+                  "const": "m3-evidence-test-result-missing-repair"
+                },
+                "selected_task_id": {
+                  "const": "TASK-CE-EV-TEST-RESULT-MISSING"
+                },
+                "selected_task_agent": {
+                  "const": "SimulationTestRepairAgent"
+                },
+                "selected_finding_code": {
+                  "const": "EV_TEST_RESULT_MISSING"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "review_exports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "reviewer_statuses",
+        "finding_chain_statuses",
+        "export_ids"
+      ],
+      "properties": {
+        "count": {
+          "const": 4
+        },
+        "reviewer_statuses": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "const": "converged"
+          }
+        },
+        "finding_chain_statuses": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "converged"
+              }
+            ],
+            "minItems": 1,
+            "maxItems": 1
+          }
+        },
+        "export_ids": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "safety_priority_slice",
+        "safety_undefined_signal_slice",
+        "evidence_failed_result_slice",
+        "evidence_missing_result_slice",
+        "review_packet_exports",
+        "local_gate"
+      ],
+      "properties": {
+        "safety_priority_slice": {
+          "const": "pass"
+        },
+        "safety_undefined_signal_slice": {
+          "const": "pass"
+        },
+        "evidence_failed_result_slice": {
+          "const": "pass"
+        },
+        "evidence_missing_result_slice": {
+          "const": "pass"
+        },
+        "review_packet_exports": {
+          "const": "pass"
+        },
+        "local_gate": {
+          "const": "pass"
+        }
+      }
+    },
+    "aggregate": {
+      "$ref": "#/$defs/aggregate"
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package",
+        "safety_priority_summary",
+        "safety_undefined_signal_summary",
+        "evidence_failed_result_summary",
+        "evidence_missing_result_summary"
+      ],
+      "properties": {
+        "package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_priority_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_undefined_signal_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_failed_result_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_missing_result_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slice_count",
+        "passed",
+        "converged",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "slice_count": {
+          "const": 4
+        },
+        "passed": {
+          "const": 4
+        },
+        "converged": {
+          "const": 4
+        },
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        }
+      }
+    },
+    "childSliceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slice_id",
+        "status",
+        "selected_task_id",
+        "selected_task_agent",
+        "selected_finding_code",
+        "repair_loop_kind",
+        "reviewer_status",
+        "finding_chain_statuses",
+        "convergence",
+        "artifact_paths"
+      ],
+      "properties": {
+        "slice_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "selected_task_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "selected_task_agent": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "selected_finding_code": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repair_loop_kind": {
+          "enum": [
+            "ai-fantui-safety-repair-loop",
+            "ai-fantui-evidence-repair-loop"
+          ]
+        },
+        "reviewer_status": {
+          "const": "converged"
+        },
+        "finding_chain_statuses": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "converged"
+            }
+          ],
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "convergence": {
+          "$ref": "#/$defs/convergence"
+        },
+        "artifact_paths": {
+          "$ref": "#/$defs/childArtifactPaths"
+        }
+      }
+    },
+    "convergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before_findings",
+        "after_findings",
+        "task_package_status",
+        "execution_plan_status",
+        "execution_evidence_status",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "before_findings": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "after_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "task_package_status": {
+          "const": "no_tasks_required"
+        },
+        "execution_plan_status": {
+          "const": "no_task_available"
+        },
+        "execution_evidence_status": {
+          "const": "no_task_available"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        }
+      }
+    },
+    "childArtifactPaths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_packet_before",
+        "repaired_candidate_packet",
+        "safety_guardian_report",
+        "evidence_agent_report",
+        "task_package",
+        "repair_loop_result",
+        "candidate_review_packet",
+        "candidate_review_packet_export",
+        "slice_summary"
+      ],
+      "properties": {
+        "candidate_packet_before": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repaired_candidate_packet": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_guardian_report": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_agent_report": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "task_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repair_loop_result": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "candidate_review_packet": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "candidate_review_packet_export": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "slice_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "x-well-harness-m3-safety-evidence-value-pack": {
+    "schema_version": "0.1",
+    "scope": "M3 deterministic Safety/Evidence repair-loop value package",
+    "truth_effect": "none",
+    "controller_truth_modified": false
+  }
+}

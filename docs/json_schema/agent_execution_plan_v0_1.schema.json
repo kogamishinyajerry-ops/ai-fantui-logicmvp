@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/agent_execution_plan_v0_1.schema.json",
+  "title": "well_harness agent execution plan v0.1",
+  "description": "Dry-run-only execution plan for proposed Chief Engineer tasks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "planner",
+    "dry_run_only",
+    "execution_allowed",
+    "selected_task",
+    "boundary_verdict",
+    "planned_steps",
+    "file_operations",
+    "verification_commands"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/agent_execution_plan_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-agent-execution-plan"
+    },
+    "planner": {
+      "$ref": "#/$defs/planner"
+    },
+    "dry_run_only": {
+      "const": true
+    },
+    "execution_allowed": {
+      "const": false
+    },
+    "selected_task": {
+      "type": "object"
+    },
+    "boundary_verdict": {
+      "$ref": "#/$defs/boundaryVerdict"
+    },
+    "planned_steps": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "file_operations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileOperation"
+      }
+    },
+    "verification_commands": {
+      "$ref": "#/$defs/stringArray"
+    }
+  },
+  "x-well-harness-agent-execution-plan": {
+    "schema_name": "well_harness.agent_execution_plan",
+    "schema_version": "0.1",
+    "execution_boundary": {
+      "dry_run_only": true,
+      "execution_allowed": false
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "planner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "source_task_package_id",
+        "status",
+        "selected_task_id"
+      ],
+      "properties": {
+        "agent_name": {
+          "const": "DeterministicExecutorAgent"
+        },
+        "source_task_package_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "dry_run_ready",
+            "blocked",
+            "no_task_available"
+          ]
+        },
+        "selected_task_id": {
+          "type": "string"
+        }
+      }
+    },
+    "boundaryVerdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "violations"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "blocked",
+            "no_task"
+          ]
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "fileOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "path",
+        "allowed",
+        "reason"
+      ],
+      "properties": {
+        "operation": {
+          "const": "candidate_patch_plan"
+        },
+        "path": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "allowed": {
+          "type": "boolean"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}

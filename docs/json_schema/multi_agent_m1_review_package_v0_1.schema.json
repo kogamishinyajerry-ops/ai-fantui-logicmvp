@@ -1,0 +1,351 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_m1_review_package_v0_1.schema.json",
+  "title": "Multi-Agent M1 Review Package v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "deliverables",
+    "deterministic_gates",
+    "child_artifacts",
+    "aggregate",
+    "review_boundaries",
+    "acceptance_commands",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_m1_review_package_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-m1-review-package"
+    },
+    "package_id": {
+      "const": "multi-agent-m1-review-package-v0.1"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "budget",
+        "effort_unit",
+        "claim"
+      ],
+      "properties": {
+        "id": {
+          "const": "M1"
+        },
+        "name": {
+          "const": "可审查自动开发闭环样板"
+        },
+        "budget": {
+          "const": 18
+        },
+        "effort_unit": {
+          "const": "施工队工时"
+        },
+        "claim": {
+          "const": "candidate-only engineering-chain milestone"
+        }
+      }
+    },
+    "deliverables": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/deliverableS1"
+        },
+        {
+          "$ref": "#/$defs/deliverableS2"
+        },
+        {
+          "$ref": "#/$defs/deliverableS3"
+        },
+        {
+          "$ref": "#/$defs/deliverableS4"
+        },
+        {
+          "$ref": "#/$defs/deliverableS5"
+        }
+      ]
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_repair_slices_artifact",
+        "approved_candidate_task_queue_artifact",
+        "queue_expansion_contract",
+        "construction_readiness",
+        "local_gate_entrypoint"
+      ],
+      "properties": {
+        "approved_repair_slices_artifact": {
+          "const": "pass"
+        },
+        "approved_candidate_task_queue_artifact": {
+          "const": "pass"
+        },
+        "queue_expansion_contract": {
+          "const": "pass"
+        },
+        "construction_readiness": {
+          "const": "pass"
+        },
+        "local_gate_entrypoint": {
+          "const": "pass"
+        }
+      }
+    },
+    "child_artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_repair_slices_summary",
+        "approved_candidate_task_queue_summary",
+        "construction_readiness_packet",
+        "queue_expansion_contract",
+        "project_manager_plan"
+      ],
+      "properties": {
+        "approved_repair_slices_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "approved_candidate_task_queue_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "construction_readiness_packet": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "queue_expansion_contract": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "project_manager_plan": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_repair_slice_count",
+        "approved_queue_task_count",
+        "converged_queue_tasks",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "ready_for_long_running_development"
+      ],
+      "properties": {
+        "approved_repair_slice_count": {
+          "const": 2
+        },
+        "approved_queue_task_count": {
+          "const": 3
+        },
+        "converged_queue_tasks": {
+          "const": 3
+        },
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "ready_for_long_running_development": {
+          "const": true
+        }
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "restricted_paths"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "certification_claim": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "restricted_paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "minItems": 3
+        }
+      }
+    },
+    "acceptance_commands": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "minItems": 6
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_package"
+      ],
+      "properties": {
+        "review_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidenceArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "minItems": 1
+    },
+    "deliverable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidenceArray"
+        }
+      }
+    },
+    "deliverableS1": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/deliverable"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "S1"
+            },
+            "name": {
+              "const": "queue expansion contract"
+            }
+          }
+        }
+      ]
+    },
+    "deliverableS2": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/deliverable"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "S2"
+            },
+            "name": {
+              "const": "expansion contract checker"
+            }
+          }
+        }
+      ]
+    },
+    "deliverableS3": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/deliverable"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "S3"
+            },
+            "name": {
+              "const": "approved queue artifact checker"
+            }
+          }
+        }
+      ]
+    },
+    "deliverableS4": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/deliverable"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "S4"
+            },
+            "name": {
+              "const": "review package local gate"
+            }
+          }
+        }
+      ]
+    },
+    "deliverableS5": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/deliverable"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "S5"
+            },
+            "name": {
+              "const": "GSD blocking validation reference"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

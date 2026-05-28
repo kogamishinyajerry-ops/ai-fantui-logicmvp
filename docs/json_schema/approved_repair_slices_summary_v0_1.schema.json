@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/approved_repair_slices_summary_v0_1.schema.json",
+  "title": "Approved Repair Slices Summary v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "status",
+    "gate_id",
+    "slice_order",
+    "slices",
+    "deterministic_gates",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/approved_repair_slices_summary_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-approved-repair-slices-summary"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "gate_id": {
+      "const": "approved-repair-slices"
+    },
+    "slice_order": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "first-approved-candidate-repair-slice"
+        },
+        {
+          "const": "evidence-approved-candidate-repair-slice"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "slices": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/childSliceSummary"
+            },
+            {
+              "properties": {
+                "slice_id": {
+                  "const": "first-approved-candidate-repair-slice"
+                },
+                "selected_task_agent": {
+                  "const": "LogicIRRepairAgent"
+                },
+                "selected_task_id": {
+                  "const": "TASK-CE-CHECK-SAFETY-PRIORITY-001"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/childSliceSummary"
+            },
+            {
+              "properties": {
+                "slice_id": {
+                  "const": "evidence-approved-candidate-repair-slice"
+                },
+                "selected_task_agent": {
+                  "const": "SimulationTestRepairAgent"
+                },
+                "selected_task_id": {
+                  "const": "TASK-CE-EV-SIMULATION-RESULT-FAILED"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "safety_slice",
+        "evidence_slice",
+        "review_packet_exports",
+        "local_gate"
+      ],
+      "properties": {
+        "safety_slice": {
+          "const": "pass"
+        },
+        "evidence_slice": {
+          "const": "pass"
+        },
+        "review_packet_exports": {
+          "const": "pass"
+        },
+        "local_gate": {
+          "const": "pass"
+        }
+      }
+    },
+    "aggregate": {
+      "$ref": "#/$defs/aggregate"
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "safety_summary",
+        "evidence_summary"
+      ],
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slice_count",
+        "passed",
+        "converged",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "slice_count": {
+          "const": 2
+        },
+        "passed": {
+          "const": 2
+        },
+        "converged": {
+          "const": 2
+        },
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        }
+      }
+    },
+    "childSliceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slice_id",
+        "status",
+        "selected_task_id",
+        "selected_task_agent",
+        "reviewer_status",
+        "finding_chain_statuses",
+        "convergence",
+        "artifact_paths"
+      ],
+      "properties": {
+        "slice_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "selected_task_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "selected_task_agent": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "reviewer_status": {
+          "const": "converged"
+        },
+        "finding_chain_statuses": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "const": "converged"
+          }
+        },
+        "convergence": {
+          "$ref": "#/$defs/convergence"
+        },
+        "artifact_paths": {
+          "$ref": "#/$defs/childArtifactPaths"
+        }
+      }
+    },
+    "convergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before_findings",
+        "after_findings",
+        "controller_truth_modified",
+        "execution_evidence_status",
+        "execution_plan_status",
+        "task_package_status",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "before_findings": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "after_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "execution_evidence_status": {
+          "const": "no_task_available"
+        },
+        "execution_plan_status": {
+          "const": "no_task_available"
+        },
+        "task_package_status": {
+          "const": "no_tasks_required"
+        },
+        "ui_layout_modified": {
+          "const": false
+        }
+      }
+    },
+    "childArtifactPaths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repaired_candidate_packet",
+        "candidate_review_packet",
+        "candidate_review_packet_export",
+        "repair_loop_result"
+      ],
+      "properties": {
+        "repaired_candidate_packet": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "candidate_review_packet": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "candidate_review_packet_export": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repair_loop_result": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "x-well-harness-approved-repair-slices-summary": {
+    "schema_version": "0.1",
+    "scope": "CI artifact summary for approved candidate repair slices",
+    "truth_effect": "none",
+    "controller_truth_modified": false
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_queue_cursor_state_v0_1.schema.json",
+  "aggregate": {
+    "blocked_count": 0,
+    "completed_count": 9,
+    "controller_truth_modified": false,
+    "idle": false,
+    "open_approved_count": 1,
+    "ready_for_resume": true,
+    "source_ledger_record_count": 10,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "cursor_state": "<cursor_state>",
+    "source_ledger": "<source_ledger>"
+  },
+  "completed_records": [
+    {
+      "queue_item_id": "queue-safety-priority-repair",
+      "record_id": "RUN-QUEUE-001",
+      "status": "converged",
+      "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001"
+    },
+    {
+      "queue_item_id": "queue-evidence-simulation-result-repair",
+      "record_id": "RUN-QUEUE-002",
+      "status": "converged",
+      "task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED"
+    },
+    {
+      "queue_item_id": "queue-evidence-test-result-missing-repair",
+      "record_id": "RUN-QUEUE-003",
+      "status": "converged",
+      "task_id": "TASK-CE-EV-TEST-RESULT-MISSING"
+    },
+    {
+      "queue_item_id": "queue-requirement-ambiguity-repair",
+      "record_id": "RUN-QUEUE-004",
+      "status": "converged",
+      "task_id": "TASK-CE-REQ-AMBIGUITY-UNRESOLVED"
+    },
+    {
+      "queue_item_id": "queue-safety-undefined-signal-repair",
+      "record_id": "RUN-QUEUE-005",
+      "status": "converged",
+      "task_id": "TASK-CE-CHECK-UNDEFINED-SIGNAL-001"
+    },
+    {
+      "queue_item_id": "queue-evidence-boundary-review-repair",
+      "record_id": "RUN-QUEUE-006",
+      "status": "converged",
+      "task_id": "TASK-CE-EV-BOUNDARY-REVIEW-001"
+    },
+    {
+      "queue_item_id": "queue-evidence-unknown-requirement-repair",
+      "record_id": "RUN-QUEUE-007",
+      "status": "converged",
+      "task_id": "TASK-CE-EV-TEST-COVERS-UNKNOWN-REQUIREMENT"
+    },
+    {
+      "queue_item_id": "queue-evidence-ir-trace-unknown-requirement-repair",
+      "record_id": "RUN-QUEUE-008",
+      "status": "converged",
+      "task_id": "TASK-CE-EV-IR-TRACE-UNKNOWN-REQUIREMENT"
+    },
+    {
+      "queue_item_id": "queue-safety-transition-endpoint-repair",
+      "record_id": "RUN-QUEUE-009",
+      "status": "converged",
+      "task_id": "TASK-CE-CHECK-TRANSITION-ENDPOINT-001"
+    }
+  ],
+  "cursor_id": "multi-agent-queue-cursor-state-v0.1",
+  "cursor_position": {
+    "last_completed_queue_item_id": "queue-safety-transition-endpoint-repair",
+    "last_completed_record_id": "RUN-QUEUE-009",
+    "next_queue_item_id": "queue-safety-unreachable-state-repair",
+    "next_record_id": "RUN-QUEUE-010"
+  },
+  "deterministic_gates": {
+    "boundary": "pass",
+    "completed_records": "pass",
+    "cursor_monotonicity": "pass",
+    "local_gate": "pass",
+    "resume_selection": "pass",
+    "source_ledger_checker": "pass"
+  },
+  "gate_id": "multi-agent-queue-cursor-state",
+  "kind": "ai-fantui-multi-agent-queue-cursor-state",
+  "open_records": [
+    {
+      "queue_item_id": "queue-safety-unreachable-state-repair",
+      "record_id": "RUN-QUEUE-010",
+      "status": "approved_open",
+      "task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001"
+    }
+  ],
+  "resume_policy": {
+    "next_action": "resume_next_open_record",
+    "policy_id": "first-approved-open-item-v0.1",
+    "reason": "An approved open queue run record exists; resume RUN-QUEUE-010 before appending more work."
+  },
+  "selected_next_record": {
+    "queue_item_id": "queue-safety-unreachable-state-repair",
+    "record_id": "RUN-QUEUE-010",
+    "status": "ready_to_resume",
+    "task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001"
+  },
+  "source_ledger_gate_id": "multi-agent-queue-run-ledger",
+  "source_ledger_id": "multi-agent-queue-run-ledger-v0.1",
+  "state_status": "ready_to_resume",
+  "status": "pass"
+}

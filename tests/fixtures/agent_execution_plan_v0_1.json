@@ -1,0 +1,41 @@
+{
+  "$schema": "https://well-harness.local/json_schema/agent_execution_plan_v0_1.schema.json",
+  "kind": "ai-fantui-agent-execution-plan",
+  "planner": {
+    "agent_name": "DeterministicExecutorAgent",
+    "source_task_package_id": "LOGIC_DRAWING_CANDIDATE_v0.1",
+    "status": "dry_run_ready",
+    "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001"
+  },
+  "dry_run_only": true,
+  "execution_allowed": false,
+  "selected_task": {
+    "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+    "target_agent": "LogicIRRepairAgent",
+    "task_type": "repair_candidate_logic_ir",
+    "priority": "critical"
+  },
+  "boundary_verdict": {
+    "status": "pass",
+    "violations": []
+  },
+  "planned_steps": [
+    "Read selected Chief Engineer task and its findings.",
+    "Do not apply patches; produce a dry-run candidate patch plan only.",
+    "Run the listed verification commands after any later approved execution."
+  ],
+  "file_operations": [
+    {
+      "operation": "candidate_patch_plan",
+      "path": "src/well_harness/agent_output_contract.py",
+      "allowed": true,
+      "reason": "first allowed implementation file for dry-run planning"
+    }
+  ],
+  "verification_commands": [
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_output_contract.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_requirements_intake_webui.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_editable_control_model.py",
+    "git diff --check"
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "$schema": "https://well-harness.local/json_schema/agent_task_contract_v0_1.schema.json",
+  "kind": "ai-fantui-chief-engineer-task-package",
+  "chief_engineer": {
+    "agent_name": "ChiefEngineerAgent",
+    "source_artifact_id": "LOGIC_DRAWING_CANDIDATE_v0.1",
+    "status": "tasks_ready_for_review",
+    "finding_counts": {
+      "critical": 1,
+      "high": 0,
+      "warning": 0,
+      "info": 0
+    },
+    "task_count": 1
+  },
+  "tasks": [
+    {
+      "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+      "target_agent": "LogicIRRepairAgent",
+      "task_type": "repair_candidate_logic_ir",
+      "priority": "critical",
+      "status": "proposed",
+      "input_artifacts": [
+        "LOGIC_DRAWING_CANDIDATE_v0.1",
+        "finding:CHECK_SAFETY_PRIORITY_001"
+      ],
+      "allowed_files": [
+        "src/well_harness/agent_output_contract.py",
+        "src/well_harness/agent_task_contract.py",
+        "src/well_harness/agent_execution_plan.py",
+        "src/well_harness/agent_execution_shell.py",
+        "src/well_harness/agent_repair_loop.py",
+        "src/well_harness/agent_review_packet.py",
+        "src/well_harness/agent_development_slice.py",
+        "src/well_harness/demo_server.py",
+        "src/well_harness/reference_packets/candidate_review_packet_export_v0_1.json",
+        "src/well_harness/requirements_intake/analysis.py",
+        "src/well_harness/requirements_intake/logic_builder.py",
+        ".github/workflows/gsd-automation.yml",
+        "Makefile",
+        "scripts/verify_candidate_review_packet_export.py",
+        "scripts/run_first_candidate_repair_slice.py",
+        "scripts/run_evidence_candidate_repair_slice.py",
+        "scripts/run_missing_test_result_candidate_repair_slice.py",
+        "scripts/run_approved_repair_slices.py",
+        "scripts/verify_approved_repair_slices_artifact.py",
+        "scripts/verify_multi_agent_construction_readiness.py",
+        "scripts/run_approved_candidate_task_queue.py",
+        "scripts/verify_approved_candidate_task_queue_artifact.py",
+        "scripts/verify_approved_candidate_task_queue_expansion_contract.py",
+        "tests/test_agent_output_contract.py",
+        "tests/test_agent_task_contract.py",
+        "tests/test_agent_execution_plan.py",
+        "tests/test_agent_execution_shell.py",
+        "tests/test_agent_repair_loop.py",
+        "tests/test_agent_review_packet.py",
+        "tests/test_agent_development_slice.py",
+        "tests/test_agent_evidence_development_slice.py",
+        "tests/test_agent_approved_repair_slices_gate.py",
+        "tests/test_approved_repair_slices_artifact_checker.py",
+        "tests/test_approved_repair_slices_summary_schema.py",
+        "tests/test_multi_agent_construction_readiness.py",
+        "tests/test_approved_candidate_task_queue.py",
+        "tests/test_approved_candidate_task_queue_artifact_checker.py",
+        "tests/test_approved_candidate_task_queue_expansion_contract.py",
+        "tests/test_multi_agent_deliverable_plan.py",
+        "tests/test_candidate_review_packet_export_regression.py",
+        "tests/test_requirements_intake_webui.py",
+        "tests/fixtures/agent_output_contract_v0_1.json",
+        "tests/fixtures/agent_task_contract_v0_1.json",
+        "tests/fixtures/agent_execution_plan_v0_1.json",
+        "tests/fixtures/agent_execution_evidence_v0_1.json",
+        "tests/fixtures/candidate_review_packet_v0_1.json",
+        "tests/fixtures/candidate_review_packet_export_v0_1.json",
+        "tests/fixtures/approved_repair_slices_summary_v0_1.json",
+        "tests/fixtures/approved_candidate_task_queue_summary_v0_1.json",
+        "tests/fixtures/approved_candidate_task_queue_expansion_contract_v0_1.json",
+        "docs/json_schema/agent_output_contract_v0_1.schema.json",
+        "docs/json_schema/agent_task_contract_v0_1.schema.json",
+        "docs/json_schema/agent_execution_plan_v0_1.schema.json",
+        "docs/json_schema/agent_execution_evidence_v0_1.schema.json",
+        "docs/json_schema/candidate_review_packet_v0_1.schema.json",
+        "docs/json_schema/candidate_review_packet_export_v0_1.schema.json",
+        "docs/json_schema/approved_repair_slices_summary_v0_1.schema.json",
+        "docs/json_schema/approved_candidate_task_queue_summary_v0_1.schema.json",
+        "docs/json_schema/approved_candidate_task_queue_expansion_contract_v0_1.schema.json",
+        "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md"
+      ],
+      "forbidden_files": [
+        "src/well_harness/controller.py",
+        "src/well_harness/editable_control_model.py",
+        "src/well_harness/static/requirements_intake/requirements_intake.css",
+        "src/well_harness/static/requirements_intake/requirements_intake.js",
+        "src/well_harness/static/requirements_intake/index.html"
+      ],
+      "change_boundary": {
+        "truth_effect": "none",
+        "controller_truth_modified": false,
+        "certification_claim": "none",
+        "allowed_to_modify_controller_truth": false
+      },
+      "findings": [
+        {
+          "code": "CHECK_SAFETY_PRIORITY_001",
+          "severity": "critical",
+          "message": "Transition T004 is safety-critical but lacks safety priority."
+        }
+      ],
+      "instructions": [
+        "Repair only candidate IR/task/evidence generation around the referenced finding.",
+        "Keep the output candidate-only and do not modify controller truth or UI layout files."
+      ],
+      "done_when": [
+        "tests/test_agent_task_contract.py contains a focused regression for CHECK_SAFETY_PRIORITY_001 task generation.",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_task_contract.py exits 0.",
+        "The task package validates against agent_task_contract_v0_1."
+      ],
+      "stop_if": [
+        "Any diff touches controller truth files such as src/well_harness/controller.py.",
+        "Any diff changes UI layout files under src/well_harness/static/requirements_intake/.",
+        "Existing tests start failing; do not fix by weakening tests."
+      ],
+      "verification_commands": [
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_output_contract.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_task_contract.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_execution_plan.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_execution_shell.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_repair_loop.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_review_packet.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_development_slice.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_evidence_development_slice.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_approved_repair_slices_gate.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_approved_repair_slices_artifact_checker.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_approved_repair_slices_summary_schema.py",
+        "make approved-repair-slices",
+        "make missing-test-result-candidate-repair-slice",
+        "make verify-approved-repair-slices-artifact",
+        "make multi-agent-construction-readiness",
+        "make approved-candidate-task-queue",
+        "make verify-approved-candidate-task-queue-artifact",
+        "make verify-approved-candidate-task-queue-expansion-contract",
+        "PYTHONPATH=src:. python3 scripts/verify_candidate_review_packet_export.py --format json",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_approved_candidate_task_queue.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_approved_candidate_task_queue_artifact_checker.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_approved_candidate_task_queue_expansion_contract.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_multi_agent_deliverable_plan.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_candidate_review_packet_export_regression.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_requirements_intake_webui.py",
+        "PYTHONPATH=src:. python3 -m pytest -q tests/test_editable_control_model.py",
+        "git diff --check"
+      ],
+      "human_review_required": true
+    }
+  ]
+}

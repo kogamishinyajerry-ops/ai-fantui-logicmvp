@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_merge_readiness_v0_1.schema.json",
+  "title": "Multi-Agent Merge Readiness v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "readiness_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "agent_team",
+    "inputs",
+    "summary",
+    "gates",
+    "geometry_results",
+    "pr_status",
+    "blockers",
+    "risk_notes",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_merge_readiness_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-merge-readiness"
+    },
+    "readiness_id": {
+      "const": "multi-agent-merge-readiness-v0.1"
+    },
+    "status": {
+      "enum": ["ready_for_review", "ready_with_external_blocker", "blocked"]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim"],
+      "properties": {
+        "id": {
+          "const": "M29"
+        },
+        "name": {
+          "const": "Merge Readiness Packet"
+        },
+        "claim": {
+          "const": "read_only_pr_review_and_merge_readiness_handoff"
+        }
+      }
+    },
+    "agent_team": {
+      "$ref": "#/$defs/agent_team"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validation_evidence_id",
+        "validation_status",
+        "pr_number",
+        "pr_url",
+        "head_ref_oid",
+        "geometry_dir"
+      ],
+      "properties": {
+        "validation_evidence_id": {
+          "type": "string"
+        },
+        "validation_status": {
+          "enum": ["pass", "fail", ""]
+        },
+        "pr_number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pr_url": {
+          "type": "string"
+        },
+        "head_ref_oid": {
+          "type": "string"
+        },
+        "geometry_dir": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validation_command_count",
+        "passed_command_count",
+        "failed_command_count",
+        "geometry_check_count",
+        "mergeable",
+        "remote_checks_state",
+        "review_state",
+        "notion_blocker",
+        "recommended_next_action"
+      ],
+      "properties": {
+        "validation_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "geometry_check_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mergeable": {
+          "type": "string"
+        },
+        "remote_checks_state": {
+          "enum": ["pass", "fail", "pending_or_unknown", "no_checks_reported"]
+        },
+        "review_state": {
+          "enum": ["no_reviews_or_comments", "feedback_present"]
+        },
+        "notion_blocker": {
+          "const": "external_blocker"
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validation_evidence",
+        "geometry_gate",
+        "pathspec_boundary",
+        "notion_external_blocker",
+        "pr_mergeability",
+        "remote_checks",
+        "review_state"
+      ],
+      "properties": {
+        "validation_evidence": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "geometry_gate": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "pathspec_boundary": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "notion_external_blocker": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "pr_mergeability": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "remote_checks": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "review_state": {
+          "$ref": "#/$defs/gate_status"
+        }
+      }
+    },
+    "geometry_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/geometry_result"
+      }
+    },
+    "pr_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "url",
+        "state",
+        "isDraft",
+        "mergeable",
+        "headRefOid",
+        "statusCheckRollup_count",
+        "review_count",
+        "comment_count"
+      ],
+      "properties": {
+        "number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "url": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "isDraft": {
+          "type": "boolean"
+        },
+        "mergeable": {
+          "type": "string"
+        },
+        "headRefOid": {
+          "type": "string"
+        },
+        "statusCheckRollup_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "comment_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "risk_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readiness_json", "readiness_markdown", "readiness_html"],
+      "properties": {
+        "readiness_json": {
+          "type": "string"
+        },
+        "readiness_markdown": {
+          "type": "string"
+        },
+        "readiness_html": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "agent_team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "team_size", "active_agents", "retired_role_policy"],
+      "properties": {
+        "mode": {
+          "const": "five_agent_context_cap"
+        },
+        "team_size": {
+          "const": 5
+        },
+        "active_agents": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/agent_team_member"
+          }
+        },
+        "retired_role_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "agent_team_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "name", "scope"],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "enum": [
+            "ChiefEngineerOrchestrator",
+            "LogicIRRepairAgent",
+            "EvidenceValidationAgent",
+            "SafetyRequirementsReviewer",
+            "PackagingPRReadinessAgent"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "gate_status": {
+      "enum": ["pass", "warning", "fail"]
+    },
+    "geometry_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "viewport",
+        "status",
+        "missing",
+        "overflow_px",
+        "unique_sampled_colors",
+        "screenshot"
+      ],
+      "properties": {
+        "page": {
+          "type": "string",
+          "minLength": 1
+        },
+        "viewport": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["pass", "fail"]
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "overflow_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_sampled_colors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "screenshot": {
+          "type": "string"
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker_id", "status", "message"],
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["external_blocker", "local_blocker"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

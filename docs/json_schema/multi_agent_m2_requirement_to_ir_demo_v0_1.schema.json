@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_m2_requirement_to_ir_demo_v0_1.schema.json",
+  "title": "Multi-Agent M2 Requirement to IR Demo v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "source_requirement",
+    "structured_requirements",
+    "pipeline",
+    "task_package",
+    "review_export",
+    "deterministic_gates",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_m2_requirement_to_ir_demo_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-m2-requirement-to-ir-demo"
+    },
+    "package_id": {
+      "const": "multi-agent-m2-requirement-to-ir-demo-v0.1"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "budget",
+        "effort_unit",
+        "claim"
+      ],
+      "properties": {
+        "id": {
+          "const": "M2"
+        },
+        "name": {
+          "const": "Requirement to IR 最小产品演示包"
+        },
+        "budget": {
+          "const": 36
+        },
+        "effort_unit": {
+          "const": "施工队工时"
+        },
+        "claim": {
+          "const": "candidate-only requirement-to-ir demo"
+        }
+      }
+    },
+    "source_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_id",
+        "domain",
+        "text"
+      ],
+      "properties": {
+        "fixture_id": {
+          "const": "engine-start-control-requirement-v0.1"
+        },
+        "domain": {
+          "const": "engine_start_control"
+        },
+        "text": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "structured_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ids",
+        "ambiguities"
+      ],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "REQ-START-001"
+            },
+            {
+              "const": "REQ-START-002"
+            },
+            {
+              "const": "REQ-SAFE-001"
+            },
+            {
+              "const": "REQ-SAFE-002"
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "ambiguities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "structured_requirement_count",
+        "signal_count",
+        "candidate_ir",
+        "safety_findings_before",
+        "evidence_findings_before"
+      ],
+      "properties": {
+        "structured_requirement_count": {
+          "const": 4
+        },
+        "signal_count": {
+          "minimum": 8,
+          "type": "integer"
+        },
+        "candidate_ir": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "state_count",
+            "transition_count"
+          ],
+          "properties": {
+            "id": {
+              "const": "ENG_START_CTRL_M2"
+            },
+            "state_count": {
+              "const": 6
+            },
+            "transition_count": {
+              "const": 5
+            }
+          }
+        },
+        "safety_findings_before": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "CHECK_SAFETY_PRIORITY_001"
+            }
+          ],
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "evidence_findings_before": {
+          "type": "array",
+          "maxItems": 0
+        }
+      }
+    },
+    "task_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "task_count",
+        "selected_task_id",
+        "selected_agent"
+      ],
+      "properties": {
+        "status": {
+          "const": "tasks_ready_for_review"
+        },
+        "task_count": {
+          "const": 1
+        },
+        "selected_task_id": {
+          "const": "TASK-CE-CHECK-SAFETY-PRIORITY-001"
+        },
+        "selected_agent": {
+          "const": "LogicIRRepairAgent"
+        }
+      }
+    },
+    "review_export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_status",
+        "finding_chain_statuses",
+        "export_id"
+      ],
+      "properties": {
+        "reviewer_status": {
+          "const": "converged"
+        },
+        "finding_chain_statuses": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "converged"
+            }
+          ],
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "export_id": {
+          "const": "multi-agent-m2-requirement-to-ir-demo"
+        }
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_output_contract",
+        "requirement_traceability",
+        "safety_finding_detected",
+        "approved_task_shell",
+        "repair_loop_converged",
+        "candidate_review_export"
+      ],
+      "properties": {
+        "agent_output_contract": {
+          "const": "pass"
+        },
+        "requirement_traceability": {
+          "const": "pass"
+        },
+        "safety_finding_detected": {
+          "const": "pass"
+        },
+        "approved_task_shell": {
+          "const": "pass"
+        },
+        "repair_loop_converged": {
+          "const": "pass"
+        },
+        "candidate_review_export": {
+          "const": "pass"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "ready_for_m2_review"
+      ],
+      "properties": {
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "ready_for_m2_review": {
+          "const": true
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "demo_package",
+        "source_requirement",
+        "candidate_agent_output",
+        "task_package",
+        "candidate_review_packet_export"
+      ],
+      "properties": {
+        "demo_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_requirement": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "candidate_agent_output": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "task_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "candidate_review_packet_export": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

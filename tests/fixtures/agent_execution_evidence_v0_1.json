@@ -1,0 +1,94 @@
+{
+  "$schema": "https://well-harness.local/json_schema/agent_execution_evidence_v0_1.schema.json",
+  "kind": "ai-fantui-agent-execution-evidence",
+  "executor": {
+    "agent_name": "ApprovedTaskExecutionShell",
+    "source_task_package_id": "LOGIC_DRAWING_CANDIDATE_v0.1",
+    "status": "executed_limited",
+    "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001"
+  },
+  "approval": {
+    "status": "approved",
+    "approval_id": "APPROVAL-HUMAN-001",
+    "approved_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+    "approved_by": "HumanReviewAgent",
+    "approved_at": "2026-05-20T00:00:00Z"
+  },
+  "execution_boundary": {
+    "restricted_execution": true,
+    "restricted_execution_performed": true,
+    "workspace_writes_performed": false,
+    "controller_truth_modified": false,
+    "ui_layout_modified": false
+  },
+  "selected_task": {
+    "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+    "target_agent": "LogicIRRepairAgent",
+    "task_type": "repair_candidate_logic_ir",
+    "priority": "critical"
+  },
+  "file_operations": [
+    {
+      "operation": "restricted_candidate_execution",
+      "path": "src/well_harness/agent_output_contract.py",
+      "allowed": true,
+      "execution_status": "executed",
+      "reason": "approved by HumanReviewAgent for task TASK-CE-CHECK-SAFETY-PRIORITY-001"
+    }
+  ],
+  "deterministic_gates": [
+    {
+      "name": "dry_run_boundary",
+      "status": "pass",
+      "detail": "dry-run boundary verification passed"
+    },
+    {
+      "name": "approval_gate",
+      "status": "pass",
+      "detail": "explicit approval APPROVAL-HUMAN-001 accepted for TASK-CE-CHECK-SAFETY-PRIORITY-001"
+    },
+    {
+      "name": "file_scope_boundary",
+      "status": "pass",
+      "detail": "all candidate file operations are inside the approved task boundary"
+    },
+    {
+      "name": "controller_truth_boundary",
+      "status": "pass",
+      "detail": "no controller truth or UI layout path was executed"
+    },
+    {
+      "name": "post_execution_deterministic_gates",
+      "status": "pass",
+      "detail": "9 verification gates supplied, 9 passed, 0 failed, 0 pending"
+    }
+  ],
+  "verification_commands": [
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_output_contract.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_task_contract.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_execution_plan.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_execution_shell.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_repair_loop.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_agent_review_packet.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_requirements_intake_webui.py",
+    "PYTHONPATH=src:. python3 -m pytest -q tests/test_editable_control_model.py",
+    "git diff --check"
+  ],
+  "evidence_package": {
+    "task_package_hash": "sha256:fixture-task-package",
+    "execution_plan_hash": "sha256:fixture-execution-plan",
+    "evidence_material_hash": "sha256:fixture-execution-evidence",
+    "machine_readable": true,
+    "human_review_required": true,
+    "verification_summary": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    "notes": [
+      "Restricted execution is candidate-contract evidence only.",
+      "Controller truth and requirements-intake UI layout remain outside scope."
+    ]
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/agent_task_contract_v0_1.schema.json",
+  "title": "well_harness agent task contract v0.1",
+  "description": "Machine-readable task package produced by the Chief Engineer Agent for candidate-only multi-agent development work.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "chief_engineer",
+    "tasks"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/agent_task_contract_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-chief-engineer-task-package"
+    },
+    "chief_engineer": {
+      "$ref": "#/$defs/chiefEngineer"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agentTask"
+      }
+    }
+  },
+  "x-well-harness-agent-task-contract": {
+    "schema_name": "well_harness.agent_task_contract",
+    "schema_version": "0.1",
+    "top_level_fields": [
+      "$schema",
+      "kind",
+      "chief_engineer",
+      "tasks"
+    ]
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {"type": "string"},
+          {"type": "number"},
+          {"type": "integer"},
+          {"type": "boolean"},
+          {"type": "null"}
+        ]
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "high",
+            "critical"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "findingCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "critical",
+        "high",
+        "warning",
+        "info"
+      ],
+      "properties": {
+        "critical": {"type": "integer", "minimum": 0},
+        "high": {"type": "integer", "minimum": 0},
+        "warning": {"type": "integer", "minimum": 0},
+        "info": {"type": "integer", "minimum": 0}
+      }
+    },
+    "chiefEngineer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "source_artifact_id",
+        "status",
+        "finding_counts",
+        "task_count"
+      ],
+      "properties": {
+        "agent_name": {
+          "const": "ChiefEngineerAgent"
+        },
+        "source_artifact_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "tasks_ready_for_review",
+            "no_tasks_required"
+          ]
+        },
+        "finding_counts": {
+          "$ref": "#/$defs/findingCounts"
+        },
+        "task_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "changeBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "controller_truth_modified",
+        "certification_claim",
+        "allowed_to_modify_controller_truth"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "certification_claim": {
+          "const": "none"
+        },
+        "allowed_to_modify_controller_truth": {
+          "const": false
+        }
+      }
+    },
+    "agentTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "target_agent",
+        "task_type",
+        "priority",
+        "status",
+        "input_artifacts",
+        "allowed_files",
+        "forbidden_files",
+        "change_boundary",
+        "findings",
+        "instructions",
+        "done_when",
+        "stop_if",
+        "verification_commands",
+        "human_review_required"
+      ],
+      "properties": {
+        "task_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_agent": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "task_type": {
+          "enum": [
+            "repair_candidate_logic_ir",
+            "repair_evidence_trace",
+            "repair_candidate_test_oracle",
+            "repair_structured_requirement_candidate"
+          ]
+        },
+        "priority": {
+          "enum": [
+            "info",
+            "warning",
+            "high",
+            "critical"
+          ]
+        },
+        "status": {
+          "const": "proposed"
+        },
+        "input_artifacts": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "allowed_files": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "forbidden_files": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "change_boundary": {
+          "$ref": "#/$defs/changeBoundary"
+        },
+        "findings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "instructions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "done_when": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "stop_if": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "verification_commands": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "human_review_required": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

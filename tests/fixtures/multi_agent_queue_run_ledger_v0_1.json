@@ -1,0 +1,481 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_queue_run_ledger_v0_1.schema.json",
+  "aggregate": {
+    "child_review_exports_valid": true,
+    "controller_truth_modified": false,
+    "converged": 10,
+    "executed_limited": 10,
+    "ledger_append_only": true,
+    "open_findings": [],
+    "record_count": 10,
+    "source_queue_task_count": 10,
+    "ui_layout_modified": false
+  },
+  "append_only": {
+    "append_mode": "ledger_records_append_only_v0.1",
+    "record_sequence_preserves_queue_order": true,
+    "source_queue_id": "approved-candidate-task-queue-v0.8",
+    "source_queue_order": [
+      "queue-safety-priority-repair",
+      "queue-evidence-simulation-result-repair",
+      "queue-evidence-test-result-missing-repair",
+      "queue-requirement-ambiguity-repair",
+      "queue-safety-undefined-signal-repair",
+      "queue-evidence-boundary-review-repair",
+      "queue-evidence-unknown-requirement-repair",
+      "queue-evidence-ir-trace-unknown-requirement-repair",
+      "queue-safety-transition-endpoint-repair",
+      "queue-safety-unreachable-state-repair"
+    ]
+  },
+  "artifact_paths": {
+    "ledger": "<ledger>",
+    "source_queue_summary": "<source_queue_summary>"
+  },
+  "deterministic_gates": {
+    "approved_task_shell_records": "pass",
+    "boundary": "pass",
+    "child_review_exports": "pass",
+    "local_gate": "pass",
+    "scheduler_selection": "pass",
+    "source_queue_v0_8_checker": "pass"
+  },
+  "gate_id": "multi-agent-queue-run-ledger",
+  "kind": "ai-fantui-multi-agent-queue-run-ledger",
+  "ledger_id": "multi-agent-queue-run-ledger-v0.1",
+  "run_count": 10,
+  "run_records": [
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "gate_id": "",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-safety-priority-repair",
+      "record_id": "RUN-QUEUE-001",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 1,
+      "slice_id": "first-approved-candidate-repair-slice",
+      "source_finding_code": "CHECK_SAFETY_PRIORITY_001",
+      "task": {
+        "target_agent": "LogicIRRepairAgent",
+        "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "task_type": "repair_candidate_logic_ir"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "gate_id": "",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-simulation-result-repair",
+      "record_id": "RUN-QUEUE-002",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 2,
+      "slice_id": "evidence-approved-candidate-repair-slice",
+      "source_finding_code": "EV_SIMULATION_RESULT_FAILED",
+      "task": {
+        "target_agent": "SimulationTestRepairAgent",
+        "task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+        "task_type": "repair_candidate_test_oracle"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "gate_id": "",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-test-result-missing-repair",
+      "record_id": "RUN-QUEUE-003",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 3,
+      "slice_id": "missing-test-result-approved-candidate-repair-slice",
+      "source_finding_code": "EV_TEST_RESULT_MISSING",
+      "task": {
+        "target_agent": "SimulationTestRepairAgent",
+        "task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+        "task_type": "repair_candidate_test_oracle"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-REQ-AMBIGUITY-UNRESOLVED",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "gate_id": "",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-requirement-ambiguity-repair",
+      "record_id": "RUN-QUEUE-004",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 4,
+      "slice_id": "requirement-approved-candidate-repair-slice",
+      "source_finding_code": "REQ_AMBIGUITY_UNRESOLVED",
+      "task": {
+        "target_agent": "RequirementRepairAgent",
+        "task_id": "TASK-CE-REQ-AMBIGUITY-UNRESOLVED",
+        "task_type": "repair_structured_requirement_candidate"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-CHECK-UNDEFINED-SIGNAL-001",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-fast-construction-gate",
+        "gate_id": "multi-agent-m8-fast-construction-gate",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-safety-undefined-signal-repair",
+      "record_id": "RUN-QUEUE-005",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 5,
+      "slice_id": "safety-undefined-signal-approved-candidate-repair-slice",
+      "source_finding_code": "CHECK_UNDEFINED_SIGNAL_001",
+      "task": {
+        "target_agent": "LogicIRRepairAgent",
+        "task_id": "TASK-CE-CHECK-UNDEFINED-SIGNAL-001",
+        "task_type": "repair_candidate_logic_ir"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-BOUNDARY-REVIEW-001",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-fast-construction-gate",
+        "gate_id": "multi-agent-m8-fast-construction-gate",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-boundary-review-repair",
+      "record_id": "RUN-QUEUE-006",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 6,
+      "slice_id": "evidence-boundary-review-approved-candidate-repair-slice",
+      "source_finding_code": "EV_BOUNDARY_RESULT_REVIEW_REQUIRED",
+      "task": {
+        "target_agent": "EvidenceRepairAgent",
+        "task_id": "TASK-CE-EV-BOUNDARY-REVIEW-001",
+        "task_type": "repair_evidence_trace"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-TEST-COVERS-UNKNOWN-REQUIREMENT",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-fast-construction-gate",
+        "gate_id": "multi-agent-m8-fast-construction-gate",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-unknown-requirement-repair",
+      "record_id": "RUN-QUEUE-007",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 7,
+      "slice_id": "evidence-unknown-requirement-approved-candidate-repair-slice",
+      "source_finding_code": "EV_TEST_COVERS_UNKNOWN_REQUIREMENT",
+      "task": {
+        "target_agent": "EvidenceRepairAgent",
+        "task_id": "TASK-CE-EV-TEST-COVERS-UNKNOWN-REQUIREMENT",
+        "task_type": "repair_evidence_trace"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-IR-TRACE-UNKNOWN-REQUIREMENT",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-fast-construction-gate",
+        "gate_id": "multi-agent-m8-fast-construction-gate",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-ir-trace-unknown-requirement-repair",
+      "record_id": "RUN-QUEUE-008",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 8,
+      "slice_id": "evidence-unknown-trace-approved-candidate-repair-slice",
+      "source_finding_code": "EV_IR_TRACE_UNKNOWN_REQUIREMENT",
+      "task": {
+        "target_agent": "EvidenceRepairAgent",
+        "task_id": "TASK-CE-EV-IR-TRACE-UNKNOWN-REQUIREMENT",
+        "task_type": "repair_evidence_trace"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-CHECK-TRANSITION-ENDPOINT-001",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-fast-construction-gate",
+        "gate_id": "multi-agent-m8-fast-construction-gate",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-safety-transition-endpoint-repair",
+      "record_id": "RUN-QUEUE-009",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 9,
+      "slice_id": "safety-transition-endpoint-approved-candidate-repair-slice",
+      "source_finding_code": "CHECK_TRANSITION_ENDPOINT_001",
+      "task": {
+        "target_agent": "LogicIRRepairAgent",
+        "task_id": "TASK-CE-CHECK-TRANSITION-ENDPOINT-001",
+        "task_type": "repair_candidate_logic_ir"
+      }
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001",
+        "status": "executed_limited"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "preflight": {
+        "command": "make multi-agent-fast-construction-gate",
+        "gate_id": "multi-agent-m8-fast-construction-gate",
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-safety-unreachable-state-repair",
+      "record_id": "RUN-QUEUE-010",
+      "repair": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "status": "pass"
+      },
+      "review_export": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "path": "<candidate_review_packet_export>",
+        "reviewer_status": "converged"
+      },
+      "sequence": 10,
+      "slice_id": "safety-unreachable-state-approved-candidate-repair-slice",
+      "source_finding_code": "CHECK_UNREACHABLE_STATE_001",
+      "task": {
+        "target_agent": "LogicIRRepairAgent",
+        "task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001",
+        "task_type": "repair_candidate_logic_ir"
+      }
+    }
+  ],
+  "scheduler_decision": {
+    "decision_status": "selected_approved_candidate",
+    "policy_id": "latest-approved-append-only-item-v0.1",
+    "reason": "Use the newest append-only approved queue item after v0.8 checker passes.",
+    "selected_queue_item_id": "queue-safety-unreachable-state-repair",
+    "selected_record_id": "RUN-QUEUE-010"
+  },
+  "selected_queue_item_id": "queue-safety-unreachable-state-repair",
+  "selected_task_id": "TASK-CE-CHECK-UNREACHABLE-STATE-001",
+  "source_queue_gate_id": "approved-candidate-task-queue-v0-8",
+  "source_queue_id": "approved-candidate-task-queue-v0.8",
+  "status": "pass"
+}

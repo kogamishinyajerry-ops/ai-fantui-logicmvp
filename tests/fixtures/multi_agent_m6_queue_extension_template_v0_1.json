@@ -1,0 +1,130 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m6_queue_extension_template_v0_1.schema.json",
+  "aggregate": {
+    "controller_truth_modified": false,
+    "open_findings": [],
+    "ready_for_queue_expansion": true,
+    "supported_task_class_count": 3,
+    "template_count": 1,
+    "ui_layout_modified": false
+  },
+  "append_only_controls": {
+    "current_queue_id": "approved-candidate-task-queue-v0.1",
+    "next_queue_id": "approved-candidate-task-queue-v0.2",
+    "preserve_existing_queue_order": true,
+    "requires_checker_update": true,
+    "requires_child_review_export": true,
+    "requires_fixture_migration": true,
+    "requires_new_summary_schema": true
+  },
+  "artifact_paths": {
+    "engineering_system_mvp_doc": "docs/coordination/multi-agent-control-logic-engineering-system-mvp.md",
+    "expansion_contract": "/Users/Zhuanz/AI-FANTUI-LogicMVP-Workspace/worktrees/multi-agent-active-route-wiring/tests/fixtures/approved_candidate_task_queue_expansion_contract_v0_1.json",
+    "operator_template_guide": "/tmp/ai-fantui-multi-agent-m6-queue-extension-template/queue_extension_template_guide.md",
+    "project_manager_plan": "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md",
+    "template_package": "/tmp/ai-fantui-multi-agent-m6-queue-extension-template/multi_agent_m6_queue_extension_template_v0_1.json"
+  },
+  "deterministic_gates": {
+    "append_only_controls": "pass",
+    "local_gate_entrypoint": "pass",
+    "m5_control_plane_entrypoint": "pass",
+    "operator_template_guide": "pass",
+    "queue_expansion_contract": "pass",
+    "task_class_matrix": "pass",
+    "template_schema": "pass"
+  },
+  "kind": "ai-fantui-multi-agent-m6-queue-extension-template",
+  "milestone": {
+    "budget": 32,
+    "claim": "candidate-only approved queue extension template",
+    "effort_unit": "施工队工时",
+    "id": "M6",
+    "name": "队列扩展模板"
+  },
+  "package_id": "multi-agent-m6-queue-extension-template-v0.1",
+  "preconditions": {
+    "required_contract": "approved_candidate_task_queue_expansion_contract_v0_1",
+    "required_entrypoint": "make multi-agent-construction-control-plane",
+    "v0_1_queue_is_fixed": true
+  },
+  "queue_item_template": {
+    "forbidden_effects": [
+      "controller_truth_modified",
+      "ui_layout_modified",
+      "certification_claim",
+      "unapproved_task_execution"
+    ],
+    "required_artifacts": [
+      "chief_engineer_task_package",
+      "execution_plan_v0_1",
+      "execution_evidence_package_v0_1",
+      "candidate_review_packet_export_v0_1"
+    ],
+    "required_fields": [
+      "queue_item_id",
+      "source_finding_code",
+      "task_class",
+      "target_agent",
+      "task_type",
+      "approval_id",
+      "readiness_command",
+      "runner_contract"
+    ],
+    "required_gates": [
+      "make multi-agent-construction-readiness",
+      "approved_task_shell",
+      "candidate_repair_loop",
+      "candidate_review_packet_export",
+      "boundary_check"
+    ],
+    "template_id": "approved-candidate-repair-task-template-v0.1"
+  },
+  "review_boundaries": {
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "restricted_paths": [
+      "src/well_harness/controller.py",
+      "src/well_harness/editable_control_model.py",
+      "src/well_harness/static/requirements_intake/"
+    ],
+    "truth_effect": "none",
+    "ui_layout_modified": false
+  },
+  "status": "pass",
+  "task_class_matrix": [
+    {
+      "finding_selector": "code starts with CHECK_",
+      "repair_loop_kind": "ai-fantui-safety-repair-loop",
+      "required_review_export": "candidate_review_packet_export_v0_1",
+      "target_agent": "LogicIRRepairAgent",
+      "task_class": "SafetyRepairTask",
+      "task_type": "repair_candidate_logic_ir"
+    },
+    {
+      "finding_selector": "code starts with EV_",
+      "repair_loop_kind": "ai-fantui-evidence-repair-loop",
+      "required_review_export": "candidate_review_packet_export_v0_1",
+      "target_agent": "SimulationTestRepairAgent or EvidenceRepairAgent",
+      "task_class": "EvidenceRepairTask",
+      "task_type": "repair_candidate_test_or_evidence"
+    },
+    {
+      "finding_selector": "code starts with REQ_ or ambiguity requires requirement clarification",
+      "repair_loop_kind": "ai-fantui-requirement-repair-loop",
+      "required_review_export": "candidate_review_packet_export_v0_1",
+      "target_agent": "RequirementRepairAgent",
+      "task_class": "RequirementRepairTask",
+      "task_type": "repair_structured_requirement_candidate"
+    }
+  ],
+  "template_summary": {
+    "next_queue_id": "approved-candidate-task-queue-v0.2",
+    "readiness_status": "ready_for_append_only_queue_growth",
+    "supported_task_classes": [
+      "SafetyRepairTask",
+      "EvidenceRepairTask",
+      "RequirementRepairTask"
+    ],
+    "template_id": "approved-candidate-repair-task-template-v0.1"
+  }
+}

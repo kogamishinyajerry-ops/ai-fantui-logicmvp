@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_packaging_consolidation_v0_1.schema.json",
+  "title": "Multi-Agent Packaging Consolidation v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "summary",
+    "package_order",
+    "stage_commands",
+    "excluded_paths",
+    "blockers",
+    "pr_summary",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_packaging_consolidation_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-packaging-consolidation"
+    },
+    "package_id": {
+      "const": "multi-agent-packaging-consolidation-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim"],
+      "properties": {
+        "id": {
+          "const": "M23"
+        },
+        "name": {
+          "const": "Packaging Consolidation"
+        },
+        "claim": {
+          "const": "read_only_explicit_pathspec_pr_boundary"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_count",
+        "pathspec_count",
+        "missing_pathspec_count",
+        "next_action",
+        "dirty_worktree_policy"
+      ],
+      "properties": {
+        "package_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pathspec_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "missing_pathspec_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "next_action": {
+          "const": "stage_packages_in_order_with_explicit_pathspecs"
+        },
+        "dirty_worktree_policy": {
+          "const": "ignore_unrelated_dirty_files_and_stage_only_listed_pathspecs"
+        }
+      }
+    },
+    "package_order": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/package"
+      }
+    },
+    "stage_commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "excluded_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["blocker_id", "status", "message"],
+        "properties": {
+          "blocker_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": ["external_blocker", "local_blocker"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "pr_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "body_sections", "notion_blocker_note"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body_sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notion_blocker_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_json", "package_markdown", "package_html"],
+      "properties": {
+        "package_json": {
+          "type": "string"
+        },
+        "package_markdown": {
+          "type": "string"
+        },
+        "package_html": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_id",
+        "label",
+        "depends_on",
+        "claim",
+        "pathspecs",
+        "forced_pathspecs",
+        "validation_commands",
+        "missing_pathspecs",
+        "git_status",
+        "ready_for_pathspec_staging"
+      ],
+      "properties": {
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pathspecs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forced_pathspecs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "validation_commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "missing_pathspecs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "git_status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tracked_or_untracked", "forced_ignored"],
+          "properties": {
+            "tracked_or_untracked": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "forced_ignored": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "ready_for_pathspec_staging": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

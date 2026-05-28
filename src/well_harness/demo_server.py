@@ -94,6 +94,7 @@ CONTENT_TYPES = {
     ".ico": "image/x-icon",
     ".png": "image/png",
 }
+CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE = "/logic-builder/candidate-review-packet.json"
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 SYSTEM_SNAPSHOT_POST_PATH = "/api/system-snapshot"
 TRA_L4_LOCK_DEG = -14.0
@@ -616,6 +617,20 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     500,
                     {
                         "error": "deepseek_live_demo_replay_invalid",
+                        "detail": str(exc),
+                    },
+                )
+            return
+        if parsed.path == CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE:
+            try:
+                from well_harness.agent_review_packet import load_candidate_review_packet_export
+
+                self._send_json(200, load_candidate_review_packet_export())
+            except (FileNotFoundError, OSError, ImportError, json.JSONDecodeError, ValueError) as exc:
+                self._send_json(
+                    500,
+                    {
+                        "error": "candidate_review_packet_export_unavailable",
                         "detail": str(exc),
                     },
                 )

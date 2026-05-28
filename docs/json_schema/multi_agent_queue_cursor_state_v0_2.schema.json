@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_queue_cursor_state_v0_2.schema.json",
+  "title": "Multi-Agent Queue Cursor State v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "status",
+    "gate_id",
+    "cursor_id",
+    "source_ledger_id",
+    "source_ledger_gate_id",
+    "state_status",
+    "resume_policy",
+    "cursor_position",
+    "selected_next_record",
+    "completed_records",
+    "open_records",
+    "deterministic_gates",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_queue_cursor_state_v0_2.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-queue-cursor-state"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "gate_id": {
+      "const": "multi-agent-queue-cursor-state"
+    },
+    "cursor_id": {
+      "const": "multi-agent-queue-cursor-state-v0.2"
+    },
+    "source_ledger_id": {
+      "const": "multi-agent-queue-run-ledger-v0.2"
+    },
+    "source_ledger_gate_id": {
+      "const": "multi-agent-queue-run-ledger"
+    },
+    "state_status": {
+      "enum": ["idle_no_open_approved_items", "ready_to_resume", "blocked"]
+    },
+    "resume_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id", "next_action", "reason"],
+      "properties": {
+        "policy_id": {
+          "const": "first-approved-open-item-v0.2"
+        },
+        "next_action": {
+          "enum": ["wait_for_append_only_queue_growth", "resume_next_open_record", "stop_for_review"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "cursor_position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "last_completed_record_id",
+        "last_completed_queue_item_id",
+        "next_record_id",
+        "next_queue_item_id"
+      ],
+      "properties": {
+        "last_completed_record_id": {
+          "type": "string"
+        },
+        "last_completed_queue_item_id": {
+          "type": "string"
+        },
+        "next_record_id": {
+          "type": "string"
+        },
+        "next_queue_item_id": {
+          "type": "string"
+        }
+      }
+    },
+    "selected_next_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id", "queue_item_id", "task_id", "status"],
+      "properties": {
+        "record_id": {
+          "type": "string"
+        },
+        "queue_item_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": ["none", "ready_to_resume", "blocked"]
+        }
+      }
+    },
+    "completed_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cursor_record"
+      }
+    },
+    "open_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cursor_record"
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ledger_checker",
+        "cursor_monotonicity",
+        "completed_records",
+        "resume_selection",
+        "boundary",
+        "local_gate"
+      ],
+      "properties": {
+        "source_ledger_checker": {
+          "enum": ["pass", "fail"]
+        },
+        "cursor_monotonicity": {
+          "enum": ["pass", "fail"]
+        },
+        "completed_records": {
+          "enum": ["pass", "fail"]
+        },
+        "resume_selection": {
+          "enum": ["pass", "fail"]
+        },
+        "boundary": {
+          "enum": ["pass", "fail"]
+        },
+        "local_gate": {
+          "enum": ["pass", "fail"]
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ledger_record_count",
+        "completed_count",
+        "open_approved_count",
+        "blocked_count",
+        "ready_for_resume",
+        "idle",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "source_ledger_record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_approved_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_for_resume": {
+          "type": "boolean"
+        },
+        "idle": {
+          "type": "boolean"
+        },
+        "controller_truth_modified": {
+          "type": "boolean"
+        },
+        "ui_layout_modified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cursor_state", "source_ledger"],
+      "properties": {
+        "cursor_state": {
+          "type": "string"
+        },
+        "source_ledger": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "cursor_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_id", "queue_item_id", "task_id", "status"],
+      "properties": {
+        "record_id": {
+          "type": "string",
+          "pattern": "^RUN-QUEUE-[0-9]{3}$"
+        },
+        "queue_item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["converged", "approved_open", "blocked"]
+        }
+      }
+    }
+  }
+}

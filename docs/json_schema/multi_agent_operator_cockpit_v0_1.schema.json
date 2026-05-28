@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_operator_cockpit_v0_1.schema.json",
+  "title": "Multi-Agent Operator Cockpit v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "cockpit_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "agent_team",
+    "summary",
+    "operator_views",
+    "gates",
+    "blockers",
+    "dependency_boundary",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_operator_cockpit_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-operator-cockpit"
+    },
+    "cockpit_id": {
+      "const": "multi-agent-operator-cockpit-v0.1"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim", "activation_status"],
+      "properties": {
+        "id": {
+          "const": "M22"
+        },
+        "name": {
+          "const": "Multi-Agent Operator Cockpit"
+        },
+        "claim": {
+          "const": "read_only_operator_dashboard_package"
+        },
+        "activation_status": {
+          "const": "ready_for_pr_packaging_m21_implementation_still_owner_gated"
+        }
+      }
+    },
+    "agent_team": {
+      "$ref": "#/$defs/agent_team"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headline",
+        "project_status",
+        "ultrawork_status",
+        "completed_count",
+        "open_approved_count",
+        "latest_completed_record_id",
+        "selected_next_record_id",
+        "recommended_next_step"
+      ],
+      "properties": {
+        "headline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_status": {
+          "enum": ["pass", "fail"]
+        },
+        "ultrawork_status": {
+          "enum": ["pass", "fail"]
+        },
+        "completed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_approved_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_completed_record_id": {
+          "type": "string"
+        },
+        "selected_next_record_id": {
+          "type": "string"
+        },
+        "recommended_next_step": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "operator_views": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["view_id", "label", "status", "html", "json"],
+        "properties": {
+          "view_id": {
+            "enum": ["project-manager-status", "ultrawork-monitor"]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": ["pass", "fail"]
+          },
+          "html": {
+            "type": "string",
+            "minLength": 1
+          },
+          "json": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_status",
+        "ultrawork_monitor",
+        "queue_cursor",
+        "operator_boundary",
+        "notion_blocker_classification"
+      ],
+      "properties": {
+        "project_status": {
+          "enum": ["pass", "fail"]
+        },
+        "ultrawork_monitor": {
+          "enum": ["pass", "fail"]
+        },
+        "queue_cursor": {
+          "enum": ["pass", "fail"]
+        },
+        "operator_boundary": {
+          "enum": ["pass", "fail"]
+        },
+        "notion_blocker_classification": {
+          "enum": ["pass", "fail"]
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["blocker_id", "status", "message"],
+        "properties": {
+          "blocker_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": ["external_blocker", "local_blocker"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "dependency_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "notion_control_plane",
+        "pathspec_package",
+        "excluded_paths"
+      ],
+      "properties": {
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "notion_control_plane": {
+          "const": "external_blocker"
+        },
+        "pathspec_package": {
+          "const": "docs/coordination/multi-agent-operator-cockpit.md"
+        },
+        "excluded_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cockpit_json",
+        "cockpit_markdown",
+        "cockpit_html",
+        "project_status_json",
+        "project_status_html",
+        "ultrawork_dashboard_json",
+        "ultrawork_dashboard_html"
+      ],
+      "properties": {
+        "cockpit_json": {
+          "type": "string"
+        },
+        "cockpit_markdown": {
+          "type": "string"
+        },
+        "cockpit_html": {
+          "type": "string"
+        },
+        "project_status_json": {
+          "type": "string"
+        },
+        "project_status_html": {
+          "type": "string"
+        },
+        "ultrawork_dashboard_json": {
+          "type": "string"
+        },
+        "ultrawork_dashboard_html": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "agent_team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "team_size", "active_agents", "retired_role_policy"],
+      "properties": {
+        "mode": {
+          "const": "five_agent_context_cap"
+        },
+        "team_size": {
+          "const": 5
+        },
+        "active_agents": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/agent_team_member"
+          }
+        },
+        "retired_role_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "agent_team_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "name", "scope"],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "enum": [
+            "ChiefEngineerOrchestrator",
+            "LogicIRRepairAgent",
+            "EvidenceValidationAgent",
+            "SafetyRequirementsReviewer",
+            "PackagingPRReadinessAgent"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/candidate_review_packet_v0_1.schema.json",
+  "title": "well_harness candidate review packet v0.1",
+  "description": "Machine-readable review packet that summarizes finding to approval to repair to convergence chains.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "reviewer",
+    "boundary",
+    "source_artifacts",
+    "summary",
+    "finding_chains",
+    "human_review_required"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/candidate_review_packet_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-candidate-review-packet"
+    },
+    "reviewer": {
+      "$ref": "#/$defs/reviewer"
+    },
+    "boundary": {
+      "$ref": "#/$defs/boundary"
+    },
+    "source_artifacts": {
+      "$ref": "#/$defs/sourceArtifacts"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "finding_chains": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/findingChain"
+      }
+    },
+    "human_review_required": {
+      "type": "boolean"
+    }
+  },
+  "x-well-harness-candidate-review-packet": {
+    "schema_name": "well_harness.agent_review_packet",
+    "schema_version": "0.1",
+    "truth_boundary": {
+      "truth_effect": "none",
+      "controller_truth_modified": false,
+      "certification_claim": "none"
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "status",
+        "loop_count"
+      ],
+      "properties": {
+        "agent_name": {
+          "const": "CandidateReviewPacketAgent"
+        },
+        "status": {
+          "enum": [
+            "no_findings",
+            "blocked_pending_approval",
+            "blocked_safety_findings",
+            "needs_followup",
+            "converged",
+            "open_findings"
+          ]
+        },
+        "loop_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_state",
+        "truth_effect",
+        "controller_truth_modified",
+        "certification_claim"
+      ],
+      "properties": {
+        "candidate_state": {
+          "type": "string"
+        },
+        "truth_effect": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "certification_claim": {
+          "const": "none"
+        }
+      }
+    },
+    "sourceArtifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logic_ir_agent",
+        "logic_ir_task_id",
+        "task_package_status",
+        "execution_plan_status",
+        "execution_evidence_status"
+      ],
+      "properties": {
+        "logic_ir_agent": {
+          "type": "string"
+        },
+        "logic_ir_task_id": {
+          "type": "string"
+        },
+        "task_package_status": {
+          "type": "string"
+        },
+        "execution_plan_status": {
+          "type": "string"
+        },
+        "execution_evidence_status": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_findings",
+        "loop_count",
+        "converged_loops",
+        "blocked_loops",
+        "needs_followup_loops",
+        "open_findings"
+      ],
+      "properties": {
+        "total_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "loop_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "converged_loops": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked_loops": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_followup_loops": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_findings": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "findingChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "loop_kind",
+        "status",
+        "finding",
+        "approval",
+        "repair",
+        "before",
+        "after",
+        "convergence"
+      ],
+      "properties": {
+        "loop_kind": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "finding": {
+          "type": "object"
+        },
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "repair": {
+          "$ref": "#/$defs/repair"
+        },
+        "before": {
+          "type": "object"
+        },
+        "after": {
+          "type": "object"
+        },
+        "convergence": {
+          "type": "object"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approval_id",
+        "approved_task_id",
+        "approved_by"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "approval_id": {
+          "type": "string"
+        },
+        "approved_task_id": {
+          "type": "string"
+        },
+        "approved_by": {
+          "type": "string"
+        }
+      }
+    },
+    "repair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actions",
+        "performed"
+      ],
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "performed": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
