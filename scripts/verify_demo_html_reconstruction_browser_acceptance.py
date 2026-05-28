@@ -172,6 +172,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "operator_guide_visible": page.locator(
                         "#demo-reconstruction-operator-guide"
                     ).is_visible(timeout=5000),
+                    "output_mirror_visible": page.locator(
+                        "#demo-reconstruction-output-mirror"
+                    ).is_visible(timeout=5000),
                     "console_frame_visible": page.locator(
                         "#demo-reconstruction-console-frame"
                     ).is_visible(timeout=5000),
@@ -949,10 +952,60 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
 
                 max_reverse = _interaction_snapshot(frame, "max-reverse", "DEPLOYED")
+                page.wait_for_function(
+                    """() => {
+                        const status = document.querySelector("#demo-reconstruction-output-mirror-status");
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        return status
+                            && status.textContent.trim() === "DEPLOYED"
+                            && output
+                            && output.textContent.trim() === "ON";
+                    }""",
+                    timeout=5000,
+                )
+                max_reverse_output_mirror = page.evaluate(
+                    """() => ({
+                        status: document.querySelector("#demo-reconstruction-output-mirror-status")?.textContent?.trim() || "",
+                        logic: document.querySelector("#demo-reconstruction-output-mirror-logic")?.textContent?.trim() || "",
+                        thr: document.querySelector("#demo-reconstruction-output-mirror-thr")?.textContent?.trim() || "",
+                        summary: document.querySelector("#demo-reconstruction-output-mirror-summary")?.textContent?.trim() || "",
+                        outputs: {
+                            tls: document.querySelector("#demo-reconstruction-output-mirror-tls")?.textContent?.trim() || "",
+                            etrac: document.querySelector("#demo-reconstruction-output-mirror-etrac")?.textContent?.trim() || "",
+                            eec: document.querySelector("#demo-reconstruction-output-mirror-eec")?.textContent?.trim() || "",
+                            thr_lock: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
+                        },
+                    })"""
+                )
                 frame.locator("body").screenshot(path=str(max_reverse_path))
                 frame.locator('section[aria-labelledby="outputs-heading"]').scroll_into_view_if_needed()
                 frame.locator('section[aria-labelledby="outputs-heading"]').screenshot(path=str(max_reverse_outputs_path))
                 inhibit = _interaction_snapshot(frame, "inhibit-block", "FAULT")
+                page.wait_for_function(
+                    """() => {
+                        const status = document.querySelector("#demo-reconstruction-output-mirror-status");
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        return status
+                            && status.textContent.trim() === "FAULT"
+                            && output
+                            && output.textContent.trim() === "BLOCKED";
+                    }""",
+                    timeout=5000,
+                )
+                inhibit_output_mirror = page.evaluate(
+                    """() => ({
+                        status: document.querySelector("#demo-reconstruction-output-mirror-status")?.textContent?.trim() || "",
+                        logic: document.querySelector("#demo-reconstruction-output-mirror-logic")?.textContent?.trim() || "",
+                        thr: document.querySelector("#demo-reconstruction-output-mirror-thr")?.textContent?.trim() || "",
+                        summary: document.querySelector("#demo-reconstruction-output-mirror-summary")?.textContent?.trim() || "",
+                        outputs: {
+                            tls: document.querySelector("#demo-reconstruction-output-mirror-tls")?.textContent?.trim() || "",
+                            etrac: document.querySelector("#demo-reconstruction-output-mirror-etrac")?.textContent?.trim() || "",
+                            eec: document.querySelector("#demo-reconstruction-output-mirror-eec")?.textContent?.trim() || "",
+                            thr_lock: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
+                        },
+                    })"""
+                )
                 frame.locator("body").screenshot(path=str(inhibit_path))
                 frame.locator('section[aria-labelledby="outputs-heading"]').scroll_into_view_if_needed()
                 frame.locator('section[aria-labelledby="outputs-heading"]').screenshot(path=str(inhibit_outputs_path))
@@ -1189,6 +1242,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "hud_output_linkage": "pass"
         if max_reverse["hud_thr_lock"] == "RELEASED" and max_reverse["outputs"]["thr_lock"] == "ON"
         else "fail",
+        "output_mirror_sync": "pass"
+        if (
+            max_reverse_output_mirror["status"] == "DEPLOYED"
+            and max_reverse_output_mirror["outputs"]["thr_lock"] == "ON"
+            and "L4:ON" in max_reverse_output_mirror["logic"]
+            and inhibit_output_mirror["status"] == "FAULT"
+            and inhibit_output_mirror["outputs"]["thr_lock"] == "BLOCKED"
+            and "BLOCKED" in inhibit_output_mirror["thr"]
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -1242,6 +1305,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "interactions": {
             "max-reverse": max_reverse,
             "inhibit-block": inhibit,
+        },
+        "output_mirror": {
+            "max-reverse": max_reverse_output_mirror,
+            "inhibit-block": inhibit_output_mirror,
         },
         "console_errors": console_errors,
         "deterministic_gates": gates,
@@ -1316,6 +1383,7 @@ def main(argv: list[str] | None = None) -> int:
                 "node_wire_pixels": "fail",
                 "preset_interactions": "fail",
                 "hud_output_linkage": "fail",
+                "output_mirror_sync": "fail",
                 "boundary": "fail",
             },
             "error": str(exc),
