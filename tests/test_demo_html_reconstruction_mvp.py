@@ -171,6 +171,12 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-playback-active-step"' in html
     assert 'id="demo-reconstruction-playback-node-count"' in html
     assert 'id="demo-reconstruction-playback-wire-count"' in html
+    assert 'id="demo-reconstruction-object-provenance"' in html
+    assert 'id="demo-reconstruction-provenance-object"' in html
+    assert 'id="demo-reconstruction-provenance-source-count"' in html
+    assert 'id="demo-reconstruction-provenance-step-count"' in html
+    assert 'id="demo-reconstruction-provenance-source-list"' in html
+    assert 'id="demo-reconstruction-provenance-step-list"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -178,6 +184,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "demo.html 复刻 MVP 控制台" in html
     assert "原始 DOCX 逐句到完整电路" in html
     assert "逐句构建轨道" in html
+    assert "对象反查证据板" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
@@ -188,7 +195,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "renderTraceBoard" in script
     assert "setSelectedTrace" in script
-    assert "TRACE_WIRE_ENDPOINTS" in script
+    assert "TRACE_WIRE_ENDPOINTS" not in script
+    assert "updateWireEndpointMapFromWires" in script
+    assert "wireEndpointsForId" in script
     assert "applyEmbeddedTraceHighlight" in script
     assert "applyEmbeddedTraceFocus" in script
     assert "renderCoverageMatrix" in script
@@ -206,6 +215,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderStepPlaybackRail" in script
     assert "applyStepPlayback" in script
     assert "cumulativeTraceContract" in script
+    assert "renderObjectProvenance" in script
+    assert "objectProvenanceRecords" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -223,6 +234,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-step-playback" in stylesheet
     assert ".demo-reconstruction-playback-steps" in stylesheet
     assert ".demo-reconstruction-playback-button" in stylesheet
+    assert ".demo-reconstruction-object-provenance" in stylesheet
+    assert ".demo-reconstruction-provenance-list" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -310,6 +323,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["keyboard_review"].endswith(".png")
     assert payload["screenshots"]["review_deep_link"].endswith(".png")
     assert payload["screenshots"]["step_playback"].endswith(".png")
+    assert payload["screenshots"]["object_provenance"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -381,6 +395,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "18/20" in payload["step_playback_review"]["nodeCountText"]
     assert "20/23" in payload["step_playback_review"]["wireCountText"]
     assert "累计构建" in payload["step_playback_review"]["reviewObjectText"]
+    assert "logic4" in payload["object_provenance_review"]["objectText"]
+    assert payload["object_provenance_review"]["sourceCount"] >= 2
+    assert payload["object_provenance_review"]["stepCount"] >= 1
+    assert any("logic4" in item for item in payload["object_provenance_review"]["sourceItems"])
+    assert any("P035-S05" in item for item in payload["object_provenance_review"]["stepItems"])
+    assert "wire_logic4_thr_lock" in payload["wire_provenance_review"]["objectText"]
+    assert payload["wire_provenance_review"]["sourceCount"] >= 2
+    assert payload["wire_provenance_review"]["stepCount"] >= 1
+    assert any("logic4" in item or "thr_lock" in item for item in payload["wire_provenance_review"]["sourceItems"])
+    assert any("P035-S05" in item for item in payload["wire_provenance_review"]["stepItems"])
     assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
     assert payload["review_deep_link"]["linkHref"].endswith(
         "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -423,6 +447,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_cursor_status": "pass",
         "trace_switch_clears_object_focus": "pass",
         "step_playback_cumulative_circuit": "pass",
+        "object_provenance_traceability": "pass",
         "review_hash_link": "pass",
         "review_hash_restore": "pass",
         "source_chip_focus": "pass",
