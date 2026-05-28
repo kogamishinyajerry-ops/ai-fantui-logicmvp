@@ -203,11 +203,60 @@
   }
 
   function sourceIndexQuery() {
-    return sourceIndexSearch ? sourceIndexSearch.value.trim().toLowerCase() : "";
+    return sourceIndexRawQuery().toLowerCase();
+  }
+
+  function sourceIndexRawQuery() {
+    return sourceIndexSearch ? sourceIndexSearch.value.trim() : "";
   }
 
   function sourceIndexLevelValue() {
     return sourceIndexLevel ? sourceIndexLevel.value : "all";
+  }
+
+  function validSourceIndexLevel(value) {
+    return value === "all" || ["L1", "L2", "L3", "L4"].includes(value);
+  }
+
+  function parseHashElement(value) {
+    const parts = String(value || "").split(":");
+    if (parts.length !== 2) return null;
+    const [kind, id] = parts;
+    if (kind === "node" && circuitNodeById(id)) return {kind, id};
+    if (kind === "wire" && circuitEdgeById(id)) return {kind, id};
+    return null;
+  }
+
+  function reviewHashParams() {
+    const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+    return new URLSearchParams(hash);
+  }
+
+  function applyReviewHashState() {
+    const params = reviewHashParams();
+    const step = params.get("step");
+    if (step && sequenceSteps().some((item) => item.anchor === step)) currentAnchor = step;
+    const element = parseHashElement(params.get("el"));
+    if (element) selectedElement = element;
+    const query = params.get("q");
+    if (sourceIndexSearch && query !== null) sourceIndexSearch.value = query;
+    const level = params.get("level");
+    if (sourceIndexLevel && validSourceIndexLevel(level)) sourceIndexLevel.value = level;
+  }
+
+  function writeReviewHash() {
+    if (!currentPayload) return;
+    const params = new URLSearchParams();
+    params.set("step", currentAnchor);
+    params.set("el", `${selectedElement.kind}:${selectedElement.id}`);
+    const query = sourceIndexRawQuery();
+    if (query) params.set("q", query);
+    const level = sourceIndexLevelValue();
+    if (level !== "all") params.set("level", level);
+    const nextHash = `#${params.toString()}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
+    }
   }
 
   function makeSvgElement(name, attributes) {
@@ -395,6 +444,7 @@
     selectedElement = {kind, id};
     setSelectedElementState(kind, id);
     renderTracePanel(kind, id);
+    writeReviewHash();
   }
 
   function installElementInteraction(element, kind, id, label) {
@@ -846,11 +896,20 @@
     setSourceIndexState(activeSourceEntryAnchor);
   }
 
+  function restoreReviewFromHash() {
+    if (!currentPayload) return;
+    applyReviewHashState();
+    renderSourceIndex(sourceEntries());
+    activateStep(currentAnchor);
+    selectCircuitElement(selectedElement.kind, selectedElement.id);
+  }
+
   function renderPayload(payload) {
     const source = payload && payload.source ? payload.source : {};
     const coverage = payload && payload.coverage ? payload.coverage : {};
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
     currentPayload = payload;
+    applyReviewHashState();
     setText(sourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
     setText(
       sourceCount,
@@ -890,18 +949,26 @@
   }
   if (copyTracePacketButton) copyTracePacketButton.addEventListener("click", copyTracePacket);
   if (sourceIndexSearch) {
-    sourceIndexSearch.addEventListener("input", () => renderSourceIndex(sourceEntries()));
+    sourceIndexSearch.addEventListener("input", () => {
+      renderSourceIndex(sourceEntries());
+      writeReviewHash();
+    });
   }
   if (sourceIndexLevel) {
-    sourceIndexLevel.addEventListener("change", () => renderSourceIndex(sourceEntries()));
+    sourceIndexLevel.addEventListener("change", () => {
+      renderSourceIndex(sourceEntries());
+      writeReviewHash();
+    });
   }
   if (sourceIndexClear) {
     sourceIndexClear.addEventListener("click", () => {
       if (sourceIndexSearch) sourceIndexSearch.value = "";
       if (sourceIndexLevel) sourceIndexLevel.value = "all";
       renderSourceIndex(sourceEntries());
+      writeReviewHash();
     });
   }
+  window.addEventListener("hashchange", restoreReviewFromHash);
 
   boot();
 })();

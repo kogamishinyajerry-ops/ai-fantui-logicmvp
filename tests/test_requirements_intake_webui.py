@@ -6395,6 +6395,12 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function filteredSourceEntries" in script
     assert "function sourceEntryLevels" in script
     assert "function sourceIndexQuery" in script
+    assert "function applyReviewHashState" in script
+    assert "function writeReviewHash" in script
+    assert "function parseHashElement" in script
+    assert "hashchange" in script
+    assert "URLSearchParams" in script
+    assert "history.replaceState" in script
     assert "function currentTracePacket" in script
     assert "function copyTracePacket" in script
     assert "data-source-entry-anchor" in script
