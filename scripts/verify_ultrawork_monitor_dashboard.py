@@ -67,7 +67,10 @@ def _required_browser_text(payload: dict[str, Any]) -> list[str]:
     mode = str(agent_team.get("mode", ""))
     if mode:
         required.append(mode)
-    for agent in agent_team.get("active_agents", []):
+    active_agents = agent_team.get("active_agents", [])
+    if not isinstance(active_agents, list):
+        active_agents = []
+    for agent in active_agents:
         if isinstance(agent, dict) and agent.get("name"):
             required.append(str(agent["name"]))
 

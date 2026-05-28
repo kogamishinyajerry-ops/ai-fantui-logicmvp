@@ -229,6 +229,18 @@ def test_ultrawork_browser_required_text_is_derived_from_payload(tmp_path: Path)
     assert "local_blocker" not in blocked_required
     assert "boundary-gate" in blocked_required
 
+    malformed_team_dashboard = {
+        **idle_dashboard,
+        "agent_team": {
+            **idle_dashboard["agent_team"],
+            "active_agents": None,
+        },
+    }
+    malformed_required = ultrawork_verifier._required_browser_text(malformed_team_dashboard)
+
+    assert "five_agent_context_cap" in malformed_required
+    assert "No active blockers" in malformed_required
+
 
 def test_ultrawork_browser_gate_reports_chromium_launch_failure(monkeypatch, tmp_path: Path) -> None:
     class BrokenPlaywright:
