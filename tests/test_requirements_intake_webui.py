@@ -6350,6 +6350,13 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'href="/logic-builder?template=docx-l1-l4"' in html
     assert 'href="/demo-reconstruction"' in html
     assert 'id="docx-circuit-review-panel"' in html
+    assert 'data-docx-circuit-sentence-toolbar="true"' in html
+    assert 'id="docx-circuit-prev-step"' in html
+    assert 'id="docx-circuit-next-step"' in html
+    assert 'id="docx-circuit-step-position"' in html
+    assert 'id="docx-circuit-element-evidence-only"' in html
+    assert 'id="docx-circuit-copy-trace-packet"' in html
+    assert 'id="docx-circuit-copy-status"' in html
     assert 'id="docx-circuit-source-anchor"' in html
     assert 'id="docx-circuit-trace-panel"' in html
     assert 'data-selected-element-id="wire_logic4_thr_lock"' in html
@@ -6375,9 +6382,14 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function selectCircuitElement" in script
     assert "function renderTracePanel" in script
     assert "function matchingSourceEntries" in script
+    assert "function activateRelativeStep" in script
+    assert "function currentTracePacket" in script
+    assert "function copyTracePacket" in script
+    assert "data-evidence-scope" in script
     assert "data-selected-element-id" in script
     assert "docx-circuit-svg-wire-hit" in script
     assert "data-wire-hit-id" in script
+    assert "docx_circuit_review_packet" in script
     assert "CIRCUIT_NODES" in script
     assert "CIRCUIT_EDGES" in script
     assert "data-review-anchor" in script
@@ -6385,6 +6397,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "wire_logic4_thr_lock" in html
     assert ".docx-circuit-stage" in stylesheet
     assert ".docx-circuit-review-panel" in stylesheet
+    assert ".docx-circuit-review-toolbar" in stylesheet
+    assert ".docx-circuit-filter-toggle" in stylesheet
+    assert ".docx-circuit-copy-status" in stylesheet
     assert "#docx-circuit-svg" in stylesheet
     assert ".docx-circuit-trace-panel" in stylesheet
     assert ".docx-circuit-svg-wire-hit" in stylesheet

@@ -106,6 +106,12 @@
   const sequenceList = $("docx-circuit-sequence-list");
   const activeAnchor = $("docx-circuit-active-anchor");
   const reviewPanel = $("docx-circuit-review-panel");
+  const prevStepButton = $("docx-circuit-prev-step");
+  const nextStepButton = $("docx-circuit-next-step");
+  const stepPosition = $("docx-circuit-step-position");
+  const evidenceOnlyToggle = $("docx-circuit-element-evidence-only");
+  const copyTracePacketButton = $("docx-circuit-copy-trace-packet");
+  const copyStatus = $("docx-circuit-copy-status");
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
@@ -147,6 +153,22 @@
 
   function listFrom(values) {
     return Array.isArray(values) ? values.filter(Boolean) : [];
+  }
+
+  function sequenceSteps() {
+    return currentPayload && Array.isArray(currentPayload.sequence_steps)
+      ? currentPayload.sequence_steps
+      : [];
+  }
+
+  function currentStepIndex() {
+    const steps = sequenceSteps();
+    return Math.max(0, steps.findIndex((step) => step.anchor === currentAnchor));
+  }
+
+  function currentStep() {
+    const steps = sequenceSteps();
+    return steps[currentStepIndex()] || null;
   }
 
   function cumulativeIds(steps, activeIndex, key) {
@@ -223,6 +245,19 @@
     return entries.filter((entry) => listFrom(entry.node_ids).some((nodeId) => nodeIds.includes(nodeId)));
   }
 
+  function sourceEntriesForNodes(nodeIds) {
+    const entries = currentPayload && Array.isArray(currentPayload.source_entries)
+      ? currentPayload.source_entries
+      : [];
+    const ids = new Set(listFrom(nodeIds));
+    return entries.filter((entry) => listFrom(entry.node_ids).some((nodeId) => ids.has(nodeId)));
+  }
+
+  function activeStepSourceEntries() {
+    const step = currentStep();
+    return step ? sourceEntriesForNodes(step.node_ids) : [];
+  }
+
   function logicLevelsForElement(kind, id, entries, steps) {
     const values = new Set();
     relatedNodeIds(kind, id).forEach((nodeId) => {
@@ -289,15 +324,34 @@
     traceEvidenceList.appendChild(item);
   }
 
+  function traceEvidenceForElement(kind, id) {
+    const selectedOnly = !evidenceOnlyToggle || evidenceOnlyToggle.checked;
+    if (selectedOnly) {
+      return {
+        scope: "selected_element",
+        steps: matchingSteps(kind, id),
+        entries: matchingSourceEntries(kind, id).slice(0, 4),
+      };
+    }
+    const step = currentStep();
+    return {
+      scope: "active_sentence",
+      steps: step ? [step] : matchingSteps(kind, id),
+      entries: activeStepSourceEntries().slice(0, 6),
+    };
+  }
+
   function renderTracePanel(kind, id) {
-    const steps = matchingSteps(kind, id);
-    const entries = matchingSourceEntries(kind, id).slice(0, 4);
+    const evidence = traceEvidenceForElement(kind, id);
+    const steps = evidence.steps;
+    const entries = evidence.entries;
     const logicLevels = logicLevelsForElement(kind, id, entries, steps);
     const folded = foldedPredicatesForSteps(steps);
 
     if (tracePanel) {
       tracePanel.setAttribute("data-selected-element-type", kind);
       tracePanel.setAttribute("data-selected-element-id", id);
+      tracePanel.setAttribute("data-evidence-scope", evidence.scope);
     }
     setText(traceSelectedId, elementLabel(kind, id));
     setText(traceType, TRACE_KIND_LABELS[kind] || kind);
@@ -313,7 +367,7 @@
       appendEvidenceItem(entry.anchor || "DOCX", entry.role || "源文档条目", entry.text || "", "source_entry");
     });
     if (traceEvidenceList.children.length === 0) {
-      appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前元素没有出现在 sentence map 中。", "empty");
+      appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前选择没有命中可展示证据。", "empty");
     }
   }
 
@@ -507,9 +561,105 @@
     demoFrame.dataset.activeScenario = step.anchor;
   }
 
-  function activateStep(anchor) {
-    if (!currentPayload || !Array.isArray(currentPayload.sequence_steps)) return;
-    const steps = currentPayload.sequence_steps;
+  function setReviewNavigationState(activeIndex, steps) {
+    const count = Array.isArray(steps) ? steps.length : 0;
+    setText(stepPosition, count > 0 ? `${activeIndex + 1} / ${count}` : "0 / 0");
+    if (prevStepButton) prevStepButton.disabled = count === 0 || activeIndex <= 0;
+    if (nextStepButton) nextStepButton.disabled = count === 0 || activeIndex >= count - 1;
+  }
+
+  function primaryElementForStep(step) {
+    const wires = listFrom(step && step.wire_ids);
+    if (wires.length > 0) return {kind: "wire", id: wires[wires.length - 1]};
+    const nodes = listFrom(step && step.node_ids);
+    if (nodes.length > 0) return {kind: "node", id: nodes[nodes.length - 1]};
+    return selectedElement;
+  }
+
+  function activateRelativeStep(delta) {
+    const steps = sequenceSteps();
+    if (steps.length === 0) return;
+    const nextIndex = Math.min(steps.length - 1, Math.max(0, currentStepIndex() + delta));
+    activateStep(steps[nextIndex].anchor, {selectStepElement: true});
+  }
+
+  function currentTracePacket() {
+    const step = currentStep();
+    const evidence = traceEvidenceForElement(selectedElement.kind, selectedElement.id);
+    const logicLevels = logicLevelsForElement(selectedElement.kind, selectedElement.id, evidence.entries, evidence.steps);
+    return {
+      kind: "docx_circuit_review_packet",
+      source: {
+        path: sourcePath ? sourcePath.textContent.trim() : "",
+        anchor: step ? step.anchor : currentAnchor,
+        title: step ? step.title : "",
+        text: step ? step.source_text : "",
+      },
+      selected_element: {
+        type: selectedElement.kind,
+        id: selectedElement.id,
+        label: elementLabel(selectedElement.kind, selectedElement.id),
+        logic_levels: logicLevels,
+        folded_predicates: foldedPredicatesForSteps(evidence.steps),
+      },
+      evidence_scope: evidence.scope,
+      evidence: {
+        p035: evidence.steps.map((item) => ({
+          anchor: item.anchor,
+          title: item.title,
+          text: item.source_text,
+        })),
+        docx: evidence.entries.map((item) => ({
+          anchor: item.anchor,
+          role: item.role,
+          text: item.text,
+        })),
+      },
+      circuit: {
+        nodes: listFrom(step && step.node_ids),
+        wires: listFrom(step && step.wire_ids),
+      },
+      boundary: {
+        truth_effect: "none",
+        certification_claim: "none",
+      },
+    };
+  }
+
+  async function copyText(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "true");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (!copied) throw new Error("copy failed");
+  }
+
+  async function copyTracePacket() {
+    if (!copyTracePacketButton) return;
+    copyTracePacketButton.dataset.copyState = "pending";
+    setText(copyStatus, "复制中");
+    try {
+      await copyText(JSON.stringify(currentTracePacket(), null, 2));
+      copyTracePacketButton.dataset.copyState = "success";
+      setText(copyStatus, "已复制");
+    } catch (error) {
+      copyTracePacketButton.dataset.copyState = "failed";
+      setText(copyStatus, "复制失败");
+    }
+  }
+
+  function activateStep(anchor, options) {
+    const steps = sequenceSteps();
+    if (steps.length === 0) return;
     const activeIndex = Math.max(0, steps.findIndex((step) => step.anchor === anchor));
     const step = steps[activeIndex];
     currentAnchor = step.anchor;
@@ -538,6 +688,13 @@
       });
     }
     applyDemoScenario(step);
+    setReviewNavigationState(activeIndex, steps);
+    if (options && options.selectStepElement) {
+      const primary = primaryElementForStep(step);
+      selectCircuitElement(primary.kind, primary.id);
+    } else {
+      renderTracePanel(selectedElement.kind, selectedElement.id);
+    }
   }
 
   function renderSequence(steps) {
@@ -547,6 +704,7 @@
       const empty = document.createElement("li");
       empty.textContent = "未能读取 P035 到 L1-L4 的链路拆解。";
       sequenceList.appendChild(empty);
+      setReviewNavigationState(0, []);
       return;
     }
     steps.forEach((step) => {
@@ -566,7 +724,7 @@
       item.appendChild(text);
       appendChips(item, step.node_ids, "node");
       appendChips(item, step.wire_ids, "wire");
-      button.addEventListener("click", () => activateStep(step.anchor));
+      button.addEventListener("click", () => activateStep(step.anchor, {selectStepElement: true}));
       sequenceList.appendChild(item);
     });
   }
@@ -607,6 +765,12 @@
       if (currentPayload) activateStep(currentAnchor);
     });
   }
+  if (prevStepButton) prevStepButton.addEventListener("click", () => activateRelativeStep(-1));
+  if (nextStepButton) nextStepButton.addEventListener("click", () => activateRelativeStep(1));
+  if (evidenceOnlyToggle) {
+    evidenceOnlyToggle.addEventListener("change", () => renderTracePanel(selectedElement.kind, selectedElement.id));
+  }
+  if (copyTracePacketButton) copyTracePacketButton.addEventListener("click", copyTracePacket);
 
   boot();
 })();

@@ -107,6 +107,17 @@
         <p class="docx-circuit-kicker">INTERACTIVE REVIEW</p>
         <h2 id="docx-circuit-review-title">逐句电路审阅台</h2>
       </div>
+      <div class="docx-circuit-review-toolbar" aria-label="逐句审阅控制" data-docx-circuit-sentence-toolbar="true">
+        <button id="docx-circuit-prev-step" type="button" class="docx-circuit-tool-button">上一句</button>
+        <strong id="docx-circuit-step-position">5 / 5</strong>
+        <button id="docx-circuit-next-step" type="button" class="docx-circuit-tool-button">下一句</button>
+        <label class="docx-circuit-filter-toggle">
+          <input id="docx-circuit-element-evidence-only" type="checkbox" checked>
+          <span>仅当前元素</span>
+        </label>
+        <button id="docx-circuit-copy-trace-packet" type="button" class="docx-circuit-tool-button">复制审阅包</button>
+        <span id="docx-circuit-copy-status" class="docx-circuit-copy-status" aria-live="polite">待复制</span>
+      </div>
 
       <section class="docx-circuit-source-card" aria-label="当前原文句子">
         <span id="docx-circuit-source-anchor">P035-S05</span>
