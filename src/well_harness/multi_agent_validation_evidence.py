@@ -310,7 +310,7 @@ def render_multi_agent_validation_evidence_html(payload: dict[str, Any]) -> str:
         for package in payload["pathspec_packages"]
     )
     result_items = "\n".join(
-        "<li>"
+        "<li class=\"validation-result\">"
         f"<code>{_escape(result['command_id'])}</code>"
         f"<strong>{_escape(result['status'])}</strong>"
         f"<p>Exit { _escape(result['exit_code']) } in { _escape(result['duration_seconds']) }s</p>"
@@ -318,7 +318,10 @@ def render_multi_agent_validation_evidence_html(payload: dict[str, Any]) -> str:
         "</li>"
         for result in payload["validation_results"]
     )
-    stage_commands = "\n".join(f"<pre>{_escape(command)}</pre>" for command in payload["stage_commands"])
+    stage_commands = "\n".join(
+        f"<pre class=\"stage-command\">{_escape(command)}</pre>"
+        for command in payload["stage_commands"]
+    )
     classified = "\n".join(
         f"<li><code>{_escape(path)}</code></li>"
         for path in payload["classified_changed_pathspecs"]
