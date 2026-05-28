@@ -71,8 +71,14 @@
   const coverageFilterStatus = $("demo-reconstruction-coverage-filter-status");
   const coverageNodeList = $("demo-reconstruction-coverage-node-list");
   const coverageWireList = $("demo-reconstruction-coverage-wire-list");
+  const reviewAnchor = $("demo-reconstruction-review-anchor");
+  const reviewObject = $("demo-reconstruction-review-object");
+  const reviewSync = $("demo-reconstruction-review-sync");
   const consoleFrame = $("demo-reconstruction-console-frame");
+  let traceSteps = [];
   let currentTraceStep = null;
+  let selectedTraceIndex = -1;
+  let currentCircuitFocus = {kind: "", id: ""};
 
   function readJson(value) {
     try {
@@ -199,6 +205,139 @@
     return `#fan-chain-svg .chain-wire[data-src="${endpoints[0]}"][data-dst="${endpoints[1]}"]`;
   }
 
+  function reviewObjectLabel(kind, id) {
+    if (!id) return "等待聚焦";
+    if (kind === "wire") return `连线 · ${id}`;
+    if (kind === "node") return `节点 · ${id}`;
+    return id;
+  }
+
+  function updateKeyboardReviewStatus(details = {}) {
+    const step = currentTraceStep || {};
+    const anchorText = step.anchor
+      ? `${step.anchor} · ${step.title || "工作过程片段"}`
+      : "等待选择";
+    const objectText = details.objectId
+      ? reviewObjectLabel(details.objectKind, details.objectId)
+      : (details.objectText || reviewObjectLabel(currentCircuitFocus.kind, currentCircuitFocus.id));
+    setText(reviewAnchor, anchorText);
+    setText(reviewObject, objectText);
+    setText(reviewSync, details.syncText || (embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "等待同步"));
+  }
+
+  function setTraceCardTabStops(anchor) {
+    document.querySelectorAll("[data-trace-card]").forEach((card) => {
+      const selected = card.dataset.traceAnchor === anchor;
+      card.tabIndex = selected ? 0 : -1;
+      card.dataset.keyboardSelected = selected ? "true" : "false";
+    });
+  }
+
+  function focusTraceCard(anchor) {
+    if (!anchor) return;
+    const card = document.querySelector(`[data-trace-card][data-trace-anchor="${anchor}"]`);
+    if (card && typeof card.focus === "function") card.focus();
+  }
+
+  function selectTraceByIndex(index, shouldFocus) {
+    if (!traceSteps.length) return;
+    const nextIndex = Math.max(0, Math.min(traceSteps.length - 1, index));
+    setSelectedTrace(traceSteps[nextIndex]);
+    if (shouldFocus) focusTraceCard(traceSteps[nextIndex].anchor);
+  }
+
+  function handleTraceCardKeydown(event) {
+    const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const focusedAnchor = event.currentTarget ? event.currentTarget.dataset.traceAnchor : "";
+    const focusedIndex = traceSteps.findIndex((step) => step && step.anchor === focusedAnchor);
+    const currentIndex = focusedIndex >= 0 ? focusedIndex : (selectedTraceIndex >= 0 ? selectedTraceIndex : 0);
+    if (event.key === "Home") {
+      selectTraceByIndex(0, true);
+    } else if (event.key === "End") {
+      selectTraceByIndex(traceSteps.length - 1, true);
+    } else if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      selectTraceByIndex(currentIndex + 1, true);
+    } else {
+      selectTraceByIndex(currentIndex - 1, true);
+    }
+  }
+
+  function visibleCoverageButtons() {
+    return [
+      ...Array.from(coverageNodeList ? coverageNodeList.querySelectorAll("button") : []),
+      ...Array.from(coverageWireList ? coverageWireList.querySelectorAll("button") : []),
+    ].filter((button) => !button.hidden);
+  }
+
+  function setCoverageButtonTabStops(kind, id) {
+    const visibleButtons = visibleCoverageButtons();
+    let target = visibleButtons.find(
+      (button) => button.dataset.circuitCoverageKind === kind && button.dataset.circuitCoverageId === id,
+    );
+    if (!target) target = visibleButtons[0] || null;
+    visibleButtons.forEach((button) => {
+      const selected = button === target;
+      button.tabIndex = selected ? 0 : -1;
+      button.dataset.keyboardSelected = selected ? "true" : "false";
+    });
+    document
+      .querySelectorAll("[data-circuit-coverage-kind]")
+      .forEach((button) => {
+        const isCurrent = button.dataset.circuitCoverageKind === kind && button.dataset.circuitCoverageId === id;
+        button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
+      });
+  }
+
+  function markCircuitObjectFocus(kind, id) {
+    currentCircuitFocus = {kind, id};
+    setCoverageButtonTabStops(kind, id);
+    document
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
+      .forEach((button) => {
+        const chipKind = button.dataset.traceFocusKind || button.dataset.sourceFocusKind || "";
+        const chipId = button.dataset.traceFocusId || button.dataset.sourceFocusId || "";
+        const isCurrent = chipKind === kind && chipId === id;
+        button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
+        button.dataset.reviewObjectSelected = isCurrent ? "true" : "false";
+      });
+  }
+
+  function clearCircuitObjectFocus() {
+    currentCircuitFocus = {kind: "", id: ""};
+    setCoverageButtonTabStops("", "");
+    document
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
+      .forEach((button) => {
+        button.setAttribute("aria-pressed", "false");
+        button.dataset.reviewObjectSelected = "false";
+      });
+  }
+
+  function handleCoverageKeyboardNavigation(event) {
+    const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    const buttons = visibleCoverageButtons();
+    const currentIndex = buttons.indexOf(event.currentTarget);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    let nextIndex = currentIndex;
+    if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = buttons.length - 1;
+    } else if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      nextIndex = Math.min(buttons.length - 1, currentIndex + 1);
+    } else {
+      nextIndex = Math.max(0, currentIndex - 1);
+    }
+    const target = buttons[nextIndex];
+    if (!target) return;
+    applyEmbeddedTraceFocus(target.dataset.circuitCoverageKind, target.dataset.circuitCoverageId);
+    target.focus();
+  }
+
   function applyEmbeddedTraceHighlight(step) {
     if (!consoleFrame || !step) return { nodeCount: 0, wireCount: 0, ready: false };
     const frameDocument = consoleFrame.contentDocument;
@@ -233,14 +372,24 @@
       embeddedHighlightStatus,
       `电路图已同步：${step.anchor || "当前句子"} · ${nodeCount}/${(step.node_ids || []).length} 节点 · ${wireCount}/${(step.wire_ids || []).length} 连线`,
     );
+    updateKeyboardReviewStatus({
+      objectText: `整句链路 · ${(step.node_ids || []).length} 节点 · ${(step.wire_ids || []).length} 连线`,
+      syncText: embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "",
+    });
     return { nodeCount, wireCount, ready: true };
   }
 
   function applyEmbeddedTraceFocus(kind, id) {
     if (!consoleFrame || !id) return { matchCount: 0, ready: false };
+    markCircuitObjectFocus(kind, id);
     const frameDocument = consoleFrame.contentDocument;
     if (!frameDocument || !frameDocument.querySelector("#fan-chain-svg")) {
       setText(embeddedHighlightStatus, "等待电路图同步");
+      updateKeyboardReviewStatus({
+        objectKind: kind,
+        objectId: id,
+        syncText: "等待电路图同步",
+      });
       return { matchCount: 0, ready: false };
     }
     ensureEmbeddedTraceStyle(frameDocument);
@@ -269,6 +418,11 @@
     });
     const unit = kind === "wire" ? "条匹配" : "个匹配";
     setText(embeddedHighlightStatus, `聚焦${label}：${id} · ${matchCount} ${unit}`);
+    updateKeyboardReviewStatus({
+      objectKind: kind,
+      objectId: id,
+      syncText: embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "",
+    });
     return { matchCount, ready: true };
   }
 
@@ -280,8 +434,10 @@
     }`;
     button.dataset.circuitCoverageKind = kind;
     button.dataset.circuitCoverageId = id;
+    button.setAttribute("aria-pressed", "false");
     button.textContent = id;
     button.addEventListener("click", () => applyEmbeddedTraceFocus(kind, id));
+    button.addEventListener("keydown", handleCoverageKeyboardNavigation);
     return button;
   }
 
@@ -297,6 +453,7 @@
       button.hidden = !matches;
       if (matches) visibleCount += 1;
     });
+    setCoverageButtonTabStops(currentCircuitFocus.kind, currentCircuitFocus.id);
     setText(coverageFilterStatus, `${visibleCount}/${buttons.length} 对象`);
   }
 
@@ -321,10 +478,13 @@
 
   function setSelectedTrace(step) {
     if (!step || typeof step !== "object") return;
+    clearCircuitObjectFocus();
     currentTraceStep = step;
+    selectedTraceIndex = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
     document.querySelectorAll("[data-trace-card]").forEach((card) => {
       card.setAttribute("aria-pressed", card.dataset.traceAnchor === step.anchor ? "true" : "false");
     });
+    setTraceCardTabStops(step.anchor);
     setText(selectedAnchor, step.anchor || "P035");
     setText(selectedTitle, step.title || "工作过程片段");
     setText(selectedText, step.source_text || "");
@@ -343,6 +503,7 @@
       traceContract,
       `${coverage.sequence_step_count || steps.length} 步 · ${coverage.covered_node_count || 0}/${contract.node_count || EXPECTED_NODE_COUNT} 节点 · ${coverage.covered_wire_count || 0}/${contract.wire_count || EXPECTED_WIRE_COUNT} 连线`,
     );
+    traceSteps = steps;
     traceCardList.innerHTML = "";
     if (steps.length === 0) {
       const fallback = document.createElement("button");
@@ -360,6 +521,7 @@
       card.dataset.traceCard = String(index + 1);
       card.dataset.traceAnchor = step.anchor || "";
       card.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      card.tabIndex = index === 0 ? 0 : -1;
 
       const stepLabel = document.createElement("span");
       stepLabel.className = "demo-reconstruction-trace-step";
@@ -373,6 +535,7 @@
       card.appendChild(title);
       card.appendChild(meta);
       card.addEventListener("click", () => setSelectedTrace(step));
+      card.addEventListener("keydown", handleTraceCardKeydown);
       traceCardList.appendChild(card);
     });
     setSelectedTrace(steps[0]);
