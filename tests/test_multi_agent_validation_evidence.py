@@ -86,11 +86,11 @@ def test_multi_agent_validation_evidence_schema_validates_payload() -> None:
     assert payload["validation_results"][-1]["command_id"] == "m24-pr-preflight-03"
     assert any("git add -f --" in command for command in payload["stage_commands"])
     assert any("multi-agent-validation-evidence.md" in command for command in payload["stage_commands"])
+    assert "Repo, GitHub, and local artifacts" in payload["pr_evidence_note"]
     assert "src/well_harness/agent_*.py" in payload["classified_changed_pathspecs"]
     assert "docs/json_schema/approved_*.schema.json" in payload["classified_changed_pathspecs"]
-    assert "notion-control-plane-404" in payload["pr_evidence_note"]
     assert "21 validation commands passed" in payload["pr_evidence_note"]
-    assert payload["blockers"][0]["status"] == "external_blocker"
+    assert payload["blockers"] == []
 
 
 def test_multi_agent_validation_evidence_html_exposes_results_and_blocker() -> None:
@@ -105,9 +105,9 @@ def test_multi_agent_validation_evidence_html_exposes_results_and_blocker() -> N
     assert "multi-agent-cursor-baseline-v0-2-01" in html
     assert "m24-pr-preflight-03" in html
     assert "m25-validation-evidence" in html
+    assert "repo-github-local-artifacts" in html
     assert "Classified Changed Pathspecs" in html
     assert "src/well_harness/agent_*.py" in html
-    assert "notion-control-plane-404" in html
     assert "21 validation commands passed" in html
 
 
@@ -184,7 +184,7 @@ def test_multi_agent_validation_evidence_is_wired_into_docs_and_makefile() -> No
     assert "21 validation commands" in doc
     assert "9 explicit stage commands" in doc
     assert "m25-validation-evidence" in doc
-    assert "notion-control-plane-404" in doc
+    assert "Repo/GitHub/local artifacts" in doc
     assert "src/well_harness/controller.py" in doc
 
     assert "M25" in mvp_doc

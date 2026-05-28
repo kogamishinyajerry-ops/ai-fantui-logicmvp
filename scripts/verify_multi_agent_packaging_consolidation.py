@@ -115,13 +115,12 @@ def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, 
             mismatches.append(f"excluded_paths must include {required}")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     stage_commands = payload.get("stage_commands", [])
     if not any(isinstance(command, str) and "git add -f --" in command for command in stage_commands):
@@ -149,7 +148,7 @@ def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, 
             "candidate-review-runtime-export",
             "ultrawork-monitor",
             "m22-operator-cockpit",
-            "notion-control-plane-404",
+            "repo-github-local-artifacts",
         ]:
             if marker not in html:
                 mismatches.append(f"package HTML missing marker: {marker}")

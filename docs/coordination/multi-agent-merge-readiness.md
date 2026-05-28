@@ -6,14 +6,15 @@ Status: M29 read-only PR review and merge-readiness handoff
 ## Purpose
 
 This package turns the current PR evidence into a single local review entry. It
-does not stage, commit, push, merge, self-approve, or write to Notion.
+does not stage, commit, push, merge, self-approve, or write to external
+planning systems.
 
 The packet answers four questions:
 
 1. Did the 21 validation commands pass?
 2. Did the status-surface browser geometry gate pass on desktop and mobile?
-3. Is PR #269 mergeable, and are there reviews/comments/checks to address?
-4. Is the Notion 404 still classified as an external control-plane blocker?
+3. Is PR #270 mergeable, and are there reviews/comments/checks to address?
+4. Is the repo/GitHub/local-artifact control boundary intact?
 
 The packet also carries the five-agent active team cap so PR review does not
 inflate historical task labels into extra live agents.
@@ -72,11 +73,10 @@ tools/run_gsd_validation_suite.py
 .planning/**
 ```
 
-## Notion Blocker
+## Control-Plane Boundary
 
-`notion-control-plane-404` remains an external control-plane blocker. This
-readiness package must not change Notion configuration, Notion sync scripts, or
-Notion page permissions.
+Repo/GitHub/local artifacts are the active control surfaces for this readiness
+package. External planning systems are outside the blocking validation path.
 
 ## Verification
 
@@ -96,5 +96,5 @@ make verify-multi-agent-merge-readiness
 
 Browser gate: open the generated HTML and verify it shows `Multi-Agent Merge
 Readiness`, `five_agent_context_cap`, `PackagingPRReadinessAgent`,
-`RUN-QUEUE-011`, `21 validation commands passed`, `notion-control-plane-404`,
+`RUN-QUEUE-011`, `21 validation commands passed`, `repo_github_local_artifacts`,
 and `MERGEABLE` without desktop or mobile layout overflow.

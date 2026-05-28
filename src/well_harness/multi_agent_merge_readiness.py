@@ -18,7 +18,6 @@ READINESS_ID = "multi-agent-merge-readiness-v0.1"
 JSON_NAME = "multi_agent_merge_readiness_v0_1.json"
 MARKDOWN_NAME = "multi_agent_merge_readiness_v0_1.md"
 HTML_NAME = "multi_agent_merge_readiness_v0_1.html"
-NOTION_BLOCKER_ID = "notion-control-plane-404"
 GUARDED_CHANGED_PATHS = {
     "src/well_harness/demo_server.py",
     "src/well_harness/requirements_intake/**",
@@ -53,18 +52,6 @@ def _validation_evidence_passed(validation_evidence: dict[str, Any]) -> bool:
         and summary.get("failed_command_count") == 0
         and summary.get("passed_command_count") == summary.get("validation_command_count")
         and summary.get("executed_command_count") == summary.get("validation_command_count")
-    )
-
-
-def _notion_external_blocker_present(validation_evidence: dict[str, Any]) -> bool:
-    blockers = validation_evidence.get("blockers", [])
-    if not isinstance(blockers, list):
-        return False
-    return any(
-        isinstance(item, dict)
-        and item.get("blocker_id") == NOTION_BLOCKER_ID
-        and item.get("status") == "external_blocker"
-        for item in blockers
     )
 
 
@@ -210,10 +197,8 @@ def _overall_status(gates: dict[str, str]) -> str:
     ]
     if any(gates.get(key) == "fail" for key in hard_fail_keys):
         return "blocked"
-    if gates.get("notion_external_blocker") != "pass":
-        return "blocked"
     if any(value == "warning" for value in gates.values()):
-        return "ready_with_external_blocker"
+        return "ready_with_warnings"
     return "ready_for_review"
 
 
@@ -232,7 +217,6 @@ def build_multi_agent_merge_readiness(
         "validation_evidence": _gate(_validation_evidence_passed(validation_evidence)),
         "geometry_gate": _gate(_geometry_passed(geometry_results)),
         "pathspec_boundary": _gate(_pathspec_boundary_ok(validation_evidence)),
-        "notion_external_blocker": _gate(_notion_external_blocker_present(validation_evidence)),
         "pr_mergeability": _gate(str(pr_status.get("mergeable", "")) == "MERGEABLE"),
         "remote_checks": _gate(
             checks_state != "fail",
@@ -272,7 +256,7 @@ def build_multi_agent_merge_readiness(
             "mergeable": str(pr_status.get("mergeable", "")),
             "remote_checks_state": checks_state,
             "review_state": review_state,
-            "notion_blocker": "external_blocker",
+            "control_plane": "repo_github_local_artifacts",
             "recommended_next_action": (
                 "request_review_or_wait_for_remote_checks"
                 if status != "blocked"
@@ -292,16 +276,10 @@ def build_multi_agent_merge_readiness(
             "review_count": len(pr_status.get("reviews", []) or []),
             "comment_count": len(pr_status.get("comments", []) or []),
         },
-        "blockers": [
-            {
-                "blocker_id": NOTION_BLOCKER_ID,
-                "status": "external_blocker",
-                "message": "Notion control-plane HTTP 404 remains outside merge readiness.",
-            }
-        ],
+        "blockers": [],
         "risk_notes": [
             "GitHub reports no checks for this branch; local validation evidence remains the primary proof.",
-            "Notion 404 is external control-plane state and is not changed by this packet.",
+            "External planning surfaces are outside the merge-readiness control boundary for this lane.",
             "Unrelated dirty worktree files remain outside the explicit pathspec boundary.",
         ],
         "artifact_paths": {
@@ -340,7 +318,7 @@ def render_multi_agent_merge_readiness_markdown(payload: dict[str, Any]) -> str:
         f"- Mergeable: `{summary['mergeable']}`\n"
         f"- Remote checks: `{summary['remote_checks_state']}`\n"
         f"- Reviews: `{summary['review_state']}`\n"
-        f"- Notion blocker: `{summary['notion_blocker']}`\n"
+        f"- Control plane: `{summary['control_plane']}`\n"
         f"- Recommended next action: `{summary['recommended_next_action']}`\n\n"
         "## Gates\n\n"
         f"{gates}\n\n"
@@ -356,7 +334,7 @@ def render_multi_agent_merge_readiness_markdown(payload: dict[str, Any]) -> str:
         f"- Reviews: `{payload['pr_status']['review_count']}`\n"
         f"- Comments: `{payload['pr_status']['comment_count']}`\n\n"
         "## Blockers\n\n"
-        f"- `{NOTION_BLOCKER_ID}` remains an external control-plane blocker.\n\n"
+        "- none\n\n"
         "## Risks\n\n"
         f"{risks}\n"
     )
@@ -476,7 +454,7 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
 <body>
   <header>
     <h1>Multi-Agent Merge Readiness</h1>
-    <p class="subtitle">Read-only handoff for PR review and merge readiness. Notion remains an external blocker.</p>
+    <p class="subtitle">Read-only handoff for PR review and merge readiness. Repo, GitHub, and local artifacts are the active control boundary.</p>
   </header>
   <main>
     <div class="grid metrics">
@@ -484,6 +462,7 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
       <div class="metric"><span>Validation</span><strong>{_escape(summary['passed_command_count'])} / {_escape(summary['validation_command_count'])}</strong></div>
       <div class="metric"><span>Mergeable</span><strong>{_escape(summary['mergeable'])}</strong></div>
       <div class="metric"><span>Remote checks</span><strong>{_escape(summary['remote_checks_state'])}</strong></div>
+      <div class="metric"><span>Control plane</span><strong>{_escape(summary['control_plane'])}</strong></div>
     </div>
     <section>
       <h2>Gates</h2>
@@ -522,7 +501,7 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
     </section>
     <section>
       <h2>Blockers And Risks</h2>
-      <p><code>{NOTION_BLOCKER_ID}</code> remains an external control-plane blocker.</p>
+      <p>No active external blockers are recorded in this readiness packet.</p>
       <ul>{risks}</ul>
     </section>
   </main>

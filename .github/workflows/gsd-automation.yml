@@ -38,10 +38,13 @@ jobs:
     permissions:
       contents: read
     env:
+      AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: ${{ github.event_name == 'push' && github.event.before || 'main' }}
       PYTHONPATH: src
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -50,12 +53,300 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        # Install all [dev] extras from pyproject.toml so CI matches local runs.
-        # Previously only installed jsonschema + pytest, missing pytest-subtests / numpy / pyyaml.
-        run: pip install -e '.[dev]'
+        # Install dev + e2e extras because the validation artifact lane invokes
+        # Playwright's CLI before running browser-backed gates.
+        run: pip install -e '.[dev,e2e]'
+
+      - name: Install Playwright Chromium
+        run: python3 -m playwright install --with-deps chromium
 
       - name: Run GSD validation suite
-        run: python3 tools/run_gsd_validation_suite.py --format json
+        run: python3 tools/run_gsd_validation_suite.py --format json --skip notion_control_plane
+
+      - name: Verify candidate review packet export
+        run: PYTHONPATH=src:. python3 scripts/verify_candidate_review_packet_export.py --format json
+
+      - name: Verify demo.html reconstruction MVP
+        run: PYTHONPATH=src:. python3 scripts/verify_demo_html_reconstruction_mvp.py --format json
+
+      - name: Run Phase 1 demo MVP gate
+        run: PHASE1_DEMO_MVP_GATE_ARTIFACT_DIR=artifacts/phase1-demo-mvp-review-package make phase1-demo-mvp-gate
+
+      - name: Verify Phase 1 demo MVP gate artifact
+        run: PHASE1_DEMO_MVP_GATE_ARTIFACT_DIR=artifacts/phase1-demo-mvp-review-package make verify-phase1-demo-mvp-gate-artifact
+
+      - name: Run Phase 1 demo MVP baseline handoff
+        run: PHASE1_DEMO_MVP_GATE_ARTIFACT_DIR=artifacts/phase1-demo-mvp-review-package PHASE1_DEMO_MVP_BASELINE_HANDOFF_ARTIFACT_DIR=artifacts/phase1-demo-mvp-baseline-handoff make phase1-demo-mvp-baseline-handoff
+
+      - name: Run approved repair slices
+        run: PYTHONPATH=src:. python3 scripts/run_approved_repair_slices.py --format json --artifact-dir artifacts/approved-repair-slices
+
+      - name: Run missing test-result candidate repair slice
+        run: PYTHONPATH=src:. python3 scripts/run_missing_test_result_candidate_repair_slice.py --format json --artifact-dir artifacts/missing-test-result-candidate-repair-slice
+
+      - name: Verify approved repair slices artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_repair_slices_artifact.py --format json --artifact-dir artifacts/approved-repair-slices
+
+      - name: Verify multi-agent construction readiness
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_construction_readiness.py --format json --artifact-dir artifacts/multi-agent-construction-readiness
+
+      - name: Run approved candidate task queue
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue.py --format json --artifact-dir artifacts/approved-candidate-task-queue
+
+      - name: Verify approved candidate task queue artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue
+
+      - name: Verify approved candidate task queue expansion contract
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_expansion_contract.py --format json
+
+      - name: Run approved candidate task queue v0.2
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_2.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-2
+
+      - name: Verify approved candidate task queue v0.2 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_2_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-2
+
+      - name: Run approved candidate task queue v0.3
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_3.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-3
+
+      - name: Verify approved candidate task queue v0.3 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_3_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-3
+
+      - name: Run approved candidate task queue v0.4
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_4.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-4
+
+      - name: Verify approved candidate task queue v0.4 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_4_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-4
+
+      - name: Run approved candidate task queue v0.5
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_5.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-5
+
+      - name: Verify approved candidate task queue v0.5 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_5_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-5
+
+      - name: Run approved candidate task queue v0.6
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_6.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-6
+
+      - name: Verify approved candidate task queue v0.6 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_6_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-6
+
+      - name: Run approved candidate task queue v0.7
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_7.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-7
+
+      - name: Verify approved candidate task queue v0.7 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_7_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-7
+
+      - name: Run approved candidate task queue v0.8
+        run: PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_8.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-8
+
+      - name: Verify approved candidate task queue v0.8 artifact
+        run: PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_8_artifact.py --format json --artifact-dir artifacts/approved-candidate-task-queue-v0-8
+
+      - name: Run multi-agent queue run ledger
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_queue_run_ledger.py --format json --artifact-dir artifacts/multi-agent-queue-run-ledger
+
+      - name: Verify multi-agent queue run ledger
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_queue_run_ledger.py --format json --artifact-dir artifacts/multi-agent-queue-run-ledger
+
+      - name: Run multi-agent queue cursor state
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_queue_cursor_state.py --format json --artifact-dir artifacts/multi-agent-queue-cursor-state
+
+      - name: Verify multi-agent queue cursor state
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_queue_cursor_state.py --format json --artifact-dir artifacts/multi-agent-queue-cursor-state
+
+      - name: Run multi-agent queue cursor resume state
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_queue_cursor_state.py --resume-mode idle --format json --artifact-dir artifacts/multi-agent-queue-cursor-resume-state
+
+      - name: Verify multi-agent queue cursor resume state
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_queue_cursor_state.py --format json --artifact-dir artifacts/multi-agent-queue-cursor-resume-state
+
+      - name: Run multi-agent M1 review package
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m1_review_package.py --format json --artifact-dir artifacts/multi-agent-m1-review-package
+
+      - name: Verify multi-agent M1 review package
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m1_review_package.py --format json --package artifacts/multi-agent-m1-review-package/multi_agent_m1_review_package_v0_1.json
+
+      - name: Run multi-agent M2 Requirement to IR demo
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m2_requirement_to_ir_demo.py --format json --artifact-dir artifacts/multi-agent-m2-requirement-to-ir-demo
+
+      - name: Verify multi-agent M2 Requirement to IR demo
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m2_requirement_to_ir_demo.py --format json --package artifacts/multi-agent-m2-requirement-to-ir-demo/multi_agent_m2_requirement_to_ir_demo_v0_1.json
+
+      - name: Run multi-agent M3 Safety/Evidence value pack
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m3_safety_evidence_value_pack.py --format json --artifact-dir artifacts/multi-agent-m3-safety-evidence-value-pack
+
+      - name: Verify multi-agent M3 Safety/Evidence value pack
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m3_safety_evidence_value_pack.py --format json --package artifacts/multi-agent-m3-safety-evidence-value-pack/multi_agent_m3_safety_evidence_value_pack_v0_1.json
+
+      - name: Run multi-agent M4 external review handoff
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m4_external_review_handoff.py --format json --artifact-dir artifacts/multi-agent-m4-external-review-handoff
+
+      - name: Verify multi-agent M4 external review handoff
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m4_external_review_handoff.py --format json --package artifacts/multi-agent-m4-external-review-handoff/multi_agent_m4_external_review_handoff_v0_1.json
+
+      - name: Run multi-agent M5 construction control plane
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m5_construction_control_plane.py --format json --artifact-dir artifacts/multi-agent-m5-construction-control-plane
+
+      - name: Verify multi-agent M5 construction control plane
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m5_construction_control_plane.py --format json --package artifacts/multi-agent-m5-construction-control-plane/multi_agent_m5_construction_control_plane_v0_1.json
+
+      - name: Run multi-agent M6 queue extension template
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m6_queue_extension_template.py --format json --artifact-dir artifacts/multi-agent-m6-queue-extension-template
+
+      - name: Verify multi-agent M6 queue extension template
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m6_queue_extension_template.py --format json --package artifacts/multi-agent-m6-queue-extension-template/multi_agent_m6_queue_extension_template_v0_1.json
+
+      - name: Run multi-agent M8 fast construction gate
+        run: PYTHONPATH=src:. python3 scripts/run_multi_agent_m8_fast_construction_gate.py --format json --artifact-dir artifacts/multi-agent-m8-fast-construction-gate
+
+      - name: Verify multi-agent M8 fast construction gate
+        run: PYTHONPATH=src:. python3 scripts/verify_multi_agent_m8_fast_construction_gate.py --format json --package artifacts/multi-agent-m8-fast-construction-gate/multi_agent_m8_fast_construction_gate_v0_1.json
+
+      - name: Upload approved candidate task queue summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue
+          path: artifacts/approved-candidate-task-queue/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.2
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-2
+          path: artifacts/approved-candidate-task-queue-v0-2/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.3
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-3
+          path: artifacts/approved-candidate-task-queue-v0-3/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.4
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-4
+          path: artifacts/approved-candidate-task-queue-v0-4/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.5
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-5
+          path: artifacts/approved-candidate-task-queue-v0-5/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.6
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-6
+          path: artifacts/approved-candidate-task-queue-v0-6/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.7
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-7
+          path: artifacts/approved-candidate-task-queue-v0-7/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved candidate task queue v0.8
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-candidate-task-queue-v0-8
+          path: artifacts/approved-candidate-task-queue-v0-8/**/*.json
+          if-no-files-found: error
+
+      - name: Upload multi-agent queue run ledger
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-queue-run-ledger
+          path: artifacts/multi-agent-queue-run-ledger/**/*.json
+          if-no-files-found: error
+
+      - name: Upload multi-agent queue cursor state
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-queue-cursor-state
+          path: artifacts/multi-agent-queue-cursor-state/**/*.json
+          if-no-files-found: error
+
+      - name: Upload multi-agent queue cursor resume state
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-queue-cursor-resume-state
+          path: artifacts/multi-agent-queue-cursor-resume-state/**/*.json
+          if-no-files-found: error
+
+      - name: Upload approved repair slices summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-repair-slices
+          path: artifacts/approved-repair-slices/**/*.json
+          if-no-files-found: error
+
+      - name: Upload Phase 1 demo MVP review package
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-demo-mvp-review-package
+          path: artifacts/phase1-demo-mvp-review-package/**/*
+          if-no-files-found: error
+
+      - name: Upload Phase 1 demo MVP baseline handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-demo-mvp-baseline-handoff
+          path: artifacts/phase1-demo-mvp-baseline-handoff/**/*
+          if-no-files-found: error
+
+      - name: Upload multi-agent M1 review package
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m1-review-package
+          path: artifacts/multi-agent-m1-review-package/**/*.json
+          if-no-files-found: error
+
+      - name: Upload multi-agent M2 Requirement to IR demo
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m2-requirement-to-ir-demo
+          path: artifacts/multi-agent-m2-requirement-to-ir-demo/**/*.json
+          if-no-files-found: error
+
+      - name: Upload multi-agent M3 Safety/Evidence value pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m3-safety-evidence-value-pack
+          path: artifacts/multi-agent-m3-safety-evidence-value-pack/**/*.json
+          if-no-files-found: error
+
+      - name: Upload multi-agent M4 external review handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m4-external-review-handoff
+          path: artifacts/multi-agent-m4-external-review-handoff/**/*
+          if-no-files-found: error
+
+      - name: Upload multi-agent M5 construction control plane
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m5-construction-control-plane
+          path: artifacts/multi-agent-m5-construction-control-plane/**/*
+          if-no-files-found: error
+
+      - name: Upload multi-agent M6 queue extension template
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m6-queue-extension-template
+          path: artifacts/multi-agent-m6-queue-extension-template/**/*
+          if-no-files-found: error
+
+      - name: Upload multi-agent M8 fast construction gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-agent-m8-fast-construction-gate
+          path: artifacts/multi-agent-m8-fast-construction-gate/**/*
+          if-no-files-found: error
 
   # Stage 3: Sync repo docs to Notion (non-blocking)
   notion-sync:

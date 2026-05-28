@@ -80,13 +80,12 @@ def verify_ultrawork_monitor_dashboard(dashboard_path: Path) -> dict[str, Any]:
         mismatches.append("dashboard_html artifact must exist and be non-empty")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain recorded as an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     agent_team = payload.get("agent_team", {})
     expected_agents = {

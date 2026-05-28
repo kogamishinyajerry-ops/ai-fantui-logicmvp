@@ -32,7 +32,7 @@
       "const": "multi-agent-merge-readiness-v0.1"
     },
     "status": {
-      "enum": ["ready_for_review", "ready_with_external_blocker", "blocked"]
+      "enum": ["ready_for_review", "ready_with_warnings", "blocked"]
     },
     "generated_at": {
       "type": "string",
@@ -101,7 +101,7 @@
         "mergeable",
         "remote_checks_state",
         "review_state",
-        "notion_blocker",
+        "control_plane",
         "recommended_next_action"
       ],
       "properties": {
@@ -130,8 +130,8 @@
         "review_state": {
           "enum": ["no_reviews_or_comments", "feedback_present"]
         },
-        "notion_blocker": {
-          "const": "external_blocker"
+        "control_plane": {
+          "const": "repo_github_local_artifacts"
         },
         "recommended_next_action": {
           "type": "string",
@@ -146,7 +146,6 @@
         "validation_evidence",
         "geometry_gate",
         "pathspec_boundary",
-        "notion_external_blocker",
         "pr_mergeability",
         "remote_checks",
         "review_state"
@@ -159,9 +158,6 @@
           "$ref": "#/$defs/gate_status"
         },
         "pathspec_boundary": {
-          "$ref": "#/$defs/gate_status"
-        },
-        "notion_external_blocker": {
           "$ref": "#/$defs/gate_status"
         },
         "pr_mergeability": {

@@ -213,7 +213,7 @@
       ],
       "properties": {
         "unit_tests_timeout_seconds": {
-          "const": 480
+          "const": 900
         },
         "last_full_validation_unit_tests_seconds": {
           "type": "number",

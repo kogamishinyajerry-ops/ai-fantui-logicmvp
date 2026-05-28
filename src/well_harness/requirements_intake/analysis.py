@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Any, Callable
 from xml.etree import ElementTree
 
+from well_harness.agent_output_contract import build_agent_output_packet
+from well_harness.adapters.c919_etras_requirements_adapter import (
+    build_c919_etras_requirements_preparse,
+)
+
 
 REQUIREMENTS_INTAKE_KIND = "ai-fantui-requirements-intake-analysis"
 REQUIREMENTS_INTAKE_VERSION = 1
@@ -52,7 +57,7 @@ SECRET_PATTERNS = (
 REQUIREMENT_LINE_RE = re.compile(
     r"(需求|要求|必须|应当|应该|shall|should|when|if|当|如果|条件|逻辑|门限|阈值|"
     r"输入|输出|信号|状态|命令|释放|锁|互锁|故障|失效|注入|冗余|RA|TRA|SW|EEC|"
-    r"AND|OR|NOT|gate|logic)",
+    r"ETRAS|WOW|AND|OR|NOT|gate|logic)",
     re.IGNORECASE,
 )
 SOURCE_ANCHOR_QUOTE_CHARS = 120
@@ -723,7 +728,7 @@ def _dedupe_anchors(anchors: list[dict[str, str]]) -> list[dict[str, str]]:
                 "quote_zh": quote[:SOURCE_ANCHOR_QUOTE_CHARS],
             }
         )
-        if len(deduped) >= 6:
+        if len(deduped) >= 10:
             break
     return deduped
 
@@ -937,6 +942,18 @@ def _deterministic_l1_l4_preparse(document_text: str) -> dict[str, Any]:
     }
 
 
+def _deterministic_local_preparse(document_text: str) -> dict[str, Any]:
+    l1_l4_facts = _deterministic_l1_l4_preparse(document_text)
+    if l1_l4_facts.get("available"):
+        return l1_l4_facts
+    c919_facts = build_c919_etras_requirements_preparse(document_text)
+    if c919_facts.get("available"):
+        return c919_facts
+    if c919_facts.get("present_signal_ids"):
+        return c919_facts
+    return l1_l4_facts
+
+
 def _normalize_questions(value: Any) -> list[dict[str, str]]:
     if not isinstance(value, list):
         return []
@@ -1095,7 +1112,8 @@ def _normalize_model_payload(raw_content: str) -> dict[str, Any]:
 def _payload_from_deterministic_preparse(local_facts: dict[str, Any], *, reason: str) -> dict[str, Any]:
     return {
         "summary_zh": _str(local_facts.get("summary_zh"), "本地预解析已生成可绘图 L1-L4 结构。"),
-        "document_assumptions": [
+        "document_assumptions": local_facts.get("document_assumptions")
+        or [
             "本地规则仅从 DOCX 正文中出现的 L1-L4、信号名和门限抽取概念结构。",
             "嵌入 Visio 若存在，只能作为结构辅助；正文条件仍是条件来源。",
         ],
@@ -1133,7 +1151,7 @@ def build_local_preparse_payload(document_text: str, *, document_name: str = "")
             details={"max_chars": MAX_REQUIREMENTS_TEXT_CHARS},
         )
 
-    local_facts = _deterministic_l1_l4_preparse(text)
+    local_facts = _deterministic_local_preparse(text)
     text_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
     if local_facts.get("available"):
         normalized = _payload_from_deterministic_preparse(local_facts, reason="local_preparse_first")
@@ -1158,7 +1176,7 @@ def build_local_preparse_payload(document_text: str, *, document_name: str = "")
             },
         }
     ready = bool(normalized.get("ready_for_logic_builder"))
-    return {
+    payload = {
         "$schema": "https://well-harness.local/json_schema/requirements_intake_analysis_v1.schema.json",
         "kind": REQUIREMENTS_INTAKE_KIND,
         "version": REQUIREMENTS_INTAKE_VERSION,
@@ -1176,7 +1194,7 @@ def build_local_preparse_payload(document_text: str, *, document_name: str = "")
         },
         "llm": {
             "provider": "local-preparse",
-            "model": "deterministic-docx-l1-l4",
+            "model": _str(local_facts.get("model"), "deterministic-docx-l1-l4"),
             "api_base": "",
             "key_source": "",
             "response_source": "deterministic_preparse",
@@ -1188,6 +1206,7 @@ def build_local_preparse_payload(document_text: str, *, document_name: str = "")
         **normalized,
         "ready_for_logic_builder": ready,
     }
+    return _attach_requirement_analyst_contract(payload)
 
 
 def _node_anchor_map(nodes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -1384,6 +1403,74 @@ def _apply_readiness_gate(normalized: dict[str, Any], input_meta: dict[str, Any]
     }
 
 
+def _question_texts(questions: Any) -> list[str]:
+    if not isinstance(questions, list):
+        return []
+    texts: list[str] = []
+    for index, question in enumerate(questions, start=1):
+        if isinstance(question, dict):
+            question_id = _str(question.get("id"), f"question_{index}")
+            prompt = _str(question.get("prompt_zh") or question.get("prompt"), "Open question requires review.")
+            texts.append(f"{question_id}: {prompt}")
+        elif isinstance(question, str) and question.strip():
+            texts.append(question.strip())
+    return texts
+
+
+def _attach_requirement_analyst_contract(payload: dict[str, Any]) -> dict[str, Any]:
+    ready = bool(payload.get("ready_for_logic_builder"))
+    open_issues = _question_texts(payload.get("open_questions"))
+    failed_checks = []
+    if not ready:
+        failed_checks.append(
+            {
+                "code": "CHECK_REQUIREMENTS_READY_GATE_001",
+                "severity": "warning",
+                "message": "Requirements candidate is not ready for the logic builder.",
+            }
+        )
+    source_document = payload.get("source_document") if isinstance(payload.get("source_document"), dict) else {}
+    source_sha = _str(source_document.get("sha256"))
+    source_name = _str(source_document.get("name"), "pasted-requirements.txt")
+    packet = build_agent_output_packet(
+        agent_name="RequirementAnalystAgent",
+        task_id=f"REQ-INTAKE-{source_sha[:12] or 'UNHASHED'}",
+        input_artifacts=[f"source_document:{source_name}:{source_sha[:12] or 'unhashed'}"],
+        output_artifacts=[f"{REQUIREMENTS_INTAKE_KIND}:v{REQUIREMENTS_INTAKE_VERSION}"],
+        candidate_state="requirements_candidate",
+        assumptions=payload.get("document_assumptions") if isinstance(payload.get("document_assumptions"), list) else [],
+        open_issues=open_issues,
+        confidence_level="high" if ready else "medium",
+        confidence_reason=(
+            "Candidate requirements package is ready for logic-builder handoff."
+            if ready
+            else "Candidate requirements package still has clarification or completeness gaps."
+        ),
+        deterministic_checks_passed=ready,
+        failed_checks=failed_checks,
+        human_review_required=bool(open_issues or not ready),
+        payload={
+            "kind": payload.get("kind"),
+            "status": payload.get("status"),
+            "source_document_sha256": source_sha,
+            "ready_for_logic_builder": ready,
+            "requirement_counts": {
+                "concept_nodes": len(payload.get("concept_logic_nodes") or []),
+                "concept_edges": len(payload.get("concept_edges") or []),
+                "requirement_groups": len(payload.get("requirement_groups") or []),
+                "open_questions": len(payload.get("open_questions") or []),
+            },
+            "truth_boundary": {
+                "truth_effect": payload.get("truth_effect"),
+                "controller_truth_modified": payload.get("controller_truth_modified"),
+                "certification_claim": payload.get("certification_claim"),
+            },
+        },
+    )
+    payload["agent_output_contract_v0_1"] = {"requirement_analyst": packet}
+    return payload
+
+
 def analyze_requirements_text(
     document_text: str,
     *,
@@ -1404,7 +1491,7 @@ def analyze_requirements_text(
 
     cfg = _provider_config(provider)
     analysis_text, input_meta = _compact_document_for_llm(text)
-    local_preparse = _deterministic_l1_l4_preparse(text)
+    local_preparse = _deterministic_local_preparse(text)
     if local_preparse.get("available"):
         input_meta["deterministic_preparse"] = {
             "available": True,
@@ -1432,7 +1519,7 @@ def analyze_requirements_text(
     normalized = _apply_readiness_gate(normalized, input_meta)
     ready = bool(normalized["ready_for_logic_builder"])
     text_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return {
+    payload = {
         "$schema": "https://well-harness.local/json_schema/requirements_intake_analysis_v1.schema.json",
         "kind": REQUIREMENTS_INTAKE_KIND,
         "version": REQUIREMENTS_INTAKE_VERSION,
@@ -1457,3 +1544,4 @@ def analyze_requirements_text(
         **normalized,
         "ready_for_logic_builder": ready,
     }
+    return _attach_requirement_analyst_contract(payload)

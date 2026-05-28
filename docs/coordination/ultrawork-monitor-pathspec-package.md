@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This package adds a read-only local UltraWork Monitor entry for the multi-agent lane without changing controller truth, runtime truth, Notion control-plane configuration, or existing browser routes.
+This package adds a read-only local UltraWork Monitor entry for the multi-agent lane without changing controller truth, runtime truth, planning-control configuration, or existing browser routes.
 
 The monitor now exposes a five-agent active team under
 `agent_team.mode = five_agent_context_cap`. Legacy queue role labels such as
@@ -81,7 +81,7 @@ tools/run_gsd_validation_suite.py
 .planning/**
 ```
 
-The Notion 404 remains an external control-plane blocker. This package must not edit Notion configuration, Notion sync scripts, or controller truth.
+Repo, GitHub, and local artifacts are the active control surfaces for this monitor package. External planning systems are outside the blocking validation path.
 
 ## Verification
 
@@ -101,4 +101,4 @@ make ultrawork-monitor-dashboard
 make verify-ultrawork-monitor-dashboard
 ```
 
-Browser gate: open `/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html` and verify the page shows `UltraWork Monitor`, `five_agent_context_cap`, `RUN-QUEUE-011`, `LogicIRRepairAgent`, `PackagingPRReadinessAgent`, and `notion-control-plane-404`.
+Browser gate: open `/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html` and verify the page shows `UltraWork Monitor`, `five_agent_context_cap`, `RUN-QUEUE-011`, `LogicIRRepairAgent`, `PackagingPRReadinessAgent`, and `No active blockers`.

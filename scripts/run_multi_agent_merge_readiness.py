@@ -32,17 +32,17 @@ GEOMETRY_PAGES = [
     (
         "ultrawork",
         Path("/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html"),
-        ["UltraWork Monitor", "RUN-QUEUE-011", "notion-control-plane-404"],
+        ["UltraWork Monitor", "RUN-QUEUE-011", "No active blockers"],
     ),
     (
         "cockpit",
         Path("/tmp/ai-fantui-multi-agent-operator-cockpit/multi_agent_operator_cockpit_v0_1.html"),
-        ["Multi-Agent Operator Cockpit", "RUN-QUEUE-011", "notion-control-plane-404"],
+        ["Multi-Agent Operator Cockpit", "RUN-QUEUE-011", "repo_github_local_artifacts"],
     ),
     (
         "packaging",
         Path("/tmp/ai-fantui-multi-agent-packaging-consolidation/multi_agent_packaging_consolidation_v0_1.html"),
-        ["Multi-Agent Packaging Consolidation", "multi-agent-cursor-baseline-v0-2", "notion-control-plane-404"],
+        ["Multi-Agent Packaging Consolidation", "multi-agent-cursor-baseline-v0-2", "repo-github-local-artifacts"],
     ),
     (
         "preflight",
@@ -69,7 +69,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--validation-evidence", type=Path, default=DEFAULT_VALIDATION_EVIDENCE_PATH)
     parser.add_argument("--geometry-dir", type=Path, default=DEFAULT_GEOMETRY_DIR)
     parser.add_argument("--pr-status-json", type=Path, default=None)
-    parser.add_argument("--pr-number", type=int, default=269)
+    parser.add_argument("--pr-number", type=int, default=270)
     parser.add_argument("--format", choices=("text", "json"), default="text")
     return parser.parse_args()
 

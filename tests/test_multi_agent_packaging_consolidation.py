@@ -90,7 +90,7 @@ def test_multi_agent_packaging_consolidation_html_exposes_order_and_blocker() ->
     assert "candidate-review-runtime-export" in html
     assert "ultrawork-monitor" in html
     assert "m22-operator-cockpit" in html
-    assert "notion-control-plane-404" in html
+    assert "repo-github-local-artifacts" in html
     assert "git add -f --" in html
 
 
@@ -165,7 +165,7 @@ def test_multi_agent_packaging_consolidation_is_wired_into_docs_and_makefile() -
     assert "src/well_harness/controller.py" in doc
     assert "src/well_harness/demo_server.py" in doc
     assert "artifacts/**" in doc
-    assert "notion-control-plane-404" in doc
+    assert "Repo/GitHub/local artifacts" in doc
 
     assert "M23" in mvp_doc
     assert "make multi-agent-packaging-consolidation" in mvp_doc

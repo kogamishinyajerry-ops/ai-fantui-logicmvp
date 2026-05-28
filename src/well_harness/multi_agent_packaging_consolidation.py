@@ -15,7 +15,6 @@ PACKAGE_ID = "multi-agent-packaging-consolidation-v0.1"
 JSON_NAME = "multi_agent_packaging_consolidation_v0_1.json"
 MARKDOWN_NAME = "multi_agent_packaging_consolidation_v0_1.md"
 HTML_NAME = "multi_agent_packaging_consolidation_v0_1.html"
-NOTION_BLOCKER_ID = "notion-control-plane-404"
 
 
 EXCLUDED_PATHS = [
@@ -295,23 +294,17 @@ def build_multi_agent_packaging_consolidation(
         "package_order": packages,
         "stage_commands": _stage_commands(packages),
         "excluded_paths": EXCLUDED_PATHS,
-        "blockers": [
-            {
-                "blocker_id": NOTION_BLOCKER_ID,
-                "status": "external_blocker",
-                "message": "Notion control-plane HTTP 404 remains outside this packaging slice.",
-            }
-        ],
+        "blockers": [],
         "pr_summary": {
             "title": "Add multi-agent operator cockpit and packaging boundary",
             "body_sections": [
                 "Summary",
                 "Validation",
-                "Notion external blocker",
+                "Control-plane boundary",
                 "Pathspec packaging boundary",
                 "Risks",
             ],
-            "notion_blocker_note": "Notion 404 is preserved as an external control-plane blocker; this PR does not change Notion configuration.",
+            "control_plane_note": "Repo, GitHub, and local artifacts are the active control surfaces for this PR.",
         },
         "artifact_paths": {
             "package_json": "",
@@ -350,8 +343,8 @@ def render_multi_agent_packaging_markdown(payload: dict[str, Any]) -> str:
         + "\n\n".join(package_sections)
         + "\n\n## Excluded Paths\n\n"
         f"{excluded}\n\n"
-        "## Notion Blocker\n\n"
-        f"- `{NOTION_BLOCKER_ID}` remains an external control-plane blocker.\n"
+        "## Control-Plane Boundary\n\n"
+        "- Repo, GitHub, and local artifacts are the active control surfaces for this package.\n"
     )
 
 
@@ -455,6 +448,7 @@ def render_multi_agent_packaging_html(payload: dict[str, Any]) -> str:
       <p>Packages: <strong>{_escape(payload['summary']['package_count'])}</strong></p>
       <p>Pathspecs: <strong>{_escape(payload['summary']['pathspec_count'])}</strong></p>
       <p>Missing pathspecs: <strong>{_escape(payload['summary']['missing_pathspec_count'])}</strong></p>
+      <p>Control boundary: <code>repo-github-local-artifacts</code></p>
     </section>
     <div class="grid">{cards}</div>
     <section>
@@ -466,8 +460,8 @@ def render_multi_agent_packaging_html(payload: dict[str, Any]) -> str:
       <ul>{excluded}</ul>
     </section>
     <section>
-      <h2>External Blocker</h2>
-      <p><code>{NOTION_BLOCKER_ID}</code> remains an external control-plane blocker.</p>
+      <h2>Control-Plane Boundary</h2>
+      <p><code>repo-github-local-artifacts</code> is the active control boundary.</p>
     </section>
   </main>
 </body>

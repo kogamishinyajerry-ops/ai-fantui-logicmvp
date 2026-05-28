@@ -5,6 +5,20 @@ import json
 import re
 from typing import Any
 
+from well_harness.agent_output_contract import (
+    build_agent_output_packet,
+    run_evidence_agent_checks,
+    run_safety_guardian_checks,
+    validate_agent_output_contract,
+)
+from well_harness.agent_execution_plan import build_execution_plan_from_task_package
+from well_harness.agent_execution_shell import build_execution_evidence_package
+from well_harness.agent_repair_loop import (
+    run_evidence_agent_repair_loop,
+    run_safety_guardian_repair_loop,
+)
+from well_harness.agent_review_packet import build_candidate_review_packet
+from well_harness.agent_task_contract import build_chief_engineer_task_package
 from well_harness.requirements_intake.analysis import (
     REQUIREMENTS_INTAKE_KIND,
     RequestPost,
@@ -27,6 +41,10 @@ L1_L4_CIRCUIT_LAYOUT = "deterministic_l1_l4_circuit_v1"
 LOGIC_CHANGE_INTERPRETATION_KIND = "ai-fantui-logic-change-interpretation"
 LOGIC_CHANGE_INTERPRETATION_VERSION = 1
 LOGIC_CHANGE_MAX_TOKENS = 2048
+STREAMED_LOGIC_AUTHORING_SESSION_KIND = "ai-fantui-streamed-logic-authoring-session"
+STREAMED_LOGIC_AUTHORING_PROPOSAL_KIND = "ai-fantui-streamed-logic-authoring-proposal"
+STREAMED_LOGIC_AUTHORING_VERSION = 1
+STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE = "AUTHORIZE_REQUIREMENTS_EDIT"
 FAULT_INJECTION_PREPARATION_KIND = "ai-fantui-fault-injection-preparation"
 FAULT_INJECTION_PREPARATION_VERSION = 1
 FAULT_INJECTION_PREPARATION_MAX_TOKENS = 4096
@@ -211,6 +229,196 @@ def _reference_contract_prompt_block(requirements_payload: dict[str, Any]) -> st
 
 def _payload_sha256(payload: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _safe_contract_id(prefix: str, value: str) -> str:
+    normalized = re.sub(r"[^A-Za-z0-9]+", "_", _str(value)).strip("_").upper()
+    return f"{prefix}-{normalized or 'CANDIDATE'}"
+
+
+def _contract_requirement_ids(requirements_payload: dict[str, Any]) -> list[str]:
+    groups = requirements_payload.get("requirement_groups")
+    if isinstance(groups, list):
+        requirement_ids = [
+            _safe_contract_id("REQ", _str(group.get("id")))
+            for group in groups
+            if isinstance(group, dict) and _str(group.get("id"))
+        ]
+        if requirement_ids:
+            return requirement_ids
+    if requirements_payload.get("concept_logic_nodes") or requirements_payload.get("concept_edges"):
+        return ["REQ-DRAWING-STRUCTURE"]
+    return ["REQ-UNSPECIFIED-CANDIDATE"]
+
+
+def _logic_ir_packet_payload(
+    drawing: dict[str, Any],
+    requirements_payload: dict[str, Any],
+) -> dict[str, Any]:
+    nodes = [node for node in drawing.get("nodes", []) if isinstance(node, dict) and _str(node.get("id"))]
+    edges = [edge for edge in drawing.get("edges", []) if isinstance(edge, dict) and _str(edge.get("id"))]
+    node_ids = [_str(node.get("id")) for node in nodes]
+    edge_sources = {_str(edge.get("source")) for edge in edges}
+    edge_targets = {_str(edge.get("target")) for edge in edges}
+    entry_nodes = [node_id for node_id in node_ids if node_id in edge_sources and node_id not in edge_targets]
+    if not entry_nodes:
+        entry_nodes = node_ids[:1]
+    requirement_ids = _contract_requirement_ids(requirements_payload)
+    transitions: list[dict[str, Any]] = [
+        {
+            "id": f"T_ENTRY_{index:03d}",
+            "from": "__START__",
+            "to": node_id,
+            "guard": "",
+            "guard_signals": [],
+            "priority": "normal",
+            "trace": {"requirements": requirement_ids},
+        }
+        for index, node_id in enumerate(entry_nodes, start=1)
+    ]
+    transitions.extend(
+        {
+            "id": _safe_contract_id("T", _str(edge.get("id"))),
+            "from": _str(edge.get("source")),
+            "to": _str(edge.get("target")),
+            "guard": f"{_str(edge.get('id'))}_candidate_link_active",
+            "guard_signals": [_str(edge.get("source"))],
+            "priority": "normal",
+            "trace": {"requirements": requirement_ids},
+        }
+        for edge in edges
+    )
+    return {
+        "requirements": [
+            {
+                "id": requirement_id,
+                "text": "Candidate requirement grouping from requirements-intake payload.",
+            }
+            for requirement_id in requirement_ids
+        ],
+        "signals": [{"name": node_id} for node_id in node_ids],
+        "logic_ir": {
+            "id": "REQ_INTAKE_LOGIC_DRAWING_CANDIDATE",
+            "type": "directed_candidate_graph",
+            "initial_state": "__START__",
+            "states": [
+                {"id": "__START__", "label": "candidate graph entry"},
+                *[
+                    {
+                        "id": _str(node.get("id")),
+                        "label": _str(node.get("label"), _str(node.get("id"))),
+                        "node_kind": _str(node.get("node_kind"), "component"),
+                    }
+                    for node in nodes
+                ],
+            ],
+            "transitions": transitions,
+            "invariants": [],
+        },
+        "test_scenarios": [
+            {
+                "id": "TC-CANDIDATE-GRAPH-STRUCTURE",
+                "purpose": "Verify candidate drawing graph is represented in machine-readable IR.",
+                "covers": requirement_ids,
+            }
+        ],
+        "simulation_results": [
+            {
+                "scenario_id": "TC-CANDIDATE-GRAPH-STRUCTURE",
+                "status": "pass",
+            }
+        ],
+        "drawing_summary": {
+            "kind": drawing.get("kind"),
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "source_requirements_sha256": drawing.get("source_requirements_sha256"),
+        },
+    }
+
+
+def _attach_logic_ir_agent_contracts(
+    drawing: dict[str, Any],
+    requirements_payload: dict[str, Any],
+) -> dict[str, Any]:
+    source_sha = _str(drawing.get("source_requirements_sha256")) or _payload_sha256(requirements_payload)
+    packet = build_agent_output_packet(
+        agent_name="LogicIRAgent",
+        task_id=f"LOGIC-BUILDER-{source_sha[:12] or 'UNHASHED'}",
+        input_artifacts=[
+            f"{REQUIREMENTS_INTAKE_KIND}:{source_sha[:12] or 'unhashed'}",
+            f"{LOGIC_DRAWING_KIND}:v{LOGIC_DRAWING_VERSION}",
+        ],
+        output_artifacts=["logic_ir:REQ_INTAKE_LOGIC_DRAWING_CANDIDATE"],
+        candidate_state="logic_ir_candidate",
+        assumptions=[
+            "The embedded IR is a candidate graph representation of the drawing payload, not controller truth.",
+            "Pass/fail evidence is limited to deterministic structure and trace checks for this route.",
+        ],
+        open_issues=[],
+        confidence_level="medium",
+        confidence_reason="IR was derived deterministically from requirements-intake and logic-builder candidate payloads.",
+        deterministic_checks_passed=True,
+        failed_checks=[],
+        human_review_required=True,
+        payload=_logic_ir_packet_payload(drawing, requirements_payload),
+    )
+    safety_report = run_safety_guardian_checks(packet)
+    evidence_report = run_evidence_agent_checks(packet)
+    combined_findings = [*safety_report.get("findings", []), *evidence_report.get("findings", [])]
+    packet["agent_output"]["validation"]["deterministic_checks_passed"] = not combined_findings
+    packet["agent_output"]["validation"]["failed_checks"] = combined_findings
+    validate_agent_output_contract(packet)
+    drawing["agent_output_contract_v0_1"] = {
+        "logic_ir": packet,
+        "safety_guardian": safety_report,
+        "evidence": evidence_report,
+    }
+    drawing["chief_engineer_task_package_v0_1"] = build_chief_engineer_task_package(
+        drawing["agent_output_contract_v0_1"],
+        source_artifact_id=f"{LOGIC_DRAWING_KIND}:{source_sha[:12] or 'unhashed'}",
+    )
+    drawing["execution_plan_v0_1"] = build_execution_plan_from_task_package(
+        drawing["chief_engineer_task_package_v0_1"]
+    )
+    drawing["execution_evidence_package_v0_1"] = build_execution_evidence_package(
+        drawing["chief_engineer_task_package_v0_1"]
+    )
+    repair_loop_results = _candidate_repair_loop_results(
+        packet,
+        safety_report=safety_report,
+        evidence_report=evidence_report,
+    )
+    drawing["candidate_review_packet_v0_1"] = build_candidate_review_packet(
+        drawing["agent_output_contract_v0_1"],
+        task_package=drawing["chief_engineer_task_package_v0_1"],
+        execution_plan=drawing["execution_plan_v0_1"],
+        execution_evidence_package=drawing["execution_evidence_package_v0_1"],
+        repair_loop_results=repair_loop_results,
+    )
+    return drawing
+
+
+def _candidate_repair_loop_results(
+    packet: dict[str, Any],
+    *,
+    safety_report: dict[str, Any],
+    evidence_report: dict[str, Any],
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    if safety_report.get("findings"):
+        results.append(run_safety_guardian_repair_loop(packet))
+    supported_evidence_codes = {
+        "EV_SIMULATION_RESULT_FAILED",
+        "EV_TEST_RESULT_MISSING",
+    }
+    evidence_findings = evidence_report.get("findings", [])
+    if any(
+        isinstance(finding, dict) and finding.get("code") in supported_evidence_codes
+        for finding in evidence_findings
+    ):
+        results.append(run_evidence_agent_repair_loop(packet))
+    return results
 
 
 def _limited_drawing_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1292,7 +1500,12 @@ def _attach_drawing_source_context(
         edge["provenance"] = _str(edge.get("provenance") or source_edge.get("provenance"), "model_inference")
 
 
-def _normalize_logic_drawing(raw: str, requirements_payload: dict[str, Any]) -> dict[str, Any]:
+def _normalize_logic_drawing(
+    raw: str,
+    requirements_payload: dict[str, Any],
+    *,
+    attach_agent_contracts: bool = True,
+) -> dict[str, Any]:
     try:
         parsed = _extract_json_object(_strip_model_json(raw))
     except json.JSONDecodeError as exc:
@@ -1342,6 +1555,8 @@ def _normalize_logic_drawing(raw: str, requirements_payload: dict[str, Any]) -> 
     if circuit_view is not None:
         circuit_view["source_requirements_sha256"] = source_sha
         drawing["circuit_view"] = circuit_view
+    if attach_agent_contracts:
+        _attach_logic_ir_agent_contracts(drawing, requirements_payload)
     return drawing
 
 
@@ -1469,6 +1684,852 @@ def _validate_drawing_payload(drawing_payload: dict[str, Any]) -> None:
         )
     if not isinstance(drawing_payload.get("nodes"), list) or not drawing_payload.get("nodes"):
         raise RequirementsIntakeError("invalid_drawing_payload", "drawing_payload must include nodes.", status_code=409)
+
+
+def _streamed_target_key(target_type: str, target_id: str) -> str:
+    return f"{_str(target_type)}:{_str(target_id)}"
+
+
+def _streamed_proposal_id(target_type: str, target_id: str, *, revision_index: int = 0) -> str:
+    raw = f"{target_type}-{target_id}"
+    safe = re.sub(r"[^a-zA-Z0-9_.-]+", "-", raw).strip("-").lower()
+    base = f"m21-{safe or 'candidate-edit'}"
+    if revision_index > 0:
+        return f"{base}-revision-{revision_index}"
+    return base
+
+
+def _normalize_streamed_requirements_document_patch(
+    value: Any,
+    *,
+    feedback_text: str,
+    target_type: str,
+    target_id: str,
+    proposal_id: str,
+) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        value = {}
+    proposed_text = _str(
+        value.get("proposed_text_zh")
+        or value.get("replacement_text_zh")
+        or value.get("text_zh")
+        or feedback_text
+    )[:500]
+    return {
+        "operation": _str(value.get("operation") or "candidate_requirements_text_revision")[:80],
+        "target": _str(value.get("target") or "requirements_document")[:120],
+        "target_type": target_type,
+        "target_id": target_id,
+        "source_proposal_id": proposal_id,
+        "proposed_text_zh": proposed_text,
+        "truth_effect": "none",
+        "controller_truth_modified": False,
+        "requires_explicit_authorization": True,
+    }
+
+
+def _normalize_streamed_decision_history(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    history: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        decision = _str(item.get("decision")).strip().lower()
+        if decision in {"confirmed", "accepted", "accept"}:
+            decision = "confirm"
+        if decision in {"reject", "rejected", "feedback", "revise"}:
+            decision = "request_revision"
+        if decision not in {"confirm", "request_revision"}:
+            continue
+        target_type = _str(item.get("target_type")).strip().lower()
+        if target_type not in {"node", "wire"}:
+            target_type = ""
+        target_id = _str(item.get("target_id"))[:120]
+        proposal_id = _str(item.get("proposal_id"))[:160]
+        feedback_text = _str(item.get("feedback_text"))[:500]
+        edit_requested = (
+            item.get("requirements_document_edit_requested") is True
+            or item.get("requirements_document_update_requested") is True
+            or isinstance(item.get("requirements_document_patch"), dict)
+        )
+        authorization_phrase = _str(item.get("requirements_document_authorization_phrase"))[:120]
+        edit_authorized = (
+            item.get("requirements_document_edit_authorized") is True
+            and authorization_phrase == STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE
+        )
+        requirements_document_patch = (
+            _normalize_streamed_requirements_document_patch(
+                item.get("requirements_document_patch"),
+                feedback_text=feedback_text,
+                target_type=target_type,
+                target_id=target_id,
+                proposal_id=proposal_id,
+            )
+            if edit_requested
+            else None
+        )
+        history.append(
+            {
+                "proposal_id": proposal_id,
+                "target_type": target_type,
+                "target_id": target_id,
+                "target_key": _streamed_target_key(target_type, target_id) if target_type and target_id else "",
+                "decision": decision,
+                "feedback_text": feedback_text,
+                "decided_at": _str(item.get("decided_at"))[:80],
+                "requirements_document_edit_requested": edit_requested,
+                "requirements_document_edit_authorized": edit_authorized,
+                "requirements_document_authorization_phrase": authorization_phrase,
+                "requirements_document_patch": requirements_document_patch,
+                "source_requirements_sha256": _str(item.get("source_requirements_sha256"))[:80],
+                "source_drawing_sha256": _str(item.get("source_drawing_sha256"))[:80],
+            }
+        )
+        if len(history) >= 64:
+            break
+    return history
+
+
+def _filter_streamed_decision_history(
+    history: list[dict[str, Any]],
+    *,
+    source_requirements_sha256: str,
+    source_drawing_sha256: str,
+) -> list[dict[str, Any]]:
+    filtered: list[dict[str, Any]] = []
+    confirmed_targets: set[str] = set()
+    revision_counts_by_key: dict[str, int] = {}
+    for item in history:
+        target_key = _str(item.get("target_key"))
+        if not target_key:
+            continue
+        item_requirements_sha = _str(item.get("source_requirements_sha256"))
+        item_drawing_sha = _str(item.get("source_drawing_sha256"))
+        if item_requirements_sha and item_requirements_sha != source_requirements_sha256:
+            continue
+        if item_drawing_sha and item_drawing_sha != source_drawing_sha256:
+            continue
+        if item.get("decision") == "confirm":
+            if target_key in confirmed_targets:
+                continue
+            expected_revision_index = revision_counts_by_key.get(target_key, 0)
+            expected_proposal_id = _streamed_proposal_id(
+                _str(item.get("target_type")),
+                _str(item.get("target_id")),
+                revision_index=expected_revision_index,
+            )
+            if _str(item.get("proposal_id")) != expected_proposal_id:
+                continue
+            confirmed_targets.add(target_key)
+            filtered.append(item)
+            continue
+        if item.get("decision") == "request_revision":
+            if target_key in confirmed_targets:
+                continue
+            expected_revision_index = revision_counts_by_key.get(target_key, 0)
+            expected_proposal_id = _streamed_proposal_id(
+                _str(item.get("target_type")),
+                _str(item.get("target_id")),
+                revision_index=expected_revision_index,
+            )
+            if _str(item.get("proposal_id")) != expected_proposal_id:
+                continue
+            filtered.append(item)
+            revision_counts_by_key[target_key] = expected_revision_index + 1
+    return filtered
+
+
+def _streamed_requirements_document_edit_gate(history: list[dict[str, Any]]) -> dict[str, Any]:
+    requested = [item for item in history if item.get("requirements_document_edit_requested")]
+    base = {
+        "requires_explicit_authorization": True,
+        "authorized": False,
+        "truth_effect": "none",
+        "controller_truth_modified": False,
+        "requirements_document_modified": False,
+        "automatic_document_mutation": False,
+        "write_effect": "none",
+        "authorization_record": None,
+        "authorization_gate": {
+            "required_phrase": STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE,
+            "status": "not_requested",
+        },
+    }
+    if not requested:
+        return {
+            **base,
+            "status": "not_requested",
+            "pending_candidate_patch": None,
+            "proposal": None,
+        }
+    latest = requested[-1]
+    authorized = latest.get("requirements_document_edit_authorized") is True
+    pending_patch = latest.get("requirements_document_patch")
+    pending_patch_sha256 = _payload_sha256(pending_patch) if isinstance(pending_patch, dict) else ""
+    return {
+        **base,
+        "status": "authorized_candidate_patch" if authorized else "authorization_required",
+        "authorized": authorized,
+        "pending_candidate_patch": pending_patch,
+        "pending_candidate_patch_sha256": pending_patch_sha256,
+        "proposal": pending_patch,
+        "authorization_gate": {
+            "required_phrase": STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE,
+            "provided_phrase_matches": authorized,
+            "status": "authorized" if authorized else "blocked_without_explicit_authorization",
+        },
+        "authorization_record": {
+            "proposal_id": latest.get("proposal_id", ""),
+            "target_type": latest.get("target_type", ""),
+            "target_id": latest.get("target_id", ""),
+            "decided_at": latest.get("decided_at", ""),
+        } if authorized else None,
+    }
+
+
+def _streamed_source_excerpt(anchors: list[dict[str, str]], fallback: str) -> str:
+    for anchor in anchors:
+        quote = _str(anchor.get("quote_zh") or anchor.get("quote")).strip()
+        if quote:
+            return quote[:180]
+    return fallback[:180] or "来源未提供；当前为候选解释，需要工程师确认。"
+
+
+def _streamed_node_anchors(
+    node: dict[str, Any],
+    requirement_nodes: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    node_id = _str(node.get("id"))
+    linked_id = _str(node.get("linked_node_id"))
+    return _merge_source_anchors(
+        node.get("source_anchors"),
+        requirement_nodes.get(linked_id, {}).get("source_anchors"),
+        requirement_nodes.get(node_id, {}).get("source_anchors"),
+    )
+
+
+def _streamed_wire_anchors(
+    wire: dict[str, Any],
+    requirement_edges: dict[tuple[str, str], dict[str, Any]],
+    requirement_nodes: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    source_id = _str(wire.get("source"))
+    target_id = _str(wire.get("target"))
+    edge_context = requirement_edges.get((source_id, target_id), {})
+    return _merge_source_anchors(
+        wire.get("source_anchors"),
+        edge_context.get("source_anchors"),
+        requirement_nodes.get(source_id, {}).get("source_anchors"),
+        requirement_nodes.get(target_id, {}).get("source_anchors"),
+    )
+
+
+def _streamed_candidate_objects(
+    requirements_payload: dict[str, Any],
+    drawing_payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    requirement_nodes = _requirement_node_context(requirements_payload)
+    requirement_edges = _requirement_edge_context(requirements_payload)
+    circuit_view = drawing_payload.get("circuit_view")
+    if isinstance(circuit_view, dict) and circuit_view.get("kind"):
+        nodes = [item for item in circuit_view.get("nodes", []) if isinstance(item, dict)]
+        wires = [item for item in circuit_view.get("wires", []) if isinstance(item, dict)]
+    else:
+        nodes = [item for item in drawing_payload.get("nodes", []) if isinstance(item, dict)]
+        wires = [item for item in drawing_payload.get("edges", []) if isinstance(item, dict)]
+
+    candidates: list[dict[str, Any]] = []
+    wire_context: dict[str, dict[str, list[str]]] = {}
+    for wire in wires:
+        source_id = _str(wire.get("source"))
+        target_id = _str(wire.get("target"))
+        if not source_id or not target_id:
+            continue
+        wire_id = f"{source_id}->{target_id}"
+        wire_context.setdefault(source_id, {"upstream": [], "downstream": []})["downstream"].append(target_id)
+        wire_context.setdefault(target_id, {"upstream": [], "downstream": []})["upstream"].append(source_id)
+        anchors = _streamed_wire_anchors(wire, requirement_edges, requirement_nodes)
+        candidates.append(
+            {
+                "target_type": "wire",
+                "target_id": wire_id,
+                "display_label": _str(wire.get("label")) or f"{source_id} -> {target_id}",
+                "edit_type": "add_wire",
+                "source_id": source_id,
+                "target_node_id": target_id,
+                "source_anchors": anchors,
+                "source_excerpt": _streamed_source_excerpt(anchors, _str(wire.get("label"))),
+                "interpreted_logic": _str(wire.get("label")) or f"{source_id} feeds {target_id}",
+                "upstream": [source_id],
+                "downstream": [target_id],
+            }
+        )
+
+    node_candidates: list[dict[str, Any]] = []
+    for node in nodes:
+        node_id = _str(node.get("id"))
+        if not node_id:
+            continue
+        linked_id = _str(node.get("linked_node_id"))
+        display_label = _str(node.get("display_label") or node.get("label") or linked_id or node_id)
+        description = _str(node.get("description_zh") or node.get("label") or display_label)
+        anchors = _streamed_node_anchors(node, requirement_nodes)
+        context = wire_context.get(node_id, {"upstream": [], "downstream": []})
+        node_candidates.append(
+            {
+                "target_type": "node",
+                "target_id": node_id,
+                "display_label": display_label,
+                "edit_type": "add_node",
+                "source_anchors": anchors,
+                "source_excerpt": _streamed_source_excerpt(anchors, description),
+                "interpreted_logic": description,
+                "upstream": context.get("upstream", [])[:6],
+                "downstream": context.get("downstream", [])[:6],
+            }
+        )
+    return node_candidates + candidates
+
+
+_STREAMED_PROMPT_STOPWORDS = {
+    "adjust",
+    "change",
+    "edit",
+    "node",
+    "please",
+    "priority",
+    "update",
+    "wire",
+    "修改",
+    "调整",
+    "节点",
+    "连线",
+    "优先",
+    "处理",
+}
+
+
+def _streamed_prompt_terms(prompt: str) -> tuple[str, set[str]]:
+    prompt_text = _str(prompt).strip().lower()
+    if not prompt_text:
+        return "", set()
+    terms = {
+        match.group(0).lower()
+        for match in re.finditer(
+            r"[A-Za-z][A-Za-z0-9_.<>-]*|\d+(?:\.\d+)?|[\u4e00-\u9fff]+",
+            prompt_text,
+        )
+    }
+    return prompt_text, {
+        item for item in terms if item and item not in _STREAMED_PROMPT_STOPWORDS
+    }
+
+
+def _streamed_prompt_contains_value(
+    prompt_text: str,
+    prompt_terms: set[str],
+    value: Any,
+) -> bool:
+    normalized = _str(value).strip().lower()
+    if not normalized:
+        return False
+    if re.fullmatch(r"[a-z0-9_.<>-]+", normalized):
+        return normalized in prompt_terms
+    return normalized in prompt_text
+
+
+def _streamed_candidate_prompt_values(candidate: dict[str, Any]) -> list[str]:
+    values = [
+        _str(candidate.get("target_type")),
+        _str(candidate.get("target_id")),
+        _str(candidate.get("display_label")),
+        _str(candidate.get("source_id")),
+        _str(candidate.get("target_node_id")),
+        _str(candidate.get("source_excerpt")),
+        _str(candidate.get("interpreted_logic")),
+    ]
+    for anchor in candidate.get("source_anchors", []):
+        if not isinstance(anchor, dict):
+            continue
+        values.extend(
+            [
+                _str(anchor.get("id")),
+                _str(anchor.get("quote_zh")),
+                _str(anchor.get("quote")),
+            ]
+        )
+    return [item for item in values if item]
+
+
+def _streamed_candidate_prompt_score(
+    candidate: dict[str, Any],
+    *,
+    prompt_text: str,
+    prompt_terms: set[str],
+) -> int:
+    if not prompt_text:
+        return 0
+    score = 0
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("target_id")):
+        score += 100
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("display_label")):
+        score += 80
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("source_id")):
+        score += 25
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("target_node_id")):
+        score += 25
+    target_type = _str(candidate.get("target_type")).lower()
+    if target_type == "node" and "节点" in prompt_text:
+        score += 5
+    if target_type == "wire" and ("连线" in prompt_text or "wire" in prompt_terms):
+        score += 5
+    candidate_text = " ".join(_streamed_candidate_prompt_values(candidate)).lower()
+    candidate_terms = {
+        match.group(0).lower()
+        for match in re.finditer(
+            r"[A-Za-z][A-Za-z0-9_.<>-]*|\d+(?:\.\d+)?|[\u4e00-\u9fff]+",
+            candidate_text,
+        )
+    }
+    score += len((candidate_terms - _STREAMED_PROMPT_STOPWORDS) & prompt_terms)
+    return score
+
+
+def _order_streamed_candidates_for_prompt(
+    candidates: list[dict[str, Any]],
+    natural_language_prompt: str,
+) -> list[dict[str, Any]]:
+    prompt_text, prompt_terms = _streamed_prompt_terms(natural_language_prompt)
+    if not prompt_text:
+        return candidates
+    scored = [
+        (
+            _streamed_candidate_prompt_score(
+                candidate,
+                prompt_text=prompt_text,
+                prompt_terms=prompt_terms,
+            ),
+            index,
+            candidate,
+        )
+        for index, candidate in enumerate(candidates)
+    ]
+    if not any(score > 0 for score, _index, _candidate in scored):
+        return candidates
+    return [
+        candidate
+        for _score, _index, candidate in sorted(
+            scored,
+            key=lambda item: (-item[0], item[1]),
+        )
+    ]
+
+
+def _streamed_proposal_from_candidate(
+    candidate: dict[str, Any],
+    *,
+    sequence_index: int,
+    revision_of: str = "",
+    user_feedback: str = "",
+    revision_index: int = 0,
+    feedback_decided_at: str = "",
+    source_requirements_sha256: str = "",
+    source_drawing_sha256: str = "",
+    decision_history_count: int = 0,
+) -> dict[str, Any]:
+    target_type = _str(candidate.get("target_type"))
+    target_id = _str(candidate.get("target_id"))
+    edit_type = _str(candidate.get("edit_type"))
+    graph_diff = {
+        "operation": edit_type,
+        "node_ids_added": [target_id] if target_type == "node" else [],
+        "wire_ids_added": [target_id] if target_type == "wire" else [],
+        "truth_effect": "none",
+    }
+    proposal_id = _streamed_proposal_id(target_type, target_id, revision_index=revision_index)
+    source_anchors = _normalize_source_anchors(candidate.get("source_anchors"))
+    proposal = {
+        "kind": STREAMED_LOGIC_AUTHORING_PROPOSAL_KIND,
+        "version": STREAMED_LOGIC_AUTHORING_VERSION,
+        "id": proposal_id,
+        "proposal_status": "candidate_proposal_ready",
+        "sequence_index": sequence_index,
+        "revision_index": revision_index,
+        "edit_type": edit_type,
+        "target_type": target_type,
+        "target_id": target_id,
+        "display_label": _str(candidate.get("display_label"))[:120],
+        "source_excerpt": _str(candidate.get("source_excerpt"))[:220],
+        "source_anchor_ids": _source_anchor_ids(source_anchors),
+        "source_anchors": source_anchors,
+        "interpreted_logic": _str(candidate.get("interpreted_logic"))[:260],
+        "upstream": _string_list(candidate.get("upstream"), limit=8),
+        "downstream": _string_list(candidate.get("downstream"), limit=8),
+        "model_rationale": (
+            "This is the next atomic candidate graph edit. It must be "
+            "confirmed by the engineer before it is committed to the candidate graph."
+        ),
+        "graph_diff": graph_diff,
+        "requires_user_confirmation": True,
+        "confirmation_question_zh": "这个节点/连线是否按需求原文理解正确？",
+        "revision_gate": {
+            "status": "not_requested",
+            "truth_effect": "none",
+            "controller_truth_modified": False,
+            "requires_engineer_confirmation": True,
+        },
+        "recomputed_from": {
+            "source_requirements_sha256": source_requirements_sha256,
+            "source_drawing_sha256": source_drawing_sha256,
+            "decision_history_count": decision_history_count,
+        },
+    }
+    if revision_of:
+        feedback_sha256 = hashlib.sha256(user_feedback.encode("utf-8")).hexdigest()
+        proposal["proposal_status"] = "revised_proposal_ready"
+        proposal["revision_of"] = revision_of
+        proposal["user_feedback"] = user_feedback
+        proposal["feedback_applied"] = {
+            "proposal_id": revision_of,
+            "target_type": target_type,
+            "target_id": target_id,
+            "feedback_text": user_feedback,
+            "feedback_sha256": feedback_sha256,
+            "decided_at": feedback_decided_at,
+        }
+        proposal["revision_gate"] = {
+            "status": "revision_candidate_ready",
+            "feedback_applied": bool(user_feedback),
+            "truth_effect": "none",
+            "controller_truth_modified": False,
+            "requires_engineer_confirmation": True,
+        }
+        proposal["model_rationale"] = (
+            "This revised candidate edit incorporates the engineer feedback "
+            "while preserving the original source excerpt and truth boundary."
+        )
+    return proposal
+
+
+def _streamed_replay_and_committed_graph(
+    *,
+    history: list[dict[str, Any]],
+    candidates_by_key: dict[str, dict[str, Any]],
+    source_requirements_sha256: str,
+    source_drawing_sha256: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    replay: list[dict[str, Any]] = []
+    committed_edit_ids: list[str] = []
+    node_ids_added: list[str] = []
+    wire_ids_added: list[str] = []
+    confirmed_revision_pairs: list[dict[str, str]] = []
+
+    for decision_index, decision in enumerate(history, start=1):
+        candidate = candidates_by_key.get(_str(decision.get("target_key")))
+        if not candidate:
+            continue
+        proposal = _streamed_proposal_from_candidate(
+            candidate,
+            sequence_index=len(committed_edit_ids) + 1,
+            source_requirements_sha256=source_requirements_sha256,
+            source_drawing_sha256=source_drawing_sha256,
+            decision_history_count=decision_index,
+        )
+        proposal_id = _str(decision.get("proposal_id")) or proposal["id"]
+        committed = decision.get("decision") == "confirm"
+        previous_revision = None
+        if committed:
+            for previous in reversed(history[: decision_index - 1]):
+                if (
+                    previous.get("decision") == "request_revision"
+                    and previous.get("target_key") == decision.get("target_key")
+                ):
+                    previous_revision = previous
+                    break
+        confirmed_revision_of = _str(previous_revision.get("proposal_id")) if previous_revision else ""
+        if confirmed_revision_of == proposal_id:
+            confirmed_revision_of = ""
+        graph_diff = proposal["graph_diff"]
+        feedback_text = _str(decision.get("feedback_text"))
+        requirements_patch = decision.get("requirements_document_patch")
+        requirements_patch_is_dict = isinstance(requirements_patch, dict)
+        requirements_patch_sha256 = (
+            _payload_sha256(requirements_patch) if requirements_patch_is_dict else ""
+        )
+        requirements_edit_requested = decision.get("requirements_document_edit_requested") is True
+        requirements_edit_authorized = decision.get("requirements_document_edit_authorized") is True
+        if requirements_edit_authorized:
+            requirements_patch_status = "authorized_candidate_patch"
+        elif requirements_edit_requested:
+            requirements_patch_status = "authorization_required"
+        else:
+            requirements_patch_status = "not_requested"
+        replay_event = {
+            "kind": "ai-fantui-streamed-logic-authoring-replay-event",
+            "version": STREAMED_LOGIC_AUTHORING_VERSION,
+            "id": f"m21-replay-{decision_index}",
+            "decision_index": decision_index,
+            "event_type": "candidate_edit_committed" if committed else "candidate_edit_revision_requested",
+            "proposal_id": proposal_id,
+            "target_type": proposal["target_type"],
+            "target_id": proposal["target_id"],
+            "display_label": proposal["display_label"],
+            "source_excerpt": proposal["source_excerpt"],
+            "source_anchor_ids": proposal["source_anchor_ids"],
+            "interpreted_logic": proposal["interpreted_logic"],
+            "graph_diff": graph_diff,
+            "committed": committed,
+            "user_feedback": feedback_text,
+            "decided_at": _str(decision.get("decided_at")),
+            "requirements_document_edit_requested": requirements_edit_requested,
+            "requirements_document_edit_authorized": requirements_edit_authorized,
+            "requirements_document_patch_status": requirements_patch_status,
+            "requirements_document_patch": requirements_patch if requirements_patch_is_dict else None,
+            "requirements_document_patch_sha256": requirements_patch_sha256,
+            "requirements_document_authorization_gate": {
+                "required_phrase": STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE,
+                "provided_phrase_matches": requirements_edit_authorized,
+                "status": (
+                    "authorized"
+                    if requirements_edit_authorized
+                    else (
+                        "blocked_without_explicit_authorization"
+                        if requirements_edit_requested
+                        else "not_requested"
+                    )
+                ),
+            },
+            "requirements_document_modified": False,
+            "truth_effect": "none",
+            "controller_truth_modified": False,
+            "commit_boundary": "one_confirmed_candidate_edit_per_user_decision",
+            "confirmed_revision_of": confirmed_revision_of,
+            "commits_revision": bool(confirmed_revision_of),
+        }
+        if not committed:
+            replay_event["candidate_recalculation"] = {
+                "status": "revision_candidate_ready",
+                "source_proposal_id": proposal_id,
+                "feedback_text": feedback_text,
+                "feedback_sha256": hashlib.sha256(feedback_text.encode("utf-8")).hexdigest()
+                if feedback_text
+                else "",
+                "truth_effect": "none",
+                "controller_truth_modified": False,
+            }
+        if committed:
+            replay_event["committed_edit_index"] = len(committed_edit_ids) + 1
+            committed_edit_ids.append(proposal_id)
+            if confirmed_revision_of:
+                confirmed_revision_pairs.append(
+                    {
+                        "committed_proposal_id": proposal_id,
+                        "revision_of": confirmed_revision_of,
+                        "target_key": _str(decision.get("target_key")),
+                    }
+                )
+            node_ids_added.extend(graph_diff.get("node_ids_added", []))
+            wire_ids_added.extend(graph_diff.get("wire_ids_added", []))
+        replay.append(replay_event)
+
+    if not committed_edit_ids:
+        status = "empty"
+    elif len(committed_edit_ids) == 1:
+        status = "one_edit_committed"
+    else:
+        status = "multiple_edits_committed"
+    committed_graph = {
+        "kind": "ai-fantui-streamed-logic-authoring-committed-candidate-graph",
+        "version": STREAMED_LOGIC_AUTHORING_VERSION,
+        "status": status,
+        "commit_boundary": "one_confirmed_candidate_edit_per_user_decision",
+        "committed_edit_count": len(committed_edit_ids),
+        "committed_edit_ids": committed_edit_ids,
+        "confirmed_revision_pairs": confirmed_revision_pairs,
+        "node_ids_added": node_ids_added,
+        "wire_ids_added": wire_ids_added,
+        "truth_effect": "none",
+        "controller_truth_modified": False,
+        "requirements_document_modified": False,
+        "replay_event_ids": [
+            event["id"] for event in replay if event.get("committed") is True
+        ],
+    }
+    return replay, committed_graph
+
+
+def _streamed_candidate_queue_state(
+    *,
+    candidates: list[dict[str, Any]],
+    active_proposal: dict[str, Any] | None,
+    accepted_keys: set[str],
+    rejected_items: list[dict[str, Any]],
+    stream_replay: list[dict[str, Any]],
+    committed_candidate_graph: dict[str, Any],
+) -> dict[str, Any]:
+    active_target_type = _str(active_proposal.get("target_type")) if active_proposal else ""
+    active_target_id = _str(active_proposal.get("target_id")) if active_proposal else ""
+    active_target_key = (
+        _streamed_target_key(active_target_type, active_target_id)
+        if active_target_type and active_target_id
+        else ""
+    )
+    ordered_target_keys = [
+        _streamed_target_key(_str(item.get("target_type")), _str(item.get("target_id")))
+        for item in candidates
+    ]
+    revised_targets_confirmed = {
+        item["target_key"]
+        for item in rejected_items
+        if item.get("target_key") in accepted_keys
+    }
+    if not active_proposal:
+        status = "candidate_queue_completed"
+    elif active_proposal.get("proposal_status") == "revised_proposal_ready":
+        status = "revision_candidate_ready"
+    else:
+        status = "candidate_queue_active"
+    total_count = len(candidates)
+    accepted_count = len(accepted_keys)
+    return {
+        "kind": "ai-fantui-streamed-logic-authoring-candidate-queue",
+        "version": STREAMED_LOGIC_AUTHORING_VERSION,
+        "status": status,
+        "total_candidate_count": total_count,
+        "accepted_count": accepted_count,
+        "rejected_count": len(rejected_items),
+        "committed_count": int(committed_candidate_graph.get("committed_edit_count") or 0),
+        "pending_count": max(total_count - accepted_count, 0),
+        "replay_event_count": len(stream_replay),
+        "ordered_target_keys": ordered_target_keys,
+        "accepted_target_keys": sorted(accepted_keys),
+        "rejected_target_keys": [
+            _str(item.get("target_key")) for item in rejected_items if item.get("target_key")
+        ],
+        "revised_targets_confirmed": sorted(revised_targets_confirmed),
+        "can_continue_after_revision": bool(revised_targets_confirmed),
+        "active_target_key": active_target_key,
+        "active_target_type": active_target_type,
+        "active_target_id": active_target_id,
+        "active_sequence_index": int(active_proposal.get("sequence_index") or 0)
+        if active_proposal
+        else 0,
+        "active_revision_index": int(active_proposal.get("revision_index") or 0)
+        if active_proposal
+        else 0,
+        "next_candidate_kind": active_target_type,
+        "truth_effect": "none",
+        "controller_truth_modified": False,
+        "requirements_document_modified": False,
+    }
+
+
+def build_streamed_logic_authoring_session(
+    requirements_payload: dict[str, Any],
+    drawing_payload: dict[str, Any],
+    *,
+    decision_history: list[dict[str, Any]] | None = None,
+    natural_language_prompt: str = "",
+) -> dict[str, Any]:
+    _validate_requirements_payload(requirements_payload)
+    _validate_drawing_payload(drawing_payload)
+    source_requirements_sha256 = _payload_sha256(requirements_payload)
+    source_drawing_sha256 = _payload_sha256(drawing_payload)
+    history = _filter_streamed_decision_history(
+        _normalize_streamed_decision_history(decision_history),
+        source_requirements_sha256=source_requirements_sha256,
+        source_drawing_sha256=source_drawing_sha256,
+    )
+    accepted_keys = {item["target_key"] for item in history if item["decision"] == "confirm" and item["target_key"]}
+    accepted_edit_ids = [item["proposal_id"] for item in history if item["decision"] == "confirm" and item["proposal_id"]]
+    rejected_items = [item for item in history if item["decision"] == "request_revision" and item["target_key"]]
+    rejected_edit_ids = [item["proposal_id"] for item in rejected_items if item["proposal_id"]]
+    candidates = _order_streamed_candidates_for_prompt(
+        _streamed_candidate_objects(requirements_payload, drawing_payload),
+        natural_language_prompt,
+    )
+    candidates_by_key = {
+        _streamed_target_key(_str(item.get("target_type")), _str(item.get("target_id"))): item
+        for item in candidates
+    }
+    stream_replay, committed_candidate_graph = _streamed_replay_and_committed_graph(
+        history=history,
+        candidates_by_key=candidates_by_key,
+        source_requirements_sha256=source_requirements_sha256,
+        source_drawing_sha256=source_drawing_sha256,
+    )
+    active_proposal: dict[str, Any] | None = None
+    latest_rejected = rejected_items[-1] if rejected_items else None
+    if latest_rejected and latest_rejected["target_key"] not in accepted_keys:
+        candidate = candidates_by_key.get(latest_rejected["target_key"])
+        if candidate:
+            revision_count = sum(
+                1
+                for item in rejected_items
+                if item["target_key"] == latest_rejected["target_key"]
+            )
+            active_proposal = _streamed_proposal_from_candidate(
+                candidate,
+                sequence_index=len(accepted_keys) + 1,
+                revision_of=latest_rejected["proposal_id"],
+                user_feedback=latest_rejected["feedback_text"],
+                revision_index=revision_count,
+                feedback_decided_at=latest_rejected["decided_at"],
+                source_requirements_sha256=source_requirements_sha256,
+                source_drawing_sha256=source_drawing_sha256,
+                decision_history_count=len(history),
+            )
+    if active_proposal is None:
+        for index, candidate in enumerate(candidates, start=1):
+            key = _streamed_target_key(_str(candidate.get("target_type")), _str(candidate.get("target_id")))
+            if key in accepted_keys:
+                continue
+            active_proposal = _streamed_proposal_from_candidate(
+                candidate,
+                sequence_index=len(accepted_keys) + 1,
+                source_requirements_sha256=source_requirements_sha256,
+                source_drawing_sha256=source_drawing_sha256,
+                decision_history_count=len(history),
+            )
+            break
+    candidate_queue = _streamed_candidate_queue_state(
+        candidates=candidates,
+        active_proposal=active_proposal,
+        accepted_keys=accepted_keys,
+        rejected_items=rejected_items,
+        stream_replay=stream_replay,
+        committed_candidate_graph=committed_candidate_graph,
+    )
+
+    return {
+        "$schema": "https://well-harness.local/json_schema/streamed_logic_authoring_session_v1.schema.json",
+        "kind": STREAMED_LOGIC_AUTHORING_SESSION_KIND,
+        "version": STREAMED_LOGIC_AUTHORING_VERSION,
+        "status": "awaiting_user_confirmation" if active_proposal else "completed",
+        "m21_mode": "engineer_in_the_loop_streamed_authoring",
+        "truth_effect": "none",
+        "candidate_state": "streamed_logic_authoring_candidate",
+        "certification_claim": "none",
+        "controller_truth_modified": False,
+        "source_requirements_sha256": source_requirements_sha256,
+        "source_drawing_sha256": source_drawing_sha256,
+        "accepted_edit_ids": accepted_edit_ids,
+        "rejected_edit_ids": rejected_edit_ids,
+        "decision_history": history,
+        "stream_replay": stream_replay,
+        "committed_candidate_graph": committed_candidate_graph,
+        "candidate_queue": candidate_queue,
+        "proposal_count": len(candidates),
+        "active_proposal": active_proposal,
+        "requirements_document_edit": _streamed_requirements_document_edit_gate(history),
+        "non_claims": [
+            "no controller truth promotion",
+            "no automatic requirements document mutation",
+            "no certification or DAL readiness claim",
+            "no whole-graph black-box generation acceptance",
+        ],
+    }
 
 
 def _normalize_change_interpretation(
@@ -2372,10 +3433,13 @@ def update_logic_drawing(
     drawing_payload: dict[str, Any],
     interpretation_payload: dict[str, Any],
     *,
+    requirements_payload: dict[str, Any] | None = None,
     provider: str = "deepseek",
     request_post: RequestPost | None = None,
 ) -> dict[str, Any]:
     _validate_drawing_payload(drawing_payload)
+    if requirements_payload is not None:
+        _validate_requirements_payload(requirements_payload)
     if not isinstance(interpretation_payload, dict):
         raise RequirementsIntakeError("invalid_logic_change_interpretation", "interpretation_payload must be an object.")
     if interpretation_payload.get("kind") != LOGIC_CHANGE_INTERPRETATION_KIND:
@@ -2397,8 +3461,14 @@ def update_logic_drawing(
         request_post=request_post,
         max_tokens=LOGIC_DRAWING_MAX_TOKENS,
     )
-    updated = _normalize_logic_drawing(content, drawing_payload)
-    if drawing_payload.get("source_requirements_sha256"):
+    updated = _normalize_logic_drawing(
+        content,
+        requirements_payload or drawing_payload,
+        attach_agent_contracts=requirements_payload is not None,
+    )
+    if requirements_payload is not None:
+        updated["source_requirements_sha256"] = _payload_sha256(requirements_payload)
+    elif drawing_payload.get("source_requirements_sha256"):
         updated["source_requirements_sha256"] = _str(drawing_payload.get("source_requirements_sha256"))
     interpretation_sha = _payload_sha256(interpretation_payload)
     updated["source_drawing_sha256"] = _payload_sha256(drawing_payload)

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://well-harness.local/json_schema/phase1_demo_mvp_gate_summary_v0_1.schema.json",
+  "artifact_dir": "/tmp/ai-fantui-phase1-demo-mvp-gate",
+  "artifact_paths": {
+    "browser_acceptance_json": "/tmp/ai-fantui-phase1-demo-mvp-gate/demo_html_reconstruction_browser_acceptance.json",
+    "demo_gate_json": "/tmp/ai-fantui-phase1-demo-mvp-gate/demo_html_reconstruction_mvp_gate.json",
+    "gate_summary": "/tmp/ai-fantui-phase1-demo-mvp-gate/phase1_demo_mvp_gate_summary.json",
+    "markdown_report": "/tmp/ai-fantui-phase1-demo-mvp-gate/phase1_demo_mvp_review_report.md",
+    "package": "/tmp/ai-fantui-phase1-demo-mvp-gate/phase1_demo_mvp_review_package_v0_1.json",
+    "release_summary": "/tmp/ai-fantui-phase1-demo-mvp-gate/phase1_demo_mvp_release_summary.json",
+    "screenshots": [
+      "/tmp/ai-fantui-phase1-demo-mvp-gate/browser-acceptance/demo-reconstruction-mvp-chain-svg.png"
+    ],
+    "standalone_browser_acceptance_dir": "/tmp/ai-fantui-phase1-demo-mvp-gate/standalone-browser-acceptance"
+  },
+  "checks": {
+    "ci_artifact": {
+      "deterministic_gates": {
+        "boundary": "pass",
+        "browser_acceptance": "pass",
+        "child_json": "pass",
+        "markdown_report": "pass",
+        "package": "pass",
+        "screenshots": "pass"
+      },
+      "kind": "ai-fantui-phase1-demo-mvp-ci-artifact-verification",
+      "mismatches": [],
+      "returncode": 0,
+      "status": "pass"
+    },
+    "release_checklist": {
+      "deterministic_gates": {
+        "boundary": "pass",
+        "browser_acceptance": "pass",
+        "ci_artifact": "pass",
+        "documentation": "pass",
+        "review_package": "pass",
+        "review_package_verification": "pass"
+      },
+      "kind": "ai-fantui-phase1-demo-mvp-release-summary",
+      "mismatches": [],
+      "returncode": 0,
+      "status": "pass"
+    },
+    "release_summary_verification": {
+      "deterministic_gates": {
+        "artifact_paths": "pass",
+        "boundary": "pass",
+        "deterministic_gates": "pass",
+        "release_status": "pass",
+        "schema": "pass"
+      },
+      "kind": "ai-fantui-phase1-demo-mvp-release-summary-verification",
+      "mismatches": [],
+      "returncode": 0,
+      "status": "pass"
+    }
+  },
+  "demo_surface": {
+    "node_count": 20,
+    "output_card_count": 4,
+    "preset_count": 5,
+    "route": "/demo-reconstruction",
+    "status_output_count": 6,
+    "title": "demo.html 复刻 MVP 控制台",
+    "wire_count": 23
+  },
+  "deterministic_gates": {
+    "boundary": "pass",
+    "browser_acceptance": "pass",
+    "ci_artifact": "pass",
+    "release_checklist": "pass",
+    "release_summary_verification": "pass"
+  },
+  "generated_at": "2026-05-21T00:00:00Z",
+  "kind": "ai-fantui-phase1-demo-mvp-gate-summary",
+  "mismatches": [],
+  "review_boundaries": {
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "truth_effect": "none",
+    "ui_layout_modified": false
+  },
+  "route": "/demo-reconstruction",
+  "status": "pass",
+  "version": 1
+}

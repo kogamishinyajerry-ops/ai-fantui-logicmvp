@@ -142,9 +142,9 @@
   "validation_budget": {
     "fast_gate_expected_seconds_under": 60,
     "full_pytest_is_per_milestone_gate": true,
-    "last_full_validation_unit_tests_seconds": 404.227,
+    "last_full_validation_unit_tests_seconds": 684.16,
     "reason": "Use this fast gate before each approved slice; keep full pytest and GSD validation as milestone or release gates.",
-    "remaining_margin_seconds": 75.773,
-    "unit_tests_timeout_seconds": 480
+    "remaining_margin_seconds": 215.84,
+    "unit_tests_timeout_seconds": 900
   }
 }

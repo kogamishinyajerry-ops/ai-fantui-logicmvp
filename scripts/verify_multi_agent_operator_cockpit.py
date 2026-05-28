@@ -101,13 +101,12 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
             mismatches.append(f"{key} artifact must exist and be non-empty")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     expected_agents = {
         "ChiefEngineerOrchestrator",
@@ -162,7 +161,7 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
             "UltraWork Monitor",
             "five_agent_context_cap",
             "PackagingPRReadinessAgent",
-            "notion-control-plane-404",
+            "repo_github_local_artifacts",
             "RUN-QUEUE-011",
         ]:
             if marker not in html:

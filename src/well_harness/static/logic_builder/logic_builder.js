@@ -4,6 +4,9 @@
   const INPUT_KEY = "ai-fantui-requirements-intake-ready-v1";
   const DRAWING_KEY = "ai-fantui-logic-builder-drawing-v1";
   const HISTORY_KEY = "ai-fantui-logic-builder-change-history-v1";
+  const STREAMED_AUTHORING_KEY = "ai-fantui-logic-builder-streamed-authoring-v1";
+  const STREAMED_AUTHORING_PROPOSAL_API = "/api/requirements-intake/streamed-authoring/proposal";
+  const STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE = "AUTHORIZE_REQUIREMENTS_EDIT";
   const ANNOTATION_BATCH_KEY = "ai-fantui-logic-builder-annotation-batch-v1";
   const FAULT_DRAFT_KEY = "ai-fantui-fault-injection-preparation-v1";
   const REVISION_HANDOFF_KEY = "ai-fantui-fault-injection-sandbox-revision-handoff-v1";
@@ -86,6 +89,12 @@
     revisionHandoff: null,
     annotationPopoverX: 0,
     annotationPopoverY: 0,
+    streamedAuthoringSession: null,
+    streamedAuthoringHistory: [],
+    streamedAuthoringInFlight: false,
+    streamedAuthoringLaunchPrompt: "",
+    presentationMode: "workbench",
+    presentationZoom: 1,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -137,6 +146,14 @@
   const logicCanvasToolbar = $("logic-canvas-compact-toolbar");
   const counts = $("logic-canvas-counts");
   const source = $("logic-canvas-source");
+  const naturalLanguageInput = $("logic-natural-language-input");
+  const naturalLanguageSend = $("logic-natural-language-send");
+  const logicPresentationModeToggle = $("logic-presentation-mode-toggle");
+  const presentationControls = $("logic-presentation-controls");
+  const presentationZoomOut = $("logic-presentation-zoom-out");
+  const presentationZoomReset = $("logic-presentation-zoom-reset");
+  const presentationZoomIn = $("logic-presentation-zoom-in");
+  const presentationExit = $("logic-presentation-exit");
   const provenanceFilter = $("logic-provenance-filter");
   const provenanceFilterButtons = Array.from(document.querySelectorAll("[data-provenance-filter]"));
   const reconstructionModePanel = $("logic-reconstruction-mode-panel");
@@ -145,6 +162,34 @@
   const demoBridge = $("logic-demo-bridge");
   const drawingStreamTimeline = $("logic-drawing-stream-timeline");
   const drawingStreamEvents = $("logic-drawing-stream-events");
+  const streamedAuthoringPanel = $("logic-streamed-authoring-panel");
+  const streamedPanelToggle = $("logic-streamed-panel-toggle");
+  const streamedAuthoringStatus = $("logic-streamed-status");
+  const streamedAuthoringCurrent = $("logic-streamed-current");
+  const streamedAuthoringSequence = $("logic-streamed-sequence");
+  const streamedAuthoringTitle = $("logic-streamed-title");
+  const streamedAuthoringExplanation = $("logic-streamed-explanation");
+  const streamedAuthoringQueue = $("logic-streamed-queue");
+  const streamedAuthoringQueueCount = $("logic-streamed-queue-count");
+  const streamedAuthoringQueueNext = $("logic-streamed-queue-next");
+  const streamedRevisionReceipt = $("logic-streamed-revision-receipt");
+  const streamedRevisionStatus = $("logic-streamed-revision-status");
+  const streamedRevisionFeedback = $("logic-streamed-revision-feedback");
+  const streamedRevisionBoundary = $("logic-streamed-revision-boundary");
+  const streamedAuthoringSource = $("logic-streamed-source");
+  const streamedAuthoringNeighborhood = $("logic-streamed-neighborhood");
+  const streamedGateSummary = document.querySelector("[data-m21-gate-summary]");
+  const streamedCandidateGate = document.querySelector('[data-m21-gate="candidate-recalc"]');
+  const streamedRequirementsGate = document.querySelector('[data-m21-gate="requirements-doc"]');
+  const streamedCandidateGateText = $("logic-streamed-candidate-gate");
+  const streamedRequirementsGateText = $("logic-streamed-requirements-gate");
+  const streamedAuthoringFeedback = $("logic-streamed-feedback");
+  const streamedDocEditRequest = $("logic-streamed-doc-edit-request");
+  const streamedDocEditAuthorization = $("logic-streamed-doc-edit-authorization");
+  const streamedAuthoringStart = $("logic-streamed-start");
+  const streamedAuthoringConfirm = $("logic-streamed-confirm");
+  const streamedAuthoringRevise = $("logic-streamed-revise");
+  const streamedAuthoringHistory = $("logic-streamed-history");
   const annotationPopover = $("logic-annotation-popover");
   const annotationSubmitBar = $("logic-annotation-submit-bar");
   const selectedTargetLabel = $("logic-selected-target-label");
@@ -335,6 +380,32 @@
     }
   }
 
+  function loadStreamedAuthoringHistory() {
+    try {
+      const raw = window.localStorage.getItem(STREAMED_AUTHORING_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.decisions)
+        ? parsed.decisions.filter((item) => item && item.proposal_id && item.target_id)
+        : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveStreamedAuthoringHistory() {
+    const payload = {
+      kind: "ai-fantui-logic-builder-streamed-authoring-history",
+      version: 1,
+      updated_at: new Date().toISOString(),
+      truth_effect: "none",
+      controller_truth_modified: false,
+      decisions: state.streamedAuthoringHistory,
+    };
+    window.localStorage.setItem(STREAMED_AUTHORING_KEY, JSON.stringify(payload));
+    return payload;
+  }
+
   function annotationTargetLabel(type, id, fallback) {
     if (fallback) return fallback;
     if (type === "wire") return String(id || "").replace("->", " → ");
@@ -431,6 +502,365 @@
     });
   }
 
+  function activeStreamedAuthoringProposal() {
+    const session = state.streamedAuthoringSession;
+    return session && session.active_proposal ? session.active_proposal : null;
+  }
+
+  function streamedTargetLabel(proposal) {
+    if (!proposal) return "等待候选对象";
+    const typeLabel = proposal.target_type === "wire" ? "连线" : "节点";
+    const display = proposal.display_label || proposal.target_id || "candidate";
+    return `${typeLabel} ${display}`;
+  }
+
+  function streamedNeighborhoodText(proposal) {
+    if (!proposal) return "等待候选对象。";
+    const upstream = Array.isArray(proposal.upstream) && proposal.upstream.length
+      ? proposal.upstream.join(" / ")
+      : "无显式上游";
+    const downstream = Array.isArray(proposal.downstream) && proposal.downstream.length
+      ? proposal.downstream.join(" / ")
+      : "无显式下游";
+    return `上游：${upstream}；下游：${downstream}`;
+  }
+
+  function streamedGraphDiffSummary(graphDiff) {
+    const diff = graphDiff && typeof graphDiff === "object" ? graphDiff : {};
+    const operation = diff.operation || "candidate_edit";
+    const nodeCount = Array.isArray(diff.node_ids_added) ? diff.node_ids_added.length : 0;
+    const wireCount = Array.isArray(diff.wire_ids_added) ? diff.wire_ids_added.length : 0;
+    return `${operation} · +${nodeCount} 节点 / +${wireCount} 连线`;
+  }
+
+  function revisionFeedbackForProposal(proposal) {
+    return proposal && proposal.feedback_applied && typeof proposal.feedback_applied === "object"
+      ? proposal.feedback_applied
+      : null;
+  }
+
+  function syncStreamedRevisionReceipt(proposal) {
+    if (!streamedRevisionReceipt) return;
+    const feedbackApplied = revisionFeedbackForProposal(proposal);
+    const isRevisedCandidate = Boolean(
+      proposal
+      && proposal.revision_of
+      && proposal.proposal_status === "revised_proposal_ready"
+      && feedbackApplied
+    );
+    streamedRevisionReceipt.hidden = !isRevisedCandidate;
+    streamedRevisionReceipt.dataset.feedbackRevisionState = isRevisedCandidate ? "candidate-recomputed" : "idle";
+    streamedRevisionReceipt.dataset.revisionOf = isRevisedCandidate ? (proposal.revision_of || "") : "";
+    streamedRevisionReceipt.dataset.feedbackApplied = isRevisedCandidate ? "true" : "false";
+    if (streamedAuthoringPanel) {
+      streamedAuthoringPanel.dataset.revisionFlow = isRevisedCandidate ? "candidate-recomputed" : "idle";
+    }
+    if (streamedAuthoringCurrent) {
+      streamedAuthoringCurrent.dataset.feedbackRevisionState = isRevisedCandidate ? "candidate-recomputed" : "idle";
+      streamedAuthoringCurrent.dataset.revisionCandidate = isRevisedCandidate ? "ready" : "none";
+    }
+    if (streamedRevisionStatus) {
+      streamedRevisionStatus.textContent = isRevisedCandidate ? "反馈已重算候选" : "等待修改意见";
+    }
+    if (streamedRevisionFeedback) {
+      const feedbackText = feedbackApplied && feedbackApplied.feedback_text
+        ? feedbackApplied.feedback_text
+        : "反馈后会在这里显示重算依据。";
+      streamedRevisionFeedback.textContent = feedbackText;
+    }
+    if (streamedRevisionBoundary) {
+      streamedRevisionBoundary.textContent = "candidate graph only · truth_effect:none";
+    }
+    if (isRevisedCandidate && streamedAuthoringPanel) {
+      window.requestAnimationFrame(() => {
+        streamedAuthoringPanel.scrollTop = 0;
+      });
+    }
+  }
+
+  function syncStreamedAuthoringQueue(session, proposal) {
+    const queue = session && session.candidate_queue ? session.candidate_queue : null;
+    const status = queue ? (queue.status || "waiting") : "waiting";
+    if (streamedAuthoringPanel) {
+      streamedAuthoringPanel.dataset.candidateQueueStatus = status;
+      streamedAuthoringPanel.dataset.activeTargetKey = queue ? (queue.active_target_key || "") : "";
+      streamedAuthoringPanel.dataset.activeSequenceIndex = queue ? String(queue.active_sequence_index || 0) : "0";
+    }
+    if (streamedGateSummary) {
+      streamedGateSummary.dataset.candidateQueueStatus = status;
+      streamedGateSummary.dataset.activeTargetKey = queue ? (queue.active_target_key || "") : "";
+      streamedGateSummary.dataset.activeSequenceIndex = queue ? String(queue.active_sequence_index || 0) : "0";
+      streamedGateSummary.dataset.totalCandidateCount = queue ? String(queue.total_candidate_count || 0) : "0";
+      streamedGateSummary.dataset.acceptedCandidateCount = queue ? String(queue.accepted_count || 0) : "0";
+      streamedGateSummary.dataset.pendingCandidateCount = queue ? String(queue.pending_count || 0) : "0";
+    }
+    if (streamedAuthoringCurrent) {
+      streamedAuthoringCurrent.dataset.proposalId = proposal ? (proposal.id || "") : "";
+      streamedAuthoringCurrent.dataset.proposalStatus = proposal ? (proposal.proposal_status || "") : "";
+      streamedAuthoringCurrent.dataset.activeSequenceIndex = queue ? String(queue.active_sequence_index || 0) : "0";
+      streamedAuthoringCurrent.dataset.activeTargetKey = queue ? (queue.active_target_key || "") : "";
+    }
+    if (streamedAuthoringQueue) {
+      streamedAuthoringQueue.dataset.candidateQueueStatus = status;
+      streamedAuthoringQueue.dataset.activeTargetKey = queue ? (queue.active_target_key || "") : "";
+    }
+    if (streamedAuthoringQueueCount) {
+      const accepted = queue ? Number(queue.accepted_count || 0) : 0;
+      const total = queue ? Number(queue.total_candidate_count || 0) : 0;
+      const replay = queue ? Number(queue.replay_event_count || 0) : 0;
+      streamedAuthoringQueueCount.textContent = `${accepted}/${total} 已确认 · ${replay} 步回放`;
+    }
+    if (streamedAuthoringQueueNext) {
+      if (proposal && queue) {
+        const typeLabel = queue.next_candidate_kind === "wire" ? "下一连线" : "下一节点";
+        streamedAuthoringQueueNext.textContent = `${typeLabel} · ${queue.active_target_key || "候选"}`;
+      } else if (queue && queue.status === "candidate_queue_completed") {
+        streamedAuthoringQueueNext.textContent = "队列完成";
+      } else {
+        streamedAuthoringQueueNext.textContent = "等待下一候选";
+      }
+    }
+  }
+
+  function renderStreamedAuthoringHistory() {
+    if (!streamedAuthoringHistory) return;
+    streamedAuthoringHistory.innerHTML = "";
+    const replay = state.streamedAuthoringSession && Array.isArray(state.streamedAuthoringSession.stream_replay)
+      ? state.streamedAuthoringSession.stream_replay
+      : [];
+    if (replay.length) {
+      replay.forEach((event) => {
+        const li = document.createElement("li");
+        li.dataset.streamReplayEvent = event.event_type || "candidate_edit_event";
+        li.dataset.requirementsPatchStatus = event.requirements_document_patch_status || "not_requested";
+        const decision = event.event_type === "candidate_edit_committed" ? "已提交" : "已反馈重算";
+        const target = annotationTargetLabel(event.target_type, event.target_id, event.display_label);
+        const sourceExcerpt = event.source_excerpt ? ` · 来源：${String(event.source_excerpt).slice(0, 56)}` : "";
+        const recalculation = event.event_type === "candidate_edit_revision_requested"
+          ? ` · ${event.candidate_recalculation && event.candidate_recalculation.status ? event.candidate_recalculation.status : "revision_candidate_ready"}`
+          : "";
+        const patchHash = event.requirements_document_patch_sha256 ? ` · patch:${String(event.requirements_document_patch_sha256).slice(0, 8)}` : "";
+        const docGate = event.requirements_document_edit_requested
+          ? (event.requirements_document_edit_authorized ? " · 需求文档候选补丁已授权" : " · 需求文档补丁待授权")
+          : "";
+        li.textContent = `${decision} #${event.decision_index || "-"} · ${target} · ${streamedGraphDiffSummary(event.graph_diff)}${recalculation}${sourceExcerpt}${docGate}${patchHash}`;
+        streamedAuthoringHistory.appendChild(li);
+      });
+      return;
+    }
+    const items = state.streamedAuthoringHistory;
+    if (!items.length) {
+      streamedAuthoringHistory.innerHTML = "<li>尚未开始。</li>";
+      return;
+    }
+    for (const item of items) {
+      const li = document.createElement("li");
+      const decision = item.decision === "confirm" ? "已确认" : "已反馈";
+      const target = annotationTargetLabel(item.target_type, item.target_id, item.target_label);
+      const docGate = item.requirements_document_edit_requested
+        ? (item.requirements_document_edit_authorized ? " · 需求文档候选补丁已授权" : " · 需求文档补丁待授权")
+        : "";
+      li.textContent = `${decision} · ${target}${docGate}`;
+      streamedAuthoringHistory.appendChild(li);
+    }
+  }
+
+  function syncStreamedDocEditControls() {
+    if (!streamedDocEditRequest || !streamedDocEditAuthorization) return;
+    const enabled = streamedDocEditRequest.checked;
+    streamedDocEditAuthorization.disabled = !enabled;
+    if (!enabled) streamedDocEditAuthorization.value = "";
+  }
+
+  function syncStreamedAuthoringHighlight() {
+    const proposal = activeStreamedAuthoringProposal();
+    const targetType = proposal ? proposal.target_type : "";
+    const targetId = proposal ? proposal.target_id : "";
+    const mark = (element, matched) => {
+      element.classList.toggle("is-streamed-authoring-active", matched);
+      if (matched) element.dataset.streamedAuthoringActive = "true";
+      else delete element.dataset.streamedAuthoringActive;
+    };
+    if (nodeLayer) {
+      nodeLayer.querySelectorAll(".logic-node").forEach((element) => {
+        mark(element, targetType === "node" && element.dataset.nodeId === targetId);
+      });
+    }
+    if (!circuitSvg) return;
+    circuitSvg.querySelectorAll(".logic-circuit-node").forEach((element) => {
+      const matches = targetType === "node" && (
+        element.dataset.nodeId === targetId
+        || element.dataset.demoNodeId === targetId
+        || element.dataset.technicalId === targetId
+      );
+      mark(element, matches);
+    });
+    circuitSvg.querySelectorAll(".logic-circuit-wire").forEach((element) => {
+      const pairId = `${element.dataset.source || ""}->${element.dataset.target || ""}`;
+      const matches = targetType === "wire" && (
+        element.dataset.wireId === targetId
+        || pairId === targetId
+      );
+      mark(element, matches);
+    });
+    if (svg) {
+      svg.querySelectorAll(".logic-wire").forEach((element) => {
+        const pairId = `${element.dataset.source || ""}->${element.dataset.target || ""}`;
+        const matches = targetType === "wire" && (
+          element.dataset.wireId === targetId
+          || pairId === targetId
+        );
+        mark(element, matches);
+      });
+    }
+  }
+
+  function setStreamedAuthoringPanelVisibility(expanded) {
+    if (!streamedAuthoringPanel) return;
+    const isExpanded = Boolean(expanded);
+    streamedAuthoringPanel.hidden = !isExpanded;
+    streamedAuthoringPanel.dataset.panelVisibility = isExpanded ? "expanded" : "collapsed";
+    if (streamedPanelToggle) {
+      streamedPanelToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+      streamedPanelToggle.classList.toggle("is-expanded", isExpanded);
+      streamedPanelToggle.title = isExpanded ? "收起候选确认" : "候选确认";
+      streamedPanelToggle.setAttribute("aria-label", isExpanded ? "收起候选确认面板" : "打开候选确认面板");
+    }
+  }
+
+  function renderStreamedAuthoringSession(session) {
+    state.streamedAuthoringSession = session || null;
+    if (!streamedAuthoringPanel) return;
+    const proposal = activeStreamedAuthoringProposal();
+    const candidateQueue = session && session.candidate_queue ? session.candidate_queue : null;
+    const requirementsEdit = session && session.requirements_document_edit ? session.requirements_document_edit : null;
+    const committedCandidateGraph = session && session.committed_candidate_graph ? session.committed_candidate_graph : null;
+    const requirementsGateStatus = requirementsEdit && requirementsEdit.authorized
+      ? "authorized"
+      : (requirementsEdit && requirementsEdit.status === "authorization_required" ? "locked" : "locked");
+    syncStreamedRevisionReceipt(proposal);
+    if (streamedGateSummary) {
+      streamedGateSummary.dataset.requirementsDocumentEditStatus = requirementsEdit ? requirementsEdit.status : "not_requested";
+      streamedGateSummary.dataset.committedCandidateGraphStatus = committedCandidateGraph ? committedCandidateGraph.status : "empty";
+      streamedGateSummary.dataset.committedEditCount = committedCandidateGraph ? String(committedCandidateGraph.committed_edit_count || 0) : "0";
+    }
+    syncStreamedAuthoringQueue(session, proposal);
+    if (streamedCandidateGate) streamedCandidateGate.dataset.gateStatus = proposal ? "ready" : "waiting";
+    if (streamedRequirementsGate) streamedRequirementsGate.dataset.gateStatus = requirementsGateStatus;
+    if (streamedCandidateGateText) {
+      streamedCandidateGateText.textContent = proposal
+        ? "确认只记录当前节点/连线判断；填写反馈后只重算候选编辑。"
+        : "等待候选图纸后开始逐笔确认。";
+    }
+    if (streamedRequirementsGateText) {
+      if (requirementsEdit && requirementsEdit.authorized) {
+        streamedRequirementsGateText.textContent = "已授权：仅记录需求文档候选补丁，仍不会写入 controller.py。";
+      } else if (requirementsEdit && requirementsEdit.status === "authorization_required") {
+        streamedRequirementsGateText.textContent = "待授权：需求文档候选补丁已暂存，但不会自动修改原文。";
+      } else {
+        streamedRequirementsGateText.textContent = "未授权：不会自动修改需求文档，也不会写入 controller.py。";
+      }
+    }
+    streamedAuthoringPanel.dataset.state = proposal
+      ? "awaiting-confirmation"
+      : (session && session.status === "completed" ? "completed" : "waiting");
+    if (!session) {
+      streamedAuthoringPanel.dataset.naturalLanguageStepConfirmation = "waiting";
+      if (streamedAuthoringCurrent) {
+        streamedAuthoringCurrent.dataset.naturalLanguageConfirmation = "waiting";
+        delete streamedAuthoringCurrent.dataset.sourceExcerptPresent;
+      }
+      if (streamedAuthoringSource) {
+        delete streamedAuthoringSource.dataset.sourceHighlight;
+      }
+      if (streamedAuthoringExplanation) {
+        delete streamedAuthoringExplanation.dataset.logicHighlight;
+      }
+      if (streamedAuthoringNeighborhood) {
+        delete streamedAuthoringNeighborhood.dataset.wireLogicHighlight;
+      }
+      if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "等待候选图纸";
+      if (streamedAuthoringSequence) streamedAuthoringSequence.textContent = "--";
+      if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = "当前候选编辑";
+      if (streamedAuthoringExplanation) streamedAuthoringExplanation.textContent = "图纸生成后，模型会一次提出一个节点或连线候选。";
+      if (streamedAuthoringSource) streamedAuthoringSource.textContent = "等待来源片段。";
+      if (streamedAuthoringNeighborhood) streamedAuthoringNeighborhood.textContent = "等待候选对象。";
+      if (streamedAuthoringConfirm) streamedAuthoringConfirm.disabled = true;
+      if (streamedAuthoringRevise) streamedAuthoringRevise.disabled = true;
+      syncStreamedRevisionReceipt(null);
+      renderStreamedAuthoringHistory();
+      syncStreamedAuthoringHighlight();
+      return;
+    }
+    if (!proposal) {
+      streamedAuthoringPanel.dataset.naturalLanguageStepConfirmation = "completed";
+      if (streamedAuthoringCurrent) {
+        streamedAuthoringCurrent.dataset.naturalLanguageConfirmation = "completed";
+        delete streamedAuthoringCurrent.dataset.sourceExcerptPresent;
+      }
+      if (streamedAuthoringSource) {
+        delete streamedAuthoringSource.dataset.sourceHighlight;
+      }
+      if (streamedAuthoringExplanation) {
+        delete streamedAuthoringExplanation.dataset.logicHighlight;
+      }
+      if (streamedAuthoringNeighborhood) {
+        delete streamedAuthoringNeighborhood.dataset.wireLogicHighlight;
+      }
+      if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "候选编辑已全部确认";
+      if (streamedAuthoringSequence) streamedAuthoringSequence.textContent = `${state.streamedAuthoringHistory.length}/${session.proposal_count || 0}`;
+      if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = "流式建模完成";
+      if (streamedAuthoringExplanation) streamedAuthoringExplanation.textContent = "所有候选节点和连线都已有工程师决策记录。";
+      if (streamedAuthoringSource) streamedAuthoringSource.textContent = "未触发需求文档自动修改。";
+      if (streamedAuthoringNeighborhood) streamedAuthoringNeighborhood.textContent = "candidate graph only · truth_effect:none";
+      if (streamedAuthoringConfirm) streamedAuthoringConfirm.disabled = true;
+      if (streamedAuthoringRevise) streamedAuthoringRevise.disabled = true;
+      syncStreamedRevisionReceipt(null);
+      renderStreamedAuthoringHistory();
+      syncStreamedAuthoringHighlight();
+      return;
+    }
+    if (streamedAuthoringCurrent) {
+      streamedAuthoringCurrent.dataset.targetType = proposal.target_type || "";
+      streamedAuthoringCurrent.dataset.targetId = proposal.target_id || "";
+      streamedAuthoringCurrent.dataset.proposalId = proposal.id || "";
+      streamedAuthoringCurrent.dataset.proposalStatus = proposal.proposal_status || "";
+      streamedAuthoringCurrent.dataset.activeSequenceIndex = candidateQueue ? String(candidateQueue.active_sequence_index || 0) : String(proposal.sequence_index || 0);
+      streamedAuthoringCurrent.dataset.activeTargetKey = candidateQueue ? (candidateQueue.active_target_key || "") : "";
+      streamedAuthoringCurrent.dataset.naturalLanguageConfirmation = "candidate-awaiting-engineer-confirmation";
+      streamedAuthoringCurrent.dataset.sourceExcerptPresent = proposal.source_excerpt ? "true" : "false";
+    }
+    streamedAuthoringPanel.dataset.naturalLanguageStepConfirmation = "awaiting-engineer";
+    if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "等待工程师确认";
+    if (streamedAuthoringSequence) streamedAuthoringSequence.textContent = `#${proposal.sequence_index || 1}/${session.proposal_count || "?"}`;
+    if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = streamedTargetLabel(proposal);
+    if (streamedAuthoringExplanation) {
+      streamedAuthoringExplanation.textContent = proposal.interpreted_logic || proposal.confirmation_question_zh || "请确认模型对这一笔候选编辑的理解。";
+      streamedAuthoringExplanation.dataset.logicHighlight = "active";
+    }
+    if (streamedAuthoringSource) {
+      const anchorIds = Array.isArray(proposal.source_anchor_ids) && proposal.source_anchor_ids.length
+        ? ` · ${proposal.source_anchor_ids.join(" / ")}`
+        : "";
+      streamedAuthoringSource.textContent = `${proposal.source_excerpt || "来源片段待补齐"}${anchorIds}`;
+      streamedAuthoringSource.dataset.sourceHighlight = "active";
+    }
+    if (streamedAuthoringNeighborhood) {
+      streamedAuthoringNeighborhood.textContent = streamedNeighborhoodText(proposal);
+      streamedAuthoringNeighborhood.dataset.wireLogicHighlight = "active";
+    }
+    if (streamedAuthoringConfirm) {
+      streamedAuthoringConfirm.disabled = state.busy || state.streamedAuthoringInFlight || !proposal.requires_user_confirmation;
+      streamedAuthoringConfirm.textContent = proposal.revision_of ? "确认修订候选" : "确认候选，不写需求";
+    }
+    if (streamedAuthoringRevise) {
+      streamedAuthoringRevise.disabled = state.busy || state.streamedAuthoringInFlight || !proposal.requires_user_confirmation;
+      streamedAuthoringRevise.textContent = proposal.revision_of ? "继续修改候选" : "反馈后重算候选";
+    }
+    renderStreamedAuthoringHistory();
+    syncStreamedAuthoringHighlight();
+  }
+
   function markStreamChunksFailed() {
     if (!streamChunks) return;
     streamChunks.querySelectorAll(".stream-chunk").forEach((chunk) => {
@@ -441,6 +871,7 @@
   function renderReconstructionMode(payload, circuitView) {
     const hasCircuitView = Boolean(circuitView && circuitView.kind);
     if (reconstructionModePanel) {
+      reconstructionModePanel.hidden = false;
       reconstructionModePanel.dataset.mode = hasCircuitView ? "demo-reconstruction" : "concept";
     }
     if (reconstructionMode) {
@@ -557,6 +988,130 @@
     activateWorkbenchTab("none");
     closeCommandPalette();
     setActiveAuxPanel("none");
+  }
+
+  function applyLogicPresentationZoom() {
+    if (!canvas) return;
+    const zoom = clampNumber(state.presentationZoom || 1, 0.82, 1.22);
+    state.presentationZoom = zoom;
+    canvas.style.setProperty("--logic-presentation-zoom", zoom.toFixed(2));
+    if (presentationControls) presentationControls.dataset.zoom = zoom.toFixed(2);
+    if (state.presentationMode === "circuit-only") {
+      applyLogicPresentationLayout();
+    }
+  }
+
+  function setLogicPresentationZoom(nextZoom) {
+    state.presentationZoom = clampNumber(nextZoom, 0.82, 1.22);
+    applyLogicPresentationZoom();
+  }
+
+  function drawingContentBounds() {
+    const points = [];
+    if (nodeLayer) {
+      nodeLayer.querySelectorAll(".logic-node").forEach((element) => {
+        const left = Number.parseFloat(element.style.left || "0") || 0;
+        const top = Number.parseFloat(element.style.top || "0") || 0;
+        const width = Number.parseFloat(element.style.width || String(element.offsetWidth || 0)) || 0;
+        const height = Number.parseFloat(element.style.height || String(element.offsetHeight || 0)) || 0;
+        points.push([left, top], [left + width, top + height]);
+      });
+    }
+    if (svg) {
+      svg.querySelectorAll(".logic-wire").forEach((wire) => {
+        const raw = wire.getAttribute("points") || "";
+        raw.trim().split(/\s+/).forEach((pair) => {
+          const [x, y] = pair.split(",").map((value) => Number.parseFloat(value));
+          if (Number.isFinite(x) && Number.isFinite(y)) points.push([x, y]);
+        });
+      });
+    }
+    if (circuitSvg && !circuitSvg.hidden && typeof circuitSvg.getBBox === "function") {
+      try {
+        const box = circuitSvg.getBBox();
+        if (box && Number.isFinite(box.width) && box.width > 0 && box.height > 0) {
+          points.push([box.x, box.y], [box.x + box.width, box.y + box.height]);
+        }
+      } catch (_) {
+        // Some browsers throw when an SVG has no rendered children.
+      }
+    }
+    if (!points.length) return null;
+    const xs = points.map(([x]) => x);
+    const ys = points.map(([, y]) => y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    const maxX = Math.max(...xs);
+    const maxY = Math.max(...ys);
+    return {
+      minX,
+      minY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY),
+    };
+  }
+
+  function drawingLayers() {
+    return [circuitSvg, svg, nodeLayer, panelLayer].filter(Boolean);
+  }
+
+  function restoreWorkbenchDrawingLayout() {
+    const fitScale = Number.parseFloat(canvas && canvas.dataset.fitScale ? canvas.dataset.fitScale : "1") || 1;
+    drawingLayers().forEach((layer) => {
+      layer.style.transform = `scale(${fitScale})`;
+      layer.style.transformOrigin = "0 0";
+    });
+  }
+
+  function applyLogicPresentationLayout() {
+    if (!canvas) return;
+    const bounds = drawingContentBounds();
+    if (!bounds) {
+      restoreWorkbenchDrawingLayout();
+      return;
+    }
+    const viewportWidth = Math.max(640, window.innerWidth || canvas.clientWidth || 640);
+    const viewportHeight = Math.max(420, window.innerHeight || canvas.clientHeight || 420);
+    const baseScale = Math.min(
+      (viewportWidth - 220) / bounds.width,
+      (viewportHeight - 170) / bounds.height,
+    );
+    const scale = clampNumber(baseScale * (state.presentationZoom || 1), 0.58, 1.72);
+    const translateX = Math.round((viewportWidth - (bounds.width * scale)) / 2 - (bounds.minX * scale));
+    const translateY = Math.round((viewportHeight - (bounds.height * scale)) / 2 - (bounds.minY * scale));
+    canvas.dataset.presentationScale = scale.toFixed(3);
+    canvas.dataset.presentationOffsetX = String(translateX);
+    canvas.dataset.presentationOffsetY = String(translateY);
+    drawingLayers().forEach((layer) => {
+      layer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      layer.style.transformOrigin = "0 0";
+    });
+  }
+
+  function setLogicPresentationMode(enabled) {
+    const nextMode = enabled ? "circuit-only" : "workbench";
+    state.presentationMode = nextMode;
+    document.body.dataset.logicPresentationMode = nextMode;
+    if (logicShell) logicShell.dataset.presentationMode = nextMode;
+    if (canvas) canvas.dataset.presentationMode = nextMode;
+    if (presentationControls) {
+      presentationControls.hidden = !enabled;
+      presentationControls.dataset.presentationControls = enabled ? "visible" : "hidden";
+    }
+    if (logicPresentationModeToggle) {
+      logicPresentationModeToggle.setAttribute("aria-pressed", enabled ? "true" : "false");
+      logicPresentationModeToggle.setAttribute("aria-label", enabled ? "退出纯画布展示模式" : "进入纯画布展示模式");
+      logicPresentationModeToggle.title = enabled ? "退出纯画布" : "纯画布";
+    }
+    if (enabled) {
+      setStreamedAuthoringPanelVisibility(false);
+      closeAuxiliaryPanels();
+      applyLogicPresentationLayout();
+      if (canvas) canvas.focus({preventScroll: true});
+    } else {
+      restoreWorkbenchDrawingLayout();
+    }
+    applyLogicPresentationZoom();
   }
 
   function openCommandPalette() {
@@ -1427,6 +1982,7 @@
     regenerate.textContent = isBusy ? "绘制中..." : "检查：重新绘制";
     updateCircuitEvaluationControls();
     updateChangeControls();
+    renderStreamedAuthoringSession(state.streamedAuthoringSession);
   }
 
   function loadRequirementsPayload() {
@@ -1542,7 +2098,7 @@
     if (message) templateEntry.dataset.templateMessage = message;
     if (drawingStreamTimeline) drawingStreamTimeline.hidden = !hasDrawing;
     if (reconstructionModePanel) reconstructionModePanel.hidden = !hasDrawing;
-    if (annotationSubmitBar) annotationSubmitBar.hidden = !hasDrawing;
+    if (annotationSubmitBar) annotationSubmitBar.hidden = true;
   }
 
   function clearDrawingSurface() {
@@ -1885,6 +2441,9 @@
   }
 
   async function requestDrawingUpdate(interpretationPayload) {
+    if (!state.requirementsPayload) {
+      throw new Error("缺少原始需求上下文，请先从需求理解页进入。");
+    }
     if (!state.drawingPayload) {
       throw new Error("没有可更新的逻辑图纸。");
     }
@@ -1898,6 +2457,7 @@
       body: JSON.stringify({
         provider: provider.value,
         allow_fallback: provider.value !== "deepseek",
+        requirements_payload: state.requirementsPayload,
         drawing_payload: state.drawingPayload,
         interpretation_payload: confirmed,
       }),
@@ -1909,6 +2469,54 @@
       throw error;
     }
     return payload;
+  }
+
+  async function requestStreamedAuthoringProposal() {
+    if (!state.requirementsPayload) {
+      throw new Error("缺少原始需求上下文，请先从需求理解页进入。");
+    }
+    if (!state.drawingPayload) {
+      throw new Error("没有可确认的候选逻辑图纸。");
+    }
+    const response = await fetch(STREAMED_AUTHORING_PROPOSAL_API, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        requirements_payload: state.requirementsPayload,
+        drawing_payload: state.drawingPayload,
+        decision_history: state.streamedAuthoringHistory,
+        natural_language_prompt: state.streamedAuthoringLaunchPrompt,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      const error = new Error(safeUiError(payload, "流式候选生成失败，请保留当前图纸并重试。"));
+      error.payload = payload;
+      throw error;
+    }
+    return payload;
+  }
+
+  async function syncStreamedAuthoringProposal(options) {
+    const silent = options && options.silent;
+    if (!streamedAuthoringPanel) return;
+    if (!state.requirementsPayload || !state.drawingPayload) {
+      renderStreamedAuthoringSession(null);
+      return;
+    }
+    if (streamedAuthoringStatus && !silent) {
+      streamedAuthoringStatus.textContent = "正在读取下一笔候选编辑";
+    }
+    try {
+      const payload = await requestStreamedAuthoringProposal();
+      renderStreamedAuthoringSession(payload);
+    } catch (error) {
+      if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "候选编辑读取失败";
+      if (streamedAuthoringExplanation) streamedAuthoringExplanation.textContent = error.message || "请稍后重试。";
+      if (streamedAuthoringConfirm) streamedAuthoringConfirm.disabled = true;
+      if (streamedAuthoringRevise) streamedAuthoringRevise.disabled = true;
+      syncStreamedAuthoringHighlight();
+    }
   }
 
   function renderFlags(payload) {
@@ -2449,6 +3057,88 @@
     }
     renderCircuitBadges(view);
     applyCircuitProvenanceFilter();
+    syncStreamedAuthoringHighlight();
+  }
+
+  function renderDemoChainMarkers(targetSvg) {
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.id = "logic-demo-chain-arrow-idle";
+    marker.setAttribute("markerWidth", "7");
+    marker.setAttribute("markerHeight", "7");
+    marker.setAttribute("refX", "6");
+    marker.setAttribute("refY", "3.5");
+    marker.setAttribute("orient", "auto");
+    const arrow = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    arrow.setAttribute("d", "M0,0 L7,3.5 L0,7 Z");
+    arrow.setAttribute("fill", "var(--logic-demo-chain-muted)");
+    marker.appendChild(arrow);
+    defs.appendChild(marker);
+    targetSvg.appendChild(defs);
+  }
+
+  function normalizeRoutePoint(point) {
+    return {
+      x: Number(point && point.x) || 0,
+      y: Number(point && point.y) || 0,
+    };
+  }
+
+  function routePointKey(point) {
+    const normalized = normalizeRoutePoint(point);
+    return `${normalized.x}:${normalized.y}`;
+  }
+
+  function edgeJunctionPoints(edges) {
+    const bySource = new Map();
+    for (const edge of edges || []) {
+      const route = Array.isArray(edge.route) ? edge.route : [];
+      if (!edge.source || route.length < 2) continue;
+      if (!bySource.has(edge.source)) bySource.set(edge.source, []);
+      bySource.get(edge.source).push({ edge, route: route.map(normalizeRoutePoint) });
+    }
+    const junctions = new Map();
+    for (const [source, sourceEdges] of bySource.entries()) {
+      if (sourceEdges.length < 2) continue;
+      const sharedInterior = new Map();
+      for (const item of sourceEdges) {
+        const seenForEdge = new Set();
+        for (const point of item.route.slice(1, -1)) {
+          const key = routePointKey(point);
+          if (seenForEdge.has(key)) continue;
+          seenForEdge.add(key);
+          const entry = sharedInterior.get(key) || { source, point, count: 0 };
+          entry.count += 1;
+          sharedInterior.set(key, entry);
+        }
+      }
+      let addedSharedInterior = false;
+      for (const [key, entry] of sharedInterior.entries()) {
+        if (entry.count < 2) continue;
+        junctions.set(`${source}:${key}`, { source, point: entry.point });
+        addedSharedInterior = true;
+      }
+      if (addedSharedInterior) continue;
+      const firstPointKey = routePointKey(sourceEdges[0].route[0]);
+      const sharedStart = sourceEdges.every((item) => routePointKey(item.route[0]) === firstPointKey);
+      if (sharedStart) {
+        junctions.set(`${source}:${firstPointKey}`, { source, point: sourceEdges[0].route[0] });
+      }
+    }
+    return Array.from(junctions.values());
+  }
+
+  function renderEdgeJunctions(edges) {
+    for (const junction of edgeJunctionPoints(edges)) {
+      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      dot.classList.add("logic-junction");
+      dot.dataset.source = junction.source || "";
+      dot.dataset.junctionRole = "fanout";
+      dot.setAttribute("cx", String(junction.point.x));
+      dot.setAttribute("cy", String(junction.point.y));
+      dot.setAttribute("r", "3");
+      svg.appendChild(dot);
+    }
   }
 
   function renderEdges(payload, size) {
@@ -2456,35 +3146,35 @@
     svg.setAttribute("width", String(size.width));
     svg.setAttribute("height", String(size.height));
     svg.setAttribute("viewBox", `0 0 ${size.width} ${size.height}`);
+    renderDemoChainMarkers(svg);
     for (const edge of payload.edges || []) {
       const route = Array.isArray(edge.route) ? edge.route : [];
       if (route.length < 2) continue;
       const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      const edgeSource = edge.source || "";
+      const edgeTarget = edge.target || "";
+      polyline.classList.add("logic-wire");
+      polyline.dataset.wireId = `${edgeSource}->${edgeTarget}`;
+      polyline.dataset.source = edgeSource;
+      polyline.dataset.target = edgeTarget;
       polyline.setAttribute("points", route.map((point) => `${Number(point.x) || 0},${Number(point.y) || 0}`).join(" "));
       polyline.setAttribute("fill", "none");
-      polyline.setAttribute("stroke", "rgba(54,198,216,0.72)");
-      polyline.setAttribute("stroke-width", "2");
-      polyline.setAttribute("stroke-linecap", "round");
-      polyline.setAttribute("stroke-linejoin", "round");
+      polyline.setAttribute("stroke", "var(--logic-demo-chain-muted)");
+      polyline.setAttribute("stroke-width", "1.3");
+      polyline.setAttribute("stroke-linecap", "butt");
+      polyline.setAttribute("stroke-linejoin", "miter");
+      polyline.setAttribute("marker-end", "url(#logic-demo-chain-arrow-idle)");
+      const wireTitle = [edge.label, sourceAnchorLabel(anchorsForEdge(edge))]
+        .filter(Boolean)
+        .join(" · ");
+      if (wireTitle) {
+        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        title.textContent = wireTitle;
+        polyline.appendChild(title);
+      }
       svg.appendChild(polyline);
-
-      const end = route[route.length - 1];
-      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      dot.setAttribute("cx", String(Number(end.x) || 0));
-      dot.setAttribute("cy", String(Number(end.y) || 0));
-      dot.setAttribute("r", "3");
-      dot.setAttribute("fill", "rgba(25,210,143,0.9)");
-      svg.appendChild(dot);
-
-      const mid = route[Math.max(0, Math.floor(route.length / 2) - 1)];
-      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      label.setAttribute("x", String(Number(mid.x) || 0));
-      label.setAttribute("y", String((Number(mid.y) || 0) - 6));
-      label.setAttribute("fill", "rgba(216,228,242,0.76)");
-      label.setAttribute("font-size", "10");
-      label.textContent = sourceAnchorLabel(anchorsForEdge(edge));
-      svg.appendChild(label);
     }
+    renderEdgeJunctions(payload.edges || []);
   }
 
   function renderNodes(payload) {
@@ -2497,22 +3187,25 @@
       }
       element.dataset.nodeId = node.id || "";
       element.dataset.kind = node.node_kind || "logic";
+      element.dataset.defaultDetail = "hidden";
+      element.dataset.description = node.description_zh || "";
+      element.dataset.sourceAnchor = sourceAnchorLabel(anchorsForNode(node));
       element.style.left = `${Number(node.x) || 0}px`;
       element.style.top = `${Number(node.y) || 0}px`;
       element.style.width = `${Number(node.width) || 180}px`;
       element.style.height = `${Math.max(72, Number(node.height) || 104)}px`;
       const anchorTitle = sourceAnchorQuote(anchorsForNode(node));
-      if (anchorTitle) {
-        element.title = anchorTitle;
+      const hoverTitle = [node.label || node.id, node.description_zh, anchorTitle]
+        .filter(Boolean)
+        .join("\n");
+      if (hoverTitle) {
+        element.title = hoverTitle;
       }
       element.innerHTML = `
         <span class="logic-node-kind">${escapeText(node.node_kind || "logic")}</span>
         <div class="logic-node-title">
           <strong>${escapeText(node.label || node.id)}</strong>
-          <code>${escapeText(node.id)}</code>
         </div>
-        <div class="logic-node-desc">${escapeText(node.description_zh || "")}</div>
-        <div class="logic-node-anchor">来源：${escapeText(sourceAnchorLabel(anchorsForNode(node)))}</div>
       `;
       element.addEventListener("click", (event) => selectNode(node.id || "", event, element));
       nodeLayer.appendChild(element);
@@ -2749,6 +3442,7 @@
   function updateAnnotationControls() {
     const hasTarget = Boolean(state.selectedTargetId);
     const hasText = Boolean(nodeCommentText && nodeCommentText.value.trim());
+    if (annotationSubmitBar) annotationSubmitBar.hidden = !hasTarget && state.annotationDrafts.length === 0;
     if (annotationPopover) annotationPopover.hidden = !hasTarget;
     if (selectedTargetLabel) {
       selectedTargetLabel.textContent = annotationTargetLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
@@ -2780,6 +3474,7 @@
     updateAnnotationControls();
     renderObjectContextDrawer();
     updateAnnotationPopoverPosition();
+    syncStreamedAuthoringHighlight();
     if (nodeCommentText && state.selectedTargetId) nodeCommentText.focus();
   }
 
@@ -2871,11 +3566,77 @@
     }
   }
 
+  async function handleStreamedAuthoringDecision(decision) {
+    const proposal = activeStreamedAuthoringProposal();
+    if (state.streamedAuthoringInFlight) return;
+    if (!proposal) return;
+    const feedbackText = streamedAuthoringFeedback ? streamedAuthoringFeedback.value.trim() : "";
+    if (decision === "request_revision" && !feedbackText) {
+      if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "请先写下修正意见";
+      if (streamedAuthoringFeedback) streamedAuthoringFeedback.focus();
+      return;
+    }
+    const requirementsDocumentEditRequested = Boolean(
+      decision === "request_revision"
+      && streamedDocEditRequest
+      && streamedDocEditRequest.checked
+    );
+    const authorizationPhrase = streamedDocEditAuthorization ? streamedDocEditAuthorization.value.trim() : "";
+    const requirementsDocumentEditAuthorized = (
+      requirementsDocumentEditRequested
+      && authorizationPhrase === STREAMED_REQUIREMENTS_EDIT_AUTHORIZATION_PHRASE
+    );
+    state.streamedAuthoringInFlight = true;
+    renderStreamedAuthoringSession(state.streamedAuthoringSession);
+    try {
+      state.streamedAuthoringHistory.push({
+        proposal_id: proposal.id,
+        target_type: proposal.target_type,
+        target_id: proposal.target_id,
+        target_label: proposal.display_label || proposal.target_id || "",
+        decision,
+        feedback_text: decision === "request_revision" ? feedbackText : "",
+        natural_language_prompt: state.streamedAuthoringLaunchPrompt,
+        decided_at: new Date().toISOString(),
+        source_requirements_sha256: state.streamedAuthoringSession ? state.streamedAuthoringSession.source_requirements_sha256 : "",
+        source_drawing_sha256: state.streamedAuthoringSession ? state.streamedAuthoringSession.source_drawing_sha256 : "",
+        truth_effect: "none",
+        controller_truth_modified: false,
+        candidate_graph_only: true,
+        requirements_document_edit_requested: requirementsDocumentEditRequested,
+        requirements_document_edit_authorized: requirementsDocumentEditAuthorized,
+        requirements_document_authorization_phrase: requirementsDocumentEditRequested ? authorizationPhrase : "",
+        requirements_document_patch: requirementsDocumentEditRequested ? {
+          operation: "candidate_requirements_text_revision",
+          target: "requirements_document",
+          target_type: proposal.target_type,
+          target_id: proposal.target_id,
+          source_proposal_id: proposal.id,
+          proposed_text_zh: feedbackText,
+          truth_effect: "none",
+          controller_truth_modified: false,
+          requires_explicit_authorization: true,
+        } : null,
+      });
+      saveStreamedAuthoringHistory();
+      if (streamedAuthoringFeedback) streamedAuthoringFeedback.value = "";
+      if (streamedDocEditRequest) streamedDocEditRequest.checked = false;
+      syncStreamedDocEditControls();
+      renderStreamedAuthoringHistory();
+      await syncStreamedAuthoringProposal({silent: false});
+    } finally {
+      state.streamedAuthoringInFlight = false;
+      renderStreamedAuthoringSession(state.streamedAuthoringSession);
+    }
+  }
+
   function updateChangeControls() {
     const hasDraft = Boolean(state.drawingPayload);
     const hasRequirements = Boolean(state.requirementsPayload);
-    const hasText = Boolean(changeText.value.trim());
+    const naturalLanguageText = naturalLanguageInput ? naturalLanguageInput.value.trim() : "";
+    const hasText = Boolean(changeText.value.trim() || naturalLanguageText);
     submitChangeButton.disabled = state.busy || !hasDraft || !hasRequirements || !hasText;
+    if (naturalLanguageSend) naturalLanguageSend.disabled = state.busy || !hasDraft || !hasRequirements || !naturalLanguageText;
     confirmChangeButton.disabled = state.busy || !state.interpretationPayload || !hasDraft;
     faultNext.disabled = state.busy || !hasDraft;
     changeText.disabled = state.busy || !hasDraft || !hasRequirements;
@@ -3047,6 +3808,8 @@
     renderObjectContextDrawer();
     updateChangeControls();
     renderWorkflowOverview();
+    syncStreamedAuthoringHighlight();
+    void syncStreamedAuthoringProposal({silent: true});
   }
 
   async function generateDrawing() {
@@ -3059,9 +3822,12 @@
       setProgress(84, "生成布局", "模型已返回图纸草稿，正在按模型坐标渲染。", "layout");
       state.changeHistory = [];
       state.activeChangeId = "";
+      state.streamedAuthoringHistory = [];
       saveChangeHistory();
+      saveStreamedAuthoringHistory();
       window.localStorage.removeItem(FAULT_DRAFT_KEY);
       renderChangeHistory();
+      renderStreamedAuthoringSession(null);
       renderWorkflowOverview();
       renderDrawing(payload);
       setProgress(96, "渲染图纸", "节点、连线和参数面板已按模型输出绘制。", "render");
@@ -3103,6 +3869,44 @@
     }
   }
 
+  function canStartStreamedAuthoringFromNaturalLanguage() {
+    return Boolean(
+      streamedAuthoringPanel
+      && state.requirementsPayload
+      && state.drawingPayload
+    );
+  }
+
+  async function handleNaturalLanguageStreamedAuthoringSubmit(text) {
+    state.streamedAuthoringLaunchPrompt = text;
+    if (streamedAuthoringPanel) {
+      streamedAuthoringPanel.dataset.launchSource = "natural-language";
+      streamedAuthoringPanel.dataset.launchPromptPresent = text ? "true" : "false";
+      streamedAuthoringPanel.dataset.naturalLanguageStepConfirmation = "requesting-candidate";
+    }
+    if (streamedAuthoringCurrent) {
+      streamedAuthoringCurrent.dataset.naturalLanguageConfirmation = "requesting-candidate";
+    }
+    setStreamedAuthoringPanelVisibility(true);
+    if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "正在生成下一笔候选";
+    await syncStreamedAuthoringProposal({silent: false});
+  }
+
+  async function handleNaturalLanguageSubmit() {
+    if (!naturalLanguageInput || !changeText) return;
+    const text = naturalLanguageInput.value.trim();
+    if (!text || (naturalLanguageSend && naturalLanguageSend.disabled)) return;
+    naturalLanguageInput.value = "";
+    updateChangeControls();
+    if (canStartStreamedAuthoringFromNaturalLanguage()) {
+      await handleNaturalLanguageStreamedAuthoringSubmit(text);
+      return;
+    }
+    changeText.value = text;
+    updateChangeControls();
+    await submitChange();
+  }
+
   async function confirmChange() {
     if (!state.interpretationPayload) return;
     beginTask("更新逻辑图纸", "用户已确认修改意图，模型正在生成完整更新后的图纸。");
@@ -3136,9 +3940,11 @@
     state.requirementsPayload = loadRequirementsPayload();
     state.drawingPayload = loadDrawingPayload();
     state.changeHistory = loadChangeHistory();
+    state.streamedAuthoringHistory = loadStreamedAuthoringHistory();
     state.annotationDrafts = loadAnnotationBatch();
     renderInput(state.requirementsPayload);
     renderBurdenSummary(state.drawingPayload);
+    renderStreamedAuthoringSession(null);
     renderWorkflowOverview();
     if (state.requirementsPayload && state.drawingPayload && state.changeHistory.length) {
       beginTask("载入修改草稿", "正在读取上次保存的图纸和修改历史。");
@@ -3251,6 +4057,20 @@
   });
   changeText.addEventListener("input", updateChangeControls);
   if (nodeCommentText) nodeCommentText.addEventListener("input", updateAnnotationControls);
+  if (naturalLanguageInput) {
+    naturalLanguageInput.addEventListener("input", updateChangeControls);
+    naturalLanguageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void handleNaturalLanguageSubmit();
+      }
+    });
+  }
+  if (naturalLanguageSend) {
+    naturalLanguageSend.addEventListener("click", () => {
+      void handleNaturalLanguageSubmit();
+    });
+  }
   if (addAnnotationButton) addAnnotationButton.addEventListener("click", addAnnotationDraft);
   if (submitAnnotationsButton) submitAnnotationsButton.addEventListener("click", submitAnnotationBatch);
   if (batchConfirmUpdateButton) batchConfirmUpdateButton.addEventListener("click", confirmChange);
@@ -3259,6 +4079,46 @@
       if (batchInterpretationPanel) batchInterpretationPanel.hidden = true;
       if (nodeCommentText && state.selectedTargetId) nodeCommentText.focus();
     });
+  }
+  if (streamedAuthoringStart) {
+    streamedAuthoringStart.addEventListener("click", () => {
+      void syncStreamedAuthoringProposal({silent: false});
+    });
+  }
+  if (streamedAuthoringConfirm) {
+    streamedAuthoringConfirm.addEventListener("click", () => {
+      void handleStreamedAuthoringDecision("confirm");
+    });
+  }
+  if (streamedAuthoringRevise) {
+    streamedAuthoringRevise.addEventListener("click", () => {
+      void handleStreamedAuthoringDecision("request_revision");
+    });
+  }
+  if (streamedPanelToggle) {
+    streamedPanelToggle.addEventListener("click", () => {
+      setStreamedAuthoringPanelVisibility(streamedAuthoringPanel ? streamedAuthoringPanel.hidden : true);
+    });
+  }
+  if (logicPresentationModeToggle) {
+    logicPresentationModeToggle.addEventListener("click", () => {
+      setLogicPresentationMode(state.presentationMode !== "circuit-only");
+    });
+  }
+  if (presentationExit) {
+    presentationExit.addEventListener("click", () => setLogicPresentationMode(false));
+  }
+  if (presentationZoomOut) {
+    presentationZoomOut.addEventListener("click", () => setLogicPresentationZoom(state.presentationZoom - 0.08));
+  }
+  if (presentationZoomReset) {
+    presentationZoomReset.addEventListener("click", () => setLogicPresentationZoom(1));
+  }
+  if (presentationZoomIn) {
+    presentationZoomIn.addEventListener("click", () => setLogicPresentationZoom(state.presentationZoom + 0.08));
+  }
+  if (streamedDocEditRequest) {
+    streamedDocEditRequest.addEventListener("change", syncStreamedDocEditControls);
   }
   if (logicContextCommentShortcut) {
     logicContextCommentShortcut.addEventListener("click", () => {
@@ -3321,6 +4181,10 @@
       if (commandPalette && !commandPalette.hidden) closeCommandPalette();
       else openCommandPalette();
     } else if (event.key === "Escape") {
+      if (state.presentationMode === "circuit-only") {
+        setLogicPresentationMode(false);
+        return;
+      }
       closeCommandPalette();
     }
   });

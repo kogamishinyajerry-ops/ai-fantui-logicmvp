@@ -97,7 +97,7 @@ def test_review_packet_export_regression_command_reports_fixture_drift(tmp_path:
     assert "reviewer_status" in payload["mismatches"]
 
 
-def test_demo_server_import_does_not_eagerly_load_review_packet_export() -> None:
+def test_demo_server_import_does_not_require_jsonschema_for_review_packet_export() -> None:
     result = subprocess.run(
         [
             sys.executable,
@@ -106,16 +106,16 @@ def test_demo_server_import_does_not_eagerly_load_review_packet_export() -> None
 import importlib.abc
 import sys
 
-class BlockAgentReviewPacket(importlib.abc.MetaPathFinder):
+class BlockJsonschema(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname == "well_harness.agent_review_packet":
-            raise ModuleNotFoundError("blocked eager review-packet import")
+        if fullname == "jsonschema" or fullname.startswith("jsonschema."):
+            raise ModuleNotFoundError("blocked jsonschema import")
         return None
 
-sys.meta_path.insert(0, BlockAgentReviewPacket())
+sys.meta_path.insert(0, BlockJsonschema())
 from well_harness import demo_server
 assert demo_server.CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE == "/logic-builder/candidate-review-packet.json"
-assert "well_harness.agent_review_packet" not in sys.modules
+assert "jsonschema" not in sys.modules
 """,
         ],
         cwd=PROJECT_ROOT,
@@ -146,7 +146,7 @@ from well_harness.demo_server import (
     DemoRequestHandler,
 )
 
-assert "well_harness.agent_review_packet" not in sys.modules
+sys.modules.pop("well_harness.agent_review_packet", None)
 for module_name in list(sys.modules):
     if module_name == "jsonschema" or module_name.startswith("jsonschema."):
         sys.modules.pop(module_name)

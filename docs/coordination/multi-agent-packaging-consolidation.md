@@ -5,7 +5,7 @@ Status: M23 read-only PR boundary gate
 
 ## Purpose
 
-This package converts the accumulated multi-agent construction lane into an auditable PR packaging sequence. It does not stage, commit, push, merge, self-approve, or write to Notion.
+This package converts the accumulated multi-agent construction lane into an auditable PR packaging sequence. It does not stage, commit, push, merge, self-approve, or write to external planning systems.
 
 The package answers one question:
 
@@ -60,9 +60,9 @@ tools/run_gsd_validation_suite.py
 .planning/**
 ```
 
-## Notion Blocker
+## Control-Plane Boundary
 
-`notion-control-plane-404` remains an external control-plane blocker. This package must not change Notion configuration or rewrite the blocker as a local code failure.
+Repo/GitHub/local artifacts are the active control surfaces for this package. External planning systems are outside the blocking validation path.
 
 ## Verification
 
@@ -79,4 +79,4 @@ make multi-agent-packaging-consolidation
 make verify-multi-agent-packaging-consolidation
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `candidate-review-runtime-export`, `ultrawork-monitor`, `m22-operator-cockpit`, and `notion-control-plane-404` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `candidate-review-runtime-export`, `ultrawork-monitor`, `m22-operator-cockpit`, and `repo-github-local-artifacts` without desktop or mobile layout overflow.

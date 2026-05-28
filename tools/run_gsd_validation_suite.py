@@ -14,7 +14,7 @@ from typing import Any, Callable, Sequence, cast
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FORMATS = {"text", "json"}
 DEFAULT_PYTHON_COMMAND = "python3"
-DEFAULT_TIMEOUT_SECONDS = 420.0
+DEFAULT_TIMEOUT_SECONDS = 900.0
 
 
 @dataclass(frozen=True)

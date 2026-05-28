@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/streamed_logic_authoring_session_v1.schema.json",
+  "title": "Streamed Logic Authoring Session",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "status",
+    "m21_mode",
+    "truth_effect",
+    "candidate_state",
+    "certification_claim",
+    "controller_truth_modified",
+    "source_requirements_sha256",
+    "source_drawing_sha256",
+    "accepted_edit_ids",
+    "rejected_edit_ids",
+    "decision_history",
+    "stream_replay",
+    "committed_candidate_graph",
+    "candidate_queue",
+    "proposal_count",
+    "active_proposal",
+    "requirements_document_edit",
+    "non_claims"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/streamed_logic_authoring_session_v1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-streamed-logic-authoring-session"
+    },
+    "version": {
+      "const": 1
+    },
+    "status": {
+      "enum": ["awaiting_user_confirmation", "completed"]
+    },
+    "m21_mode": {
+      "const": "engineer_in_the_loop_streamed_authoring"
+    },
+    "truth_effect": {
+      "const": "none"
+    },
+    "candidate_state": {
+      "const": "streamed_logic_authoring_candidate"
+    },
+    "certification_claim": {
+      "const": "none"
+    },
+    "controller_truth_modified": {
+      "const": false
+    },
+    "source_requirements_sha256": {
+      "type": "string"
+    },
+    "source_drawing_sha256": {
+      "type": "string"
+    },
+    "accepted_edit_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "rejected_edit_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "decision_history": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "stream_replay": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "committed_candidate_graph": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "kind",
+        "version",
+        "status",
+        "committed_edit_count",
+        "truth_effect",
+        "controller_truth_modified",
+        "requirements_document_modified"
+      ],
+      "properties": {
+        "kind": {
+          "const": "ai-fantui-streamed-logic-authoring-committed-candidate-graph"
+        },
+        "version": {"const": 1},
+        "status": {
+          "enum": ["empty", "one_edit_committed", "multiple_edits_committed"]
+        },
+        "committed_edit_count": {"type": "integer", "minimum": 0},
+        "truth_effect": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "requirements_document_modified": {"const": false}
+      }
+    },
+    "candidate_queue": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "kind",
+        "version",
+        "status",
+        "total_candidate_count",
+        "accepted_count",
+        "pending_count",
+        "truth_effect",
+        "controller_truth_modified",
+        "requirements_document_modified"
+      ],
+      "properties": {
+        "kind": {
+          "const": "ai-fantui-streamed-logic-authoring-candidate-queue"
+        },
+        "version": {"const": 1},
+        "status": {
+          "enum": [
+            "candidate_queue_active",
+            "revision_candidate_ready",
+            "candidate_queue_completed"
+          ]
+        },
+        "total_candidate_count": {"type": "integer", "minimum": 0},
+        "accepted_count": {"type": "integer", "minimum": 0},
+        "pending_count": {"type": "integer", "minimum": 0},
+        "truth_effect": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "requirements_document_modified": {"const": false}
+      }
+    },
+    "proposal_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "active_proposal": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "kind",
+            "version",
+            "id",
+            "proposal_status",
+            "sequence_index",
+            "edit_type",
+            "target_type",
+            "target_id",
+            "graph_diff",
+            "requires_user_confirmation",
+            "revision_gate",
+            "recomputed_from"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ai-fantui-streamed-logic-authoring-proposal"
+            },
+            "version": {"const": 1},
+            "id": {"type": "string", "minLength": 1},
+            "proposal_status": {
+              "enum": ["candidate_proposal_ready", "revised_proposal_ready"]
+            },
+            "sequence_index": {"type": "integer", "minimum": 1},
+            "edit_type": {"type": "string", "minLength": 1},
+            "target_type": {"enum": ["node", "wire"]},
+            "target_id": {"type": "string", "minLength": 1},
+            "graph_diff": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["operation", "node_ids_added", "wire_ids_added", "truth_effect"],
+              "properties": {
+                "operation": {"type": "string", "minLength": 1},
+                "node_ids_added": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "wire_ids_added": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "truth_effect": {"const": "none"}
+              }
+            },
+            "requires_user_confirmation": {"const": true},
+            "revision_gate": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "status",
+                "truth_effect",
+                "controller_truth_modified",
+                "requires_engineer_confirmation"
+              ],
+              "properties": {
+                "status": {"type": "string"},
+                "truth_effect": {"const": "none"},
+                "controller_truth_modified": {"const": false},
+                "requires_engineer_confirmation": {"const": true}
+              }
+            },
+            "recomputed_from": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "source_requirements_sha256",
+                "source_drawing_sha256",
+                "decision_history_count"
+              ],
+              "properties": {
+                "source_requirements_sha256": {"type": "string"},
+                "source_drawing_sha256": {"type": "string"},
+                "decision_history_count": {"type": "integer", "minimum": 0}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "requirements_document_edit": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "requires_explicit_authorization",
+        "authorized",
+        "truth_effect",
+        "controller_truth_modified",
+        "requirements_document_modified",
+        "automatic_document_mutation",
+        "write_effect",
+        "authorization_gate",
+        "status"
+      ],
+      "properties": {
+        "requires_explicit_authorization": {"const": true},
+        "authorized": {"type": "boolean"},
+        "truth_effect": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "requirements_document_modified": {"const": false},
+        "automatic_document_mutation": {"const": false},
+        "write_effect": {"const": "none"},
+        "status": {
+          "enum": ["not_requested", "authorization_required", "authorized_candidate_patch"]
+        },
+        "authorization_gate": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["required_phrase", "status"],
+          "properties": {
+            "required_phrase": {"type": "string", "minLength": 1},
+            "status": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "non_claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string"}
+    }
+  }
+}

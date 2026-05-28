@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
-
 
 AGENT_OUTPUT_CONTRACT_SCHEMA_ID = (
     "https://well-harness.local/json_schema/agent_output_contract_v0_1.schema.json"
@@ -16,6 +14,19 @@ CANDIDATE_BOUNDARY = {
     "truth_effect": "none",
     "controller_truth_modified": False,
     "certification_claim": "none",
+}
+REQUIRED_AGENT_OUTPUT_FIELDS = {
+    "agent_name",
+    "task_id",
+    "input_artifacts",
+    "output_artifacts",
+    "assumptions",
+    "open_issues",
+    "confidence",
+    "validation",
+    "boundary",
+    "human_review_required",
+    "payload",
 }
 
 
@@ -95,6 +106,14 @@ def _load_schema() -> dict[str, Any]:
 
 
 def _schema_validate(payload: dict[str, Any]) -> None:
+    try:
+        import jsonschema
+    except ModuleNotFoundError as exc:
+        if exc.name not in {None, "jsonschema"}:
+            raise
+        _fallback_schema_validate(payload)
+        return
+
     schema = _load_schema()
     try:
         jsonschema.Draft202012Validator(schema).validate(payload)
@@ -104,6 +123,31 @@ def _schema_validate(payload: dict[str, Any]) -> None:
         raise AgentOutputContractError(
             f"agent output schema validation failed{location}: {exc.message}"
         ) from exc
+
+
+def _fallback_schema_validate(payload: dict[str, Any]) -> None:
+    """Runtime-safe structural checks used when optional jsonschema is absent."""
+    if payload.get("$schema") != AGENT_OUTPUT_CONTRACT_SCHEMA_ID:
+        raise AgentOutputContractError("agent output $schema is invalid")
+    agent_output = payload.get("agent_output")
+    if not isinstance(agent_output, dict):
+        raise AgentOutputContractError("agent_output must be an object")
+    missing = sorted(REQUIRED_AGENT_OUTPUT_FIELDS - set(agent_output))
+    if missing:
+        raise AgentOutputContractError(
+            f"agent_output missing required field(s): {', '.join(missing)}"
+        )
+    for field_name in ("input_artifacts", "output_artifacts", "assumptions", "open_issues"):
+        if not isinstance(agent_output.get(field_name), list):
+            raise AgentOutputContractError(f"agent_output.{field_name} must be a list")
+    if not isinstance(agent_output.get("confidence"), dict):
+        raise AgentOutputContractError("agent_output.confidence must be an object")
+    if not isinstance(agent_output.get("validation"), dict):
+        raise AgentOutputContractError("agent_output.validation must be an object")
+    if not isinstance(agent_output.get("boundary"), dict):
+        raise AgentOutputContractError("agent_output.boundary must be an object")
+    if not isinstance(agent_output.get("human_review_required"), bool):
+        raise AgentOutputContractError("agent_output.human_review_required must be a boolean")
 
 
 def _agent_output(payload: dict[str, Any]) -> dict[str, Any]:

@@ -31,6 +31,23 @@
   --fan-sticky-offset: 64px;  /* unified-nav (48px) + 16px gap */
 }
 
+html.is-codex-light-demo {
+  --fan-bg:          #f7f8fb;
+  --fan-panel:       #ffffff;
+  --fan-panel-hi:    #f9fafb;
+  --fan-border:      #d8dee8;
+  --fan-border-hi:   #cbd5e1;
+  --fan-text:        #111827;
+  --fan-text-dim:    #667085;
+  --fan-text-mute:   #98a2b3;
+  --fan-accent:      var(--cyan);
+  --fan-active:      var(--green);
+  --fan-warn:        var(--amber);
+  --fan-fail:        var(--red);
+  --fan-logic-bg:    #f2f4f7;
+  color-scheme: light;
+}
+
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
@@ -39,6 +56,31 @@ html, body {
   color: var(--fan-text);
   font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
   min-height: 100vh;
+}
+
+html.is-codex-light-demo .fan-header,
+html.is-codex-light-demo .fan-status-banner,
+html.is-codex-light-demo .fan-presets,
+html.is-codex-light-demo .fan-panel,
+html.is-codex-light-demo .fan-eng-ref,
+html.is-codex-light-demo .fan-footer {
+  border-radius: 6px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+html.is-codex-light-demo .fan-preset-btn:hover,
+html.is-codex-light-demo .fan-fault-row:hover {
+  background: #eff6ff;
+}
+
+html.is-codex-light-demo #fan-arr-idle path {
+  fill: #98a2b3;
+}
+html.is-codex-light-demo #fan-arr-active path {
+  fill: #0f9f6e;
+}
+html.is-codex-light-demo #fan-arr-fault path {
+  fill: #dc2626;
 }
 
 .fan-workstation {

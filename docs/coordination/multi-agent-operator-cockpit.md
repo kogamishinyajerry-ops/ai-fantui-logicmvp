@@ -11,10 +11,10 @@ This package gives the multi-agent construction lane one local operator cockpit.
 - UltraWork Monitor;
 - the five-agent active team cap;
 - queue/cursor health;
-- external Notion blocker classification;
+- repo/GitHub/local-artifact boundary state;
 - explicit dependency and pathspec boundaries.
 
-It is a read-only package. It does not activate M21 streamed-authoring implementation, edit controller truth, alter Notion configuration, or add a live server route.
+It is a read-only package. It does not activate M21 streamed-authoring implementation, edit controller truth, alter external planning configuration, or add a live server route.
 
 ## Local Entry
 
@@ -42,7 +42,7 @@ Allowed:
 
 - Generate JSON, Markdown, and static HTML cockpit artifacts.
 - Reuse existing project-manager status and UltraWork dashboard artifacts.
-- Keep Notion 404 as an external blocker.
+- Keep the control boundary on repo, GitHub, and local artifacts.
 - Keep M21 implementation explicitly owner-gated.
 
 Not allowed:
@@ -54,7 +54,7 @@ Not allowed:
 - Edit `src/well_harness/static/**`.
 - Edit `.planning/**`.
 - Stage `artifacts/**`.
-- Change Notion control-plane configuration.
+- Change external planning-control configuration.
 
 ## Pathspec Package
 
@@ -91,4 +91,4 @@ make multi-agent-operator-cockpit
 make verify-multi-agent-operator-cockpit
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`, `UltraWork Monitor`, `five_agent_context_cap`, `PackagingPRReadinessAgent`, `RUN-QUEUE-011`, and `notion-control-plane-404` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`, `UltraWork Monitor`, `five_agent_context_cap`, `PackagingPRReadinessAgent`, `RUN-QUEUE-011`, and `repo_github_local_artifacts` without desktop or mobile layout overflow.

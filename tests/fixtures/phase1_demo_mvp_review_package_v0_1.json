@@ -1,0 +1,126 @@
+{
+  "$schema": "https://well-harness.local/json_schema/phase1_demo_mvp_review_package_v0_1.schema.json",
+  "kind": "ai-fantui-phase1-demo-mvp-review-package",
+  "package_id": "phase1-demo-mvp-review-package-v0.1",
+  "status": "pass",
+  "generated_at": "2026-05-21T00:00:00Z",
+  "demo_surface": {
+    "route": "/demo-reconstruction",
+    "title": "demo.html 复刻 MVP 控制台",
+    "node_count": 20,
+    "wire_count": 23,
+    "preset_count": 5,
+    "status_output_count": 6,
+    "output_card_count": 4
+  },
+  "homepage_entry": {
+    "route": "/demo-reconstruction",
+    "element_id": "home-first-phase-demo-entry",
+    "priority": "first_phase_mvp",
+    "label": "demo.html 复刻 MVP 控制台"
+  },
+  "deterministic_gates": {
+    "demo_html_reconstruction_mvp": "pass",
+    "browser_acceptance": "pass",
+    "screenshots": "pass",
+    "markdown_report": "pass",
+    "boundary": "pass"
+  },
+  "artifact_paths": {
+    "package": "phase1_demo_mvp_review_package_v0_1.json",
+    "markdown_report": "phase1_demo_mvp_review_report.md",
+    "demo_gate_json": "demo_html_reconstruction_mvp_gate.json",
+    "browser_acceptance_json": "demo_html_reconstruction_browser_acceptance.json"
+  },
+  "demo_gate": {
+    "status": "pass",
+    "deterministic_gates": {
+      "golden_demo_contract": "pass",
+      "replica_surface_contract": "pass",
+      "homepage_entry": "pass",
+      "logic_builder_bridge": "pass",
+      "local_routes": "pass",
+      "boundary": "pass"
+    },
+    "observed": {
+      "golden_demo": {
+        "node_count": 20,
+        "wire_count": 23,
+        "preset_count": 5
+      },
+      "homepage_entry": {
+        "entry_present": true,
+        "route": "/demo-reconstruction",
+        "priority": "first_phase_mvp",
+        "label": "demo.html 复刻 MVP 控制台",
+        "appears_before_default_mode_grid": true
+      }
+    }
+  },
+  "browser_acceptance": {
+    "status": "pass",
+    "deterministic_gates": {
+      "browser_boot": "pass",
+      "screenshots": "pass",
+      "first_screen_operator_guide": "pass",
+      "node_wire_pixels": "pass",
+      "preset_interactions": "pass",
+      "hud_output_linkage": "pass",
+      "boundary": "pass"
+    },
+    "screenshots": {
+      "first_screen": "demo-reconstruction-mvp-first-screen.png",
+      "chain_svg": "demo-reconstruction-mvp-chain-svg.png",
+      "max_reverse": "demo-reconstruction-mvp-max-reverse.png",
+      "max_reverse_outputs": "demo-reconstruction-mvp-max-reverse-outputs.png",
+      "inhibit_block": "demo-reconstruction-mvp-inhibit-block.png",
+      "inhibit_block_outputs": "demo-reconstruction-mvp-inhibit-block-outputs.png"
+    },
+    "first_screen_review": {
+      "operator_guide_visible": true,
+      "console_frame_visible": true,
+      "evidence_rail_visible": true
+    },
+    "pixel_visibility": {
+      "chain_svg": {
+        "status": "pass",
+        "node_count": 20,
+        "wire_count": 23
+      }
+    },
+    "interactions": {
+      "max-reverse": {
+        "status_badge": "DEPLOYED",
+        "outputs": {
+          "thr_lock": "ON"
+        }
+      },
+      "inhibit-block": {
+        "status_badge": "FAULT",
+        "outputs": {
+          "thr_lock": "BLOCKED"
+        }
+      }
+    }
+  },
+  "residual_risks": [
+    {
+      "id": "PHASE1-RISK-001",
+      "severity": "medium",
+      "summary": "当前交付包证明 demo.html 复刻控制台可演示和可回归，不证明认证级控制律正确性。",
+      "mitigation": "后续阶段继续通过 approved-task shell、Safety/Evidence gates 和人工审查推进。"
+    }
+  ],
+  "non_certification_declaration": {
+    "certification_claim": "none",
+    "dal_claim": "none",
+    "production_readiness_claim": "none",
+    "controller_truth_promotion": "none"
+  },
+  "review_boundaries": {
+    "truth_effect": "none",
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "ui_layout_modified": false
+  }
+}

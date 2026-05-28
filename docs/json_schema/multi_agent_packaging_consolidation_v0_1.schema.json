@@ -130,7 +130,7 @@
     "pr_summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "body_sections", "notion_blocker_note"],
+      "required": ["title", "body_sections", "control_plane_note"],
       "properties": {
         "title": {
           "type": "string",
@@ -144,7 +144,7 @@
             "minLength": 1
           }
         },
-        "notion_blocker_note": {
+        "control_plane_note": {
           "type": "string",
           "minLength": 1
         }

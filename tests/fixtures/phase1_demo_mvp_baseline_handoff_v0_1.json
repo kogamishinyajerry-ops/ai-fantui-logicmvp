@@ -1,0 +1,58 @@
+{
+  "$schema": "https://well-harness.local/json_schema/phase1_demo_mvp_baseline_handoff_v0_1.schema.json",
+  "kind": "ai-fantui-phase1-demo-mvp-baseline-handoff",
+  "package_id": "phase1-demo-mvp-baseline-handoff-v0.1",
+  "status": "pass",
+  "milestone": {
+    "id": "M13",
+    "name": "Phase 1 Demo MVP Baseline Handoff",
+    "effort_unit": "施工队工时",
+    "claim": "demo-only baseline handoff"
+  },
+  "baseline_summary": {
+    "readiness_status": "ready_for_phase1_demo_review",
+    "canonical_reference": "demo.html",
+    "route": "/demo-reconstruction",
+    "node_count": 20,
+    "wire_count": 23,
+    "deliverable_claim": "stable demo MVP console baseline",
+    "non_claims": [
+      "no controller truth promotion",
+      "no certification claim",
+      "no production readiness claim"
+    ]
+  },
+  "artifact_contract": {
+    "artifact_name": "phase1-demo-mvp-review-package",
+    "machine_entry": "phase1_demo_mvp_gate_summary.json",
+    "gate_artifact_dir": "/tmp/ai-fantui-phase1-demo-mvp-gate"
+  },
+  "entrypoints": {
+    "local_gate": "make phase1-demo-mvp-gate",
+    "external_artifact_gate": "make verify-phase1-demo-mvp-gate-artifact",
+    "gate_summary_verifier": "scripts/verify_phase1_demo_mvp_gate_summary.py --format json --summary /tmp/ai-fantui-phase1-demo-mvp-gate/phase1_demo_mvp_gate_summary.json",
+    "release_summary_verifier": "scripts/verify_phase1_demo_mvp_release_summary.py --format json --summary /tmp/ai-fantui-phase1-demo-mvp-gate/phase1_demo_mvp_release_summary.json",
+    "focused_regression": "PYTHONPATH=src:. python3 -m pytest -q tests/test_phase1_demo_mvp_review_package.py"
+  },
+  "deterministic_gates": {
+    "gate_artifact_verification": "pass",
+    "artifact_contract": "pass",
+    "entrypoints": "pass",
+    "human_handoff_doc": "pass",
+    "boundary": "pass"
+  },
+  "review_boundaries": {
+    "truth_effect": "none",
+    "certification_claim": "none",
+    "dal_claim": "none",
+    "production_readiness_claim": "none",
+    "controller_truth_promotion": "none",
+    "controller_truth_modified": false,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "handoff_package": "/tmp/ai-fantui-phase1-demo-mvp-baseline-handoff/phase1_demo_mvp_baseline_handoff_v0_1.json",
+    "human_handoff_doc": "/tmp/ai-fantui-phase1-demo-mvp-baseline-handoff/phase1_demo_mvp_baseline_handoff.md"
+  },
+  "mismatches": []
+}

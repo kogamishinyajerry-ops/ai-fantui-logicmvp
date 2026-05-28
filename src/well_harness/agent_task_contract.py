@@ -6,8 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-import jsonschema
-
 
 AGENT_TASK_CONTRACT_SCHEMA_ID = (
     "https://well-harness.local/json_schema/agent_task_contract_v0_1.schema.json"
@@ -21,6 +19,31 @@ CHANGE_BOUNDARY = {
     "controller_truth_modified": False,
     "certification_claim": "none",
     "allowed_to_modify_controller_truth": False,
+}
+REQUIRED_TASK_PACKAGE_FIELDS = {"$schema", "kind", "chief_engineer", "tasks"}
+REQUIRED_CHIEF_ENGINEER_FIELDS = {
+    "agent_name",
+    "source_artifact_id",
+    "status",
+    "finding_counts",
+    "task_count",
+}
+REQUIRED_AGENT_TASK_FIELDS = {
+    "task_id",
+    "target_agent",
+    "task_type",
+    "priority",
+    "status",
+    "input_artifacts",
+    "allowed_files",
+    "forbidden_files",
+    "change_boundary",
+    "findings",
+    "instructions",
+    "done_when",
+    "stop_if",
+    "verification_commands",
+    "human_review_required",
 }
 ALLOWED_FILES = [
     "src/well_harness/agent_output_contract.py",
@@ -266,6 +289,14 @@ def _load_schema() -> dict[str, Any]:
 
 
 def _schema_validate(package: dict[str, Any]) -> None:
+    try:
+        import jsonschema
+    except ModuleNotFoundError as exc:
+        if exc.name not in {None, "jsonschema"}:
+            raise
+        _fallback_schema_validate(package)
+        return
+
     schema = _load_schema()
     try:
         jsonschema.Draft202012Validator(schema).validate(package)
@@ -279,6 +310,64 @@ def _schema_validate(package: dict[str, Any]) -> None:
         raise AgentTaskContractError(
             f"agent task schema validation failed{location}: {exc.message}"
         ) from exc
+
+
+def _missing_fields(value: dict[str, Any], required: set[str], label: str) -> None:
+    missing = sorted(required - set(value))
+    if missing:
+        raise AgentTaskContractError(f"{label} missing required field(s): {', '.join(missing)}")
+
+
+def _fallback_schema_validate(package: dict[str, Any]) -> None:
+    """Runtime-safe structural checks used when optional jsonschema is absent."""
+    if package.get("$schema") != AGENT_TASK_CONTRACT_SCHEMA_ID:
+        raise AgentTaskContractError("agent task package $schema is invalid")
+    if package.get("kind") != AGENT_TASK_PACKAGE_KIND:
+        raise AgentTaskContractError("agent task package kind is invalid")
+    _missing_fields(package, REQUIRED_TASK_PACKAGE_FIELDS, "agent task package")
+
+    chief = package.get("chief_engineer")
+    if not isinstance(chief, dict):
+        raise AgentTaskContractError("chief_engineer must be an object")
+    _missing_fields(chief, REQUIRED_CHIEF_ENGINEER_FIELDS, "chief_engineer")
+    if chief.get("agent_name") != "ChiefEngineerAgent":
+        raise AgentTaskContractError("chief_engineer.agent_name is invalid")
+
+    tasks = package.get("tasks")
+    if not isinstance(tasks, list):
+        raise AgentTaskContractError("tasks must be a list")
+    for index, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            raise AgentTaskContractError(f"tasks[{index}] must be an object")
+        _missing_fields(task, REQUIRED_AGENT_TASK_FIELDS, f"tasks[{index}]")
+        boundary = task.get("change_boundary")
+        if not isinstance(boundary, dict):
+            raise AgentTaskContractError(f"tasks[{index}].change_boundary must be an object")
+        for field_name, expected_value in CHANGE_BOUNDARY.items():
+            if boundary.get(field_name) != expected_value:
+                if field_name == "allowed_to_modify_controller_truth":
+                    raise AgentTaskContractError(
+                        "agent task may not authorize controller truth modification"
+                    )
+                raise AgentTaskContractError(
+                    f"tasks[{index}].change_boundary.{field_name} must be {expected_value!r}"
+                )
+        for field_name in (
+            "input_artifacts",
+            "allowed_files",
+            "forbidden_files",
+            "findings",
+            "instructions",
+            "done_when",
+            "stop_if",
+            "verification_commands",
+        ):
+            if not isinstance(task.get(field_name), list):
+                raise AgentTaskContractError(f"tasks[{index}].{field_name} must be a list")
+        if not isinstance(task.get("human_review_required"), bool):
+            raise AgentTaskContractError(
+                f"tasks[{index}].human_review_required must be a boolean"
+            )
 
 
 def _non_empty_text(value: Any, default: str) -> str:

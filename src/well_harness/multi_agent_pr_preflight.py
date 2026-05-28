@@ -18,7 +18,6 @@ PREFLIGHT_ID = "multi-agent-pr-preflight-v0.1"
 JSON_NAME = "multi_agent_pr_preflight_v0_1.json"
 MARKDOWN_NAME = "multi_agent_pr_preflight_v0_1.md"
 HTML_NAME = "multi_agent_pr_preflight_v0_1.html"
-NOTION_BLOCKER_ID = "notion-control-plane-404"
 M24_PACKAGE_ID = "m24-pr-preflight"
 M24_PATHSPECS = [
     "Makefile",
@@ -130,9 +129,9 @@ def _build_pr_body(
         "## Validation\n"
         "Run these commands in package order before commit/PR update:\n\n"
         f"{validation_lines}\n\n"
-        "## Notion external blocker\n"
-        "- `notion-control-plane-404` remains an external control-plane blocker.\n"
-        "- This PR does not change Notion configuration or reclassify the blocker as local code failure.\n\n"
+        "## Control-plane boundary\n"
+        "- Repo, GitHub, and local artifacts are the active control surfaces for this PR.\n"
+        "- No external planning surface is required for merge readiness in this lane.\n\n"
         "## Pathspec packaging boundary\n"
         "Stage only these generated package groups, in order:\n\n"
         f"{stage_lines}\n\n"
@@ -198,7 +197,7 @@ def build_multi_agent_pr_preflight(
                 "multi-agent-cursor-baseline-v0-2",
                 "ultrawork-monitor",
                 "m23-packaging-consolidation",
-                NOTION_BLOCKER_ID,
+                "repo-github-local-artifacts",
                 "git add -f --",
             ],
             "viewports": [
@@ -214,7 +213,7 @@ def build_multi_agent_pr_preflight(
                 stage_commands=stage_commands,
                 validation_plan=validation_plan,
             ),
-            "notion_blocker_note": packaging_payload["pr_summary"]["notion_blocker_note"],
+            "control_plane_note": packaging_payload["pr_summary"]["control_plane_note"],
         },
         "artifact_paths": {
             "preflight_json": "",
@@ -254,8 +253,8 @@ def render_multi_agent_pr_preflight_markdown(payload: dict[str, Any]) -> str:
         f"{stages}\n\n"
         "## Excluded Paths\n\n"
         f"{excluded}\n\n"
-        "## Notion Blocker\n\n"
-        f"- `{NOTION_BLOCKER_ID}` remains an external control-plane blocker.\n\n"
+        "## Control-Plane Boundary\n\n"
+        "- Repo, GitHub, and local artifacts are the active control surfaces.\n\n"
         "## PR Body\n\n"
         f"{payload['pr_body']['body']}\n"
     )
@@ -385,8 +384,8 @@ def render_multi_agent_pr_preflight_html(payload: dict[str, Any]) -> str:
       <ul>{gate_markers}</ul>
     </section>
     <section>
-      <h2>Notion Blocker</h2>
-      <p><code>{NOTION_BLOCKER_ID}</code> remains an external control-plane blocker.</p>
+      <h2>Control-Plane Boundary</h2>
+      <p><code>repo-github-local-artifacts</code> is the active control boundary for this PR.</p>
     </section>
     <section>
       <h2>PR Body</h2>

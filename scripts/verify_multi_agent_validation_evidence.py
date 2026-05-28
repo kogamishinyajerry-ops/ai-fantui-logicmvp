@@ -148,16 +148,15 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
         mismatches.append("classified_changed_pathspecs must include legacy agent module pathspecs")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     note = payload.get("pr_evidence_note", "")
-    for marker in ["21 validation commands passed", "notion-control-plane-404"]:
+    for marker in ["21 validation commands passed", "Repo, GitHub, and local artifacts"]:
         if marker not in note:
             mismatches.append(f"PR evidence note missing marker: {marker}")
 
@@ -177,9 +176,9 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             "multi-agent-cursor-baseline-v0-2-01",
             "m24-pr-preflight-03",
             "m25-validation-evidence",
+            "repo-github-local-artifacts",
             "Classified Changed Pathspecs",
             "src/well_harness/agent_*.py",
-            "notion-control-plane-404",
             "21 validation commands passed",
         ]:
             if marker not in html:

@@ -78,13 +78,7 @@ def _ultrawork_payload(tmp_path: Path) -> dict:
             "boundary": "pass",
             "local_gate": "pass",
         },
-        "blockers": [
-            {
-                "blocker_id": "notion-control-plane-404",
-                "status": "external_blocker",
-                "message": "Notion control-plane HTTP 404 remains outside this cockpit slice.",
-            }
-        ],
+        "blockers": [],
         "artifact_paths": {
             "dashboard_json": str(tmp_path / "ultrawork_monitor_dashboard_v0_1.json"),
             "dashboard_html": str(tmp_path / "ultrawork_monitor_dashboard_v0_1.html"),
@@ -135,7 +129,7 @@ def test_multi_agent_operator_cockpit_html_exposes_operator_views(tmp_path: Path
     assert "Project Manager Status" in html
     assert "UltraWork Monitor" in html
     assert "RUN-QUEUE-011" in html
-    assert "notion-control-plane-404" in html
+    assert "repo_github_local_artifacts" in html
     assert "src/well_harness/controller.py" in html
     assert "src/well_harness/demo_server.py" in html
 
@@ -222,6 +216,7 @@ def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
     assert "src/well_harness/static/**" in doc
     assert ".planning/**" in doc
     assert "artifacts/**" in doc
+    assert "repo/GitHub/local-artifact boundary" in doc
     assert "five-agent active team" in doc
     assert "M22" in mvp_doc
     assert "five-agent active team" in mvp_doc

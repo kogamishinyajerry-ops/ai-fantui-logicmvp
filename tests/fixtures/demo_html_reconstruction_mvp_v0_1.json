@@ -1,0 +1,92 @@
+{
+  "$schema": "https://well-harness.local/json_schema/demo_html_reconstruction_mvp_v0_1.schema.json",
+  "kind": "ai-fantui-demo-html-reconstruction-mvp",
+  "mvp_id": "demo-html-reconstruction-mvp-v0.1",
+  "status": "pass",
+  "golden_reference": {
+    "route": "/demo.html",
+    "path": "src/well_harness/static/demo.html",
+    "svg_id": "fan-chain-svg",
+    "source_role": "canonical_reverse_logic_cockpit_reference"
+  },
+  "replica_surface": {
+    "route": "/demo-reconstruction",
+    "path": "src/well_harness/static/demo_reconstruction/index.html",
+    "surface_role": "mvp_reconstruction_console_surface"
+  },
+  "homepage_entry": {
+    "route": "/demo-reconstruction",
+    "element_id": "home-first-phase-demo-entry",
+    "priority": "first_phase_mvp",
+    "label": "demo.html 复刻 MVP 控制台"
+  },
+  "contract": {
+    "expected_canvas": {
+      "width": 900,
+      "height": 400
+    },
+    "expected_node_count": 20,
+    "expected_wire_count": 23,
+    "expected_preset_count": 5,
+    "expected_status_output_count": 6,
+    "expected_output_card_count": 4,
+    "required_node_ids": [
+      "sw1",
+      "aircraft_on_ground",
+      "radio_altitude_ft",
+      "sw2",
+      "engine_running",
+      "n1k",
+      "eec_enable",
+      "reverser_inhibited",
+      "logic1",
+      "logic2",
+      "logic3",
+      "tls115",
+      "tls_unlocked",
+      "vdt90",
+      "etrac_540v",
+      "eec_deploy",
+      "pls_power",
+      "pdu_motor",
+      "logic4",
+      "thr_lock"
+    ],
+    "required_status_output_ids": [
+      "fan-hud-sw1",
+      "fan-hud-sw2",
+      "fan-hud-tls",
+      "fan-hud-vdt90",
+      "fan-hud-logic",
+      "fan-hud-thr-lock"
+    ],
+    "required_output_card_ids": [
+      "fan-out-tls115",
+      "fan-out-etrac",
+      "fan-out-eec",
+      "fan-out-thr"
+    ],
+    "required_preset_ids": [
+      "nominal-fwd",
+      "landing-deploy",
+      "max-reverse",
+      "stow-return",
+      "inhibit-block"
+    ]
+  },
+  "deterministic_gates": {
+    "golden_demo_contract": "pass",
+    "replica_surface_contract": "pass",
+    "homepage_entry": "pass",
+    "logic_builder_bridge": "pass",
+    "local_routes": "pass",
+    "boundary": "pass"
+  },
+  "observed": {},
+  "review_boundaries": {
+    "controller_truth_modified": false,
+    "ui_layout_modified": false,
+    "truth_effect": "none",
+    "certification_claim": "none"
+  }
+}
