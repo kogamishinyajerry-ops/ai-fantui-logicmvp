@@ -35,12 +35,13 @@ make verify-multi-agent-pr-preflight
 
 1. `multi-agent-cursor-baseline-v0-2`
 2. `project-manager-status`
-3. `ultrawork-monitor`
-4. `m22-operator-cockpit`
-5. `m23-packaging-consolidation`
-6. `m24-pr-preflight`
+3. `candidate-review-runtime-export`
+4. `ultrawork-monitor`
+5. `m22-operator-cockpit`
+6. `m23-packaging-consolidation`
+7. `m24-pr-preflight`
 
-The generated artifact contains 19 validation commands, 7 explicit stage commands, and the copy-ready PR body. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
+The generated artifact contains 21 validation commands, 8 explicit stage commands, and the copy-ready PR body. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
 
 ## Excluded Dirty Context
 
@@ -51,7 +52,6 @@ Do not stage these paths from this preflight package:
 artifacts/**
 src/well_harness/controller.py
 src/well_harness/runner.py
-src/well_harness/demo_server.py
 src/well_harness/requirements_intake/**
 src/well_harness/static/**
 tests/test_demo.py

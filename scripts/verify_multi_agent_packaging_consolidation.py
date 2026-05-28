@@ -17,10 +17,14 @@ SCHEMA_NAME = "multi_agent_packaging_consolidation_v0_1.schema.json"
 EXPECTED_ORDER = [
     "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
+    "candidate-review-runtime-export",
     "ultrawork-monitor",
     "m22-operator-cockpit",
     "m23-packaging-consolidation",
 ]
+ALLOWED_RUNTIME_PATHSPECS = {
+    "candidate-review-runtime-export": {"src/well_harness/demo_server.py"},
+}
 
 
 def _parse_args() -> argparse.Namespace:
@@ -90,18 +94,20 @@ def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, 
         for pathspec in package.get("pathspecs", []) + package.get("forced_pathspecs", []):
             if pathspec.startswith("artifacts/") or pathspec.startswith(".planning/"):
                 mismatches.append(f"{package.get('package_id')} includes excluded pathspec {pathspec}")
+            package_id = str(package.get("package_id", ""))
             if pathspec in {
                 "src/well_harness/controller.py",
                 "src/well_harness/runner.py",
-                "src/well_harness/demo_server.py",
-            }:
+            } or (
+                pathspec == "src/well_harness/demo_server.py"
+                and pathspec not in ALLOWED_RUNTIME_PATHSPECS.get(package_id, set())
+            ):
                 mismatches.append(f"{package.get('package_id')} includes protected pathspec {pathspec}")
 
     excluded = payload.get("excluded_paths", [])
     for required in [
         "artifacts/**",
         "src/well_harness/controller.py",
-        "src/well_harness/demo_server.py",
         "src/well_harness/static/**",
         ".planning/**",
     ]:
@@ -139,6 +145,7 @@ def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, 
         for marker in [
             "Multi-Agent Packaging Consolidation",
             "multi-agent-cursor-baseline-v0-2",
+            "candidate-review-runtime-export",
             "ultrawork-monitor",
             "m22-operator-cockpit",
             "repo-github-local-artifacts",

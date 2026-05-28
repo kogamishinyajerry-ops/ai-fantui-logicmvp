@@ -9,7 +9,7 @@ This package captures the M24 preflight validation plan as auditable command evi
 
 The packet answers three questions:
 
-1. Did the 19 validation commands actually run?
+1. Did the 21 validation commands actually run?
 2. Which commands passed or failed, with bounded output evidence?
 3. Which latest explicit pathspec commands should be used after evidence capture?
 
@@ -35,13 +35,14 @@ make verify-multi-agent-validation-evidence
 
 1. `multi-agent-cursor-baseline-v0-2`
 2. `project-manager-status`
-3. `ultrawork-monitor`
-4. `m22-operator-cockpit`
-5. `m23-packaging-consolidation`
-6. `m24-pr-preflight`
-7. `m25-validation-evidence`
+3. `candidate-review-runtime-export`
+4. `ultrawork-monitor`
+5. `m22-operator-cockpit`
+6. `m23-packaging-consolidation`
+7. `m24-pr-preflight`
+8. `m25-validation-evidence`
 
-The generated artifact contains 19 validation commands, 19 command results, 8 explicit stage commands, and a PR evidence note. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
+The generated artifact contains 21 validation commands, 21 command results, 9 explicit stage commands, and a PR evidence note. The UltraWork package keeps a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
 
 ## Excluded Dirty Context
 
@@ -52,7 +53,6 @@ Do not stage these paths from this evidence package:
 artifacts/**
 src/well_harness/controller.py
 src/well_harness/runner.py
-src/well_harness/demo_server.py
 src/well_harness/requirements_intake/**
 src/well_harness/static/**
 tests/test_demo.py
@@ -81,4 +81,4 @@ make multi-agent-validation-evidence
 make verify-multi-agent-validation-evidence
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Validation Evidence`, `multi-agent-cursor-baseline-v0-2-01`, `m24-pr-preflight-03`, `m25-validation-evidence`, `repo-github-local-artifacts`, and `19 validation commands passed` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Validation Evidence`, `multi-agent-cursor-baseline-v0-2-01`, `m24-pr-preflight-03`, `m25-validation-evidence`, `repo-github-local-artifacts`, and `21 validation commands passed` without desktop or mobile layout overflow.

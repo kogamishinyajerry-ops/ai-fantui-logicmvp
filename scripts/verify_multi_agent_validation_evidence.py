@@ -17,6 +17,7 @@ SCHEMA_NAME = "multi_agent_validation_evidence_v0_1.schema.json"
 EXPECTED_PACKAGES = [
     "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
+    "candidate-review-runtime-export",
     "ultrawork-monitor",
     "m22-operator-cockpit",
     "m23-packaging-consolidation",
@@ -84,10 +85,10 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
 
     validation_plan = payload.get("validation_plan", [])
     validation_results = payload.get("validation_results", [])
-    if len(validation_plan) != 19:
-        mismatches.append("validation_plan must contain 19 commands")
-    if len(validation_results) != 19:
-        mismatches.append("validation_results must contain 19 command results")
+    if len(validation_plan) != 21:
+        mismatches.append("validation_plan must contain 21 commands")
+    if len(validation_results) != 21:
+        mismatches.append("validation_results must contain 21 command results")
     plan_by_id = {
         item.get("command_id"): item
         for item in validation_plan
@@ -108,18 +109,18 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
 
     summary = payload.get("summary", {})
     if isinstance(summary, dict):
-        if summary.get("passed_command_count") != 19:
-            mismatches.append("passed_command_count must be 19")
+        if summary.get("passed_command_count") != 21:
+            mismatches.append("passed_command_count must be 21")
         if summary.get("failed_command_count") != 0:
             mismatches.append("failed_command_count must be 0")
-        if summary.get("stage_command_count") != 8:
-            mismatches.append("stage_command_count must be 8")
+        if summary.get("stage_command_count") != 9:
+            mismatches.append("stage_command_count must be 9")
     else:
         mismatches.append("summary must be an object")
 
     stage_commands = payload.get("stage_commands", [])
-    if len(stage_commands) != 8:
-        mismatches.append("stage_commands must contain 8 explicit commands")
+    if len(stage_commands) != 9:
+        mismatches.append("stage_commands must contain 9 explicit commands")
     if not any(isinstance(command, str) and "git add -f --" in command for command in stage_commands):
         mismatches.append("stage commands must include git add -f for ignored Claude agents")
     if not any(
@@ -130,7 +131,6 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
     protected_markers = [
         "src/well_harness/controller.py",
         "src/well_harness/runner.py",
-        "src/well_harness/demo_server.py",
         "src/well_harness/static/",
         "artifacts/",
         ".planning/",
@@ -152,7 +152,7 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
         mismatches.append("external planning blockers must not be recorded as active blockers")
 
     note = payload.get("pr_evidence_note", "")
-    for marker in ["19 validation commands passed", "Repo, GitHub, and local artifacts"]:
+    for marker in ["21 validation commands passed", "Repo, GitHub, and local artifacts"]:
         if marker not in note:
             mismatches.append(f"PR evidence note missing marker: {marker}")
 
@@ -173,7 +173,7 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             "m24-pr-preflight-03",
             "m25-validation-evidence",
             "repo-github-local-artifacts",
-            "19 validation commands passed",
+            "21 validation commands passed",
         ]:
             if marker not in html:
                 mismatches.append(f"evidence HTML missing marker: {marker}")

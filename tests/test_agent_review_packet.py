@@ -177,6 +177,19 @@ def test_candidate_review_packet_export_fallback_rejects_invalid_exporter_contra
         )
 
 
+def test_candidate_review_packet_export_fallback_rejects_human_review_mismatch() -> None:
+    review = _review_packet_module()
+    export_packet = _load_json(EXPORT_FIXTURE_PATH)
+    assert export_packet["review_packet"]["human_review_required"] is True
+    export_packet["human_review_required"] = False
+
+    with pytest.raises(review.CandidateReviewPacketError):
+        review._fallback_review_packet_export_validate(
+            export_packet,
+            "candidate review packet export",
+        )
+
+
 def test_review_packet_exposes_blocked_safety_chain_without_approval() -> None:
     review = _review_packet_module()
     packet = _logic_ir_packet()

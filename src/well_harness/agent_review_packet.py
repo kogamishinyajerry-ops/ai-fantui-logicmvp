@@ -207,6 +207,10 @@ def _fallback_review_packet_export_validate(packet: dict[str, Any], label: str) 
         raise CandidateReviewPacketError(f"{label} machine_readable must be true")
     if not isinstance(packet.get("human_review_required"), bool):
         raise CandidateReviewPacketError(f"{label} human_review_required must be a boolean")
+    if packet.get("human_review_required") is not review_packet.get("human_review_required"):
+        raise CandidateReviewPacketError(
+            f"{label} human_review_required must match embedded review packet"
+        )
 
 
 def _fallback_schema_validate(

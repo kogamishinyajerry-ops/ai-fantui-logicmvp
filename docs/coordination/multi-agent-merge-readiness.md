@@ -11,7 +11,7 @@ planning systems.
 
 The packet answers four questions:
 
-1. Did the 19 validation commands pass?
+1. Did the 21 validation commands pass?
 2. Did the status-surface browser geometry gate pass on desktop and mobile?
 3. Is PR #270 mergeable, and are there reviews/comments/checks to address?
 4. Is the repo/GitHub/local-artifact control boundary intact?
@@ -96,5 +96,5 @@ make verify-multi-agent-merge-readiness
 
 Browser gate: open the generated HTML and verify it shows `Multi-Agent Merge
 Readiness`, `five_agent_context_cap`, `PackagingPRReadinessAgent`,
-`RUN-QUEUE-011`, `19 validation commands passed`, `repo_github_local_artifacts`,
+`RUN-QUEUE-011`, `21 validation commands passed`, `repo_github_local_artifacts`,
 and `MERGEABLE` without desktop or mobile layout overflow.
