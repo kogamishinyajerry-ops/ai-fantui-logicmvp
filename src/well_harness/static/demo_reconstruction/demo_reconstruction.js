@@ -75,11 +75,17 @@
   const reviewObject = $("demo-reconstruction-review-object");
   const reviewSync = $("demo-reconstruction-review-sync");
   const reviewLink = $("demo-reconstruction-review-link");
+  const stepPlayback = $("demo-reconstruction-step-playback");
+  const playbackStepList = $("demo-reconstruction-playback-step-list");
+  const playbackActiveStep = $("demo-reconstruction-playback-active-step");
+  const playbackNodeCount = $("demo-reconstruction-playback-node-count");
+  const playbackWireCount = $("demo-reconstruction-playback-wire-count");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let traceSteps = [];
   let currentTraceStep = null;
   let selectedTraceIndex = -1;
   let currentCircuitFocus = {kind: "", id: ""};
+  let activePlaybackIndex = -1;
   let applyingReviewHashState = false;
 
   function readJson(value) {
@@ -256,6 +262,138 @@
     const hash = reviewHashForState();
     const suffix = hash ? `#${hash}` : "";
     reviewLink.href = `${window.location.pathname}${window.location.search}${suffix}`;
+  }
+
+  function cumulativeTraceContract(index) {
+    const safeIndex = Math.max(0, Math.min(traceSteps.length - 1, index));
+    const nodes = [];
+    const wires = [];
+    const seenNodes = new Set();
+    const seenWires = new Set();
+    traceSteps.slice(0, safeIndex + 1).forEach((step) => {
+      (step.node_ids || []).forEach((nodeId) => {
+        if (!seenNodes.has(nodeId)) {
+          seenNodes.add(nodeId);
+          nodes.push(nodeId);
+        }
+      });
+      (step.wire_ids || []).forEach((wireId) => {
+        if (!seenWires.has(wireId)) {
+          seenWires.add(wireId);
+          wires.push(wireId);
+        }
+      });
+    });
+    const step = traceSteps[safeIndex] || {};
+    return {
+      anchor: step.anchor || `S${safeIndex + 1}`,
+      title: step.title || "工作过程片段",
+      node_ids: nodes,
+      wire_ids: wires,
+      step_count: safeIndex + 1,
+    };
+  }
+
+  function setPlaybackButtonState(anchor) {
+    document.querySelectorAll("[data-playback-step]").forEach((button) => {
+      const selected = button.dataset.playbackStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function updateStepPlaybackSummary(contract) {
+    if (!contract) return;
+    setText(playbackActiveStep, contract.anchor);
+    setText(playbackNodeCount, `${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`);
+    setText(playbackWireCount, `${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`);
+    setPlaybackButtonState(contract.anchor);
+  }
+
+  function syncStepPlaybackToTrace(step) {
+    if (!step || !traceSteps.length) return;
+    const index = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
+    if (index < 0) return;
+    updateStepPlaybackSummary(cumulativeTraceContract(index));
+  }
+
+  function applyEmbeddedPlaybackHighlight(contract) {
+    if (!consoleFrame || !contract) return { nodeCount: 0, wireCount: 0, ready: false };
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument || !frameDocument.querySelector("#fan-chain-svg")) {
+      setText(embeddedHighlightStatus, "等待电路图同步");
+      updateKeyboardReviewStatus({
+        objectText: `累计构建 · ${contract.anchor}`,
+        syncText: "等待电路图同步",
+      });
+      return { nodeCount: 0, wireCount: 0, ready: false };
+    }
+    ensureEmbeddedTraceStyle(frameDocument);
+    frameDocument
+      .querySelectorAll("#fan-chain-svg [data-docx-trace-selected]")
+      .forEach((element) => element.removeAttribute("data-docx-trace-selected"));
+
+    let nodeCount = 0;
+    let wireCount = 0;
+    contract.node_ids.forEach((nodeId) => {
+      frameDocument
+        .querySelectorAll(`#fan-chain-svg [data-node="${nodeId}"]`)
+        .forEach((element) => {
+          element.setAttribute("data-docx-trace-selected", "true");
+          nodeCount += 1;
+        });
+    });
+    contract.wire_ids.forEach((wireId) => {
+      const selector = embeddedWireSelector(wireId);
+      if (!selector) return;
+      frameDocument.querySelectorAll(selector).forEach((element) => {
+        element.setAttribute("data-docx-trace-selected", "true");
+        wireCount += 1;
+      });
+    });
+    const status = `构建轨道已同步：${contract.anchor} · ${nodeCount}/${EXPECTED_NODE_COUNT} 节点 · ${wireCount}/${EXPECTED_WIRE_COUNT} 连线`;
+    setText(embeddedHighlightStatus, status);
+    updateKeyboardReviewStatus({
+      objectText: `累计构建 · ${contract.anchor} · ${nodeCount}/${EXPECTED_NODE_COUNT} 节点 · ${wireCount}/${EXPECTED_WIRE_COUNT} 连线`,
+      syncText: status,
+    });
+    return { nodeCount, wireCount, ready: true };
+  }
+
+  function applyStepPlayback(index) {
+    if (!traceSteps.length) return;
+    const safeIndex = Math.max(0, Math.min(traceSteps.length - 1, index));
+    const step = traceSteps[safeIndex];
+    activePlaybackIndex = safeIndex;
+    setSelectedTrace(step, {writeHash: false, keepPlaybackMode: true});
+    const contract = cumulativeTraceContract(safeIndex);
+    updateStepPlaybackSummary(contract);
+    applyEmbeddedPlaybackHighlight(contract);
+    writeReviewHashState();
+  }
+
+  function renderStepPlaybackRail(steps) {
+    if (!playbackStepList) return;
+    playbackStepList.innerHTML = "";
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-playback-button";
+      button.dataset.playbackStep = step.anchor;
+      button.setAttribute("aria-pressed", "false");
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor;
+      const count = document.createElement("span");
+      count.textContent = `${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      const title = document.createElement("small");
+      title.textContent = step.title || "工作过程片段";
+      button.append(anchor, count, title);
+      button.addEventListener("click", () => applyStepPlayback(index));
+      playbackStepList.appendChild(button);
+    });
+    if (steps.length) updateStepPlaybackSummary(cumulativeTraceContract(selectedTraceIndex >= 0 ? selectedTraceIndex : 0));
+    if (stepPlayback) stepPlayback.dataset.stepPlaybackReady = steps.length ? "true" : "false";
   }
 
   function writeReviewHashState() {
@@ -453,6 +591,7 @@
 
   function applyEmbeddedTraceFocus(kind, id) {
     if (!consoleFrame || !id) return { matchCount: 0, ready: false };
+    activePlaybackIndex = -1;
     markCircuitObjectFocus(kind, id);
     const frameDocument = consoleFrame.contentDocument;
     if (!frameDocument || !frameDocument.querySelector("#fan-chain-svg")) {
@@ -552,9 +691,11 @@
 
   function setSelectedTrace(step, options = {}) {
     if (!step || typeof step !== "object") return;
+    if (!options.keepPlaybackMode) activePlaybackIndex = -1;
     clearCircuitObjectFocus();
     currentTraceStep = step;
     selectedTraceIndex = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
+    syncStepPlaybackToTrace(step);
     document.querySelectorAll("[data-trace-card]").forEach((card) => {
       card.setAttribute("aria-pressed", card.dataset.traceAnchor === step.anchor ? "true" : "false");
     });
@@ -614,6 +755,7 @@
       traceCardList.appendChild(card);
     });
     setSelectedTrace(steps[0], {writeHash: false});
+    renderStepPlaybackRail(steps);
   }
 
   function renderSourceEntries(entries) {
@@ -755,6 +897,8 @@
     consoleFrame.addEventListener("load", () => {
       if (currentCircuitFocus.kind && currentCircuitFocus.id) {
         applyEmbeddedTraceFocus(currentCircuitFocus.kind, currentCircuitFocus.id);
+      } else if (activePlaybackIndex >= 0) {
+        applyEmbeddedPlaybackHighlight(cumulativeTraceContract(activePlaybackIndex));
       } else if (currentTraceStep) {
         applyEmbeddedTraceHighlight(currentTraceStep);
       }
