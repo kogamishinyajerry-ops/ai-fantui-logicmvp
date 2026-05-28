@@ -3,6 +3,7 @@
 
   const DRAWING_KEY = "ai-fantui-logic-builder-drawing-v1";
   const REPLAY_ENDPOINT = "/api/requirements-intake/deepseek-live-demo-replay";
+  const DOCX_SENTENCE_CIRCUIT_ENDPOINT = "/api/demo-reconstruction/docx-sentence-circuit-map";
   const EXPECTED_NODE_COUNT = 20;
   const EXPECTED_WIRE_COUNT = 23;
   const PRESETS = ["默认前向", "着陆展开", "最大反推", "收起回杆", "抑制阻塞"];
@@ -21,6 +22,15 @@
   const statusCell = $("demo-reconstruction-status-cell");
   const nodeList = $("demo-reconstruction-node-list");
   const wireList = $("demo-reconstruction-wire-list");
+  const docxSourcePath = $("demo-reconstruction-docx-source-path");
+  const docxCoverage = $("demo-reconstruction-docx-coverage");
+  const docxCircuitContract = $("demo-reconstruction-docx-circuit-contract");
+  const docxNodeCoverage = $("demo-reconstruction-docx-node-coverage");
+  const docxWireCoverage = $("demo-reconstruction-docx-wire-coverage");
+  const docxEntryCount = $("demo-reconstruction-docx-entry-count");
+  const docxSequenceCount = $("demo-reconstruction-docx-sequence-count");
+  const sourceEntryList = $("demo-reconstruction-source-entry-list");
+  const sequenceStepList = $("demo-reconstruction-sequence-step-list");
 
   function readJson(value) {
     try {
@@ -67,6 +77,115 @@
     return actual === expected ? "通过" : `需复核：${actual}/${expected} ${unit}`;
   }
 
+  function appendChipGroup(container, label, values, className) {
+    if (!container || !Array.isArray(values) || values.length === 0) return;
+    const group = document.createElement("div");
+    group.className = "demo-reconstruction-chip-group";
+    const caption = document.createElement("span");
+    caption.className = "demo-reconstruction-chip-caption";
+    caption.textContent = label;
+    group.appendChild(caption);
+    values.forEach((value) => {
+      const chip = document.createElement("span");
+      chip.className = `demo-reconstruction-chip ${className}`;
+      chip.textContent = value;
+      group.appendChild(chip);
+    });
+    container.appendChild(group);
+  }
+
+  function renderSourceEntries(entries) {
+    if (!sourceEntryList) return;
+    sourceEntryList.innerHTML = "";
+    if (!Array.isArray(entries) || entries.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "DOCX 逐句映射暂无数据";
+      sourceEntryList.appendChild(li);
+      return;
+    }
+    entries.forEach((entry) => {
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-source-entry";
+      li.dataset.sourceAnchor = entry.anchor || "";
+      const topLine = document.createElement("div");
+      topLine.className = "demo-reconstruction-entry-topline";
+      const anchor = document.createElement("strong");
+      anchor.textContent = entry.anchor || "source";
+      const role = document.createElement("span");
+      role.textContent = entry.role || "源文档条目";
+      topLine.appendChild(anchor);
+      topLine.appendChild(role);
+
+      const text = document.createElement("p");
+      text.textContent = entry.text || "";
+
+      const chips = document.createElement("div");
+      chips.className = "demo-reconstruction-entry-chips";
+      appendChipGroup(chips, "节点", entry.node_ids, "demo-reconstruction-node-chip");
+      appendChipGroup(chips, "连线", entry.wire_ids, "demo-reconstruction-wire-chip");
+
+      li.appendChild(topLine);
+      li.appendChild(text);
+      li.appendChild(chips);
+      sourceEntryList.appendChild(li);
+    });
+  }
+
+  function renderSequenceSteps(steps) {
+    if (!sequenceStepList) return;
+    sequenceStepList.innerHTML = "";
+    if (!Array.isArray(steps) || steps.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "P035 到 L1-L4 的链路拆解暂无数据";
+      sequenceStepList.appendChild(li);
+      return;
+    }
+    steps.forEach((step) => {
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-sequence-step";
+      li.dataset.sourceAnchor = step.anchor || "";
+      const title = document.createElement("strong");
+      title.textContent = `${step.anchor || "step"} · ${step.title || ""}`;
+      const text = document.createElement("p");
+      text.textContent = step.source_text || "";
+
+      const chips = document.createElement("div");
+      chips.className = "demo-reconstruction-entry-chips";
+      appendChipGroup(chips, "节点", step.node_ids, "demo-reconstruction-node-chip");
+      appendChipGroup(chips, "连线", step.wire_ids, "demo-reconstruction-wire-chip");
+      appendChipGroup(chips, "折叠谓词", step.folded_predicates, "demo-reconstruction-folded-chip");
+
+      li.appendChild(title);
+      li.appendChild(text);
+      li.appendChild(chips);
+      sequenceStepList.appendChild(li);
+    });
+  }
+
+  function renderDocxSentenceCircuitMap(payload) {
+    const source = payload && payload.source ? payload.source : {};
+    const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
+    const coverage = payload && payload.coverage ? payload.coverage : {};
+    const expectedNodes = Array.isArray(contract.node_ids) ? contract.node_ids.length : EXPECTED_NODE_COUNT;
+    const expectedWires = Array.isArray(contract.wire_ids) ? contract.wire_ids.length : EXPECTED_WIRE_COUNT;
+
+    setText(docxSourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
+    setText(
+      docxCoverage,
+      `${coverage.paragraph_count || source.paragraph_count || 0} 段 · ${source.table_count || 0} 表 · ${coverage.source_entry_count || 0} 条`,
+    );
+    setText(
+      docxCircuitContract,
+      `${contract.node_count || EXPECTED_NODE_COUNT}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_count || EXPECTED_WIRE_COUNT}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    setText(docxNodeCoverage, `${coverage.covered_node_count || 0}/${expectedNodes}`);
+    setText(docxWireCoverage, `${coverage.covered_wire_count || 0}/${expectedWires}`);
+    setText(docxEntryCount, `${coverage.source_entry_count || 0} 条源文档记录`);
+    setText(docxSequenceCount, `${coverage.sequence_step_count || 0} 步`);
+    renderSourceEntries(payload && payload.source_entries);
+    renderSequenceSteps(payload && payload.sequence_steps);
+  }
+
   function renderCircuit(circuit, sourceLabel) {
     const nodes = Array.isArray(circuit && circuit.nodes) ? circuit.nodes : [];
     const wires = Array.isArray(circuit && circuit.wires) ? circuit.wires : [];
@@ -99,7 +218,25 @@
     return circuitViewFromDrawing(payload && payload.drawing_payload);
   }
 
+  async function loadDocxSentenceCircuitMap() {
+    const response = await fetch(DOCX_SENTENCE_CIRCUIT_ENDPOINT, {headers: {"Accept": "application/json"}});
+    if (!response.ok) return null;
+    return response.json();
+  }
+
   async function boot() {
+    loadDocxSentenceCircuitMap()
+      .then((payload) => {
+        if (payload) {
+          renderDocxSentenceCircuitMap(payload);
+        } else {
+          renderSourceEntries([{anchor: "DOCX", role: "接口不可用", text: "未能读取原始 DOCX 映射接口", node_ids: [], wire_ids: []}]);
+        }
+      })
+      .catch(() => {
+        renderSourceEntries([{anchor: "DOCX", role: "接口异常", text: "原始 DOCX 映射接口返回异常，完整 demo 电路仍可查看。", node_ids: [], wire_ids: []}]);
+      });
+
     const stored = circuitViewFromDrawing(readJson(window.localStorage.getItem(DRAWING_KEY)));
     if (stored) {
       renderCircuit(stored, "读取本地复刻草稿");
