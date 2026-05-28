@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p11">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p11" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p12">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p12" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -274,6 +274,12 @@
           <strong id="demo-reconstruction-topology-summary">等待拓扑读回</strong>
         </div>
         <div id="demo-reconstruction-topology-readback" class="demo-reconstruction-topology-readback" aria-live="polite">等待连线聚焦</div>
+        <div class="demo-reconstruction-topology-controls" aria-label="拓扑审阅筛选">
+          <label for="demo-reconstruction-topology-search">检索连线</label>
+          <input id="demo-reconstruction-topology-search" type="search" autocomplete="off" placeholder="wire / L4 / THR_LOCK / P035-S05">
+          <div id="demo-reconstruction-topology-step-filter" class="demo-reconstruction-topology-step-filter" aria-label="按 P035 步骤筛选拓扑连线"></div>
+          <strong id="demo-reconstruction-topology-filter-status">23/23 连线</strong>
+        </div>
         <ol id="demo-reconstruction-topology-list" class="demo-reconstruction-topology-list">
           <li>正在读取完整电路拓扑</li>
         </ol>

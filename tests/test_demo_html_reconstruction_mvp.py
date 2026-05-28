@@ -170,6 +170,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-topology-matrix"' in html
     assert 'id="demo-reconstruction-topology-summary"' in html
     assert 'id="demo-reconstruction-topology-readback"' in html
+    assert 'id="demo-reconstruction-topology-search"' in html
+    assert 'id="demo-reconstruction-topology-step-filter"' in html
+    assert 'id="demo-reconstruction-topology-filter-status"' in html
     assert 'id="demo-reconstruction-topology-list"' in html
     assert 'id="demo-reconstruction-keyboard-review"' in html
     assert 'id="demo-reconstruction-review-anchor"' in html
@@ -274,6 +277,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderTopologyMatrix" in script
     assert "topologyWireIds" in script
     assert "updateTopologyReadback" in script
+    assert "renderTopologyStepFilter" in script
+    assert "updateTopologyFilter" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -306,6 +311,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-coverage-matrix" in stylesheet
     assert ".demo-reconstruction-coverage-tools" in stylesheet
     assert ".demo-reconstruction-topology-matrix" in stylesheet
+    assert ".demo-reconstruction-topology-controls" in stylesheet
+    assert ".demo-reconstruction-topology-step-filter" in stylesheet
     assert ".demo-reconstruction-topology-list" in stylesheet
     assert ".demo-reconstruction-topology-row" in stylesheet
     assert ".demo-reconstruction-keyboard-review" in stylesheet
@@ -495,6 +502,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["topology_focus_review"]["highlightedWireCount"] == 1
     assert "P035-S05" in payload["topology_focus_review"]["readbackText"]
     assert "wire_logic4_thr_lock" in payload["topology_focus_review"]["reviewObjectText"]
+    assert payload["topology_filter_review"]["query"] == "THR_LOCK"
+    assert "step=P035-S05" in payload["topology_filter_review"]["hash"]
+    assert "focus=" not in payload["topology_filter_review"]["hash"]
+    assert payload["topology_filter_review"]["selectedFilters"] == ["P035-S05"]
+    assert payload["topology_filter_review"]["visibleRows"] == ["wire_logic4_thr_lock"]
+    assert payload["topology_filter_review"]["selectedAnchor"] == "P035-S05"
+    assert "1/23" in payload["topology_filter_review"]["statusText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -655,6 +669,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_navigation": "pass",
         "assembly_map_readback": "pass",
         "topology_matrix_readback": "pass",
+        "topology_filter_workbench": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",
