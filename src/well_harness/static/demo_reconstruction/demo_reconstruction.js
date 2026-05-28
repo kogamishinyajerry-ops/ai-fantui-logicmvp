@@ -66,6 +66,9 @@
   const selectedWires = $("demo-reconstruction-selected-wires");
   const selectedFolded = $("demo-reconstruction-selected-folded");
   const embeddedHighlightStatus = $("demo-reconstruction-embedded-highlight-status");
+  const coverageContract = $("demo-reconstruction-coverage-contract");
+  const coverageNodeList = $("demo-reconstruction-coverage-node-list");
+  const coverageWireList = $("demo-reconstruction-coverage-wire-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let currentTraceStep = null;
 
@@ -258,6 +261,37 @@
     return { matchCount, ready: true };
   }
 
+  function renderCoverageButton(kind, id) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `demo-reconstruction-chip ${
+      kind === "wire" ? "demo-reconstruction-wire-chip" : "demo-reconstruction-node-chip"
+    }`;
+    button.dataset.circuitCoverageKind = kind;
+    button.dataset.circuitCoverageId = id;
+    button.textContent = id;
+    button.addEventListener("click", () => applyEmbeddedTraceFocus(kind, id));
+    return button;
+  }
+
+  function renderCoverageMatrix(payload) {
+    const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
+    const nodeIds = Array.isArray(contract.node_ids) ? contract.node_ids : [];
+    const wireIds = Array.isArray(contract.wire_ids) ? contract.wire_ids : [];
+    setText(
+      coverageContract,
+      `${nodeIds.length || contract.node_count || 0}/${EXPECTED_NODE_COUNT} 节点 · ${wireIds.length || contract.wire_count || 0}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    if (coverageNodeList) {
+      coverageNodeList.innerHTML = "";
+      nodeIds.forEach((nodeId) => coverageNodeList.appendChild(renderCoverageButton("node", nodeId)));
+    }
+    if (coverageWireList) {
+      coverageWireList.innerHTML = "";
+      wireIds.forEach((wireId) => coverageWireList.appendChild(renderCoverageButton("wire", wireId)));
+    }
+  }
+
   function setSelectedTrace(step) {
     if (!step || typeof step !== "object") return;
     currentTraceStep = step;
@@ -408,6 +442,7 @@
     setText(docxEntryCount, `${coverage.source_entry_count || 0} 条源文档记录`);
     setText(docxSequenceCount, `${coverage.sequence_step_count || 0} 步`);
     renderTraceBoard(payload);
+    renderCoverageMatrix(payload);
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
   }

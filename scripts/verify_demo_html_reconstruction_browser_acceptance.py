@@ -149,7 +149,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         return document.querySelectorAll("[data-trace-card]").length >= 5
                             && document.querySelectorAll(".demo-reconstruction-source-entry").length >= 10
-                            && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5;
+                            && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5
+                            && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
+                            && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23;
                     }""",
                     timeout=7000,
                 )
@@ -181,6 +183,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
                             selectedNodeChipCount: document.querySelectorAll("#demo-reconstruction-selected-nodes .demo-reconstruction-chip").length,
                             selectedWireChipCount: document.querySelectorAll("#demo-reconstruction-selected-wires .demo-reconstruction-chip").length,
+                            coverageNodeButtonCount: document.querySelectorAll("[data-circuit-coverage-kind='node']").length,
+                            coverageWireButtonCount: document.querySelectorAll("[data-circuit-coverage-kind='wire']").length,
+                            coverageContract: text("#demo-reconstruction-coverage-contract"),
                             nodeCoverage: text("#demo-reconstruction-docx-node-coverage"),
                             wireCoverage: text("#demo-reconstruction-docx-wire-coverage"),
                             traceContract: text("#demo-reconstruction-trace-contract"),
@@ -313,6 +318,72 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator(
+                    '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="thr_lock"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        if (!doc) return false;
+                        const nodes = doc.querySelectorAll(
+                            "#fan-chain-svg [data-docx-trace-selected='true'][data-node]"
+                        );
+                        const wires = doc.querySelectorAll(
+                            "#fan-chain-svg .chain-wire[data-docx-trace-selected='true']"
+                        );
+                        const status = document
+                            .querySelector("#demo-reconstruction-embedded-highlight-status")
+                            ?.textContent || "";
+                        return nodes.length === 1 && wires.length === 0 && status.includes("thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator(
+                    '[data-circuit-coverage-kind="wire"][data-circuit-coverage-id="wire_logic4_thr_lock"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        if (!doc) return false;
+                        const nodes = doc.querySelectorAll(
+                            "#fan-chain-svg [data-docx-trace-selected='true'][data-node]"
+                        );
+                        const wires = doc.querySelectorAll(
+                            "#fan-chain-svg .chain-wire[data-docx-trace-selected='true']"
+                        );
+                        const status = document
+                            .querySelector("#demo-reconstruction-embedded-highlight-status")
+                            ?.textContent || "";
+                        return nodes.length === 0
+                            && wires.length === 1
+                            && status.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                coverage_matrix_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            nodeButtonCount: document.querySelectorAll("[data-circuit-coverage-kind='node']").length,
+                            wireButtonCount: document.querySelectorAll("[data-circuit-coverage-kind='wire']").length,
+                            contractText: document
+                                .querySelector("#demo-reconstruction-coverage-contract")
+                                ?.textContent?.trim() || "",
+                            focusedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            focusedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            statusText: document
+                                .querySelector("#demo-reconstruction-embedded-highlight-status")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 desktop_geometry = page.evaluate(
                     """() => ({
                         viewportWidth: window.innerWidth,
@@ -419,6 +490,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             source_map_review["sourceEntryCount"] >= 10
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
+            and source_map_review["coverageNodeButtonCount"] == 20
+            and source_map_review["coverageWireButtonCount"] == 23
             and source_map_review["selectedNodeChipCount"] > 0
             and source_map_review["selectedWireChipCount"] > 0
             and source_map_review["nodeCoverage"] == "20/20"
@@ -447,6 +520,17 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and embedded_trace_chip_focus_review["focusedNodeCount"] == 0
             and embedded_trace_chip_focus_review["focusedWireCount"] == 1
             and "wire_logic4_thr_lock" in embedded_trace_chip_focus_review["statusText"]
+        )
+        else "fail",
+        "coverage_matrix_focus": "pass"
+        if (
+            coverage_matrix_review["nodeButtonCount"] == 20
+            and coverage_matrix_review["wireButtonCount"] == 23
+            and "20/20" in coverage_matrix_review["contractText"]
+            and "23/23" in coverage_matrix_review["contractText"]
+            and coverage_matrix_review["focusedNodeCount"] == 0
+            and coverage_matrix_review["focusedWireCount"] == 1
+            and "wire_logic4_thr_lock" in coverage_matrix_review["statusText"]
         )
         else "fail",
         "responsive_geometry": "pass"
@@ -497,6 +581,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
+        "coverage_matrix_review": coverage_matrix_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,
             "mobile": mobile_geometry,
@@ -566,6 +651,7 @@ def main(argv: list[str] | None = None) -> int:
                 "trace_selection_interaction": "fail",
                 "embedded_trace_highlight": "fail",
                 "embedded_trace_chip_focus": "fail",
+                "coverage_matrix_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",
                 "node_wire_pixels": "fail",

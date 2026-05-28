@@ -255,6 +255,59 @@ h2 { margin-bottom: 0; font-size: 18px; }
   padding: 8px 10px;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-coverage-matrix {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.demo-reconstruction-coverage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.demo-reconstruction-coverage-head h3 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 15px;
+}
+.demo-reconstruction-coverage-head p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.demo-reconstruction-coverage-head strong {
+  min-width: 160px;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-align: right;
+}
+.demo-reconstruction-coverage-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+}
+.demo-reconstruction-coverage-grid section {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.demo-reconstruction-coverage-grid section > strong {
+  color: #111827;
+  font-size: 12px;
+}
+.demo-reconstruction-coverage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
 .demo-reconstruction-source-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
@@ -493,6 +546,8 @@ button.demo-reconstruction-chip:focus-visible {
   .demo-reconstruction-source-layout,
   .demo-reconstruction-trace-head,
   .demo-reconstruction-trace-grid,
+  .demo-reconstruction-coverage-head,
+  .demo-reconstruction-coverage-grid,
   .demo-reconstruction-console-stage {
     grid-template-columns: 1fr;
   }
@@ -513,6 +568,13 @@ button.demo-reconstruction-chip:focus-visible {
     display: grid;
   }
   .demo-reconstruction-trace-head strong {
+    min-width: 0;
+    text-align: left;
+  }
+  .demo-reconstruction-coverage-head {
+    display: grid;
+  }
+  .demo-reconstruction-coverage-head strong {
     min-width: 0;
     text-align: left;
   }

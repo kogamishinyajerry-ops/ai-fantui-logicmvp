@@ -158,6 +158,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-trace-card-list"' in html
     assert 'id="demo-reconstruction-selected-trace"' in html
     assert 'id="demo-reconstruction-embedded-highlight-status"' in html
+    assert 'id="demo-reconstruction-coverage-matrix"' in html
+    assert 'id="demo-reconstruction-coverage-node-list"' in html
+    assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
@@ -175,6 +178,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "TRACE_WIRE_ENDPOINTS" in script
     assert "applyEmbeddedTraceHighlight" in script
     assert "applyEmbeddedTraceFocus" in script
+    assert "renderCoverageMatrix" in script
+    assert "circuitCoverageKind" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
@@ -183,6 +188,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-trace-board" in stylesheet
     assert ".demo-reconstruction-trace-card" in stylesheet
     assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
+    assert ".demo-reconstruction-coverage-matrix" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -282,6 +288,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["sequenceStepCount"] == 5
     assert payload["source_map_review"]["traceCardCount"] == 5
+    assert payload["source_map_review"]["coverageNodeButtonCount"] == 20
+    assert payload["source_map_review"]["coverageWireButtonCount"] == 23
     assert payload["source_map_review"]["selectedNodeChipCount"] > 0
     assert payload["source_map_review"]["selectedWireChipCount"] > 0
     assert payload["source_map_review"]["nodeCoverage"] == "20/20"
@@ -300,6 +308,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["embedded_trace_chip_focus_review"]["focusedNodeCount"] == 0
     assert payload["embedded_trace_chip_focus_review"]["focusedWireCount"] == 1
     assert "wire_logic4_thr_lock" in payload["embedded_trace_chip_focus_review"]["statusText"]
+    assert payload["coverage_matrix_review"]["nodeButtonCount"] == 20
+    assert payload["coverage_matrix_review"]["wireButtonCount"] == 23
+    assert "20/20" in payload["coverage_matrix_review"]["contractText"]
+    assert "23/23" in payload["coverage_matrix_review"]["contractText"]
+    assert payload["coverage_matrix_review"]["focusedNodeCount"] == 0
+    assert payload["coverage_matrix_review"]["focusedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["coverage_matrix_review"]["statusText"]
     assert payload["responsive_geometry"]["desktop"]["noHorizontalOverflow"] is True
     assert payload["responsive_geometry"]["mobile"]["noHorizontalOverflow"] is True
     assert payload["embedded_palette"]["html_class"] is True
@@ -319,6 +334,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",
+        "coverage_matrix_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
         "node_wire_pixels": "pass",
