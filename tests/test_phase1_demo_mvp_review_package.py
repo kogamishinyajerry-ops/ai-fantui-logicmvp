@@ -648,11 +648,14 @@ def test_phase1_demo_mvp_gate_is_the_ci_entrypoint_after_standalone_demo_preflig
     workflow = GSD_AUTOMATION_WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "pip install -e '.[dev,e2e]'" in workflow
-    assert "AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: main" in workflow
+    assert (
+        "AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: "
+        "${{ github.event_name == 'push' && github.event.before || 'main' }}"
+    ) in workflow
     assert workflow.index("validation:") < workflow.index(
-        "AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: main"
+        "AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF:"
     )
-    assert workflow.index("AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: main") < workflow.index(
+    assert workflow.index("github.event.before") < workflow.index(
         "Run Phase 1 demo MVP gate"
     )
     assert "Install Playwright Chromium" in workflow

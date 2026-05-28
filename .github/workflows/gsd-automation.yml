@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: read
     env:
-      AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: main
+      AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: ${{ github.event_name == 'push' && github.event.before || 'main' }}
       PYTHONPATH: src
     steps:
       - name: Check out repository
