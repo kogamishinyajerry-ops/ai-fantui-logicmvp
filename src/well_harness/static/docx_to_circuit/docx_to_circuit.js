@@ -31,6 +31,12 @@
 
   const LOGIC_IDS = ["logic1", "logic2", "logic3", "logic4"];
   const TRACE_KIND_LABELS = {node: "节点", wire: "线束"};
+  const WORKBENCH_SECTION_ANCHORS = [
+    "docx-circuit-source-index-panel",
+    "docx-circuit-review-panel",
+    "docx-circuit-demo-panel",
+    "docx-circuit-review-packet-preview",
+  ];
   const DEMO_SCENARIOS = {
     "P035-S01": {
       label: "L1 / TLS 解锁",
@@ -109,6 +115,7 @@
   const sourceIndexLevel = $("docx-circuit-source-index-level");
   const sourceIndexClear = $("docx-circuit-source-index-clear");
   const sourceIndexList = $("docx-circuit-source-index-list");
+  const workbenchBar = $("docx-circuit-workbench-bar");
   const activeAnchor = $("docx-circuit-active-anchor");
   const reviewPanel = $("docx-circuit-review-panel");
   const prevStepButton = $("docx-circuit-prev-step");
@@ -144,6 +151,7 @@
   let currentAnchor = DEFAULT_STEP_ANCHOR;
   let selectedElement = {kind: "wire", id: "wire_logic4_thr_lock"};
   let activeSourceEntryAnchor = "";
+  let pendingWorkbenchSectionAnchor = "";
 
   function setText(element, value) {
     if (element) element.textContent = value;
@@ -242,6 +250,19 @@
     return new URLSearchParams(hash);
   }
 
+  function normalizedWorkbenchSectionAnchor(value) {
+    const anchor = String(value || "").replace(/^#/, "");
+    return WORKBENCH_SECTION_ANCHORS.includes(anchor) ? anchor : "";
+  }
+
+  function scrollToWorkbenchSection(anchor) {
+    const sectionAnchor = normalizedWorkbenchSectionAnchor(anchor);
+    if (!sectionAnchor) return;
+    const target = document.getElementById(sectionAnchor);
+    if (!target) return;
+    window.requestAnimationFrame(() => target.scrollIntoView({block: "start", behavior: "auto"}));
+  }
+
   function hasReviewHashParams(params) {
     return ["step", "el", "source", "q", "level"].some((key) => params.has(key));
   }
@@ -261,6 +282,7 @@
     if (sourceIndexSearch && query !== null) sourceIndexSearch.value = query;
     const level = params.get("level");
     if (sourceIndexLevel && validSourceIndexLevel(level)) sourceIndexLevel.value = level;
+    pendingWorkbenchSectionAnchor = normalizedWorkbenchSectionAnchor(params.get("section"));
     return true;
   }
 
@@ -273,6 +295,8 @@
     if (state && state.query) params.set("q", state.query);
     const level = state && state.level ? state.level : "all";
     if (level !== "all") params.set("level", level);
+    const section = normalizedWorkbenchSectionAnchor(state && state.sectionAnchor);
+    if (section) params.set("section", section);
     return `#${params.toString()}`;
   }
 
@@ -284,6 +308,7 @@
       sourceEntryAnchor: activeSourceEntryAnchor,
       query: sourceIndexRawQuery(),
       level: sourceIndexLevelValue(),
+      sectionAnchor: pendingWorkbenchSectionAnchor,
     });
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
@@ -293,6 +318,31 @@
   function currentReviewUrl() {
     writeReviewHash();
     return window.location.href;
+  }
+
+  function writeWorkbenchSectionHash(sectionAnchor) {
+    if (!currentPayload) return;
+    const nextHash = reviewHashForState({
+      stepAnchor: currentAnchor,
+      element: selectedElement,
+      sourceEntryAnchor: activeSourceEntryAnchor,
+      query: sourceIndexRawQuery(),
+      level: sourceIndexLevelValue(),
+      sectionAnchor,
+    });
+    window.history.pushState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
+  }
+
+  function handleWorkbenchAnchorClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const link = target ? target.closest("a[href^='#']") : null;
+    if (!link || !workbenchBar || !workbenchBar.contains(link)) return;
+    const sectionAnchor = normalizedWorkbenchSectionAnchor(link.getAttribute("href"));
+    if (!sectionAnchor) return;
+    event.preventDefault();
+    pendingWorkbenchSectionAnchor = sectionAnchor;
+    writeWorkbenchSectionHash(sectionAnchor);
+    scrollToWorkbenchSection(sectionAnchor);
   }
 
   function sourceEntryReviewUrl(entry) {
@@ -1075,6 +1125,7 @@
     activateStep(currentAnchor, activeSourceEntryAnchor ? {sourceEntryAnchor: activeSourceEntryAnchor} : undefined);
     selectCircuitElement(selectedElement.kind, selectedElement.id);
     if (activeSourceEntryAnchor) setSourceIndexState(activeSourceEntryAnchor);
+    scrollToWorkbenchSection(pendingWorkbenchSectionAnchor);
   }
 
   function renderPayload(payload) {
@@ -1084,6 +1135,7 @@
     currentPayload = payload;
     applyReviewHashState();
     const restoredSourceEntryAnchor = activeSourceEntryAnchor;
+    const restoredSectionAnchor = pendingWorkbenchSectionAnchor;
     setText(sourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
     setText(
       sourceCount,
@@ -1100,6 +1152,7 @@
     activateStep(currentAnchor, restoredSourceEntryAnchor ? {sourceEntryAnchor: restoredSourceEntryAnchor} : undefined);
     selectCircuitElement(selectedElement.kind, selectedElement.id);
     if (restoredSourceEntryAnchor) setSourceIndexState(restoredSourceEntryAnchor);
+    scrollToWorkbenchSection(restoredSectionAnchor);
   }
 
   async function boot() {
@@ -1127,6 +1180,7 @@
   if (copyTracePacketButton) copyTracePacketButton.addEventListener("click", copyTracePacket);
   if (copyReviewLinkButton) copyReviewLinkButton.addEventListener("click", copyReviewLink);
   if (showSourceEntryButton) showSourceEntryButton.addEventListener("click", focusActiveSourceEntry);
+  if (workbenchBar) workbenchBar.addEventListener("click", handleWorkbenchAnchorClick);
   if (sourceIndexSearch) {
     sourceIndexSearch.addEventListener("input", () => {
       renderSourceIndex(sourceEntries());

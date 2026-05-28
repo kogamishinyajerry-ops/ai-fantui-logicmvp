@@ -312,6 +312,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     review_packet_preview_path = artifact_dir / f"docx-to-circuit-review-packet-preview-{stamp}.png"
     source_entry_path = artifact_dir / f"docx-to-circuit-source-entry-link-{stamp}.png"
     workbench_anchor_path = artifact_dir / f"docx-to-circuit-workbench-anchor-{stamp}.png"
+    workbench_anchor_reopen_path = artifact_dir / f"docx-to-circuit-workbench-anchor-reopen-{stamp}.png"
     requirements_official_docx_path = artifact_dir / f"requirements-official-docx-link-{stamp}.png"
     logic_template_query_path = artifact_dir / f"logic-template-query-link-{stamp}.png"
     responsive_paths = {
@@ -324,6 +325,8 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     requirements_official_docx_state: dict[str, Any] = {}
     logic_template_query_state: dict[str, Any] = {}
     workbench_anchor_state: dict[str, Any] = {}
+    workbench_anchor_reopen_state: dict[str, Any] = {}
+    workbench_anchor_url = ""
 
     server, thread, base_url = _start_server()
     current_link = f"{base_url}/docx-to-circuit#step=P035-S01&el=node%3Asw1&q=SW1&level=L1"
@@ -401,11 +404,20 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 source_state = _page_state(source_page)
                 source_page.locator('#docx-circuit-workbench-bar a[href="#docx-circuit-demo-panel"]').click()
                 source_page.wait_for_function(
-                    """() => window.location.hash === "#docx-circuit-demo-panel" """,
+                    """() => window.location.hash.includes("section=docx-circuit-demo-panel") """,
                     timeout=7000,
                 )
                 workbench_anchor_state = _page_state(source_page)
+                workbench_anchor_url = source_page.url
                 source_page.screenshot(path=str(workbench_anchor_path), full_page=True)
+                workbench_anchor_reopen_page = context.new_page()
+                workbench_anchor_reopen_page.goto(workbench_anchor_url, wait_until="networkidle")
+                workbench_anchor_reopen_state = _page_state(workbench_anchor_reopen_page)
+                workbench_anchor_reopen_page.screenshot(
+                    path=str(workbench_anchor_reopen_path),
+                    full_page=True,
+                )
+                workbench_anchor_reopen_page.close()
                 source_page.locator("#docx-circuit-show-source-entry").click()
                 source_focus_state = _page_state(source_page)
                 source_page.screenshot(path=str(source_entry_path), full_page=True)
@@ -457,6 +469,11 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     }
     current_params = _hash_params(copied_current)
     source_params = _hash_params(copied_source_entry)
+    workbench_anchor_params = _hash_params(workbench_anchor_url)
+    workbench_anchor_expected = {
+        **source_expected,
+        "hash": "#step=P035-S01&el=node%3Asw1&source=P004&q=SW1&level=L1&section=docx-circuit-demo-panel",
+    }
     gates = {
         "browser_boot": "pass" if not console_errors else "fail",
         "current_review_link": "pass"
@@ -499,12 +516,17 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         if _logic_template_query_state_matches(logic_template_query_state)
         else "fail",
         "workbench_anchor_preserves_review_state": "pass"
-        if _state_matches(
-            workbench_anchor_state,
-            {
-                **source_expected,
-                "hash": "#docx-circuit-demo-panel",
-            },
+        if (
+            workbench_anchor_params == {
+                "step": "P035-S01",
+                "el": "node:sw1",
+                "source": "P004",
+                "q": "SW1",
+                "level": "L1",
+                "section": "docx-circuit-demo-panel",
+            }
+            and _state_matches(workbench_anchor_state, workbench_anchor_expected)
+            and _state_matches(workbench_anchor_reopen_state, workbench_anchor_expected)
         )
         else "fail",
         "screenshots": "pass"
@@ -515,6 +537,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 review_packet_preview_path,
                 source_entry_path,
                 workbench_anchor_path,
+                workbench_anchor_reopen_path,
                 requirements_official_docx_path,
                 logic_template_query_path,
                 *responsive_paths.values(),
@@ -543,6 +566,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "copied_urls": {
             "current_review": copied_current,
             "source_entry": copied_source_entry,
+            "workbench_anchor": workbench_anchor_url,
         },
         "review_packet": {
             "format": "markdown_with_json",
@@ -557,6 +581,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             "source_entry": source_state,
             "source_entry_locator": source_focus_state,
             "workbench_anchor": workbench_anchor_state,
+            "workbench_anchor_reopen": workbench_anchor_reopen_state,
         },
         "responsive_states": responsive_states,
         "screenshots": {
@@ -564,6 +589,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             "review_packet_preview": str(review_packet_preview_path),
             "source_entry": str(source_entry_path),
             "workbench_anchor": str(workbench_anchor_path),
+            "workbench_anchor_reopen": str(workbench_anchor_reopen_path),
             "requirements_official_docx": str(requirements_official_docx_path),
             "logic_template_query": str(logic_template_query_path),
             "responsive": {

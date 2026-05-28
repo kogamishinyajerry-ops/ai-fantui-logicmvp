@@ -6412,9 +6412,13 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function filteredSourceEntries" in script
     assert "function sourceEntryLevels" in script
     assert "function sourceIndexQuery" in script
+    assert "WORKBENCH_SECTION_ANCHORS" in script
     assert "function hasReviewHashParams" in script
+    assert "function normalizedWorkbenchSectionAnchor" in script
     assert "function applyReviewHashState" in script
     assert "function writeReviewHash" in script
+    assert "function writeWorkbenchSectionHash" in script
+    assert "function handleWorkbenchAnchorClick" in script
     assert "function parseHashElement" in script
     assert "function currentReviewUrl" in script
     assert "function copyReviewLink" in script
@@ -6423,6 +6427,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function renderActiveSourceEntryFocus" in script
     assert "function focusActiveSourceEntry" in script
     assert 'params.set("source"' in script
+    assert 'params.set("section"' in script
     assert "sourceEntryLinkAnchor" in script
     assert "hashchange" in script
     assert "URLSearchParams" in script
@@ -6477,11 +6482,14 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "sourceLocatorFocused" in review_link_gate
     assert "docx-to-circuit-responsive-" in review_link_gate
     assert "docx-to-circuit-workbench-anchor-" in review_link_gate
+    assert "docx-to-circuit-workbench-anchor-reopen-" in review_link_gate
     assert "requirements-official-docx-link-" in review_link_gate
     assert "logic-template-query-link-" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
     assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
+    assert '"section": "docx-circuit-demo-panel"' in review_link_gate
+    assert '"workbench_anchor_reopen"' in review_link_gate
     requirements_script = (STATIC_ROOT / "requirements_intake" / "requirements_intake.js").read_text(encoding="utf-8")
     logic_script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
     assert "OFFICIAL_DOCX_SOURCE" in requirements_script
