@@ -6418,6 +6418,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "URLSearchParams" in script
     assert "history.replaceState" in script
     assert "function currentTracePacket" in script
+    assert "function tracePacketMarkdown" in script
+    assert "function markdownEvidenceList" in script
     assert "function copyTracePacket" in script
     assert "data-source-entry-anchor" in script
     assert "data-evidence-scope" in script
@@ -6425,6 +6427,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "docx-circuit-svg-wire-hit" in script
     assert "data-wire-hit-id" in script
     assert "docx_circuit_review_packet" in script
+    assert "DOCX Circuit Review Packet" in script
+    assert "```json" in script
+    assert "审阅包 Markdown 已复制" in script
     assert "CIRCUIT_NODES" in script
     assert "CIRCUIT_EDGES" in script
     assert "data-review-anchor" in script
@@ -6441,6 +6446,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert '.docx-circuit-source-focus[data-has-source="true"]' in stylesheet
     assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
     assert '"source_entry_link"' in review_link_gate
+    assert '"review_packet_markdown_json"' in review_link_gate
+    assert "markdown_with_json" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
     assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate

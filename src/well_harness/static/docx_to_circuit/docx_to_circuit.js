@@ -823,6 +823,47 @@
     };
   }
 
+  function markdownEvidenceList(items, fallback) {
+    if (!Array.isArray(items) || items.length === 0) return `- ${fallback}`;
+    return items
+      .map((item) => `- \`${item.anchor || "DOCX"}\` ${item.title || item.role || "证据"}: ${item.text || ""}`)
+      .join("\n");
+  }
+
+  function tracePacketMarkdown(packet) {
+    const element = packet.selected_element || {};
+    const source = packet.source || {};
+    const evidence = packet.evidence || {};
+    const levels = Array.isArray(element.logic_levels) && element.logic_levels.length > 0
+      ? element.logic_levels.join(" / ")
+      : "未标注";
+    const predicates = Array.isArray(element.folded_predicates) && element.folded_predicates.length > 0
+      ? element.folded_predicates.join("；")
+      : "无折叠谓词";
+    return [
+      "## DOCX Circuit Review Packet",
+      "",
+      "### Summary",
+      `- Source: \`${source.anchor || ""}\` ${source.title || ""}`,
+      `- Selected element: \`${element.type || ""}:${element.id || ""}\` ${element.label || ""}`,
+      `- Logic level: ${levels}`,
+      `- Folded predicates: ${predicates}`,
+      `- Evidence scope: \`${packet.evidence_scope || "unknown"}\``,
+      "- Boundary: `truth_effect=none`, `certification_claim=none`",
+      "",
+      "### P035 Evidence",
+      markdownEvidenceList(evidence.p035, "无 P035 证据"),
+      "",
+      "### DOCX Evidence",
+      markdownEvidenceList(evidence.docx, "无 DOCX 证据"),
+      "",
+      "### JSON",
+      "```json",
+      JSON.stringify(packet, null, 2),
+      "```",
+    ].join("\n");
+  }
+
   async function copyText(value) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(value);
@@ -845,9 +886,9 @@
     copyTracePacketButton.dataset.copyState = "pending";
     setText(copyStatus, "复制中");
     try {
-      await copyText(JSON.stringify(currentTracePacket(), null, 2));
+      await copyText(tracePacketMarkdown(currentTracePacket()));
       copyTracePacketButton.dataset.copyState = "success";
-      setText(copyStatus, "审阅包已复制");
+      setText(copyStatus, "审阅包 Markdown 已复制");
     } catch (error) {
       copyTracePacketButton.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");

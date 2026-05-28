@@ -96,6 +96,24 @@ def _state_matches(state: dict[str, Any], expected: dict[str, Any]) -> bool:
     return all(state.get(key) == value for key, value in expected.items())
 
 
+def _review_packet_markdown_valid(value: str) -> bool:
+    required = [
+        "## DOCX Circuit Review Packet",
+        "### Summary",
+        "- Source: `P035-S01`",
+        "- Selected element: `node:sw1`",
+        "### P035 Evidence",
+        "### DOCX Evidence",
+        "### JSON",
+        "```json",
+        '"kind": "docx_circuit_review_packet"',
+        '"id": "sw1"',
+        '"truth_effect": "none"',
+        '"certification_claim": "none"',
+    ]
+    return all(item in value for item in required) and value.rstrip().endswith("```")
+
+
 def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     artifact_dir.mkdir(parents=True, exist_ok=True)
     stamp = _utc_stamp()
@@ -124,6 +142,12 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.goto(current_link, wait_until="networkidle")
                 page.wait_for_selector("#docx-circuit-copy-review-link", timeout=7000)
+                page.locator("#docx-circuit-copy-trace-packet").click()
+                page.wait_for_function(
+                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("审阅包 Markdown 已复制")""",
+                    timeout=7000,
+                )
+                copied_review_packet = page.evaluate("navigator.clipboard.readText()")
                 page.locator("#docx-circuit-copy-review-link").click()
                 page.wait_for_function(
                     """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("链接已复制")""",
@@ -199,6 +223,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             and _state_matches(current_state, current_expected)
         )
         else "fail",
+        "review_packet_markdown_json": "pass"
+        if _review_packet_markdown_valid(copied_review_packet)
+        else "fail",
         "source_entry_link": "pass"
         if (
             source_params == {
@@ -233,6 +260,11 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "copied_urls": {
             "current_review": copied_current,
             "source_entry": copied_source_entry,
+        },
+        "review_packet": {
+            "format": "markdown_with_json",
+            "line_count": len(copied_review_packet.splitlines()),
+            "contains_json_fence": "```json" in copied_review_packet,
         },
         "states": {
             "current_review": current_state,
@@ -301,6 +333,7 @@ def main(argv: list[str] | None = None) -> int:
             "deterministic_gates": {
                 "browser_boot": "fail",
                 "current_review_link": "fail",
+                "review_packet_markdown_json": "fail",
                 "source_entry_link": "fail",
                 "source_entry_locator": "fail",
                 "screenshots": "fail",
