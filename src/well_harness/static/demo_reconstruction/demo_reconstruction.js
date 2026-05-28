@@ -68,6 +68,10 @@
   const reviewPacketStep = $("demo-reconstruction-review-packet-step");
   const reviewPacketObject = $("demo-reconstruction-review-packet-object");
   const reviewPacketGates = $("demo-reconstruction-review-packet-gates");
+  const custodySummary = $("demo-reconstruction-custody-summary");
+  const custodyActive = $("demo-reconstruction-custody-active");
+  const custodyOutput = $("demo-reconstruction-custody-output");
+  const custodyList = $("demo-reconstruction-custody-list");
   const outputMirrorStatus = $("demo-reconstruction-output-mirror-status");
   const outputMirrorLogic = $("demo-reconstruction-output-mirror-logic");
   const outputMirrorThr = $("demo-reconstruction-output-mirror-thr");
@@ -244,6 +248,7 @@
 
   function refreshEmbeddedReviewFromCircuit() {
     if (traceSteps.length) renderCircuitCompletionLadder(traceSteps);
+    if (traceSteps.length) renderCustodyMatrix(traceSteps);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
       renderObjectProvenance(currentCircuitFocus.kind, currentCircuitFocus.id);
       applyEmbeddedTraceFocus(currentCircuitFocus.kind, currentCircuitFocus.id);
@@ -500,6 +505,116 @@
     );
   }
 
+  function setCustodyButtonState(anchor) {
+    document.querySelectorAll("[data-custody-step-button]").forEach((button) => {
+      const selected = button.dataset.custodyStepButton === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function updateCustodyOutputReadback() {
+    if (!custodyOutput) return;
+    const status = outputMirrorStatus && outputMirrorStatus.textContent
+      ? outputMirrorStatus.textContent.trim()
+      : "";
+    const thr = outputMirrorThrOutput && outputMirrorThrOutput.textContent
+      ? outputMirrorThrOutput.textContent.trim()
+      : "";
+    const logic = outputMirrorLogic && outputMirrorLogic.textContent
+      ? outputMirrorLogic.textContent.trim()
+      : "";
+    const parts = [status, thr, logic].filter((value) => value && !value.startsWith("等待") && value !== "--");
+    setText(custodyOutput, parts.length ? parts.join(" · ") : "等待输出镜像");
+  }
+
+  function updateCustodyActiveReadback() {
+    if (!custodyActive) return;
+    if (!currentTraceStep || !currentTraceStep.anchor) {
+      setText(custodyActive, "等待选择");
+      updateCustodyOutputReadback();
+      return;
+    }
+    const index = activePlaybackIndex >= 0 ? activePlaybackIndex : selectedTraceIndex;
+    const contract = traceSteps.length && index >= 0
+      ? cumulativeTraceContract(index)
+      : {
+          node_ids: currentTraceStep.node_ids || [],
+          wire_ids: currentTraceStep.wire_ids || [],
+        };
+    setText(
+      custodyActive,
+      `${currentTraceStep.anchor} · ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    updateCustodyOutputReadback();
+  }
+
+  function renderCustodyMatrix(steps) {
+    if (!custodyList) return;
+    custodyList.innerHTML = "";
+    if (!Array.isArray(steps) || steps.length === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "交付链路暂无数据";
+      custodyList.appendChild(empty);
+      setText(custodySummary, "0/5 步 · 0/20 节点 · 0/23 连线");
+      updateCustodyActiveReadback();
+      return;
+    }
+
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-custody-item";
+      li.dataset.custodyStep = step.anchor || "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-custody-button";
+      button.dataset.custodyStepButton = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyStepPlayback(index));
+
+      const header = document.createElement("div");
+      header.className = "demo-reconstruction-custody-row-head";
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      header.append(anchor, title);
+
+      const source = document.createElement("p");
+      source.textContent = step.source_text || "";
+
+      const metrics = document.createElement("div");
+      metrics.className = "demo-reconstruction-custody-metrics";
+      [`${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`, `${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        metrics.appendChild(chip);
+      });
+      const milestoneValues = ladderMilestonesForStep(step);
+      if (milestoneValues.length) {
+        milestoneValues.forEach((value) => {
+          const chip = document.createElement("span");
+          chip.dataset.custodyMilestone = "true";
+          chip.textContent = value;
+          metrics.appendChild(chip);
+        });
+      }
+
+      button.append(header, source, metrics);
+      li.appendChild(button);
+      custodyList.appendChild(li);
+    });
+
+    const finalContract = cumulativeTraceContract(steps.length - 1);
+    setText(
+      custodySummary,
+      `${steps.length}/5 步 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    setCustodyButtonState(currentTraceStep && currentTraceStep.anchor ? currentTraceStep.anchor : steps[0].anchor);
+    updateCustodyActiveReadback();
+  }
+
   function renderReviewPacketGates(gates) {
     if (!reviewPacketGates) return;
     reviewPacketGates.innerHTML = "";
@@ -528,6 +643,7 @@
     const frameDocument = consoleFrame.contentDocument;
     if (!frameDocument || !frameDocument.querySelector("#fan-status-badge")) {
       setText(outputMirrorStatus, "等待同步");
+      updateCustodyOutputReadback();
       return;
     }
     setText(outputMirrorStatus, frameText(frameDocument, "#fan-status-badge", "IDLE"));
@@ -538,6 +654,7 @@
     setText(outputMirrorEtrac, frameText(frameDocument, "#fan-out-etrac-value", "--"));
     setText(outputMirrorEec, frameText(frameDocument, "#fan-out-eec-value", "--"));
     setText(outputMirrorThrOutput, frameText(frameDocument, "#fan-out-thr-value", "--"));
+    updateCustodyOutputReadback();
   }
 
   function installOutputMirrorObserver() {
@@ -995,6 +1112,7 @@
       card.setAttribute("aria-pressed", card.dataset.traceAnchor === step.anchor ? "true" : "false");
     });
     setTraceCardTabStops(step.anchor);
+    setCustodyButtonState(step.anchor);
     setText(selectedAnchor, step.anchor || "P035");
     setText(selectedTitle, step.title || "工作过程片段");
     setText(selectedText, step.source_text || "");
@@ -1002,6 +1120,7 @@
     renderInlineChips(selectedWires, step.wire_ids, "demo-reconstruction-wire-chip", "无连线", "wire");
     renderInlineChips(selectedFolded, step.folded_predicates, "demo-reconstruction-folded-chip", "无折叠谓词");
     applyEmbeddedTraceHighlight(step);
+    updateCustodyActiveReadback();
     if (options.writeHash !== false) writeReviewHashState();
   }
 
@@ -1052,6 +1171,7 @@
     setSelectedTrace(steps[0], {writeHash: false});
     renderStepPlaybackRail(steps);
     renderCircuitCompletionLadder(steps);
+    renderCustodyMatrix(steps);
   }
 
   function renderSourceEntries(entries) {

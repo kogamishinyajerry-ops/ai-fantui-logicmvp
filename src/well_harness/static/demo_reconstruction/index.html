@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p5">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p5" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p6">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p6" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -169,6 +169,28 @@
       </div>
       <ol id="demo-reconstruction-review-packet-gates" class="demo-reconstruction-review-packet-gates">
         <li>正在读取交付 gate</li>
+      </ol>
+    </div>
+    <div id="demo-reconstruction-custody-matrix" class="demo-reconstruction-custody-matrix" data-custody-matrix="docx-to-demo-output" aria-label="需求句子到 demo 输出交付链路">
+      <div class="demo-reconstruction-custody-head">
+        <div>
+          <h3>交付链路总览</h3>
+          <p>把每条工作过程句子、累计电路对象和当前 demo 输出读回放在同一条链路上。</p>
+        </div>
+        <strong id="demo-reconstruction-custody-summary">等待链路读回</strong>
+      </div>
+      <div class="demo-reconstruction-custody-readback" aria-label="当前交付链路读回">
+        <div>
+          <span>当前句子</span>
+          <strong id="demo-reconstruction-custody-active">等待选择</strong>
+        </div>
+        <div>
+          <span>demo 输出</span>
+          <strong id="demo-reconstruction-custody-output">等待输出镜像</strong>
+        </div>
+      </div>
+      <ol id="demo-reconstruction-custody-list" class="demo-reconstruction-custody-list">
+        <li>正在读取交付链路</li>
       </ol>
     </div>
     <div id="demo-reconstruction-coverage-matrix" class="demo-reconstruction-coverage-matrix" aria-label="完整 demo 电路对象覆盖矩阵">

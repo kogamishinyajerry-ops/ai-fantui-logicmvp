@@ -129,6 +129,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     object_provenance_path = artifact_dir / f"demo-reconstruction-object-provenance-{stamp}.png"
     completion_ladder_path = artifact_dir / f"demo-reconstruction-completion-ladder-{stamp}.png"
     review_packet_path = artifact_dir / f"demo-reconstruction-review-packet-{stamp}.png"
+    custody_matrix_path = artifact_dir / f"demo-reconstruction-custody-matrix-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -191,6 +192,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
                             ladderStepCount: document.querySelectorAll("[data-ladder-step]").length,
+                            custodyStepCount: document.querySelectorAll("[data-custody-step]").length,
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
                             selectedNodeChipCount: document.querySelectorAll("#demo-reconstruction-selected-nodes .demo-reconstruction-chip").length,
                             selectedWireChipCount: document.querySelectorAll("#demo-reconstruction-selected-wires .demo-reconstruction-chip").length,
@@ -464,6 +466,45 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             readinessText: text("#demo-reconstruction-review-packet-readiness"),
                             objectText: text("#demo-reconstruction-review-packet-object"),
                             passGateCount: gates.filter((gate) => gate.dataset.packetGateStatus === "pass").length,
+                        };
+                    }"""
+                )
+                page.locator('[data-custody-step-button="P035-S04"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const active = document.querySelector('[data-custody-step-button="P035-S04"]');
+                        const status = document.querySelector("#demo-reconstruction-embedded-highlight-status")?.textContent || "";
+                        return selected
+                            && selected.textContent.trim() === "P035-S04"
+                            && active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && status.includes("P035-S04");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator("#demo-reconstruction-custody-matrix").screenshot(
+                    path=str(custody_matrix_path)
+                )
+                custody_matrix_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            stepCount: document.querySelectorAll("[data-custody-step]").length,
+                            activeButtonCount: document.querySelectorAll("[data-custody-step-button][aria-pressed='true']").length,
+                            summaryText: text("#demo-reconstruction-custody-summary"),
+                            activeText: text("#demo-reconstruction-custody-active"),
+                            outputText: text("#demo-reconstruction-custody-output"),
+                            s04Text: text('[data-custody-step="P035-S04"]'),
+                            s05Text: text('[data-custody-step="P035-S05"]'),
+                            highlightedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
                         };
                     }"""
                 )
@@ -969,6 +1010,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         logic: document.querySelector("#demo-reconstruction-output-mirror-logic")?.textContent?.trim() || "",
                         thr: document.querySelector("#demo-reconstruction-output-mirror-thr")?.textContent?.trim() || "",
                         summary: document.querySelector("#demo-reconstruction-output-mirror-summary")?.textContent?.trim() || "",
+                        custody: document.querySelector("#demo-reconstruction-custody-output")?.textContent?.trim() || "",
                         outputs: {
                             tls: document.querySelector("#demo-reconstruction-output-mirror-tls")?.textContent?.trim() || "",
                             etrac: document.querySelector("#demo-reconstruction-output-mirror-etrac")?.textContent?.trim() || "",
@@ -998,6 +1040,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         logic: document.querySelector("#demo-reconstruction-output-mirror-logic")?.textContent?.trim() || "",
                         thr: document.querySelector("#demo-reconstruction-output-mirror-thr")?.textContent?.trim() || "",
                         summary: document.querySelector("#demo-reconstruction-output-mirror-summary")?.textContent?.trim() || "",
+                        custody: document.querySelector("#demo-reconstruction-custody-output")?.textContent?.trim() || "",
                         outputs: {
                             tls: document.querySelector("#demo-reconstruction-output-mirror-tls")?.textContent?.trim() || "",
                             etrac: document.querySelector("#demo-reconstruction-output-mirror-etrac")?.textContent?.trim() || "",
@@ -1038,6 +1081,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 object_provenance_path,
                 completion_ladder_path,
                 review_packet_path,
+                custody_matrix_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -1055,6 +1099,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
             and source_map_review["ladderStepCount"] == 5
+            and source_map_review["custodyStepCount"] == 5
             and source_map_review["coverageNodeButtonCount"] == 20
             and source_map_review["coverageWireButtonCount"] == 23
             and source_map_review["selectedNodeChipCount"] > 0
@@ -1193,6 +1238,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in review_packet_after_wire_focus["objectText"]
         )
         else "fail",
+        "custody_matrix_readback": "pass"
+        if (
+            custody_matrix_review["stepCount"] == 5
+            and custody_matrix_review["activeButtonCount"] == 1
+            and "5/5" in custody_matrix_review["summaryText"]
+            and "20/20" in custody_matrix_review["summaryText"]
+            and "23/23" in custody_matrix_review["summaryText"]
+            and "P035-S04" in custody_matrix_review["activeText"]
+            and "18/20" in custody_matrix_review["activeText"]
+            and "20/23" in custody_matrix_review["activeText"]
+            and "18/20" in custody_matrix_review["s04Text"]
+            and "20/23" in custody_matrix_review["s04Text"]
+            and "THR_LOCK" in custody_matrix_review["s05Text"]
+            and "20/20" in custody_matrix_review["s05Text"]
+            and "23/23" in custody_matrix_review["s05Text"]
+            and custody_matrix_review["highlightedNodeCount"] == 18
+            and custody_matrix_review["highlightedWireCount"] == 20
+        )
+        else "fail",
         "review_hash_link": "pass"
         if (
             review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -1250,6 +1314,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and inhibit_output_mirror["status"] == "FAULT"
             and inhibit_output_mirror["outputs"]["thr_lock"] == "BLOCKED"
             and "BLOCKED" in inhibit_output_mirror["thr"]
+            and "DEPLOYED" in max_reverse_output_mirror["custody"]
+            and "ON" in max_reverse_output_mirror["custody"]
+            and "FAULT" in inhibit_output_mirror["custody"]
+            and "BLOCKED" in inhibit_output_mirror["custody"]
         )
         else "fail",
         "boundary": "pass" if not restricted else "fail",
@@ -1272,6 +1340,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "object_provenance": str(object_provenance_path),
             "completion_ladder": str(completion_ladder_path),
             "review_packet": str(review_packet_path),
+            "custody_matrix": str(custody_matrix_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -1296,6 +1365,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "completion_ladder_review": completion_ladder_review,
         "review_packet_review": review_packet_review,
         "review_packet_after_wire_focus": review_packet_after_wire_focus,
+        "custody_matrix_review": custody_matrix_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
@@ -1377,6 +1447,7 @@ def main(argv: list[str] | None = None) -> int:
                 "object_provenance_traceability": "fail",
                 "completion_ladder_readback": "fail",
                 "review_packet_readiness": "fail",
+                "custody_matrix_readback": "fail",
                 "source_chip_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",
