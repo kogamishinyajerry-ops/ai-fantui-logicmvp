@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p7">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p7" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p8">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p8" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -342,6 +342,15 @@
           <div><span>ETRAC</span><strong id="demo-reconstruction-output-mirror-etrac">--</strong></div>
           <div><span>EEC</span><strong id="demo-reconstruction-output-mirror-eec">--</strong></div>
           <div><span>THR_LOCK</span><strong id="demo-reconstruction-output-mirror-thr-output">--</strong></div>
+        </div>
+      </section>
+      <section id="demo-reconstruction-scenario-ledger" class="demo-reconstruction-scenario-ledger" data-scenario-ledger="demo-html-presets" aria-label="demo.html 场景读回记录">
+        <div class="demo-reconstruction-scenario-ledger-head">
+          <h3>场景读回记录</h3>
+          <strong id="demo-reconstruction-scenario-ledger-status">等待预设</strong>
+        </div>
+        <div id="demo-reconstruction-scenario-ledger-list" class="demo-reconstruction-scenario-ledger-list">
+          <button type="button" class="demo-reconstruction-scenario-row" data-scenario-ledger-row="loading">正在读取预设</button>
         </div>
       </section>
       <section id="demo-reconstruction-operator-guide" class="demo-reconstruction-operator-guide" data-demo-mvp-guide="first-screen" aria-label="首屏验收路径">
