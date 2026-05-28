@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import shlex
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,10 @@ JSON_NAME = "multi_agent_merge_readiness_v0_1.json"
 MARKDOWN_NAME = "multi_agent_merge_readiness_v0_1.md"
 HTML_NAME = "multi_agent_merge_readiness_v0_1.html"
 NOTION_BLOCKER_ID = "notion-control-plane-404"
+GUARDED_CHANGED_PATHS = {
+    "src/well_harness/demo_server.py",
+    "src/well_harness/requirements_intake/**",
+}
 
 
 def _utc_now() -> str:
@@ -79,6 +84,12 @@ def _review_state(pr_status: dict[str, Any]) -> str:
     return "feedback_present"
 
 
+def _review_gate(review_state: str) -> str:
+    if review_state in {"feedback_present", "no_reviews_or_comments"}:
+        return "warning"
+    return "pass"
+
+
 def _geometry_passed(geometry_results: list[dict[str, Any]]) -> bool:
     return (
         len(geometry_results) >= 10
@@ -86,34 +97,87 @@ def _geometry_passed(geometry_results: list[dict[str, Any]]) -> bool:
     )
 
 
+def _stage_pathspecs(stage_commands: list[Any]) -> set[str]:
+    pathspecs: set[str] = set()
+    for command in stage_commands:
+        if not isinstance(command, str):
+            continue
+        try:
+            tokens = shlex.split(command.replace("\\\n", " "))
+        except ValueError:
+            return set()
+        if len(tokens) < 3 or tokens[:2] != ["git", "add"]:
+            continue
+        for token in tokens[2:]:
+            if token in {"--", "-f"}:
+                continue
+            pathspecs.add(token)
+    return pathspecs
+
+
+def _matches_pathspec(path: str, pathspec: str) -> bool:
+    if pathspec.endswith("/**"):
+        return path.startswith(pathspec[:-3].rstrip("/") + "/")
+    if pathspec.endswith("/"):
+        return path.startswith(pathspec)
+    return path == pathspec
+
+
+def _changed_paths_obey_boundary(
+    *,
+    changed_paths: Any,
+    excluded_paths: list[str],
+    stage_pathspecs: set[str],
+) -> bool:
+    if changed_paths is None:
+        return True
+    if not isinstance(changed_paths, list):
+        return False
+    for item in changed_paths:
+        if not isinstance(item, str):
+            return False
+        guarded_pathspecs = excluded_paths + sorted(GUARDED_CHANGED_PATHS)
+        if any(_matches_pathspec(item, pathspec) for pathspec in guarded_pathspecs):
+            if not any(_matches_pathspec(item, pathspec) for pathspec in stage_pathspecs):
+                return False
+    return True
+
+
 def _pathspec_boundary_ok(validation_evidence: dict[str, Any]) -> bool:
     excluded = validation_evidence.get("excluded_paths", [])
     stage_commands = validation_evidence.get("stage_commands", [])
     if not isinstance(excluded, list) or not isinstance(stage_commands, list):
         return False
+    excluded_paths = [str(item) for item in excluded]
+    stage_pathspecs = _stage_pathspecs(stage_commands)
+    if not stage_pathspecs:
+        return False
     required_exclusions = {
         ".github/workflows/gsd-automation.yml",
         "artifacts/**",
         "src/well_harness/controller.py",
-        "src/well_harness/demo_server.py",
         "src/well_harness/static/**",
         ".planning/**",
     }
     protected_markers = [
         "src/well_harness/controller.py",
         "src/well_harness/runner.py",
-        "src/well_harness/demo_server.py",
         "src/well_harness/static/",
         "artifacts/",
         ".planning/",
     ]
-    exclusions_ok = required_exclusions.issubset(set(str(item) for item in excluded))
+    exclusions_ok = required_exclusions.issubset(set(excluded_paths))
     commands_ok = all(
         isinstance(command, str)
         and not any(marker in command for marker in protected_markers)
         for command in stage_commands
     )
-    return exclusions_ok and commands_ok
+    changed_paths_ok = _changed_paths_obey_boundary(
+        changed_paths=validation_evidence.get("changed_paths"),
+        excluded_paths=excluded_paths,
+        stage_pathspecs=stage_pathspecs,
+    )
+    return exclusions_ok and commands_ok and changed_paths_ok
 
 
 def _overall_status(gates: dict[str, str]) -> str:
@@ -154,10 +218,7 @@ def build_multi_agent_merge_readiness(
             checks_state != "fail",
             warning=checks_state in {"no_checks_reported", "pending_or_unknown"},
         ),
-        "review_state": _gate(
-            review_state != "feedback_present",
-            warning=review_state == "no_reviews_or_comments",
-        ),
+        "review_state": _review_gate(review_state),
     }
     status = _overall_status(gates)
     summary = validation_evidence.get("summary", {})
@@ -437,7 +498,7 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
       <p>PR <code>{_escape(payload['pr_status']['number'])}</code>: <code>{_escape(payload['pr_status']['url'])}</code></p>
       <p>Head <code>{_escape(payload['pr_status']['headRefOid'])}</code></p>
       <p>Reviews <code>{_escape(payload['pr_status']['review_count'])}</code>, comments <code>{_escape(payload['pr_status']['comment_count'])}</code>, checks <code>{_escape(payload['pr_status']['statusCheckRollup_count'])}</code></p>
-      <p>Latest queue marker: <code>RUN-QUEUE-011</code>; validation note: <code>19 validation commands passed</code>.</p>
+      <p>Latest queue marker: <code>RUN-QUEUE-011</code>; validation note: <code>21 validation commands passed</code>.</p>
     </section>
     <section>
       <h2>Blockers And Risks</h2>

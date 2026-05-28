@@ -17,6 +17,7 @@ SCHEMA_NAME = "multi_agent_pr_preflight_v0_1.schema.json"
 EXPECTED_ORDER = [
     "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
+    "candidate-review-runtime-export",
     "ultrawork-monitor",
     "m22-operator-cockpit",
     "m23-packaging-consolidation",
@@ -88,8 +89,8 @@ def verify_multi_agent_pr_preflight(package_path: Path) -> dict[str, Any]:
         for item in validation_plan
         if isinstance(item, dict)
     ]
-    if len(validation_plan) != 19:
-        mismatches.append("validation_plan must contain 19 commands")
+    if len(validation_plan) != 21:
+        mismatches.append("validation_plan must contain 21 commands")
     if len(command_ids) != len(set(command_ids)):
         mismatches.append("validation command ids must be unique")
     if not all(
@@ -99,14 +100,13 @@ def verify_multi_agent_pr_preflight(package_path: Path) -> dict[str, Any]:
         mismatches.append("validation commands must map to known packages")
 
     stage_commands = payload.get("stage_commands", [])
-    if len(stage_commands) != 7:
-        mismatches.append("stage_commands must contain 7 explicit commands")
+    if len(stage_commands) != 8:
+        mismatches.append("stage_commands must contain 8 explicit commands")
     if not any(isinstance(command, str) and "git add -f --" in command for command in stage_commands):
         mismatches.append("stage commands must include git add -f for ignored Claude agents")
     protected_markers = [
         "src/well_harness/controller.py",
         "src/well_harness/runner.py",
-        "src/well_harness/demo_server.py",
         "src/well_harness/static/",
         "artifacts/",
         ".planning/",

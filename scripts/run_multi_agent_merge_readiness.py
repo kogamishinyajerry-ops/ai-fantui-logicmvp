@@ -52,7 +52,7 @@ GEOMETRY_PAGES = [
     (
         "evidence",
         Path("/tmp/ai-fantui-multi-agent-validation-evidence/multi_agent_validation_evidence_v0_1.html"),
-        ["Multi-Agent Validation Evidence", "multi-agent-cursor-baseline-v0-2-01", "19 validation commands passed"],
+        ["Multi-Agent Validation Evidence", "multi-agent-cursor-baseline-v0-2-01", "21 validation commands passed"],
     ),
 ]
 VIEWPORTS = [
@@ -122,10 +122,38 @@ def _load_pr_status(pr_status_json: Path | None, *, pr_number: int) -> dict[str,
             "view",
             str(pr_number),
             "--json",
-            "number,url,state,isDraft,mergeable,headRefOid,statusCheckRollup,reviews,comments",
+            "number,url,state,isDraft,mergeable,headRefOid,baseRefName,statusCheckRollup,reviews,comments,files",
         ],
         timeout=120,
     )
+
+
+def _changed_paths_from_pr_status(pr_status: dict[str, Any]) -> list[str]:
+    base_ref = pr_status.get("baseRefName")
+    if isinstance(base_ref, str) and base_ref:
+        for candidate in (f"origin/{base_ref}", base_ref):
+            result = subprocess.run(
+                ["git", "diff", "--name-only", f"{candidate}...HEAD"],
+                cwd=PROJECT_ROOT,
+                env=_env(),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=120,
+            )
+            if result.returncode == 0:
+                return [line for line in result.stdout.splitlines() if line]
+
+    files = pr_status.get("files", [])
+    if isinstance(files, list):
+        paths = [
+            str(item.get("path"))
+            for item in files
+            if isinstance(item, dict) and item.get("path")
+        ]
+        if paths:
+            return paths
+    return []
 
 
 def _ensure_source_html() -> None:
@@ -231,6 +259,10 @@ def run_multi_agent_merge_readiness(
     _ensure_source_html()
     validation_evidence = _load_json(validation_evidence_path)
     pr_status = _load_pr_status(pr_status_json, pr_number=pr_number)
+    changed_paths = _changed_paths_from_pr_status(pr_status)
+    if changed_paths:
+        validation_evidence = dict(validation_evidence)
+        validation_evidence["changed_paths"] = changed_paths
     geometry_results = _run_geometry_gate(geometry_dir)
     payload = build_multi_agent_merge_readiness(
         validation_evidence=validation_evidence,

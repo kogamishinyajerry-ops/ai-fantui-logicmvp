@@ -34,6 +34,7 @@ MVP_DOC_PATH = (
 EXPECTED_ORDER = [
     "multi-agent-cursor-baseline-v0-2",
     "project-manager-status",
+    "candidate-review-runtime-export",
     "ultrawork-monitor",
     "m22-operator-cockpit",
     "m23-packaging-consolidation",
@@ -67,8 +68,12 @@ def test_multi_agent_packaging_consolidation_schema_validates_payload() -> None:
         "docs/coordination/multi-agent-operator-cockpit.md" in command
         for command in payload["stage_commands"]
     )
+    assert any(
+        "src/well_harness/demo_server.py" in command
+        for command in payload["stage_commands"]
+    )
     assert "src/well_harness/controller.py" in payload["excluded_paths"]
-    assert "src/well_harness/demo_server.py" in payload["excluded_paths"]
+    assert "src/well_harness/demo_server.py" not in payload["excluded_paths"]
     assert "src/well_harness/static/**" in payload["excluded_paths"]
 
 
@@ -82,6 +87,7 @@ def test_multi_agent_packaging_consolidation_html_exposes_order_and_blocker() ->
     assert "Multi-Agent Packaging Consolidation" in html
     assert "multi-agent-cursor-baseline" in html
     assert "project-manager-status" in html
+    assert "candidate-review-runtime-export" in html
     assert "ultrawork-monitor" in html
     assert "m22-operator-cockpit" in html
     assert "notion-control-plane-404" in html

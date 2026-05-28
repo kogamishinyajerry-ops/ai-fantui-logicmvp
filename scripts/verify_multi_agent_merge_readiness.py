@@ -72,8 +72,8 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
     if not isinstance(summary, dict):
         mismatches.append("summary must be an object")
     else:
-        if summary.get("passed_command_count") != 19:
-            mismatches.append("passed_command_count must be 19")
+        if summary.get("passed_command_count") != 21:
+            mismatches.append("passed_command_count must be 21")
         if summary.get("failed_command_count") != 0:
             mismatches.append("failed_command_count must be 0")
         if summary.get("geometry_check_count") < 10:
@@ -162,7 +162,7 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
             "five_agent_context_cap",
             "PackagingPRReadinessAgent",
             "RUN-QUEUE-011",
-            "19 validation commands passed",
+            "21 validation commands passed",
             "notion-control-plane-404",
             "MERGEABLE",
         ]:

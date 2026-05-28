@@ -10,7 +10,7 @@ does not stage, commit, push, merge, self-approve, or write to Notion.
 
 The packet answers four questions:
 
-1. Did the 19 validation commands pass?
+1. Did the 21 validation commands pass?
 2. Did the status-surface browser geometry gate pass on desktop and mobile?
 3. Is PR #269 mergeable, and are there reviews/comments/checks to address?
 4. Is the Notion 404 still classified as an external control-plane blocker?
@@ -96,5 +96,5 @@ make verify-multi-agent-merge-readiness
 
 Browser gate: open the generated HTML and verify it shows `Multi-Agent Merge
 Readiness`, `five_agent_context_cap`, `PackagingPRReadinessAgent`,
-`RUN-QUEUE-011`, `19 validation commands passed`, `notion-control-plane-404`,
+`RUN-QUEUE-011`, `21 validation commands passed`, `notion-control-plane-404`,
 and `MERGEABLE` without desktop or mobile layout overflow.

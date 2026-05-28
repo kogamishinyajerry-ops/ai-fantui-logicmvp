@@ -23,7 +23,6 @@ EXCLUDED_PATHS = [
     "artifacts/**",
     "src/well_harness/controller.py",
     "src/well_harness/runner.py",
-    "src/well_harness/demo_server.py",
     "src/well_harness/requirements_intake/**",
     "src/well_harness/static/**",
     "tests/test_demo.py",
@@ -83,6 +82,32 @@ PACKAGE_ORDER: list[dict[str, Any]] = [
             "PYTHONPATH=src:. python3 -m pytest -q tests/test_project_manager_status_summary.py tests/test_project_visibility_mvp_acceptance.py",
             "make project-manager-status-summary",
             "make project-visibility-mvp-gate",
+        ],
+    },
+    {
+        "package_id": "candidate-review-runtime-export",
+        "label": "Candidate Review Runtime Export Package",
+        "depends_on": ["multi-agent-cursor-baseline-v0-2"],
+        "claim": (
+            "candidate review packet export remains runtime-safe and the demo "
+            "route is inside the explicit pathspec boundary"
+        ),
+        "pathspecs": [
+            "docs/json_schema/candidate_review_packet_v0_1.schema.json",
+            "docs/json_schema/candidate_review_packet_export_v0_1.schema.json",
+            "scripts/verify_candidate_review_packet_export.py",
+            "src/well_harness/agent_review_packet.py",
+            "src/well_harness/demo_server.py",
+            "src/well_harness/reference_packets/candidate_review_packet_export_v0_1.json",
+            "tests/fixtures/candidate_review_packet_v0_1.json",
+            "tests/fixtures/candidate_review_packet_export_v0_1.json",
+            "tests/test_agent_review_packet.py",
+            "tests/test_candidate_review_packet_export_regression.py",
+        ],
+        "forced_pathspecs": [],
+        "validation_commands": [
+            "PYTHONPATH=src:. python3 -m pytest -q tests/test_candidate_review_packet_export_regression.py tests/test_agent_review_packet.py",
+            "PYTHONPATH=src:. python3 scripts/verify_candidate_review_packet_export.py --format json",
         ],
     },
     {

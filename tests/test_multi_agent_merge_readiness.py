@@ -52,14 +52,15 @@ def _validation_evidence() -> dict:
         "status": "pass",
         "summary": {
             "dirty_worktree_policy": "ignore_unrelated_dirty_files_and_stage_only_listed_pathspecs",
-            "executed_command_count": 19,
+            "executed_command_count": 21,
             "failed_command_count": 0,
-            "package_count": 7,
-            "passed_command_count": 19,
-            "stage_command_count": 8,
-            "validation_command_count": 19,
+            "package_count": 8,
+            "passed_command_count": 21,
+            "stage_command_count": 9,
+            "validation_command_count": 21,
         },
         "stage_commands": [
+            "git add -- src/well_harness/demo_server.py",
             "git add -- docs/coordination/multi-agent-pr-preflight.md",
             "git add -f -- .claude/agents/ultrawork-orchestrator.md",
         ],
@@ -142,7 +143,7 @@ def test_multi_agent_merge_readiness_schema_validates_payload(tmp_path: Path) ->
     jsonschema.Draft202012Validator(_schema()).validate(payload)
     assert payload["status"] == "ready_with_external_blocker"
     assert payload["milestone"]["id"] == "M29"
-    assert payload["summary"]["passed_command_count"] == 19
+    assert payload["summary"]["passed_command_count"] == 21
     assert payload["summary"]["remote_checks_state"] == "no_checks_reported"
     assert payload["summary"]["review_state"] == "no_reviews_or_comments"
     assert payload["agent_team"]["mode"] == "five_agent_context_cap"
@@ -179,6 +180,64 @@ def test_multi_agent_merge_readiness_blocks_failed_remote_checks(tmp_path: Path)
     assert payload["status"] == "blocked"
 
 
+def test_multi_agent_merge_readiness_marks_review_feedback_as_warning(tmp_path: Path) -> None:
+    pr_status = _pr_status()
+    pr_status["reviews"] = [{"state": "COMMENTED"}]
+
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=_validation_evidence(),
+        pr_status=pr_status,
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["gates"]["review_state"] == "warning"
+    assert payload["summary"]["review_state"] == "feedback_present"
+    assert payload["status"] == "ready_with_external_blocker"
+
+
+def test_multi_agent_merge_readiness_blocks_unstaged_changed_excluded_path(
+    tmp_path: Path,
+) -> None:
+    evidence = _validation_evidence()
+    evidence["changed_paths"] = ["src/well_harness/demo_server.py"]
+    evidence["stage_commands"] = [
+        command
+        for command in evidence["stage_commands"]
+        if "src/well_harness/demo_server.py" not in command
+    ]
+
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=evidence,
+        pr_status=_pr_status(),
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["gates"]["pathspec_boundary"] == "fail"
+    assert payload["status"] == "blocked"
+
+
+def test_multi_agent_merge_readiness_allows_explicitly_staged_guarded_change(
+    tmp_path: Path,
+) -> None:
+    evidence = _validation_evidence()
+    evidence["changed_paths"] = ["src/well_harness/demo_server.py"]
+
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=evidence,
+        pr_status=_pr_status(),
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["gates"]["pathspec_boundary"] == "pass"
+    assert payload["status"] == "ready_with_external_blocker"
+
+
 def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path) -> None:
     payload = build_multi_agent_merge_readiness(
         validation_evidence=_validation_evidence(),
@@ -194,7 +253,7 @@ def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path)
     assert "ChiefEngineerOrchestrator" in html
     assert "PackagingPRReadinessAgent" in html
     assert "RUN-QUEUE-011" in html
-    assert "19 validation commands passed" in html
+    assert "21 validation commands passed" in html
     assert "notion-control-plane-404" in html
     assert "MERGEABLE" in html
     assert "no_checks_reported" in html
@@ -300,7 +359,7 @@ def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
         assert pathspec in doc
 
     assert "notion-control-plane-404" in doc
-    assert "19 validation commands" in doc
+    assert "21 validation commands" in doc
     assert "five-agent active team" in doc
     assert "M29" in mvp_doc
     assert "five-agent active team" in mvp_doc

@@ -33,11 +33,14 @@ make verify-multi-agent-packaging-consolidation
 
 1. `multi-agent-cursor-baseline-v0-2`
 2. `project-manager-status`
-3. `ultrawork-monitor`
-4. `m22-operator-cockpit`
-5. `m23-packaging-consolidation`
+3. `candidate-review-runtime-export`
+4. `ultrawork-monitor`
+5. `m22-operator-cockpit`
+6. `m23-packaging-consolidation`
 
 The generated artifact includes exact `git add -- ...` commands for each package. The UltraWork package also includes a separate `git add -f -- ...` command for ignored `.claude/agents/*` files.
+
+The `candidate-review-runtime-export` package explicitly stages `src/well_harness/demo_server.py` for the stable candidate-review export route, so it is not treated as excluded dirty context in this PR boundary.
 
 ## Excluded Dirty Context
 
@@ -48,7 +51,6 @@ Do not stage these paths from this consolidation package:
 artifacts/**
 src/well_harness/controller.py
 src/well_harness/runner.py
-src/well_harness/demo_server.py
 src/well_harness/requirements_intake/**
 src/well_harness/static/**
 tests/test_demo.py
@@ -77,4 +79,4 @@ make multi-agent-packaging-consolidation
 make verify-multi-agent-packaging-consolidation
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m22-operator-cockpit`, and `notion-control-plane-404` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `candidate-review-runtime-export`, `ultrawork-monitor`, `m22-operator-cockpit`, and `notion-control-plane-404` without desktop or mobile layout overflow.
