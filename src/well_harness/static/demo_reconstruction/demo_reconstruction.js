@@ -68,6 +68,14 @@
   const reviewPacketStep = $("demo-reconstruction-review-packet-step");
   const reviewPacketObject = $("demo-reconstruction-review-packet-object");
   const reviewPacketGates = $("demo-reconstruction-review-packet-gates");
+  const outputMirrorStatus = $("demo-reconstruction-output-mirror-status");
+  const outputMirrorLogic = $("demo-reconstruction-output-mirror-logic");
+  const outputMirrorThr = $("demo-reconstruction-output-mirror-thr");
+  const outputMirrorSummary = $("demo-reconstruction-output-mirror-summary");
+  const outputMirrorTls = $("demo-reconstruction-output-mirror-tls");
+  const outputMirrorEtrac = $("demo-reconstruction-output-mirror-etrac");
+  const outputMirrorEec = $("demo-reconstruction-output-mirror-eec");
+  const outputMirrorThrOutput = $("demo-reconstruction-output-mirror-thr-output");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let latestDocxPayload = null;
   let sourceEntries = [];
@@ -80,6 +88,7 @@
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
   let nodeKindMap = new Map();
+  let outputMirrorObserver = null;
 
   function readJson(value) {
     try {
@@ -506,6 +515,45 @@
       li.append(title, detail);
       reviewPacketGates.appendChild(li);
     });
+  }
+
+  function frameText(frameDocument, selector, fallback) {
+    const element = frameDocument ? frameDocument.querySelector(selector) : null;
+    const value = element && element.textContent ? element.textContent.trim() : "";
+    return value || fallback;
+  }
+
+  function updateOutputMirrorFromFrame() {
+    if (!outputMirrorStatus || !consoleFrame) return;
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument || !frameDocument.querySelector("#fan-status-badge")) {
+      setText(outputMirrorStatus, "等待同步");
+      return;
+    }
+    setText(outputMirrorStatus, frameText(frameDocument, "#fan-status-badge", "IDLE"));
+    setText(outputMirrorLogic, frameText(frameDocument, "#fan-hud-logic", "等待 HUD"));
+    setText(outputMirrorThr, frameText(frameDocument, "#fan-hud-thr-lock", "等待 THR_LOCK"));
+    setText(outputMirrorSummary, frameText(frameDocument, "#fan-status-summary", "等待摘要"));
+    setText(outputMirrorTls, frameText(frameDocument, "#fan-out-tls115-value", "--"));
+    setText(outputMirrorEtrac, frameText(frameDocument, "#fan-out-etrac-value", "--"));
+    setText(outputMirrorEec, frameText(frameDocument, "#fan-out-eec-value", "--"));
+    setText(outputMirrorThrOutput, frameText(frameDocument, "#fan-out-thr-value", "--"));
+  }
+
+  function installOutputMirrorObserver() {
+    if (!consoleFrame) return;
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument || !frameDocument.body) return;
+    if (outputMirrorObserver) outputMirrorObserver.disconnect();
+    outputMirrorObserver = new MutationObserver(updateOutputMirrorFromFrame);
+    outputMirrorObserver.observe(frameDocument.body, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-state", "class"],
+    });
+    updateOutputMirrorFromFrame();
   }
 
   function updateReviewPacketFromState() {
@@ -1150,6 +1198,7 @@
 
   if (consoleFrame) {
     consoleFrame.addEventListener("load", () => {
+      installOutputMirrorObserver();
       if (currentCircuitFocus.kind && currentCircuitFocus.id) {
         applyEmbeddedTraceFocus(currentCircuitFocus.kind, currentCircuitFocus.id);
       } else if (activePlaybackIndex >= 0) {
@@ -1158,6 +1207,9 @@
         applyEmbeddedTraceHighlight(currentTraceStep);
       }
     });
+    if (consoleFrame.contentDocument && consoleFrame.contentDocument.readyState !== "loading") {
+      installOutputMirrorObserver();
+    }
   }
   if (coverageSearch) {
     coverageSearch.addEventListener("input", () => {

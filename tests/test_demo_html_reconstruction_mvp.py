@@ -183,6 +183,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-packet"' in html
     assert 'id="demo-reconstruction-review-packet-readiness"' in html
     assert 'id="demo-reconstruction-review-packet-gates"' in html
+    assert 'id="demo-reconstruction-output-mirror"' in html
+    assert 'id="demo-reconstruction-output-mirror-status"' in html
+    assert 'id="demo-reconstruction-output-mirror-thr-output"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -193,6 +196,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "对象反查证据板" in html
     assert "电路完成阶梯" in html
     assert "审阅交付包" in html
+    assert "演示舱输出镜像" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
@@ -232,6 +236,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert '"P035-S03": ["EEC", "PLS", "PDU"]' not in script
     assert "updateReviewPacketFromState" in script
     assert "renderReviewPacketGates" in script
+    assert "installOutputMirrorObserver" in script
+    assert "updateOutputMirrorFromFrame" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -255,6 +261,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-ladder-item" in stylesheet
     assert ".demo-reconstruction-review-packet" in stylesheet
     assert ".demo-reconstruction-review-packet-gates" in stylesheet
+    assert ".demo-reconstruction-output-mirror" in stylesheet
+    assert ".demo-reconstruction-output-mirror-values" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -354,6 +362,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "source_map_visible": True,
         "trace_board_visible": True,
         "operator_guide_visible": True,
+        "output_mirror_visible": True,
         "console_frame_visible": True,
         "evidence_rail_visible": True,
     }
@@ -471,6 +480,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["interactions"]["max-reverse"]["outputs"]["thr_lock"] == "ON"
     assert payload["interactions"]["inhibit-block"]["status_badge"] == "FAULT"
     assert payload["interactions"]["inhibit-block"]["outputs"]["thr_lock"] != "ON"
+    assert payload["output_mirror"]["max-reverse"]["status"] == "DEPLOYED"
+    assert payload["output_mirror"]["max-reverse"]["outputs"]["thr_lock"] == "ON"
+    assert "L4:ON" in payload["output_mirror"]["max-reverse"]["logic"]
+    assert payload["output_mirror"]["inhibit-block"]["status"] == "FAULT"
+    assert payload["output_mirror"]["inhibit-block"]["outputs"]["thr_lock"] == "BLOCKED"
+    assert "BLOCKED" in payload["output_mirror"]["inhibit-block"]["thr"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
@@ -497,6 +512,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "node_wire_pixels": "pass",
         "preset_interactions": "pass",
         "hud_output_linkage": "pass",
+        "output_mirror_sync": "pass",
         "boundary": "pass",
     }
 
