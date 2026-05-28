@@ -183,6 +183,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-packet"' in html
     assert 'id="demo-reconstruction-review-packet-readiness"' in html
     assert 'id="demo-reconstruction-review-packet-gates"' in html
+    assert 'id="demo-reconstruction-custody-matrix"' in html
+    assert 'id="demo-reconstruction-custody-summary"' in html
+    assert 'id="demo-reconstruction-custody-active"' in html
+    assert 'id="demo-reconstruction-custody-output"' in html
+    assert 'id="demo-reconstruction-custody-list"' in html
     assert 'id="demo-reconstruction-output-mirror"' in html
     assert 'id="demo-reconstruction-output-mirror-status"' in html
     assert 'id="demo-reconstruction-output-mirror-thr-output"' in html
@@ -196,6 +201,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "对象反查证据板" in html
     assert "电路完成阶梯" in html
     assert "审阅交付包" in html
+    assert "交付链路总览" in html
     assert "演示舱输出镜像" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
@@ -236,6 +242,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert '"P035-S03": ["EEC", "PLS", "PDU"]' not in script
     assert "updateReviewPacketFromState" in script
     assert "renderReviewPacketGates" in script
+    assert "renderCustodyMatrix" in script
+    assert "updateCustodyActiveReadback" in script
+    assert "updateCustodyOutputReadback" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
     assert "data-docx-trace-selected" in script
@@ -261,6 +270,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-ladder-item" in stylesheet
     assert ".demo-reconstruction-review-packet" in stylesheet
     assert ".demo-reconstruction-review-packet-gates" in stylesheet
+    assert ".demo-reconstruction-custody-matrix" in stylesheet
+    assert ".demo-reconstruction-custody-button" in stylesheet
+    assert ".demo-reconstruction-custody-readback" in stylesheet
     assert ".demo-reconstruction-output-mirror" in stylesheet
     assert ".demo-reconstruction-output-mirror-values" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
@@ -353,6 +365,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["object_provenance"].endswith(".png")
     assert payload["screenshots"]["completion_ladder"].endswith(".png")
     assert payload["screenshots"]["review_packet"].endswith(".png")
+    assert payload["screenshots"]["custody_matrix"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -371,6 +384,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["traceCardCount"] == 5
     assert payload["source_map_review"]["playbackStepCount"] == 5
     assert payload["source_map_review"]["ladderStepCount"] == 5
+    assert payload["source_map_review"]["custodyStepCount"] == 5
     assert payload["source_map_review"]["coverageNodeButtonCount"] == 20
     assert payload["source_map_review"]["coverageWireButtonCount"] == 23
     assert payload["source_map_review"]["selectedNodeChipCount"] > 0
@@ -453,6 +467,19 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "23/23" in payload["review_packet_review"]["contractText"]
     assert "P035-S05" in payload["review_packet_review"]["stepText"]
     assert "wire_logic4_thr_lock" in payload["review_packet_after_wire_focus"]["objectText"]
+    assert payload["custody_matrix_review"]["stepCount"] == 5
+    assert payload["custody_matrix_review"]["activeButtonCount"] == 1
+    assert "5/5" in payload["custody_matrix_review"]["summaryText"]
+    assert "20/20" in payload["custody_matrix_review"]["summaryText"]
+    assert "23/23" in payload["custody_matrix_review"]["summaryText"]
+    assert "P035-S04" in payload["custody_matrix_review"]["activeText"]
+    assert "18/20" in payload["custody_matrix_review"]["activeText"]
+    assert "20/23" in payload["custody_matrix_review"]["activeText"]
+    assert "18/20" in payload["custody_matrix_review"]["s04Text"]
+    assert "20/23" in payload["custody_matrix_review"]["s04Text"]
+    assert "THR_LOCK" in payload["custody_matrix_review"]["s05Text"]
+    assert payload["custody_matrix_review"]["highlightedNodeCount"] == 18
+    assert payload["custody_matrix_review"]["highlightedWireCount"] == 20
     assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
     assert payload["review_deep_link"]["linkHref"].endswith(
         "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -482,9 +509,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["interactions"]["inhibit-block"]["outputs"]["thr_lock"] != "ON"
     assert payload["output_mirror"]["max-reverse"]["status"] == "DEPLOYED"
     assert payload["output_mirror"]["max-reverse"]["outputs"]["thr_lock"] == "ON"
+    assert "DEPLOYED" in payload["output_mirror"]["max-reverse"]["custody"]
+    assert "ON" in payload["output_mirror"]["max-reverse"]["custody"]
     assert "L4:ON" in payload["output_mirror"]["max-reverse"]["logic"]
     assert payload["output_mirror"]["inhibit-block"]["status"] == "FAULT"
     assert payload["output_mirror"]["inhibit-block"]["outputs"]["thr_lock"] == "BLOCKED"
+    assert "FAULT" in payload["output_mirror"]["inhibit-block"]["custody"]
+    assert "BLOCKED" in payload["output_mirror"]["inhibit-block"]["custody"]
     assert "BLOCKED" in payload["output_mirror"]["inhibit-block"]["thr"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
@@ -504,6 +535,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "object_provenance_traceability": "pass",
         "completion_ladder_readback": "pass",
         "review_packet_readiness": "pass",
+        "custody_matrix_readback": "pass",
         "review_hash_link": "pass",
         "review_hash_restore": "pass",
         "source_chip_focus": "pass",
