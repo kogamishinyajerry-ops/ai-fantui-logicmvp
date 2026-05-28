@@ -77,6 +77,39 @@
       <div><span>节点映射</span><strong id="demo-reconstruction-docx-node-coverage">20/20</strong></div>
       <div><span>连线映射</span><strong id="demo-reconstruction-docx-wire-coverage">23/23</strong></div>
     </div>
+    <div id="demo-reconstruction-docx-trace-board" class="demo-reconstruction-trace-board" data-docx-trace-board="true" aria-label="DOCX 原句到 L1-L4 电路链路板">
+      <div class="demo-reconstruction-trace-head">
+        <div>
+          <h3>逐句反推链路板</h3>
+          <p>从 P035 工作过程拆出 5 个连续电路片段，覆盖 L1、L2、L3、VDT90、L4 与 THR_LOCK。</p>
+        </div>
+        <strong id="demo-reconstruction-trace-contract">等待 DOCX 映射</strong>
+      </div>
+      <div class="demo-reconstruction-trace-grid">
+        <div id="demo-reconstruction-trace-card-list" class="demo-reconstruction-trace-card-list" aria-label="P035 工作过程电路片段">
+          <button type="button" class="demo-reconstruction-trace-card" data-trace-card="loading">正在读取链路片段</button>
+        </div>
+        <aside id="demo-reconstruction-selected-trace" class="demo-reconstruction-selected-trace" aria-label="选中句子的节点和连线">
+          <span id="demo-reconstruction-selected-anchor">未选择</span>
+          <h3 id="demo-reconstruction-selected-title">等待 DOCX 映射</h3>
+          <p id="demo-reconstruction-selected-text">加载后选择任一工作过程片段。</p>
+          <div class="demo-reconstruction-selected-groups">
+            <div>
+              <strong>节点</strong>
+              <div id="demo-reconstruction-selected-nodes" class="demo-reconstruction-entry-chips"></div>
+            </div>
+            <div>
+              <strong>连线</strong>
+              <div id="demo-reconstruction-selected-wires" class="demo-reconstruction-entry-chips"></div>
+            </div>
+            <div>
+              <strong>折叠谓词</strong>
+              <div id="demo-reconstruction-selected-folded" class="demo-reconstruction-entry-chips"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
     <div class="demo-reconstruction-source-layout">
       <section class="demo-reconstruction-source-column" aria-label="原始文档逐段逐句清单">
         <div class="demo-reconstruction-source-subhead">

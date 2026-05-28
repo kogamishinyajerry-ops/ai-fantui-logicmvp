@@ -154,6 +154,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-docx-circuit-map"' in html
+    assert 'id="demo-reconstruction-docx-trace-board"' in html
+    assert 'id="demo-reconstruction-trace-card-list"' in html
+    assert 'id="demo-reconstruction-selected-trace"' in html
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
@@ -166,9 +169,13 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "读取 golden demo 控制台" in script
     assert "DOCX_SENTENCE_CIRCUIT_ENDPOINT" in script
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
+    assert "renderTraceBoard" in script
+    assert "setSelectedTrace" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
+    assert ".demo-reconstruction-trace-board" in stylesheet
+    assert ".demo-reconstruction-trace-card" in stylesheet
 
 
 def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> None:
@@ -250,6 +257,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["status"] == "pass"
     assert payload["route"] == "/demo-reconstruction"
     assert payload["screenshots"]["first_screen"].endswith(".png")
+    assert payload["screenshots"]["mobile_first_screen"].endswith(".png")
     assert payload["screenshots"]["chain_svg"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
@@ -257,10 +265,26 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["pixel_visibility"]["chain_svg"]["node_count"] == 20
     assert payload["pixel_visibility"]["chain_svg"]["wire_count"] == 23
     assert payload["first_screen_review"] == {
+        "source_map_visible": True,
+        "trace_board_visible": True,
         "operator_guide_visible": True,
         "console_frame_visible": True,
         "evidence_rail_visible": True,
     }
+    assert payload["source_map_review"]["sourceEntryCount"] >= 10
+    assert payload["source_map_review"]["sequenceStepCount"] == 5
+    assert payload["source_map_review"]["traceCardCount"] == 5
+    assert payload["source_map_review"]["selectedNodeChipCount"] > 0
+    assert payload["source_map_review"]["selectedWireChipCount"] > 0
+    assert payload["source_map_review"]["nodeCoverage"] == "20/20"
+    assert payload["source_map_review"]["wireCoverage"] == "23/23"
+    assert payload["trace_selection_review"] == {
+        "selectedAnchorAfterClick": "P035-S05",
+        "selectedLastPressed": True,
+        "pressedTraceCount": 1,
+    }
+    assert payload["responsive_geometry"]["desktop"]["noHorizontalOverflow"] is True
+    assert payload["responsive_geometry"]["mobile"]["noHorizontalOverflow"] is True
     assert payload["embedded_palette"]["html_class"] is True
     assert payload["embedded_palette"]["palette"] == "codex-light"
     assert payload["embedded_palette"]["body_background"] == "rgb(247, 248, 251)"
@@ -274,6 +298,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "browser_boot": "pass",
         "screenshots": "pass",
         "first_screen_operator_guide": "pass",
+        "docx_sentence_circuit_map": "pass",
+        "trace_selection_interaction": "pass",
+        "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
         "node_wire_pixels": "pass",
         "preset_interactions": "pass",

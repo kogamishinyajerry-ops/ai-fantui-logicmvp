@@ -31,6 +31,14 @@
   const docxSequenceCount = $("demo-reconstruction-docx-sequence-count");
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
+  const traceContract = $("demo-reconstruction-trace-contract");
+  const traceCardList = $("demo-reconstruction-trace-card-list");
+  const selectedAnchor = $("demo-reconstruction-selected-anchor");
+  const selectedTitle = $("demo-reconstruction-selected-title");
+  const selectedText = $("demo-reconstruction-selected-text");
+  const selectedNodes = $("demo-reconstruction-selected-nodes");
+  const selectedWires = $("demo-reconstruction-selected-wires");
+  const selectedFolded = $("demo-reconstruction-selected-folded");
 
   function readJson(value) {
     try {
@@ -94,6 +102,81 @@
     container.appendChild(group);
   }
 
+  function renderInlineChips(container, values, className, emptyText) {
+    if (!container) return;
+    container.innerHTML = "";
+    if (!Array.isArray(values) || values.length === 0) {
+      const chip = document.createElement("span");
+      chip.className = `demo-reconstruction-chip ${className}`;
+      chip.textContent = emptyText;
+      container.appendChild(chip);
+      return;
+    }
+    values.forEach((value) => {
+      const chip = document.createElement("span");
+      chip.className = `demo-reconstruction-chip ${className}`;
+      chip.textContent = value;
+      container.appendChild(chip);
+    });
+  }
+
+  function setSelectedTrace(step) {
+    if (!step || typeof step !== "object") return;
+    document.querySelectorAll("[data-trace-card]").forEach((card) => {
+      card.setAttribute("aria-pressed", card.dataset.traceAnchor === step.anchor ? "true" : "false");
+    });
+    setText(selectedAnchor, step.anchor || "P035");
+    setText(selectedTitle, step.title || "工作过程片段");
+    setText(selectedText, step.source_text || "");
+    renderInlineChips(selectedNodes, step.node_ids, "demo-reconstruction-node-chip", "无节点");
+    renderInlineChips(selectedWires, step.wire_ids, "demo-reconstruction-wire-chip", "无连线");
+    renderInlineChips(selectedFolded, step.folded_predicates, "demo-reconstruction-folded-chip", "无折叠谓词");
+  }
+
+  function renderTraceBoard(payload) {
+    if (!traceCardList) return;
+    const steps = Array.isArray(payload && payload.sequence_steps) ? payload.sequence_steps : [];
+    const coverage = payload && payload.coverage ? payload.coverage : {};
+    const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
+    setText(
+      traceContract,
+      `${coverage.sequence_step_count || steps.length} 步 · ${coverage.covered_node_count || 0}/${contract.node_count || EXPECTED_NODE_COUNT} 节点 · ${coverage.covered_wire_count || 0}/${contract.wire_count || EXPECTED_WIRE_COUNT} 连线`,
+    );
+    traceCardList.innerHTML = "";
+    if (steps.length === 0) {
+      const fallback = document.createElement("button");
+      fallback.type = "button";
+      fallback.className = "demo-reconstruction-trace-card";
+      fallback.dataset.traceCard = "empty";
+      fallback.textContent = "DOCX 链路板暂无数据";
+      traceCardList.appendChild(fallback);
+      return;
+    }
+    steps.forEach((step, index) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "demo-reconstruction-trace-card";
+      card.dataset.traceCard = String(index + 1);
+      card.dataset.traceAnchor = step.anchor || "";
+      card.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+
+      const stepLabel = document.createElement("span");
+      stepLabel.className = "demo-reconstruction-trace-step";
+      stepLabel.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("strong");
+      title.textContent = step.title || "工作过程片段";
+      const meta = document.createElement("small");
+      meta.textContent = `${(step.node_ids || []).length} 节点 · ${(step.wire_ids || []).length} 连线`;
+
+      card.appendChild(stepLabel);
+      card.appendChild(title);
+      card.appendChild(meta);
+      card.addEventListener("click", () => setSelectedTrace(step));
+      traceCardList.appendChild(card);
+    });
+    setSelectedTrace(steps[0]);
+  }
+
   function renderSourceEntries(entries) {
     if (!sourceEntryList) return;
     sourceEntryList.innerHTML = "";
@@ -144,6 +227,7 @@
       const li = document.createElement("li");
       li.className = "demo-reconstruction-sequence-step";
       li.dataset.sourceAnchor = step.anchor || "";
+      li.dataset.traceAnchor = step.anchor || "";
       const title = document.createElement("strong");
       title.textContent = `${step.anchor || "step"} · ${step.title || ""}`;
       const text = document.createElement("p");
@@ -158,6 +242,7 @@
       li.appendChild(title);
       li.appendChild(text);
       li.appendChild(chips);
+      li.addEventListener("click", () => setSelectedTrace(step));
       sequenceStepList.appendChild(li);
     });
   }
@@ -182,6 +267,7 @@
     setText(docxWireCoverage, `${coverage.covered_wire_count || 0}/${expectedWires}`);
     setText(docxEntryCount, `${coverage.source_entry_count || 0} 条源文档记录`);
     setText(docxSequenceCount, `${coverage.sequence_step_count || 0} 步`);
+    renderTraceBoard(payload);
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
   }
