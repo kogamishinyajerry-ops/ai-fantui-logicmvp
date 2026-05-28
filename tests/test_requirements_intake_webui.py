@@ -6348,6 +6348,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-ux-page-role="docx-to-circuit-main-entry"' in html
     assert 'data-docx-circuit-main-entry="true"' in html
     assert 'data-docx-circuit-review-workbench="interactive"' in html
+    assert 'id="docx-circuit-workbench-bar"' in html
+    assert 'data-docx-circuit-workbench-bar="true"' in html
     assert "原始 DOCX 到完整电路" in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert 'href="/requirements-intake?source=official-docx"' in html
@@ -6385,6 +6387,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-node-grid"' in html
     assert 'id="docx-circuit-wire-grid"' in html
     assert 'id="docx-circuit-demo-scenario"' in html
+    assert 'id="docx-circuit-demo-panel"' in html
+    assert 'data-docx-circuit-demo-column="true"' in html
     assert 'id="docx-circuit-demo-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert "truth_effect:none" in html
@@ -6440,6 +6444,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "aria-pressed" in script
     assert "wire_logic4_thr_lock" in html
     assert ".docx-circuit-stage" in stylesheet
+    assert ".docx-circuit-workbench-bar" in stylesheet
     assert ".docx-circuit-review-panel" in stylesheet
     assert ".docx-circuit-review-toolbar" in stylesheet
     assert ".docx-circuit-source-index-panel" in stylesheet
@@ -6454,6 +6459,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert '"review_packet_markdown_json"' in review_link_gate
     assert "markdown_with_json" in review_link_gate
     assert "preview_matches_clipboard" in review_link_gate
+    assert "workbenchThreeColumn" in review_link_gate
+    assert "demoPanelInline" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
     assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate

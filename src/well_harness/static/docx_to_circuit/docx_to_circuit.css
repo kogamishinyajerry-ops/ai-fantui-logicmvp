@@ -130,6 +130,33 @@ h2 {
   margin-top: 14px;
   padding: 16px;
 }
+.docx-circuit-workbench-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.docx-circuit-workbench-bar a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid var(--docx-border);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--docx-text);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+.docx-circuit-workbench-bar a:hover,
+.docx-circuit-workbench-bar a:focus-visible {
+  border-color: rgba(30, 103, 255, 0.55);
+  background: #eff6ff;
+  color: var(--docx-accent);
+  outline: none;
+}
 .docx-circuit-section-head {
   display: flex;
   align-items: center;
@@ -170,7 +197,7 @@ h2 {
 }
 .docx-circuit-stage {
   display: grid;
-  grid-template-columns: minmax(300px, 0.36fr) minmax(640px, 1fr);
+  grid-template-columns: minmax(250px, 0.55fr) minmax(500px, 1fr) minmax(340px, 0.72fr);
   gap: 14px;
   align-items: start;
   margin-top: 14px;
@@ -180,6 +207,7 @@ h2 {
 .docx-circuit-demo-panel {
   min-width: 0;
   padding: 14px;
+  scroll-margin-top: 66px;
 }
 .docx-circuit-review-panel {
   border: 1px solid var(--docx-border);
@@ -219,7 +247,7 @@ h2 {
 .docx-circuit-sequence-list {
   display: grid;
   gap: 8px;
-  max-height: 710px;
+  max-height: 330px;
   margin: 0;
   overflow: auto;
   padding-left: 20px;
@@ -309,7 +337,7 @@ h2 {
 }
 .docx-circuit-source-index-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px auto;
+  grid-template-columns: minmax(0, 1fr) 86px;
   gap: 6px;
 }
 .docx-circuit-source-index-controls label {
@@ -341,6 +369,7 @@ h2 {
   align-self: end;
   cursor: pointer;
   font-weight: 700;
+  grid-column: 1 / -1;
   padding: 6px 9px;
 }
 .docx-circuit-source-index-controls input:focus,
@@ -492,6 +521,7 @@ h2 {
   border: 1px solid var(--docx-border);
   border-radius: 8px;
   background: #ffffff;
+  scroll-margin-top: 66px;
 }
 .docx-circuit-review-packet-preview summary {
   cursor: pointer;
@@ -839,14 +869,15 @@ h2 {
 #docx-circuit-demo-frame {
   display: block;
   width: 100%;
-  height: min(760px, calc(100vh - 190px));
-  min-height: 620px;
+  height: min(620px, calc(100vh - 220px));
+  min-height: 500px;
   border: 1px solid var(--docx-border);
   border-radius: 6px;
   background: #ffffff;
 }
 .docx-circuit-demo-panel {
-  grid-column: 1 / -1;
+  position: sticky;
+  top: 62px;
 }
 .docx-circuit-boundary {
   display: flex;
@@ -864,12 +895,22 @@ h2 {
   padding: 5px 8px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .docx-circuit-hero,
   .docx-circuit-stage,
   .docx-circuit-workflow {
     grid-template-columns: 1fr;
   }
+  .docx-circuit-demo-panel {
+    position: static;
+  }
+  #docx-circuit-demo-frame {
+    height: min(720px, calc(100vh - 190px));
+    min-height: 560px;
+  }
+}
+
+@media (max-width: 1100px) {
   .docx-circuit-hero-actions {
     justify-items: stretch;
   }
@@ -893,6 +934,9 @@ h2 {
   }
   .docx-circuit-metrics {
     grid-template-columns: 1fr;
+  }
+  .docx-circuit-workbench-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   h1 {
     font-size: 24px;

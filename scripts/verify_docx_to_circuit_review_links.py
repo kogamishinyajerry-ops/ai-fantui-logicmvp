@@ -81,6 +81,21 @@ def _page_state(page: Any) -> dict[str, Any]:
             focusedSourceEntryAnchor: document.activeElement?.dataset.sourceEntryAnchor || null,
             reviewPacketPreviewOpen: document.querySelector("#docx-circuit-review-packet-preview")?.open || false,
             reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
+            workbenchNavCount: document.querySelectorAll("#docx-circuit-workbench-bar a").length,
+            workbenchThreeColumn: (() => {
+                const stage = document.querySelector(".docx-circuit-stage");
+                if (!stage) return false;
+                const columns = getComputedStyle(stage).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean);
+                return columns.length >= 3;
+            })(),
+            demoPanelInline: (() => {
+                const review = document.querySelector("#docx-circuit-review-panel");
+                const demo = document.querySelector("#docx-circuit-demo-panel");
+                if (!review || !demo) return false;
+                const reviewRect = review.getBoundingClientRect();
+                const demoRect = demo.getBoundingClientRect();
+                return demoRect.left > reviewRect.left && demoRect.width > 320;
+            })(),
             selectedElementId: document.querySelector("#docx-circuit-trace-panel")?.dataset.selectedElementId || null,
             selectedElementType: document.querySelector("#docx-circuit-trace-panel")?.dataset.selectedElementType || null,
             searchValue: document.querySelector("#docx-circuit-source-index-search")?.value || null,
@@ -213,6 +228,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "visibleNodeCount": 20,
         "visibleWireCount": 23,
         "hitPointCount": 23,
+        "workbenchNavCount": 4,
+        "workbenchThreeColumn": True,
+        "demoPanelInline": True,
     }
     source_expected = {
         **current_expected,
