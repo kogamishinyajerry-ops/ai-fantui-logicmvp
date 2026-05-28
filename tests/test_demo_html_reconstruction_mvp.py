@@ -173,6 +173,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-topology-search"' in html
     assert 'id="demo-reconstruction-topology-step-filter"' in html
     assert 'id="demo-reconstruction-topology-filter-status"' in html
+    assert 'id="demo-reconstruction-output-path-lane"' in html
+    assert 'id="demo-reconstruction-output-path-summary"' in html
+    assert 'id="demo-reconstruction-output-path-targets"' in html
+    assert 'id="demo-reconstruction-output-path-readback"' in html
+    assert 'id="demo-reconstruction-output-path-list"' in html
     assert 'id="demo-reconstruction-topology-list"' in html
     assert 'id="demo-reconstruction-keyboard-review"' in html
     assert 'id="demo-reconstruction-review-anchor"' in html
@@ -282,6 +287,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'params.get("topology")' in script
     assert 'params.set("topology"' in script
     assert 'params.set("tq"' in script
+    assert "renderOutputPathLane" in script
+    assert "upstreamPathForTarget" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -316,6 +323,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-topology-matrix" in stylesheet
     assert ".demo-reconstruction-topology-controls" in stylesheet
     assert ".demo-reconstruction-topology-step-filter" in stylesheet
+    assert ".demo-reconstruction-output-path-lane" in stylesheet
+    assert ".demo-reconstruction-output-path-row" in stylesheet
     assert ".demo-reconstruction-topology-list" in stylesheet
     assert ".demo-reconstruction-topology-row" in stylesheet
     assert ".demo-reconstruction-keyboard-review" in stylesheet
@@ -520,6 +529,23 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["topology_filter_restore_review"]["visibleRows"] == ["wire_logic4_thr_lock"]
     assert payload["topology_filter_restore_review"]["selectedAnchor"] == "P035-S05"
     assert "1/23" in payload["topology_filter_restore_review"]["statusText"]
+    assert payload["output_path_review"]["visible"] is True
+    assert payload["output_path_review"]["targetCount"] == 5
+    assert payload["output_path_review"]["selectedTargets"] == ["thr_lock"]
+    assert payload["output_path_review"]["rowCount"] == 15
+    assert payload["output_path_review"]["pathOrder"][-1] == "wire_logic4_thr_lock"
+    assert payload["output_path_review"]["pathOrder"].index("wire_pdu_vdt90") < payload[
+        "output_path_review"
+    ]["pathOrder"].index("wire_vdt90_logic4")
+    assert payload["output_path_review"]["pathOrder"].index("wire_vdt90_logic4") < payload[
+        "output_path_review"
+    ]["pathOrder"].index("wire_logic4_thr_lock")
+    assert "THR_LOCK" in payload["output_path_review"]["summaryText"]
+    assert "15/23" in payload["output_path_review"]["summaryText"]
+    assert "wire_logic4_thr_lock" in payload["output_path_review"]["finalText"]
+    assert payload["output_path_focus_review"]["activeRows"] == ["wire_logic4_thr_lock"]
+    assert payload["output_path_focus_review"]["highlightedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["output_path_focus_review"]["reviewObjectText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -683,6 +709,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "assembly_map_readback": "pass",
         "topology_matrix_readback": "pass",
         "topology_filter_workbench": "pass",
+        "output_path_lane_readback": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",

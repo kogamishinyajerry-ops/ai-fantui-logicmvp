@@ -8,6 +8,13 @@
   const EXPECTED_WIRE_COUNT = 23;
   const PRESETS = ["默认前向", "着陆展开", "最大反推", "收起回杆", "抑制阻塞"];
   const STATUS_OUTPUTS = ["SW1", "SW2", "TLS", "VDT90", "L1-L4", "THR_LOCK"];
+  const OUTPUT_PATH_TARGETS = [
+    {id: "tls115", label: "TLS 115VAC"},
+    {id: "etrac_540v", label: "ETRAC 540VDC"},
+    {id: "eec_deploy", label: "EEC Deploy"},
+    {id: "pdu_motor", label: "PDU Motor"},
+    {id: "thr_lock", label: "THR_LOCK"},
+  ];
   const TRACE_HIGHLIGHT_STYLE_ID = "demo-reconstruction-trace-highlight-style";
 
   const $ = (id) => document.getElementById(id);
@@ -57,6 +64,10 @@
   const topologyStepFilter = $("demo-reconstruction-topology-step-filter");
   const topologyFilterStatus = $("demo-reconstruction-topology-filter-status");
   const topologyList = $("demo-reconstruction-topology-list");
+  const outputPathSummary = $("demo-reconstruction-output-path-summary");
+  const outputPathTargets = $("demo-reconstruction-output-path-targets");
+  const outputPathReadback = $("demo-reconstruction-output-path-readback");
+  const outputPathList = $("demo-reconstruction-output-path-list");
   const reviewAnchor = $("demo-reconstruction-review-anchor");
   const reviewObject = $("demo-reconstruction-review-object");
   const reviewSync = $("demo-reconstruction-review-sync");
@@ -111,6 +122,7 @@
   let currentCircuitFocus = {kind: "", id: ""};
   let activePlaybackIndex = -1;
   let topologyStepFilterAnchor = "all";
+  let outputPathTargetId = "thr_lock";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -423,6 +435,121 @@
     });
   }
 
+  function outputPathTargetLabel(targetId) {
+    const target = OUTPUT_PATH_TARGETS.find((item) => item.id === targetId);
+    return target ? target.label : nodeDisplayLabel(targetId);
+  }
+
+  function upstreamPathForTarget(targetId) {
+    const wireIds = topologyWireIds();
+    const seenWires = new Set();
+    const seenNodes = new Set();
+    const orderedWires = [];
+    function visit(nodeId) {
+      if (!nodeId || seenNodes.has(nodeId)) return;
+      seenNodes.add(nodeId);
+      wireIds.forEach((wireId) => {
+        const endpoints = wireEndpointsForId(wireId);
+        if (endpoints.length < 2 || endpoints[1] !== nodeId || seenWires.has(wireId)) return;
+        visit(endpoints[0]);
+        seenWires.add(wireId);
+        orderedWires.push(wireId);
+      });
+    }
+    visit(targetId);
+    return {
+      node_ids: Array.from(seenNodes),
+      wire_ids: orderedWires,
+    };
+  }
+
+  function setOutputPathTargetState(targetId) {
+    document.querySelectorAll("[data-output-path-target]").forEach((button) => {
+      const selected = button.dataset.outputPathTarget === targetId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function setOutputPathWireState(wireId) {
+    document.querySelectorAll("[data-output-path-wire-row]").forEach((button) => {
+      const selected = button.dataset.outputPathWireRow === wireId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function renderOutputPathTargets() {
+    if (!outputPathTargets) return;
+    outputPathTargets.innerHTML = "";
+    OUTPUT_PATH_TARGETS.forEach((target) => {
+      const path = upstreamPathForTarget(target.id);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.outputPathTarget = target.id;
+      button.setAttribute("aria-pressed", outputPathTargetId === target.id ? "true" : "false");
+      button.textContent = `${target.label} · ${path.wire_ids.length} 线`;
+      button.addEventListener("click", () => {
+        outputPathTargetId = target.id;
+        renderOutputPathLane();
+      });
+      outputPathTargets.appendChild(button);
+    });
+  }
+
+  function renderOutputPathLane() {
+    if (!outputPathList) return;
+    renderOutputPathTargets();
+    const path = upstreamPathForTarget(outputPathTargetId);
+    const label = outputPathTargetLabel(outputPathTargetId);
+    outputPathList.innerHTML = "";
+    if (!path.wire_ids.length || wireEndpointMap.size === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "输出路径暂无数据";
+      outputPathList.appendChild(empty);
+      setText(outputPathSummary, `${label} · 0/${EXPECTED_WIRE_COUNT} 连线`);
+      setText(outputPathReadback, "等待输出路径");
+      setOutputPathTargetState(outputPathTargetId);
+      setOutputPathWireState("");
+      return;
+    }
+    path.wire_ids.forEach((wireId, index) => {
+      const endpoints = wireEndpointsForId(wireId);
+      const step = firstTraceStepForWire(wireId);
+      const anchors = sourceAnchorsForWire(wireId, endpoints);
+      const source = endpoints[0] ? nodeDisplayLabel(endpoints[0]) : "source";
+      const target = endpoints[1] ? nodeDisplayLabel(endpoints[1]) : "target";
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-output-path-item";
+      li.dataset.outputPathWire = wireId;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-output-path-row";
+      button.dataset.outputPathWireRow = wireId;
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => {
+        applyEmbeddedTraceFocus("wire", wireId);
+        setOutputPathWireState(wireId);
+      });
+
+      const title = document.createElement("strong");
+      title.textContent = `${String(index + 1).padStart(2, "0")} · ${wireId}`;
+      const pathText = document.createElement("span");
+      pathText.textContent = `${source} -> ${target}`;
+      const meta = document.createElement("small");
+      meta.textContent = `${step ? step.anchor : "待匹配"} · DOCX ${anchors.join(" / ") || "待匹配"}`;
+      button.append(title, pathText, meta);
+      li.appendChild(button);
+      outputPathList.appendChild(li);
+    });
+    setText(
+      outputPathSummary,
+      `${label} · ${path.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${path.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`,
+    );
+    setText(outputPathReadback, `${label} 上游路径 · ${path.wire_ids.length} 条连线可逐条聚焦`);
+    setOutputPathTargetState(outputPathTargetId);
+    setOutputPathWireState(currentCircuitFocus.kind === "wire" ? currentCircuitFocus.id : "");
+  }
+
   function setTopologyRowState(wireId) {
     document.querySelectorAll("[data-topology-wire-row]").forEach((button) => {
       const selected = button.dataset.topologyWireRow === wireId;
@@ -459,6 +586,7 @@
       topologyList.appendChild(empty);
       setText(topologySummary, `${wireEndpointMap.size}/${EXPECTED_WIRE_COUNT} 连线 · 等待端点`);
       setText(topologyFilterStatus, `0/${EXPECTED_WIRE_COUNT} 连线`);
+      renderOutputPathLane();
       updateTopologyReadback("");
       return;
     }
@@ -519,6 +647,7 @@
       setTopologyRowState("");
     }
     updateTopologyFilter();
+    renderOutputPathLane();
   }
 
   function refreshEmbeddedReviewFromCircuit() {
@@ -1640,6 +1769,7 @@
     currentCircuitFocus = {kind: "", id: ""};
     setCoverageButtonTabStops("", "");
     updateTopologyReadback("");
+    setOutputPathWireState("");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
@@ -1756,8 +1886,10 @@
     setText(embeddedHighlightStatus, `聚焦${label}：${id} · ${matchCount} ${unit}`);
     if (kind === "wire") {
       updateTopologyReadback(id);
+      setOutputPathWireState(id);
     } else {
       setTopologyRowState("");
+      setOutputPathWireState("");
     }
     updateKeyboardReviewStatus({
       objectKind: kind,

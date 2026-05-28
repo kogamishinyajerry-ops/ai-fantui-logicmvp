@@ -404,6 +404,50 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
                     })"""
                 )
+                output_path_review = page.evaluate(
+                    """() => ({
+                        visible: !!document.querySelector("#demo-reconstruction-output-path-lane"),
+                        targetCount: document.querySelectorAll("[data-output-path-target]").length,
+                        selectedTargets: Array.from(
+                            document.querySelectorAll("[data-output-path-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-output-path-target")),
+                        rowCount: document.querySelectorAll("[data-output-path-wire]").length,
+                        pathOrder: Array.from(document.querySelectorAll("[data-output-path-wire]"))
+                            .map((row) => row.getAttribute("data-output-path-wire")),
+                        summaryText: document.querySelector("#demo-reconstruction-output-path-summary")?.textContent?.trim() || "",
+                        readbackText: document.querySelector("#demo-reconstruction-output-path-readback")?.textContent?.trim() || "",
+                        finalText: document.querySelector('[data-output-path-wire="wire_logic4_thr_lock"]')?.textContent?.trim() || "",
+                    })"""
+                )
+                page.locator('[data-output-path-wire-row="wire_logic4_thr_lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const row = document.querySelector('[data-output-path-wire-row="wire_logic4_thr_lock"]');
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1;
+                    }""",
+                    timeout=5000,
+                )
+                output_path_focus_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            activeRows: Array.from(
+                                document.querySelectorAll("[data-output-path-wire-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-output-path-wire-row")),
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            reviewObjectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                            topologyReadbackText: document.querySelector("#demo-reconstruction-topology-readback")?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 page.locator('[data-trace-card][data-trace-anchor="P035-S05"]').click()
                 page.wait_for_function(
                     """() => {
@@ -1530,6 +1574,30 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "1/23" in topology_filter_restore_review["statusText"]
         )
         else "fail",
+        "output_path_lane_readback": "pass"
+        if (
+            output_path_review["visible"]
+            and output_path_review["targetCount"] == 5
+            and output_path_review["selectedTargets"] == ["thr_lock"]
+            and output_path_review["rowCount"] == 15
+            and output_path_review["pathOrder"][-1] == "wire_logic4_thr_lock"
+            and (
+                output_path_review["pathOrder"].index("wire_pdu_vdt90")
+                < output_path_review["pathOrder"].index("wire_vdt90_logic4")
+            )
+            and (
+                output_path_review["pathOrder"].index("wire_vdt90_logic4")
+                < output_path_review["pathOrder"].index("wire_logic4_thr_lock")
+            )
+            and "THR_LOCK" in output_path_review["summaryText"]
+            and "15/23" in output_path_review["summaryText"]
+            and "wire_logic4_thr_lock" in output_path_review["finalText"]
+            and output_path_focus_review["activeRows"] == ["wire_logic4_thr_lock"]
+            and output_path_focus_review["highlightedWireCount"] == 1
+            and "wire_logic4_thr_lock" in output_path_focus_review["reviewObjectText"]
+            and "P035-S05" in output_path_focus_review["topologyReadbackText"]
+        )
+        else "fail",
         "trace_selection_interaction": "pass"
         if (
             trace_selection_review["selectedAnchorAfterClick"] == "P035-S05"
@@ -1820,6 +1888,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "topology_focus_review": topology_focus_review,
         "topology_filter_review": topology_filter_review,
         "topology_filter_restore_review": topology_filter_restore_review,
+        "output_path_review": output_path_review,
+        "output_path_focus_review": output_path_focus_review,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
