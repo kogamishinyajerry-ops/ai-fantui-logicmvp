@@ -68,6 +68,8 @@
   const outputPathTargets = $("demo-reconstruction-output-path-targets");
   const outputPathReadback = $("demo-reconstruction-output-path-readback");
   const outputPathList = $("demo-reconstruction-output-path-list");
+  const outputMaturitySummary = $("demo-reconstruction-output-maturity-summary");
+  const outputMaturityGrid = $("demo-reconstruction-output-maturity-grid");
   const reviewAnchor = $("demo-reconstruction-review-anchor");
   const reviewObject = $("demo-reconstruction-review-object");
   const reviewSync = $("demo-reconstruction-review-sync");
@@ -548,6 +550,78 @@
     setText(outputPathReadback, `${label} 上游路径 · ${path.wire_ids.length} 条连线可逐条聚焦`);
     setOutputPathTargetState(outputPathTargetId);
     setOutputPathWireState(currentCircuitFocus.kind === "wire" ? currentCircuitFocus.id : "");
+  }
+
+  function setOutputMaturityCellState(stepAnchor, targetId) {
+    document.querySelectorAll("[data-output-maturity-step][data-output-maturity-target]").forEach((button) => {
+      const selected = button.dataset.outputMaturityStep === stepAnchor
+        && button.dataset.outputMaturityTarget === targetId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function renderOutputMaturityMatrix(steps) {
+    if (!outputMaturityGrid) return;
+    const items = Array.isArray(steps) ? steps : [];
+    outputMaturityGrid.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("span");
+      empty.textContent = "输出成熟度暂无数据";
+      outputMaturityGrid.appendChild(empty);
+      setText(outputMaturitySummary, "0/5 步 · 等待输出");
+      return;
+    }
+
+    const corner = document.createElement("strong");
+    corner.className = "demo-reconstruction-output-maturity-corner";
+    corner.textContent = "步骤";
+    outputMaturityGrid.appendChild(corner);
+    OUTPUT_PATH_TARGETS.forEach((target) => {
+      const header = document.createElement("strong");
+      header.className = "demo-reconstruction-output-maturity-target";
+      header.textContent = target.label;
+      outputMaturityGrid.appendChild(header);
+    });
+
+    items.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const activeNodes = new Set(contract.node_ids);
+      const rowLabel = document.createElement("button");
+      rowLabel.type = "button";
+      rowLabel.className = "demo-reconstruction-output-maturity-step";
+      rowLabel.dataset.outputMaturityStepLabel = step.anchor || "";
+      rowLabel.textContent = `${step.anchor || "步骤"} · ${contract.node_ids.length}/${EXPECTED_NODE_COUNT}`;
+      rowLabel.addEventListener("click", () => setSelectedTrace(step));
+      outputMaturityGrid.appendChild(rowLabel);
+
+      OUTPUT_PATH_TARGETS.forEach((target) => {
+        const active = activeNodes.has(target.id);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "demo-reconstruction-output-maturity-cell";
+        button.dataset.outputMaturityStep = step.anchor || "";
+        button.dataset.outputMaturityTarget = target.id;
+        button.dataset.outputMaturityActive = active ? "true" : "false";
+        button.setAttribute("aria-pressed", "false");
+        button.textContent = active ? "已接入" : "待接入";
+        button.addEventListener("click", () => {
+          outputPathTargetId = target.id;
+          setSelectedTrace(step, {writeHash: false});
+          renderOutputPathLane();
+          if (active) applyEmbeddedTraceFocus("node", target.id);
+          setOutputMaturityCellState(step.anchor || "", target.id);
+        });
+        outputMaturityGrid.appendChild(button);
+      });
+    });
+
+    const finalContract = cumulativeTraceContract(items.length - 1);
+    const finalNodes = new Set(finalContract.node_ids);
+    const finalReadyCount = OUTPUT_PATH_TARGETS.filter((target) => finalNodes.has(target.id)).length;
+    setText(
+      outputMaturitySummary,
+      `${items.length}/5 步 · ${OUTPUT_PATH_TARGETS.length} 输出 · 最终 ${finalReadyCount}/${OUTPUT_PATH_TARGETS.length} 接入`,
+    );
   }
 
   function setTopologyRowState(wireId) {
@@ -2025,6 +2099,7 @@
     renderCustodyMatrix(steps);
     renderTopologyStepFilter(steps);
     renderTopologyMatrix();
+    renderOutputMaturityMatrix(steps);
   }
 
   function renderSourceEntries(entries) {

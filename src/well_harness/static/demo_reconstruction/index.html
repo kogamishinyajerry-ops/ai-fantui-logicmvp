@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p13">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p13" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p14">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p14" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -293,6 +293,18 @@
           <ol id="demo-reconstruction-output-path-list" class="demo-reconstruction-output-path-list">
             <li>正在读取输出路径</li>
           </ol>
+        </div>
+        <div id="demo-reconstruction-output-maturity-matrix" class="demo-reconstruction-output-maturity-matrix" data-output-maturity-matrix="p035-output-readiness" aria-label="P035 逐句输出成熟度矩阵">
+          <div class="demo-reconstruction-output-maturity-head">
+            <div>
+              <h4>P035 输出成熟度矩阵</h4>
+              <p>按逐句累计电路检查 demo 输出在第几步接入，并可直接同步到电路对象。</p>
+            </div>
+            <strong id="demo-reconstruction-output-maturity-summary">等待输出矩阵</strong>
+          </div>
+          <div id="demo-reconstruction-output-maturity-grid" class="demo-reconstruction-output-maturity-grid">
+            <span>正在读取输出成熟度</span>
+          </div>
         </div>
         <ol id="demo-reconstruction-topology-list" class="demo-reconstruction-topology-list">
           <li>正在读取完整电路拓扑</li>
