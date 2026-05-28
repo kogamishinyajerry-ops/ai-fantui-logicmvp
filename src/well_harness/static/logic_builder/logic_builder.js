@@ -2290,6 +2290,19 @@
     };
   }
 
+  function requestedDocxTemplate() {
+    const params = new URLSearchParams(window.location.search || "");
+    return params.get("template") === "docx-l1-l4";
+  }
+
+  function renderRequestedDocxTemplate() {
+    beginTask("载入 DOCX 模板", "正在根据链接打开本地 L1-L4 蓝图候选。");
+    renderDrawing(buildDocxTemplateCandidate());
+    resetDrawerParameters({skipSummary: true});
+    renderRunSignalSummary("idle");
+    finishTask("模板已载入", "DOCX L1-L4 官方模板已作为 sandbox candidate 展示。");
+  }
+
   function handleTemplateAction(action) {
     const selected = action || "blank";
     if (selected === "blank") {
@@ -3946,7 +3959,9 @@
     renderBurdenSummary(state.drawingPayload);
     renderStreamedAuthoringSession(null);
     renderWorkflowOverview();
-    if (state.requirementsPayload && state.drawingPayload && state.changeHistory.length) {
+    if (requestedDocxTemplate()) {
+      renderRequestedDocxTemplate();
+    } else if (state.requirementsPayload && state.drawingPayload && state.changeHistory.length) {
       beginTask("载入修改草稿", "正在读取上次保存的图纸和修改历史。");
       renderDrawing(state.drawingPayload);
       finishTask("已载入修改草稿", "当前图纸包含用户确认过的模型修改历史。");

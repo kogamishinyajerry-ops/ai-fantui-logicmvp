@@ -242,18 +242,26 @@
     return new URLSearchParams(hash);
   }
 
+  function hasReviewHashParams(params) {
+    return ["step", "el", "source", "q", "level"].some((key) => params.has(key));
+  }
+
   function applyReviewHashState() {
     const params = reviewHashParams();
+    if (!hasReviewHashParams(params)) return false;
     const step = params.get("step");
     if (step && sequenceSteps().some((item) => item.anchor === step)) currentAnchor = step;
     const element = parseHashElement(params.get("el"));
     if (element) selectedElement = element;
-    const source = params.get("source");
-    activeSourceEntryAnchor = source && sourceEntries().some((item) => item.anchor === source) ? source : "";
+    if (params.has("source")) {
+      const source = params.get("source");
+      activeSourceEntryAnchor = source && sourceEntries().some((item) => item.anchor === source) ? source : "";
+    }
     const query = params.get("q");
     if (sourceIndexSearch && query !== null) sourceIndexSearch.value = query;
     const level = params.get("level");
     if (sourceIndexLevel && validSourceIndexLevel(level)) sourceIndexLevel.value = level;
+    return true;
   }
 
   function reviewHashForState(state) {
@@ -1062,7 +1070,7 @@
 
   function restoreReviewFromHash() {
     if (!currentPayload) return;
-    applyReviewHashState();
+    if (!applyReviewHashState()) return;
     renderSourceIndex(sourceEntries());
     activateStep(currentAnchor, activeSourceEntryAnchor ? {sourceEntryAnchor: activeSourceEntryAnchor} : undefined);
     selectCircuitElement(selectedElement.kind, selectedElement.id);

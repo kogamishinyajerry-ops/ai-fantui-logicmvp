@@ -6328,6 +6328,9 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert "链路覆盖：20/20 节点 · 23/23 连线" in script
     assert "当前模式：概念图，尚未对齐演示舱电路" in script
     assert "当前模式：demo.html 高保真复刻" not in script
+    assert "function requestedDocxTemplate" in script
+    assert "function renderRequestedDocxTemplate" in script
+    assert 'params.get("template") === "docx-l1-l4"' in script
     assert ".logic-reconstruction-mode-panel" in stylesheet
 
 
@@ -6409,6 +6412,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function filteredSourceEntries" in script
     assert "function sourceEntryLevels" in script
     assert "function sourceIndexQuery" in script
+    assert "function hasReviewHashParams" in script
     assert "function applyReviewHashState" in script
     assert "function writeReviewHash" in script
     assert "function parseHashElement" in script
@@ -6460,6 +6464,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
     assert '"source_entry_link"' in review_link_gate
     assert '"review_packet_markdown_json"' in review_link_gate
+    assert '"requirements_official_docx_link"' in review_link_gate
+    assert '"logic_template_query_link"' in review_link_gate
+    assert '"workbench_anchor_preserves_review_state"' in review_link_gate
     assert "markdown_with_json" in review_link_gate
     assert "preview_matches_clipboard" in review_link_gate
     assert "workbenchThreeColumn" in review_link_gate
@@ -6469,9 +6476,20 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "noHorizontalOverflow" in review_link_gate
     assert "sourceLocatorFocused" in review_link_gate
     assert "docx-to-circuit-responsive-" in review_link_gate
+    assert "docx-to-circuit-workbench-anchor-" in review_link_gate
+    assert "requirements-official-docx-link-" in review_link_gate
+    assert "logic-template-query-link-" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
     assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
+    requirements_script = (STATIC_ROOT / "requirements_intake" / "requirements_intake.js").read_text(encoding="utf-8")
+    logic_script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+    assert "OFFICIAL_DOCX_SOURCE" in requirements_script
+    assert "function requestedOfficialDocxSource" in requirements_script
+    assert "function applyOfficialDocxSource" in requirements_script
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in requirements_script
+    assert "function requestedDocxTemplate" in logic_script
+    assert "function renderRequestedDocxTemplate" in logic_script
     assert ".docx-circuit-filter-toggle" in stylesheet
     assert ".docx-circuit-copy-status" in stylesheet
     assert "#docx-circuit-svg" in stylesheet

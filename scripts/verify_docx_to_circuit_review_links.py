@@ -187,6 +187,76 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
     )
 
 
+def _requirements_official_docx_state(page: Any, base_url: str) -> dict[str, Any]:
+    page.goto(f"{base_url}/requirements-intake?source=official-docx", wait_until="networkidle")
+    page.wait_for_selector("#requirements-document-name", timeout=7000)
+    return page.evaluate(
+        """() => ({
+            documentName: document.querySelector("#requirements-document-name")?.value || null,
+            fileState: document.querySelector("#requirements-file-state")?.textContent || null,
+            fileStateSource: document.querySelector("#requirements-file-state")?.dataset.source || null,
+            textIncludesDocx: Boolean(
+                document.querySelector("#requirements-text")?.value.includes(
+                    "uploads/20260409-thrust-reverser-control-logic.docx"
+                )
+            ),
+            textIncludesLogic4: Boolean(document.querySelector("#requirements-text")?.value.includes("L4")),
+            status: document.querySelector("#requirements-status")?.textContent || null,
+        })"""
+    )
+
+
+def _requirements_official_docx_state_matches(state: dict[str, Any]) -> bool:
+    return all(
+        [
+            state.get("documentName") == "uploads/20260409-thrust-reverser-control-logic.docx",
+            state.get("fileState") == "官方 DOCX 已载入",
+            state.get("fileStateSource") == "official-docx",
+            state.get("textIncludesDocx") is True,
+            state.get("textIncludesLogic4") is True,
+            state.get("status") == "官方 DOCX 已载入",
+        ]
+    )
+
+
+def _logic_template_query_state(page: Any, base_url: str) -> dict[str, Any]:
+    page.goto(f"{base_url}/logic-builder?template=docx-l1-l4", wait_until="networkidle")
+    page.wait_for_function(
+        """() => document.querySelector("#logic-canvas")?.dataset.reconstructionMode === "demo-reconstruction" """,
+        timeout=7000,
+    )
+    return page.evaluate(
+        """() => ({
+            reconstructionMode: document.querySelector("#logic-canvas")?.dataset.reconstructionMode || null,
+            viewMode: document.querySelector("#logic-canvas")?.dataset.viewMode || null,
+            modeText: document.querySelector("#logic-reconstruction-mode")?.textContent || null,
+            fidelityText: document.querySelector("#logic-reconstruction-fidelity")?.textContent || null,
+            localStorageHasDocxTemplate: (() => {
+                try {
+                    return Boolean(
+                        localStorage.getItem("ai-fantui-logic-builder-drawing-v1")
+                            ?.includes("local-docx-l1-l4-template")
+                    );
+                } catch (error) {
+                    return false;
+                }
+            })(),
+        })"""
+    )
+
+
+def _logic_template_query_state_matches(state: dict[str, Any]) -> bool:
+    return all(
+        [
+            state.get("reconstructionMode") == "demo-reconstruction",
+            state.get("viewMode") == "circuit",
+            state.get("modeText") == "当前模式：演示舱一致电路图",
+            state.get("fidelityText") == "链路覆盖：20/20 节点 · 23/23 连线",
+            state.get("localStorageHasDocxTemplate") is True,
+        ]
+    )
+
+
 def _capture_responsive_state(
     context: Any,
     url: str,
@@ -241,6 +311,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     current_review_path = artifact_dir / f"docx-to-circuit-current-review-link-{stamp}.png"
     review_packet_preview_path = artifact_dir / f"docx-to-circuit-review-packet-preview-{stamp}.png"
     source_entry_path = artifact_dir / f"docx-to-circuit-source-entry-link-{stamp}.png"
+    workbench_anchor_path = artifact_dir / f"docx-to-circuit-workbench-anchor-{stamp}.png"
+    requirements_official_docx_path = artifact_dir / f"requirements-official-docx-link-{stamp}.png"
+    logic_template_query_path = artifact_dir / f"logic-template-query-link-{stamp}.png"
     responsive_paths = {
         item["name"]: artifact_dir / f"docx-to-circuit-responsive-{item['name']}-{stamp}.png"
         for item in RESPONSIVE_VIEWPORTS
@@ -248,6 +321,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     restricted = _restricted_diff()
     console_errors: list[str] = []
     responsive_states: dict[str, dict[str, Any]] = {}
+    requirements_official_docx_state: dict[str, Any] = {}
+    logic_template_query_state: dict[str, Any] = {}
+    workbench_anchor_state: dict[str, Any] = {}
 
     server, thread, base_url = _start_server()
     current_link = f"{base_url}/docx-to-circuit#step=P035-S01&el=node%3Asw1&q=SW1&level=L1"
@@ -267,6 +343,19 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                     if msg.type in {"error"}
                     else None,
                 )
+                requirements_page = context.new_page()
+                requirements_official_docx_state = _requirements_official_docx_state(
+                    requirements_page,
+                    base_url,
+                )
+                requirements_page.screenshot(path=str(requirements_official_docx_path), full_page=True)
+                requirements_page.close()
+
+                logic_page = context.new_page()
+                logic_template_query_state = _logic_template_query_state(logic_page, base_url)
+                logic_page.screenshot(path=str(logic_template_query_path), full_page=True)
+                logic_page.close()
+
                 page.goto(current_link, wait_until="networkidle")
                 page.wait_for_selector("#docx-circuit-copy-review-link", timeout=7000)
                 page.locator("#docx-circuit-review-packet-preview summary").click()
@@ -310,6 +399,13 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 source_page = context.new_page()
                 source_page.goto(copied_source_entry, wait_until="networkidle")
                 source_state = _page_state(source_page)
+                source_page.locator('#docx-circuit-workbench-bar a[href="#docx-circuit-demo-panel"]').click()
+                source_page.wait_for_function(
+                    """() => window.location.hash === "#docx-circuit-demo-panel" """,
+                    timeout=7000,
+                )
+                workbench_anchor_state = _page_state(source_page)
+                source_page.screenshot(path=str(workbench_anchor_path), full_page=True)
                 source_page.locator("#docx-circuit-show-source-entry").click()
                 source_focus_state = _page_state(source_page)
                 source_page.screenshot(path=str(source_entry_path), full_page=True)
@@ -396,6 +492,21 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "source_entry_locator": "pass"
         if _state_matches(source_focus_state, source_focus_expected)
         else "fail",
+        "requirements_official_docx_link": "pass"
+        if _requirements_official_docx_state_matches(requirements_official_docx_state)
+        else "fail",
+        "logic_template_query_link": "pass"
+        if _logic_template_query_state_matches(logic_template_query_state)
+        else "fail",
+        "workbench_anchor_preserves_review_state": "pass"
+        if _state_matches(
+            workbench_anchor_state,
+            {
+                **source_expected,
+                "hash": "#docx-circuit-demo-panel",
+            },
+        )
+        else "fail",
         "screenshots": "pass"
         if all(
             path.exists() and path.stat().st_size > 0
@@ -403,6 +514,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 current_review_path,
                 review_packet_preview_path,
                 source_entry_path,
+                workbench_anchor_path,
+                requirements_official_docx_path,
+                logic_template_query_path,
                 *responsive_paths.values(),
             )
         )
@@ -437,15 +551,21 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             "preview_matches_clipboard": preview_review_packet == copied_review_packet,
         },
         "states": {
+            "requirements_official_docx": requirements_official_docx_state,
+            "logic_template_query": logic_template_query_state,
             "current_review": current_state,
             "source_entry": source_state,
             "source_entry_locator": source_focus_state,
+            "workbench_anchor": workbench_anchor_state,
         },
         "responsive_states": responsive_states,
         "screenshots": {
             "current_review": str(current_review_path),
             "review_packet_preview": str(review_packet_preview_path),
             "source_entry": str(source_entry_path),
+            "workbench_anchor": str(workbench_anchor_path),
+            "requirements_official_docx": str(requirements_official_docx_path),
+            "logic_template_query": str(logic_template_query_path),
             "responsive": {
                 name: str(path)
                 for name, path in responsive_paths.items()
@@ -512,7 +632,11 @@ def main(argv: list[str] | None = None) -> int:
                 "review_packet_markdown_json": "fail",
                 "source_entry_link": "fail",
                 "source_entry_locator": "fail",
+                "requirements_official_docx_link": "fail",
+                "logic_template_query_link": "fail",
+                "workbench_anchor_preserves_review_state": "fail",
                 "screenshots": "fail",
+                "responsive_layout": "fail",
                 "boundary": "fail",
             },
             "error": str(exc),

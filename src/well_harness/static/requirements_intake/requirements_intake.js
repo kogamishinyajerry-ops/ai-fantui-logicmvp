@@ -21,6 +21,20 @@
     analysisRounds: [],
     lastSubmittedAnswers: [],
   };
+  const OFFICIAL_DOCX_SOURCE = {
+    queryValue: "official-docx",
+    documentName: "uploads/20260409-thrust-reverser-control-logic.docx",
+    text: [
+      "官方 DOCX：uploads/20260409-thrust-reverser-control-logic.docx",
+      "目标：按原始 DOCX 正文复刻反推控制 L1-L4 逻辑链路。",
+      "关键输入：RA < 6ft、TRA 进入反推区、SW1、SW2、EEC、N1K、地面/发动机状态。",
+      "L1：RA 与 SW1 进入 TLS 115VAC 通电并解锁。",
+      "L2：SW2、地面、发动机运行与 EEC 使能进入 ETRAC 540VDC 通电。",
+      "L3：TLS 已解锁、L2、N1K、EEC、地面与 inhibit 条件共同进入 PLS/PDU 展开链路。",
+      "L4：VDT90、TRA 反推区和 L3 展开链路共同释放 THR_LOCK。",
+      "边界：仅生成 sandbox candidate；truth_effect:none；controller_truth_modified:false。",
+    ].join("\n"),
+  };
 
   const $ = (id) => document.getElementById(id);
   const form = $("requirements-form");
@@ -203,6 +217,31 @@
     }
     deepseekLiveOnly.checked = false;
     deepseekLiveOnly.disabled = true;
+  }
+
+  function requestedOfficialDocxSource() {
+    const params = new URLSearchParams(window.location.search || "");
+    return params.get("source") === OFFICIAL_DOCX_SOURCE.queryValue;
+  }
+
+  function applyOfficialDocxSource() {
+    if (!requestedOfficialDocxSource()) return false;
+    state.uploadMode = "text";
+    state.uploadBase64 = "";
+    state.preserveDownstreamDrafts = false;
+    syncUploadMode();
+    if (fileInput) fileInput.value = "";
+    if (documentName) documentName.value = OFFICIAL_DOCX_SOURCE.documentName;
+    if (textArea) textArea.value = OFFICIAL_DOCX_SOURCE.text;
+    if (fileState) {
+      fileState.textContent = "官方 DOCX 已载入";
+      fileState.dataset.source = OFFICIAL_DOCX_SOURCE.queryValue;
+    }
+    setStatus("官方 DOCX 已载入", "ok");
+    if (nextStepCopy) {
+      nextStepCopy.textContent = "已载入官方 DOCX 摘要；点击分析后进入 L1-L4 逻辑复刻。";
+    }
+    return true;
   }
 
   async function refreshProviderStatus() {
@@ -1273,7 +1312,11 @@
   form.addEventListener("submit", analyze);
   syncUploadMode();
   refreshProviderStatus();
-  if (!hydrateStoredRequirementsDraft()) {
+  if (applyOfficialDocxSource()) {
+    renderWorkflowOverview(null);
+    renderRequirementsChoiceChecklist(null);
+    renderBurdenSummary(null);
+  } else if (!hydrateStoredRequirementsDraft()) {
     renderWorkflowOverview(null);
     renderRequirementsChoiceChecklist(null);
     renderBurdenSummary(null);
