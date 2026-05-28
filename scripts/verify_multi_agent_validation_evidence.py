@@ -24,6 +24,10 @@ EXPECTED_PACKAGES = [
     "m24-pr-preflight",
     "m25-validation-evidence",
 ]
+RESPONSIVE_VIEWPORTS = [
+    {"name": "desktop", "width": 1366, "height": 768},
+    {"name": "mobile", "width": 390, "height": 844},
+]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -31,6 +35,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--artifact-dir", type=Path, default=DEFAULT_ARTIFACT_DIR)
     parser.add_argument("--package", dest="package_path", type=Path, default=None)
     parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--skip-browser", action="store_true")
     return parser.parse_args()
 
 
@@ -51,7 +56,141 @@ def _artifact_exists(path_value: Any) -> bool:
     return path.exists() and path.stat().st_size > 0
 
 
-def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]:
+def _browser_skipped() -> dict[str, Any]:
+    return {
+        "status": "skipped",
+        "mismatches": [],
+        "screenshots": {},
+        "states": {},
+    }
+
+
+def _required_browser_text(payload: dict[str, Any]) -> list[str]:
+    required: list[str] = [
+        "Multi-Agent Validation Evidence",
+        "Validation Results",
+        "Stage Commands",
+        "Control-Plane Boundary",
+        "Classified Changed Pathspecs",
+        "repo-github-local-artifacts",
+    ]
+    note = payload.get("pr_evidence_note")
+    if isinstance(note, str) and note:
+        required.append(note)
+    for package in payload.get("pathspec_packages", []):
+        if not isinstance(package, dict):
+            continue
+        for key in ("package_id", "label"):
+            value = package.get(key)
+            if isinstance(value, str) and value:
+                required.append(value)
+    for result in payload.get("validation_results", []):
+        if isinstance(result, dict):
+            command_id = result.get("command_id")
+            if isinstance(command_id, str) and command_id:
+                required.append(command_id)
+    for pathspec in payload.get("classified_changed_pathspecs", []):
+        if isinstance(pathspec, str) and pathspec:
+            required.append(pathspec)
+    return list(dict.fromkeys(required))
+
+
+def _browser_state(
+    html_path: Path,
+    screenshot_dir: Path,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    def fail(message: str) -> dict[str, Any]:
+        return {
+            "status": "fail",
+            "mismatches": [message],
+            "screenshots": {},
+            "states": {},
+        }
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        return fail(f"playwright is not available: {exc}")
+
+    required_text = _required_browser_text(payload)
+    expected_package_count = int(payload.get("summary", {}).get("package_count", 0))
+    expected_result_count = int(payload.get("summary", {}).get("executed_command_count", 0))
+    expected_stage_count = int(payload.get("summary", {}).get("stage_command_count", 0))
+    mismatches: list[str] = []
+    screenshots: dict[str, str] = {}
+    states: dict[str, dict[str, Any]] = {}
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            try:
+                for viewport in RESPONSIVE_VIEWPORTS:
+                    page = browser.new_page(
+                        viewport={"width": viewport["width"], "height": viewport["height"]},
+                    )
+                    try:
+                        page.goto(html_path.resolve().as_uri(), wait_until="load")
+                        page.wait_for_selector("h1", timeout=7000)
+                        state = page.evaluate(
+                            """(requiredText) => {
+                                const bodyText = document.body?.innerText || "";
+                                return {
+                                    title: document.title,
+                                    h1: document.querySelector("h1")?.textContent || "",
+                                    pageWidth: document.documentElement.scrollWidth,
+                                    viewportWidth: window.innerWidth,
+                                    noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                                    requiredTextPresent: requiredText.every((item) => bodyText.includes(item)),
+                                    missingText: requiredText.filter((item) => !bodyText.includes(item)),
+                                    packageCardCount: document.querySelectorAll(".package").length,
+                                    validationResultCount: document.querySelectorAll(".validation-result").length,
+                                    stageCommandCount: document.querySelectorAll(".stage-command").length,
+                                    sectionCount: document.querySelectorAll("section").length,
+                                };
+                            }""",
+                            required_text,
+                        )
+                        screenshot_path = screenshot_dir / f"multi-agent-validation-evidence-{viewport['name']}.png"
+                        page.screenshot(path=str(screenshot_path), full_page=True)
+                    except Exception as exc:
+                        mismatches.append(f"{viewport['name']} browser verification failed: {exc}")
+                        continue
+                    finally:
+                        page.close()
+                    screenshots[viewport["name"]] = str(screenshot_path)
+                    states[viewport["name"]] = state
+                    if not state.get("noHorizontalOverflow"):
+                        mismatches.append(f"{viewport['name']} viewport has horizontal page overflow")
+                    if not state.get("requiredTextPresent"):
+                        missing = ", ".join(state.get("missingText", []))
+                        mismatches.append(f"{viewport['name']} viewport is missing required text: {missing}")
+                    if state.get("packageCardCount") != expected_package_count:
+                        mismatches.append(f"{viewport['name']} viewport must expose all evidence package cards")
+                    if state.get("validationResultCount") != expected_result_count:
+                        mismatches.append(f"{viewport['name']} viewport must expose all validation results")
+                    if state.get("stageCommandCount") != expected_stage_count:
+                        mismatches.append(f"{viewport['name']} viewport must expose all stage commands")
+                    if int(state.get("sectionCount", 0)) < 5:
+                        mismatches.append(f"{viewport['name']} viewport must expose the evidence sections")
+            finally:
+                browser.close()
+    except Exception as exc:
+        return fail(f"browser verification failed: {exc}")
+
+    return {
+        "status": "pass" if not mismatches else "fail",
+        "mismatches": mismatches,
+        "screenshots": screenshots,
+        "states": states,
+    }
+
+
+def verify_multi_agent_validation_evidence(
+    package_path: Path,
+    *,
+    run_browser: bool = True,
+) -> dict[str, Any]:
     mismatches: list[str] = []
     try:
         payload = _load_json(package_path)
@@ -62,6 +201,8 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             "schema_valid": False,
             "html_exists": False,
             "markdown_exists": False,
+            "browser_valid": False,
+            "browser": _browser_skipped(),
             "mismatches": [f"package could not be loaded: {exc}"],
         }
 
@@ -184,12 +325,32 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             if marker not in html:
                 mismatches.append(f"evidence HTML missing marker: {marker}")
 
+    browser = _browser_skipped()
+    if run_browser:
+        if html_exists:
+            browser = _browser_state(
+                Path(str(artifact_paths["evidence_html"])),
+                package_path.parent / "screenshots",
+                payload,
+            )
+            mismatches.extend([f"browser: {item}" for item in browser["mismatches"]])
+        else:
+            browser = {
+                "status": "fail",
+                "mismatches": ["evidence_html artifact is unavailable"],
+                "screenshots": {},
+                "states": {},
+            }
+            mismatches.extend([f"browser: {item}" for item in browser["mismatches"]])
+
     return {
         "status": "pass" if not mismatches else "fail",
         "package_path": str(package_path),
         "schema_valid": not errors,
         "html_exists": html_exists,
         "markdown_exists": markdown_exists,
+        "browser_valid": browser["status"] == "pass",
+        "browser": browser,
         "mismatches": mismatches,
     }
 
@@ -198,6 +359,7 @@ def main() -> int:
     args = _parse_args()
     result = verify_multi_agent_validation_evidence(
         _package_path(artifact_dir=args.artifact_dir, package_path=args.package_path),
+        run_browser=not args.skip_browser,
     )
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

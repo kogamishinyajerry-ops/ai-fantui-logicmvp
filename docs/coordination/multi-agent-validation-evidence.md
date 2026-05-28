@@ -31,6 +31,11 @@ Verifier:
 make verify-multi-agent-validation-evidence
 ```
 
+The verifier opens the generated HTML in desktop and mobile browser viewports,
+captures screenshots, and fails on missing required evidence labels or
+horizontal page overflow. Unit tests can keep the browser path disabled with
+`--skip-browser`; the Makefile gate keeps the browser check enabled.
+
 ## Package Order
 
 1. `multi-agent-cursor-baseline-v0-2`
@@ -81,4 +86,4 @@ make multi-agent-validation-evidence
 make verify-multi-agent-validation-evidence
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Validation Evidence`, `multi-agent-cursor-baseline-v0-2-01`, `m24-pr-preflight-03`, `m25-validation-evidence`, `repo-github-local-artifacts`, and `21 validation commands passed` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent Validation Evidence`, `multi-agent-cursor-baseline-v0-2-01`, `m24-pr-preflight-03`, `m25-validation-evidence`, `repo-github-local-artifacts`, and `21 validation commands passed` with desktop/mobile screenshots and no horizontal layout overflow.
