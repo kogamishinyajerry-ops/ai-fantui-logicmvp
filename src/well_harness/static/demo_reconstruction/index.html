@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p4">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p4" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p5">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p5" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -128,6 +128,18 @@
       <div id="demo-reconstruction-playback-step-list" class="demo-reconstruction-playback-steps" aria-label="逐句累计构建步骤">
         <button type="button" class="demo-reconstruction-playback-button" data-playback-step="loading">正在读取构建轨道</button>
       </div>
+    </div>
+    <div id="demo-reconstruction-circuit-ladder" class="demo-reconstruction-circuit-ladder" data-circuit-ladder="p035-readback" aria-label="P035 逐句电路完成阶梯">
+      <div class="demo-reconstruction-ladder-head">
+        <div>
+          <h3>电路完成阶梯</h3>
+          <p>把 5 个工作过程步骤压成一条完成读回：每一步累计到哪些关键输出，以及距离完整 demo.html 电路还差多少。</p>
+        </div>
+        <strong id="demo-reconstruction-ladder-summary">等待完成读回</strong>
+      </div>
+      <ol id="demo-reconstruction-ladder-list" class="demo-reconstruction-ladder-list">
+        <li>正在读取完成阶梯</li>
+      </ol>
     </div>
     <div id="demo-reconstruction-coverage-matrix" class="demo-reconstruction-coverage-matrix" aria-label="完整 demo 电路对象覆盖矩阵">
       <div class="demo-reconstruction-coverage-head">

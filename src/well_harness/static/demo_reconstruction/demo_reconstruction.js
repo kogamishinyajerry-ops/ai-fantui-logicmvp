@@ -55,6 +55,8 @@
   const playbackActiveStep = $("demo-reconstruction-playback-active-step");
   const playbackNodeCount = $("demo-reconstruction-playback-node-count");
   const playbackWireCount = $("demo-reconstruction-playback-wire-count");
+  const ladderSummary = $("demo-reconstruction-ladder-summary");
+  const ladderList = $("demo-reconstruction-ladder-list");
   const provenanceObject = $("demo-reconstruction-provenance-object");
   const provenanceSourceCount = $("demo-reconstruction-provenance-source-count");
   const provenanceStepCount = $("demo-reconstruction-provenance-step-count");
@@ -400,6 +402,69 @@
     });
     if (steps.length) updateStepPlaybackSummary(cumulativeTraceContract(selectedTraceIndex >= 0 ? selectedTraceIndex : 0));
     if (stepPlayback) stepPlayback.dataset.stepPlaybackReady = steps.length ? "true" : "false";
+  }
+
+  function ladderMilestonesForStep(step) {
+    const anchor = step && step.anchor ? step.anchor : "";
+    const milestones = {
+      "P035-S01": ["TLS 115VAC", "TLS 解锁"],
+      "P035-S02": ["ETRAC 540VDC"],
+      "P035-S03": ["EEC", "PLS", "PDU"],
+      "P035-S04": ["VDT90"],
+      "P035-S05": ["L4", "THR_LOCK"],
+    };
+    return milestones[anchor] || [];
+  }
+
+  function renderCircuitCompletionLadder(steps) {
+    if (!ladderList) return;
+    ladderList.innerHTML = "";
+    if (!Array.isArray(steps) || steps.length === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "完成阶梯暂无数据";
+      ladderList.appendChild(empty);
+      setText(ladderSummary, "0/5 步 · 0/20 节点 · 0/23 连线");
+      return;
+    }
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-ladder-item";
+      li.dataset.ladderStep = step.anchor || "";
+      li.dataset.ladderComplete = contract.node_ids.length === EXPECTED_NODE_COUNT
+        && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+        ? "true"
+        : "false";
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("p");
+      title.textContent = step.title || "工作过程片段";
+
+      const metrics = document.createElement("div");
+      metrics.className = "demo-reconstruction-ladder-metrics";
+      [`${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`, `${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        metrics.appendChild(chip);
+      });
+
+      const milestones = document.createElement("div");
+      milestones.className = "demo-reconstruction-ladder-milestones";
+      ladderMilestonesForStep(step).forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        milestones.appendChild(chip);
+      });
+
+      li.append(anchor, title, metrics, milestones);
+      ladderList.appendChild(li);
+    });
+    const finalContract = cumulativeTraceContract(steps.length - 1);
+    setText(
+      ladderSummary,
+      `${steps.length}/5 步 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
   }
 
   function objectProvenanceRecords(kind, id) {
@@ -833,6 +898,7 @@
     });
     setSelectedTrace(steps[0], {writeHash: false});
     renderStepPlaybackRail(steps);
+    renderCircuitCompletionLadder(steps);
   }
 
   function renderSourceEntries(entries) {

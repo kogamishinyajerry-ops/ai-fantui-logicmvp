@@ -127,6 +127,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
     step_playback_path = artifact_dir / f"demo-reconstruction-step-playback-{stamp}.png"
     object_provenance_path = artifact_dir / f"demo-reconstruction-object-provenance-{stamp}.png"
+    completion_ladder_path = artifact_dir / f"demo-reconstruction-completion-ladder-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -185,6 +186,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
+                            ladderStepCount: document.querySelectorAll("[data-ladder-step]").length,
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
                             selectedNodeChipCount: document.querySelectorAll("#demo-reconstruction-selected-nodes .demo-reconstruction-chip").length,
                             selectedWireChipCount: document.querySelectorAll("#demo-reconstruction-selected-wires .demo-reconstruction-chip").length,
@@ -373,6 +375,20 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             )
                         ).map((item) => item.textContent.trim()),
                     })"""
+                )
+                page.locator("#demo-reconstruction-circuit-ladder").screenshot(
+                    path=str(completion_ladder_path)
+                )
+                completion_ladder_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            stepCount: document.querySelectorAll("[data-ladder-step]").length,
+                            summaryText: text("#demo-reconstruction-ladder-summary"),
+                            s03Text: text('[data-ladder-step="P035-S03"]'),
+                            s05Text: text('[data-ladder-step="P035-S05"]'),
+                        };
+                    }"""
                 )
                 page.locator(
                     '[data-circuit-coverage-kind="wire"][data-circuit-coverage-id="wire_logic4_thr_lock"]'
@@ -935,6 +951,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 review_deep_link_path,
                 step_playback_path,
                 object_provenance_path,
+                completion_ladder_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -951,6 +968,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
+            and source_map_review["ladderStepCount"] == 5
             and source_map_review["coverageNodeButtonCount"] == 20
             and source_map_review["coverageWireButtonCount"] == 23
             and source_map_review["selectedNodeChipCount"] > 0
@@ -1064,6 +1082,18 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and any("P035-S05" in item for item in wire_provenance_review["stepItems"])
         )
         else "fail",
+        "completion_ladder_readback": "pass"
+        if (
+            completion_ladder_review["stepCount"] == 5
+            and "5/5" in completion_ladder_review["summaryText"]
+            and "EEC" in completion_ladder_review["s03Text"]
+            and "PLS" in completion_ladder_review["s03Text"]
+            and "PDU" in completion_ladder_review["s03Text"]
+            and "THR_LOCK" in completion_ladder_review["s05Text"]
+            and "20/20" in completion_ladder_review["s05Text"]
+            and "23/23" in completion_ladder_review["s05Text"]
+        )
+        else "fail",
         "review_hash_link": "pass"
         if (
             review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -1131,6 +1161,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "review_deep_link": str(review_deep_link_path),
             "step_playback": str(step_playback_path),
             "object_provenance": str(object_provenance_path),
+            "completion_ladder": str(completion_ladder_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -1152,6 +1183,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "step_playback_review": step_playback_review,
         "object_provenance_review": object_provenance_review,
         "wire_provenance_review": wire_provenance_review,
+        "completion_ladder_review": completion_ladder_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
@@ -1227,6 +1259,7 @@ def main(argv: list[str] | None = None) -> int:
                 "coverage_matrix_filter": "fail",
                 "step_playback_cumulative_circuit": "fail",
                 "object_provenance_traceability": "fail",
+                "completion_ladder_readback": "fail",
                 "source_chip_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",

@@ -352,6 +352,96 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-circuit-ladder {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.demo-reconstruction-ladder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.demo-reconstruction-ladder-head h3 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 15px;
+}
+.demo-reconstruction-ladder-head p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.demo-reconstruction-ladder-head > strong {
+  min-width: 210px;
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f9fafb;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 6px 9px;
+  text-align: right;
+}
+.demo-reconstruction-ladder-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-reconstruction-ladder-item {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-ladder-item[data-ladder-complete="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+}
+.demo-reconstruction-ladder-item strong {
+  color: #2563eb;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-ladder-item p {
+  margin: 0;
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-ladder-metrics,
+.demo-reconstruction-ladder-milestones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.demo-reconstruction-ladder-metrics span,
+.demo-reconstruction-ladder-milestones span {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475467;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 2px 6px;
+}
+.demo-reconstruction-ladder-milestones span {
+  color: #0f766e;
+}
 .demo-reconstruction-coverage-head {
   display: flex;
   align-items: flex-start;
@@ -792,6 +882,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-trace-head,
   .demo-reconstruction-trace-grid,
   .demo-reconstruction-playback-head,
+  .demo-reconstruction-ladder-head,
   .demo-reconstruction-coverage-head,
   .demo-reconstruction-provenance-head,
   .demo-reconstruction-provenance-grid,
@@ -817,6 +908,13 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   }
   .demo-reconstruction-playback-head {
     display: grid;
+  }
+  .demo-reconstruction-ladder-head {
+    display: grid;
+  }
+  .demo-reconstruction-ladder-head > strong {
+    min-width: 0;
+    text-align: left;
   }
   .demo-reconstruction-provenance-head {
     display: grid;
@@ -846,6 +944,9 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-playback-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-ladder-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .demo-reconstruction-source-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -867,7 +968,8 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
     grid-template-columns: 1fr;
   }
   .demo-reconstruction-trace-card-list,
-  .demo-reconstruction-playback-steps {
+  .demo-reconstruction-playback-steps,
+  .demo-reconstruction-ladder-list {
     grid-template-columns: 1fr;
   }
 }
