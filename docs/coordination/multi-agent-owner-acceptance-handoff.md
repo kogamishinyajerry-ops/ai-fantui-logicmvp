@@ -45,3 +45,15 @@ actionable blockers.
 M32 does not grant final acceptance. If the project owner accepts, that decision
 must be provided through a separate explicit owner decision. This packet also
 keeps Notion and external planning surfaces out of scope.
+
+## Browser Gate
+
+The verifier opens the generated owner-acceptance HTML in desktop/mobile browser
+viewports, captures screenshots, and fails on missing handoff labels or
+page-level horizontal overflow. Unit tests can disable this browser path with
+`--skip-browser`; the Makefile gate keeps it enabled.
+
+The generated HTML must show `Multi-Agent Owner Acceptance Handoff`,
+`five_agent_context_cap`, `PackagingPRReadinessAgent`,
+`repo_github_local_artifacts_only`, and `external_manual_only` with
+desktop/mobile screenshots and no horizontal layout overflow.

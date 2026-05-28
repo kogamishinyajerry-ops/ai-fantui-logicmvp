@@ -337,19 +337,37 @@ def render_multi_agent_owner_acceptance_handoff_html(payload: dict[str, Any]) ->
     """Render responsive HTML owner acceptance handoff."""
     summary = payload["summary"]
     gate_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"gate-row\">"
         f"<td data-label=\"Gate\">{_escape(name.replace('_', ' '))}</td>"
         f"<td data-label=\"Status\"><span class=\"badge badge-{_escape(status)}\">{_escape(status)}</span></td>"
         "</tr>"
         for name, status in payload["gates"].items()
     )
+    team_rows = "\n".join(
+        "<tr class=\"agent-row\">"
+        f"<td data-label=\"Agent\">{_escape(item['name'])}</td>"
+        f"<td data-label=\"Scope\">{_escape(item['scope'])}</td>"
+        "</tr>"
+        for item in payload["agent_team"]["active_agents"]
+    )
     checklist_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"checklist-row\">"
         f"<td data-label=\"Item\">{_escape(item['item_id'])}</td>"
         f"<td data-label=\"Status\">{_escape(item['status'])}</td>"
         f"<td data-label=\"Owner action\">{_escape(item['owner_action'])}</td>"
         "</tr>"
         for item in payload["owner_acceptance_checklist"]
+    )
+    boundary_rows = "\n".join(
+        "<tr class=\"boundary-row\">"
+        f"<td data-label=\"Boundary\">{_escape(name)}</td>"
+        f"<td data-label=\"Status\">{_escape(status)}</td>"
+        "</tr>"
+        for name, status in payload["decision_boundaries"].items()
+    )
+    pathspec_items = "\n".join(
+        f"<li class=\"pathspec-item\"><code>{_escape(item)}</code></li>"
+        for item in payload["pathspec_package"]["pathspecs"]
     )
     risks = "\n".join(f"<li>{_escape(item)}</li>" for item in payload["risk_notes"])
     return f"""<!doctype html>
@@ -397,7 +415,8 @@ def render_multi_agent_owner_acceptance_handoff_html(payload: dict[str, Any]) ->
       padding: 16px;
     }}
     .metric span {{ display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }}
-    .metric strong {{ display: block; font-size: 22px; line-height: 1.2; overflow-wrap: anywhere; }}
+    .metric strong {{ display: block; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }}
+    .table-scroll {{ overflow-x: auto; max-width: 100%; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
     th, td {{ border-bottom: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }}
     th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; }}
@@ -443,24 +462,49 @@ def render_multi_agent_owner_acceptance_handoff_html(payload: dict[str, Any]) ->
       <p>PR <code>{_escape(payload['inputs']['handoff_pr_number'])}</code>: <code>{_escape(payload['inputs']['handoff_pr_url'])}</code></p>
       <p>Head <code>{_escape(payload['inputs']['handoff_head_ref_oid'])}</code>; merge state <code>{_escape(payload['inputs']['handoff_merge_state'])}</code>.</p>
       <p>M31 source <code>{_escape(payload['inputs']['release_decision_input_id'])}</code> is <code>{_escape(payload['inputs']['release_decision_status'])}</code>.</p>
+      <p>Handoff mode <code>{_escape(summary['handoff_mode'])}</code>.</p>
+    </section>
+    <section>
+      <h2>Active Agent Team</h2>
+      <p>Mode <code>{_escape(payload['agent_team']['mode'])}</code>, team size <code>{_escape(payload['agent_team']['team_size'])}</code>. {_escape(payload['agent_team']['retired_role_policy'])}</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Agent</th><th>Scope</th></tr></thead>
+          <tbody>{team_rows}</tbody>
+        </table>
+      </div>
     </section>
     <section>
       <h2>Gates</h2>
-      <table>
-        <thead><tr><th>Gate</th><th>Status</th></tr></thead>
-        <tbody>{gate_rows}</tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Gate</th><th>Status</th></tr></thead>
+          <tbody>{gate_rows}</tbody>
+        </table>
+      </div>
     </section>
     <section>
       <h2>Owner Acceptance Checklist</h2>
-      <table>
-        <thead><tr><th>Item</th><th>Status</th><th>Owner Action</th></tr></thead>
-        <tbody>{checklist_rows}</tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Item</th><th>Status</th><th>Owner Action</th></tr></thead>
+          <tbody>{checklist_rows}</tbody>
+        </table>
+      </div>
     </section>
     <section>
       <h2>Decision Boundaries</h2>
-      <p>auto_merge <code>{_escape(payload['decision_boundaries']['auto_merge'])}</code>; self_approval <code>{_escape(payload['decision_boundaries']['self_approval'])}</code>; resolve_review_threads <code>{_escape(payload['decision_boundaries']['resolve_review_threads'])}</code>; owner_final_decision <code>{_escape(payload['decision_boundaries']['owner_final_decision'])}</code>; notion_control_plane_changes <code>{_escape(payload['decision_boundaries']['notion_control_plane_changes'])}</code>.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Boundary</th><th>Status</th></tr></thead>
+          <tbody>{boundary_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>Pathspec Package</h2>
+      <ul>{pathspec_items}</ul>
+      <p>Stage command: <code>{_escape(payload['pathspec_package']['stage_command'])}</code></p>
     </section>
     <section>
       <h2>Risks</h2>
