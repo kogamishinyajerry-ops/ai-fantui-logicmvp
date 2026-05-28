@@ -69,65 +69,85 @@ def _dashboard_path(*, artifact_dir: Path, dashboard_path: Path | None) -> Path:
 
 
 def _browser_state(html_path: Path, screenshot_dir: Path, *, expected_lane_count: int) -> dict[str, Any]:
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError as exc:
+    def fail(message: str) -> dict[str, Any]:
         return {
             "status": "fail",
-            "mismatches": [f"playwright is not available: {exc}"],
+            "mismatches": [message],
             "screenshots": {},
             "states": {},
         }
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        return fail(f"playwright is not available: {exc}")
 
     mismatches: list[str] = []
     screenshots: dict[str, str] = {}
     states: dict[str, dict[str, Any]] = {}
     screenshot_dir.mkdir(parents=True, exist_ok=True)
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch()
+    try:
+        playwright_context = sync_playwright()
+        pw = playwright_context.__enter__()
+    except Exception as exc:  # pragma: no cover - environment-specific.
+        return fail(f"playwright startup failed: {exc}")
+
+    browser = None
+    try:
+        try:
+            browser = pw.chromium.launch()
+        except Exception as exc:
+            return fail(f"chromium launch failed: {exc}")
         try:
             for viewport in RESPONSIVE_VIEWPORTS:
-                page = browser.new_page(
-                    viewport={"width": viewport["width"], "height": viewport["height"]},
-                )
-                page.goto(html_path.resolve().as_uri(), wait_until="load")
-                page.wait_for_selector("h1", timeout=7000)
-                state = page.evaluate(
-                    """(requiredText) => {
-                        const bodyText = document.body?.innerText || "";
-                        const sections = [...document.querySelectorAll("section")].map((section) => (
-                            section.querySelector("h2")?.textContent || ""
-                        ));
-                        const scrollContainers = [...document.querySelectorAll(".table-scroll")].map((element) => {
-                            const rect = element.getBoundingClientRect();
+                page = None
+                try:
+                    page = browser.new_page(
+                        viewport={"width": viewport["width"], "height": viewport["height"]},
+                    )
+                    page.goto(html_path.resolve().as_uri(), wait_until="load")
+                    page.wait_for_selector("h1", timeout=7000)
+                    state = page.evaluate(
+                        """(requiredText) => {
+                            const bodyText = document.body?.innerText || "";
+                            const sections = [...document.querySelectorAll("section")].map((section) => (
+                                section.querySelector("h2")?.textContent || ""
+                            ));
+                            const scrollContainers = [...document.querySelectorAll(".table-scroll")].map((element) => {
+                                const rect = element.getBoundingClientRect();
+                                return {
+                                    width: Math.round(rect.width),
+                                    scrollWidth: element.scrollWidth,
+                                    hasInternalOverflow: element.scrollWidth > element.clientWidth + 2,
+                                };
+                            });
                             return {
-                                width: Math.round(rect.width),
-                                scrollWidth: element.scrollWidth,
-                                hasInternalOverflow: element.scrollWidth > element.clientWidth + 2,
+                                title: document.title,
+                                h1: document.querySelector("h1")?.textContent || "",
+                                pageWidth: document.documentElement.scrollWidth,
+                                viewportWidth: window.innerWidth,
+                                noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                                requiredTextPresent: requiredText.every((item) => bodyText.includes(item)),
+                                missingText: requiredText.filter((item) => !bodyText.includes(item)),
+                                sectionHeadings: sections,
+                                metricCount: document.querySelectorAll(".metric").length,
+                                agentRowCount: document.querySelectorAll("section:nth-of-type(1) tbody tr").length,
+                                laneRowCount: document.querySelectorAll("section:nth-of-type(3) tbody tr").length,
+                                gateCount: document.querySelectorAll("section:nth-of-type(4) li").length,
+                                tableScrollCount: scrollContainers.length,
+                                scrollContainers,
                             };
-                        });
-                        return {
-                            title: document.title,
-                            h1: document.querySelector("h1")?.textContent || "",
-                            pageWidth: document.documentElement.scrollWidth,
-                            viewportWidth: window.innerWidth,
-                            noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
-                            requiredTextPresent: requiredText.every((item) => bodyText.includes(item)),
-                            missingText: requiredText.filter((item) => !bodyText.includes(item)),
-                            sectionHeadings: sections,
-                            metricCount: document.querySelectorAll(".metric").length,
-                            agentRowCount: document.querySelectorAll("section:nth-of-type(1) tbody tr").length,
-                            laneRowCount: document.querySelectorAll("section:nth-of-type(3) tbody tr").length,
-                            gateCount: document.querySelectorAll("section:nth-of-type(4) li").length,
-                            tableScrollCount: scrollContainers.length,
-                            scrollContainers,
-                        };
-                    }""",
-                    REQUIRED_TEXT,
-                )
-                screenshot_path = screenshot_dir / f"ultrawork-monitor-dashboard-{viewport['name']}.png"
-                page.screenshot(path=str(screenshot_path), full_page=True)
-                page.close()
+                        }""",
+                        REQUIRED_TEXT,
+                    )
+                    screenshot_path = screenshot_dir / f"ultrawork-monitor-dashboard-{viewport['name']}.png"
+                    page.screenshot(path=str(screenshot_path), full_page=True)
+                except Exception as exc:
+                    mismatches.append(f"{viewport['name']} browser verification failed: {exc}")
+                    continue
+                finally:
+                    if page is not None:
+                        page.close()
                 screenshots[viewport["name"]] = str(screenshot_path)
                 states[viewport["name"]] = state
                 if not state.get("noHorizontalOverflow"):
@@ -152,7 +172,10 @@ def _browser_state(html_path: Path, screenshot_dir: Path, *, expected_lane_count
                 ):
                     mismatches.append("mobile viewport must keep wide tables inside internal scroll containers")
         finally:
-            browser.close()
+            if browser is not None:
+                browser.close()
+    finally:
+        playwright_context.__exit__(None, None, None)
 
     return {
         "status": "pass" if not mismatches else "fail",

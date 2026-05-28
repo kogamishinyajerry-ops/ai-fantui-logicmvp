@@ -4,11 +4,13 @@ import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import jsonschema
 import pytest
 
+from scripts import verify_ultrawork_monitor_dashboard as ultrawork_verifier
 from well_harness.ultrawork_monitor_dashboard import (
     SCHEMA_ID,
     build_ultrawork_monitor_dashboard,
@@ -181,6 +183,34 @@ def test_ultrawork_dashboard_runner_and_checker_round_trip(tmp_path: Path) -> No
     assert verify_payload["browser_valid"] is False
     assert verify_payload["browser"]["status"] == "skipped"
     assert verify_payload["mismatches"] == []
+
+
+def test_ultrawork_browser_gate_reports_chromium_launch_failure(monkeypatch, tmp_path: Path) -> None:
+    class BrokenPlaywright:
+        def __enter__(self):
+            chromium = types.SimpleNamespace(
+                launch=lambda: (_ for _ in ()).throw(RuntimeError("missing chromium")),
+            )
+            return types.SimpleNamespace(chromium=chromium)
+
+        def __exit__(self, *exc_info):
+            return False
+
+    sync_api = types.ModuleType("playwright.sync_api")
+    sync_api.sync_playwright = lambda: BrokenPlaywright()
+    monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", sync_api)
+
+    result = ultrawork_verifier._browser_state(
+        tmp_path / "ultrawork_monitor_dashboard_v0_1.html",
+        tmp_path / "screenshots",
+        expected_lane_count=0,
+    )
+
+    assert result["status"] == "fail"
+    assert result["screenshots"] == {}
+    assert result["states"] == {}
+    assert result["mismatches"] == ["chromium launch failed: missing chromium"]
 
 
 @pytest.mark.e2e
