@@ -375,6 +375,48 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     })"""
                 )
                 page.locator(
+                    '[data-circuit-coverage-kind="wire"][data-circuit-coverage-id="wire_logic4_thr_lock"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const object = document.querySelector("#demo-reconstruction-provenance-object");
+                        const sources = document.querySelectorAll(
+                            "#demo-reconstruction-provenance-source-list .demo-reconstruction-provenance-item"
+                        );
+                        const steps = document.querySelectorAll(
+                            "#demo-reconstruction-provenance-step-list .demo-reconstruction-provenance-item"
+                        );
+                        return object
+                            && object.textContent.includes("wire_logic4_thr_lock")
+                            && sources.length >= 2
+                            && steps.length >= 1;
+                    }""",
+                    timeout=5000,
+                )
+                wire_provenance_review = page.evaluate(
+                    """() => ({
+                        objectText: document
+                            .querySelector("#demo-reconstruction-provenance-object")
+                            ?.textContent?.trim() || "",
+                        sourceCount: document.querySelectorAll(
+                            "#demo-reconstruction-provenance-source-list .demo-reconstruction-provenance-item"
+                        ).length,
+                        stepCount: document.querySelectorAll(
+                            "#demo-reconstruction-provenance-step-list .demo-reconstruction-provenance-item"
+                        ).length,
+                        sourceItems: Array.from(
+                            document.querySelectorAll(
+                                "#demo-reconstruction-provenance-source-list .demo-reconstruction-provenance-item"
+                            )
+                        ).map((item) => item.textContent.trim()),
+                        stepItems: Array.from(
+                            document.querySelectorAll(
+                                "#demo-reconstruction-provenance-step-list .demo-reconstruction-provenance-item"
+                            )
+                        ).map((item) => item.textContent.trim()),
+                    })"""
+                )
+                page.locator(
                     '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="thr_lock"]'
                 ).click()
                 page.wait_for_function(
@@ -1012,6 +1054,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and object_provenance_review["stepCount"] >= 1
             and any("logic4" in item for item in object_provenance_review["sourceItems"])
             and any("P035-S05" in item for item in object_provenance_review["stepItems"])
+            and "wire_logic4_thr_lock" in wire_provenance_review["objectText"]
+            and wire_provenance_review["sourceCount"] >= 2
+            and wire_provenance_review["stepCount"] >= 1
+            and any(
+                "logic4" in item or "thr_lock" in item
+                for item in wire_provenance_review["sourceItems"]
+            )
+            and any("P035-S05" in item for item in wire_provenance_review["stepItems"])
         )
         else "fail",
         "review_hash_link": "pass"
@@ -1101,6 +1151,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "trace_switch_focus_reset_review": trace_switch_focus_reset_review,
         "step_playback_review": step_playback_review,
         "object_provenance_review": object_provenance_review,
+        "wire_provenance_review": wire_provenance_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {

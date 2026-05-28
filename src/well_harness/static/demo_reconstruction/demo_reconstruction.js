@@ -405,7 +405,12 @@
   function objectProvenanceRecords(kind, id) {
     if (!kind || !id) return {sourceMatches: [], stepMatches: []};
     const key = kind === "wire" ? "wire_ids" : "node_ids";
-    const sourceMatches = sourceEntries.filter((entry) => Array.isArray(entry[key]) && entry[key].includes(id));
+    const endpointIds = kind === "wire" && TRACE_WIRE_ENDPOINTS[id] ? TRACE_WIRE_ENDPOINTS[id] : [];
+    const sourceMatches = sourceEntries.filter((entry) => {
+      if (Array.isArray(entry[key]) && entry[key].includes(id)) return true;
+      if (!endpointIds.length || !Array.isArray(entry.node_ids)) return false;
+      return endpointIds.some((endpointId) => entry.node_ids.includes(endpointId));
+    });
     const stepMatches = traceSteps.filter((step) => Array.isArray(step[key]) && step[key].includes(id));
     return {sourceMatches, stepMatches};
   }

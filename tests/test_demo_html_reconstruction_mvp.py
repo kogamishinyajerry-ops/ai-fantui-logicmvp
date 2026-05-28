@@ -398,6 +398,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["object_provenance_review"]["stepCount"] >= 1
     assert any("logic4" in item for item in payload["object_provenance_review"]["sourceItems"])
     assert any("P035-S05" in item for item in payload["object_provenance_review"]["stepItems"])
+    assert "wire_logic4_thr_lock" in payload["wire_provenance_review"]["objectText"]
+    assert payload["wire_provenance_review"]["sourceCount"] >= 2
+    assert payload["wire_provenance_review"]["stepCount"] >= 1
+    assert any("logic4" in item or "thr_lock" in item for item in payload["wire_provenance_review"]["sourceItems"])
+    assert any("P035-S05" in item for item in payload["wire_provenance_review"]["stepItems"])
     assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
     assert payload["review_deep_link"]["linkHref"].endswith(
         "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
