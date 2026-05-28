@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_release_decision_input import (
     SCHEMA_ID,
@@ -209,6 +210,7 @@ def test_release_decision_input_verifier_accepts_green_check_recommendation(tmp_
             written["artifact_paths"]["decision_input_json"],
             "--format",
             "json",
+            "--skip-browser",
         ],
         cwd=PROJECT_ROOT,
         env=_script_env(),
@@ -279,9 +281,58 @@ def test_release_decision_input_html_exposes_owner_decision_surface() -> None:
     assert "owner_acceptance_or_wait_for_remote_checks" in html
     assert "auto_merge" in html
     assert "disabled" in html
+    assert "five_agent_context_cap" in html
+    assert "PackagingPRReadinessAgent" in html
+    assert 'class="gate-row"' in html
+    assert 'class="option-row"' in html
+    assert 'class="agent-row"' in html
+    assert 'class="boundary-row"' in html
+    assert 'class="pathspec-item"' in html
 
 
 def test_release_decision_input_writer_and_checker_round_trip(tmp_path: Path) -> None:
+    payload = build_multi_agent_release_decision_input(
+        review_closure=_review_closure(),
+        generated_at="2026-05-28T09:40:00Z",
+    )
+    written = write_multi_agent_release_decision_input_artifacts(
+        payload,
+        artifact_dir=tmp_path / "decision",
+    )
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            written["artifact_paths"]["decision_input_json"],
+            "--format",
+            "json",
+            "--skip-browser",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["package_path"] == written["artifact_paths"]["decision_input_json"]
+    assert verify_payload["schema_valid"] is True
+    assert verify_payload["html_exists"] is True
+    assert verify_payload["markdown_exists"] is True
+    assert verify_payload["browser_valid"] is False
+    assert verify_payload["browser"]["status"] == "skipped"
+    assert verify_payload["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_release_decision_input_browser_gate_captures_geometry(
+    tmp_path: Path,
+) -> None:
     payload = build_multi_agent_release_decision_input(
         review_closure=_review_closure(),
         generated_at="2026-05-28T09:40:00Z",
@@ -307,16 +358,26 @@ def test_release_decision_input_writer_and_checker_round_trip(tmp_path: Path) ->
         check=False,
         timeout=120,
     )
+
     assert verify_result.returncode == 0, verify_result.stderr
     verify_payload = json.loads(verify_result.stdout)
-    assert verify_payload == {
-        "html_exists": True,
-        "markdown_exists": True,
-        "mismatches": [],
-        "package_path": written["artifact_paths"]["decision_input_json"],
-        "schema_valid": True,
-        "status": "pass",
-    }
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["gateRowCount"] == len(payload["gates"])
+    assert browser["states"]["mobile"]["optionRowCount"] == len(payload["decision_options"])
+    assert browser["states"]["desktop"]["agentRowCount"] == payload["agent_team"]["team_size"]
+    assert browser["states"]["mobile"]["boundaryRowCount"] == len(payload["decision_boundaries"])
+    assert browser["states"]["desktop"]["pathspecItemCount"] == len(
+        payload["pathspec_package"]["pathspecs"],
+    )
 
 
 def test_release_decision_input_runner_uses_supplied_review_closure(tmp_path: Path) -> None:
@@ -345,3 +406,5 @@ def test_release_decision_input_makefile_and_docs_are_wired() -> None:
     assert "verify-multi-agent-release-decision-input" in makefile
     assert "M31" in doc
     assert "repo_github_local_artifacts_only" in doc
+    assert "desktop/mobile" in doc
+    assert "screenshots" in doc
