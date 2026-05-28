@@ -28,6 +28,7 @@ SCHEMA_PATH = (
 RUN_SCRIPT = PROJECT_ROOT / "scripts" / "run_multi_agent_merge_readiness.py"
 VERIFY_SCRIPT = PROJECT_ROOT / "scripts" / "verify_multi_agent_merge_readiness.py"
 MAKEFILE_PATH = PROJECT_ROOT / "Makefile"
+PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
 DOC_PATH = PROJECT_ROOT / "docs" / "coordination" / "multi-agent-merge-readiness.md"
 MVP_DOC_PATH = (
     PROJECT_ROOT / "docs" / "coordination" / "multi-agent-control-logic-engineering-system-mvp.md"
@@ -255,6 +256,7 @@ def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status
 
 def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
     makefile = MAKEFILE_PATH.read_text(encoding="utf-8")
+    pyproject = PYPROJECT_PATH.read_text(encoding="utf-8")
     doc = DOC_PATH.read_text(encoding="utf-8")
     mvp_doc = MVP_DOC_PATH.read_text(encoding="utf-8")
 
@@ -263,6 +265,8 @@ def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
     assert "verify-multi-agent-merge-readiness" in makefile
     assert "scripts/run_multi_agent_merge_readiness.py --format json" in makefile
     assert "scripts/verify_multi_agent_merge_readiness.py --format json" in makefile
+    assert '"Pillow>=10"' in pyproject
+    assert '"playwright>=1.45"' in pyproject
 
     expected_pathspecs = [
         "docs/coordination/multi-agent-merge-readiness.md",
