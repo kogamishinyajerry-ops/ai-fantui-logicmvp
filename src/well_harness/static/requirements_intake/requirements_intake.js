@@ -23,17 +23,9 @@
   };
   const OFFICIAL_DOCX_SOURCE = {
     queryValue: "official-docx",
+    apiPath: "/api/requirements-intake/official-docx-source",
     documentName: "uploads/20260409-thrust-reverser-control-logic.docx",
-    text: [
-      "官方 DOCX：uploads/20260409-thrust-reverser-control-logic.docx",
-      "目标：按原始 DOCX 正文复刻反推控制 L1-L4 逻辑链路。",
-      "关键输入：RA < 6ft、TRA 进入反推区、SW1、SW2、EEC、N1K、地面/发动机状态。",
-      "L1：RA 与 SW1 进入 TLS 115VAC 通电并解锁。",
-      "L2：SW2、地面、发动机运行与 EEC 使能进入 ETRAC 540VDC 通电。",
-      "L3：TLS 已解锁、L2、N1K、EEC、地面与 inhibit 条件共同进入 PLS/PDU 展开链路。",
-      "L4：VDT90、TRA 反推区和 L3 展开链路共同释放 THR_LOCK。",
-      "边界：仅生成 sandbox candidate；truth_effect:none；controller_truth_modified:false。",
-    ].join("\n"),
+    placeholder: "官方 DOCX 已通过上传路径载入；分析时会提交 document_base64，不会提交手写摘要。",
   };
 
   const $ = (id) => document.getElementById(id);
@@ -43,6 +35,7 @@
   const fileState = $("requirements-file-state");
   const documentName = $("requirements-document-name");
   const textArea = $("requirements-text");
+  const defaultTextAreaPlaceholder = textArea ? textArea.getAttribute("placeholder") || "" : "";
   const provider = $("requirements-provider");
   const providerStatus = $("requirements-provider-status");
   const providerKeySource = $("requirements-provider-key-source");
@@ -224,22 +217,63 @@
     return params.get("source") === OFFICIAL_DOCX_SOURCE.queryValue;
   }
 
-  function applyOfficialDocxSource() {
+  async function applyOfficialDocxSource() {
     if (!requestedOfficialDocxSource()) return false;
-    state.uploadMode = "text";
+    state.uploadMode = "base64";
     state.uploadBase64 = "";
     state.preserveDownstreamDrafts = false;
     syncUploadMode();
     if (fileInput) fileInput.value = "";
     if (documentName) documentName.value = OFFICIAL_DOCX_SOURCE.documentName;
-    if (textArea) textArea.value = OFFICIAL_DOCX_SOURCE.text;
+    if (textArea) {
+      textArea.value = "";
+      textArea.placeholder = OFFICIAL_DOCX_SOURCE.placeholder;
+    }
     if (fileState) {
-      fileState.textContent = "官方 DOCX 已载入";
+      fileState.textContent = "官方 DOCX 载入中";
       fileState.dataset.source = OFFICIAL_DOCX_SOURCE.queryValue;
     }
-    setStatus("官方 DOCX 已载入", "ok");
+    if (analyzeButton) analyzeButton.disabled = true;
+    setStatus("官方 DOCX 载入中", "busy");
     if (nextStepCopy) {
-      nextStepCopy.textContent = "已载入官方 DOCX 摘要；点击分析后进入 L1-L4 逻辑复刻。";
+      nextStepCopy.textContent = "正在载入官方 DOCX；载入后点击分析进入 L1-L4 逻辑复刻。";
+    }
+    try {
+      const response = await fetch(OFFICIAL_DOCX_SOURCE.apiPath, {
+        cache: "no-store",
+        headers: {"Accept": "application/json"},
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload || typeof payload.document_base64 !== "string" || !payload.document_base64) {
+        throw new Error(payload && payload.error ? payload.error : "official_docx_source_unavailable");
+      }
+      state.uploadBase64 = payload.document_base64;
+      if (documentName) documentName.value = payload.document_name || OFFICIAL_DOCX_SOURCE.documentName;
+      if (fileState) {
+        const sizeKb = payload.byte_size ? `${Math.ceil(Number(payload.byte_size) / 1024)} KB · ` : "";
+        fileState.textContent = `${sizeKb}官方 DOCX`;
+        fileState.dataset.source = OFFICIAL_DOCX_SOURCE.queryValue;
+      }
+      setStatus("官方 DOCX 已载入", "ok");
+      if (nextStepCopy) {
+        nextStepCopy.textContent = "已载入官方 DOCX；点击分析后进入 L1-L4 逻辑复刻。";
+      }
+      if (analyzeButton) {
+        analyzeButton.disabled = false;
+        syncAnalyzeButtonLabel();
+      }
+    } catch (error) {
+      state.uploadMode = "base64";
+      state.uploadBase64 = "";
+      syncUploadMode();
+      if (fileState) {
+        fileState.textContent = "官方 DOCX 载入失败";
+        fileState.dataset.source = OFFICIAL_DOCX_SOURCE.queryValue;
+      }
+      setStatus("官方 DOCX 载入失败", "error");
+      if (nextStepCopy) {
+        nextStepCopy.textContent = "官方 DOCX 未能载入；请手动上传 DOCX 后继续。";
+      }
     }
     return true;
   }
@@ -479,6 +513,7 @@
       syncUploadMode();
       documentName.value = file.name || "requirements.txt";
       textArea.value = String(reader.result || "");
+      textArea.placeholder = defaultTextAreaPlaceholder;
       fileState.textContent = `${Math.ceil(file.size / 1024)} KB`;
       finishTask("文档已载入", "文本文件读取完成，可以点击“分析需求”。");
       setStatus("文档已载入", "ok");
@@ -500,6 +535,7 @@
       syncUploadMode();
       documentName.value = file.name || "requirements.docx";
       textArea.value = "";
+      textArea.placeholder = defaultTextAreaPlaceholder;
       fileState.textContent = `${Math.ceil(file.size / 1024)} KB · DOCX`;
       finishTask("DOCX 已载入", "文档读取完成，点击“分析需求”后后端会提取正文并调用模型。");
       setStatus("DOCX 已载入", "ok");
@@ -1253,7 +1289,9 @@
     fileInput.value = "";
     documentName.value = "requirements.md";
     textArea.value = "";
+    textArea.placeholder = defaultTextAreaPlaceholder;
     fileState.textContent = "未选择文件";
+    fileState.dataset.source = "";
     state.lastPayload = null;
     state.lastSubmittedAnswers = [];
     state.preserveDownstreamDrafts = false;
@@ -1312,7 +1350,8 @@
   form.addEventListener("submit", analyze);
   syncUploadMode();
   refreshProviderStatus();
-  if (applyOfficialDocxSource()) {
+  if (requestedOfficialDocxSource()) {
+    applyOfficialDocxSource();
     renderWorkflowOverview(null);
     renderRequirementsChoiceChecklist(null);
     renderBurdenSummary(null);

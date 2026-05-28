@@ -243,33 +243,100 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
 
 
 def _requirements_official_docx_state(page: Any, base_url: str) -> dict[str, Any]:
+    submitted_payload: dict[str, Any] = {}
+
+    def capture_local_preparse(route: Any) -> None:
+        nonlocal submitted_payload
+        submitted_payload = route.request.post_data_json or {}
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "kind": "ai-fantui-requirements-intake-analysis",
+                    "status": "ready_for_logic_builder",
+                    "ready_for_logic_builder": True,
+                    "summary_zh": "本地 gate 已确认官方 DOCX 上传路径。",
+                    "controller_truth_modified": False,
+                    "certification_claim": "none",
+                    "open_questions": [],
+                    "concept_logic_nodes": [
+                        {
+                            "id": "logic1",
+                            "label": "L1",
+                            "node_kind": "logic",
+                            "description_zh": "官方 DOCX 上传路径 gate。",
+                        }
+                    ],
+                    "concept_edges": [
+                        {
+                            "source": "logic1",
+                            "target": "logic2",
+                            "label": "gate",
+                            "endpoint_status": "resolved",
+                        }
+                    ],
+                    "llm": {"provider": "local-preparse"},
+                    "source_scope": {"fault_injection": {"status": "source_deferred"}},
+                },
+                ensure_ascii=False,
+            ),
+        )
+
+    page.route("**/api/requirements-intake/local-preparse", capture_local_preparse)
     page.goto(f"{base_url}/requirements-intake?source=official-docx", wait_until="networkidle")
     page.wait_for_selector("#requirements-document-name", timeout=7000)
-    return page.evaluate(
+    page.wait_for_function(
+        """() => {
+            const state = document.querySelector("#requirements-file-state");
+            const form = document.querySelector("#requirements-form");
+            return state?.dataset.source === "official-docx"
+              && state?.textContent.includes("官方 DOCX")
+              && !state?.textContent.includes("载入中")
+              && form?.dataset.uploadMode === "base64";
+        }""",
+        timeout=7000,
+    )
+    page.locator("#requirements-analyze").click()
+    page.wait_for_function(
+        """() => document.querySelector("#requirements-status")?.textContent.includes("本地候选")""",
+        timeout=7000,
+    )
+    state = page.evaluate(
         """() => ({
             documentName: document.querySelector("#requirements-document-name")?.value || null,
             fileState: document.querySelector("#requirements-file-state")?.textContent || null,
             fileStateSource: document.querySelector("#requirements-file-state")?.dataset.source || null,
-            textIncludesDocx: Boolean(
-                document.querySelector("#requirements-text")?.value.includes(
-                    "uploads/20260409-thrust-reverser-control-logic.docx"
-                )
+            uploadMode: document.querySelector("#requirements-form")?.dataset.uploadMode || null,
+            textLength: document.querySelector("#requirements-text")?.value.length || 0,
+            placeholderMentionsBase64: Boolean(
+                document.querySelector("#requirements-text")?.placeholder.includes("document_base64")
             ),
-            textIncludesLogic4: Boolean(document.querySelector("#requirements-text")?.value.includes("L4")),
             status: document.querySelector("#requirements-status")?.textContent || null,
         })"""
     )
+    state["submittedDocumentName"] = submitted_payload.get("document_name")
+    state["submittedHasDocumentBase64"] = isinstance(submitted_payload.get("document_base64"), str) and len(
+        submitted_payload.get("document_base64", "")
+    ) > 100000
+    state["submittedDocumentBase64Length"] = len(submitted_payload.get("document_base64", ""))
+    state["submittedHasDocumentText"] = "document_text" in submitted_payload
+    return state
 
 
 def _requirements_official_docx_state_matches(state: dict[str, Any]) -> bool:
     return all(
         [
             state.get("documentName") == "uploads/20260409-thrust-reverser-control-logic.docx",
-            state.get("fileState") == "官方 DOCX 已载入",
+            "官方 DOCX" in str(state.get("fileState") or ""),
             state.get("fileStateSource") == "official-docx",
-            state.get("textIncludesDocx") is True,
-            state.get("textIncludesLogic4") is True,
-            state.get("status") == "官方 DOCX 已载入",
+            state.get("uploadMode") == "base64",
+            state.get("textLength") == 0,
+            state.get("placeholderMentionsBase64") is True,
+            state.get("submittedDocumentName") == "uploads/20260409-thrust-reverser-control-logic.docx",
+            state.get("submittedHasDocumentBase64") is True,
+            state.get("submittedHasDocumentText") is False,
+            state.get("status") == "本地候选可继续",
         ]
     )
 

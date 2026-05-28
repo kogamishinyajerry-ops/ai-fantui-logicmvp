@@ -6350,6 +6350,25 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert ".logic-reconstruction-mode-panel" in stylesheet
 
 
+def test_official_docx_source_payload_round_trips_through_docx_extractor():
+    payload = demo_server.official_docx_source_payload()
+    assert payload["kind"] == "ai-fantui-official-docx-source"
+    assert payload["document_name"] == "uploads/20260409-thrust-reverser-control-logic.docx"
+    blob = base64.b64decode(payload["document_base64"], validate=True)
+    assert len(blob) == payload["byte_size"]
+    assert payload["byte_size"] > 100_000
+
+    text, document_name = demo_server.extract_document_text_from_payload(
+        {
+            "document_name": payload["document_name"],
+            "document_base64": payload["document_base64"],
+        }
+    )
+    assert document_name == payload["document_name"]
+    assert len(text) > 1_000
+    assert any(term in text for term in ("SW1", "TRA", "反推"))
+
+
 def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     html_path = STATIC_ROOT / "docx_to_circuit" / "index.html"
     script_path = STATIC_ROOT / "docx_to_circuit" / "docx_to_circuit.js"
@@ -6364,6 +6383,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     )
 
     assert "/docx-to-circuit" in server_source
+    assert "REQUIREMENTS_OFFICIAL_DOCX_SOURCE_PATH" in server_source
+    assert "official_docx_source_payload" in server_source
+    assert '"document_base64"' in server_source
     assert 'data-ux-page-role="docx-to-circuit-main-entry"' in html
     assert 'data-docx-circuit-main-entry="true"' in html
     assert 'data-docx-circuit-review-workbench="interactive"' in html
@@ -6486,6 +6508,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert '"source_entry_link"' in review_link_gate
     assert '"review_packet_markdown_json"' in review_link_gate
     assert '"requirements_official_docx_link"' in review_link_gate
+    assert '"submittedDocumentBase64Length"' in review_link_gate
+    assert '"submittedHasDocumentBase64"' in review_link_gate
+    assert '"submittedHasDocumentText"' in review_link_gate
     assert '"logic_template_query_link"' in review_link_gate
     assert '"workbench_anchor_preserves_review_state"' in review_link_gate
     assert "DOCX_TO_CIRCUIT_REVIEW_BASE_REF" in review_link_gate
@@ -6518,6 +6543,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "OFFICIAL_DOCX_SOURCE" in requirements_script
     assert "function requestedOfficialDocxSource" in requirements_script
     assert "function applyOfficialDocxSource" in requirements_script
+    assert "/api/requirements-intake/official-docx-source" in requirements_script
+    assert 'state.uploadMode = "base64"' in requirements_script
+    assert "payload.document_base64" in requirements_script
+    assert "document_base64" in requirements_script
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in requirements_script
     assert "function requestedDocxTemplate" in logic_script
     assert "function renderRequestedDocxTemplate" in logic_script
