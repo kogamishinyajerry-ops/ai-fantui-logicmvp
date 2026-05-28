@@ -131,6 +131,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     completion_ladder_path = artifact_dir / f"demo-reconstruction-completion-ladder-{stamp}.png"
     review_packet_path = artifact_dir / f"demo-reconstruction-review-packet-{stamp}.png"
     custody_matrix_path = artifact_dir / f"demo-reconstruction-custody-matrix-{stamp}.png"
+    scenario_ledger_path = artifact_dir / f"demo-reconstruction-scenario-ledger-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -176,6 +177,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "output_mirror_visible": page.locator(
                         "#demo-reconstruction-output-mirror"
+                    ).is_visible(timeout=5000),
+                    "scenario_ledger_visible": page.locator(
+                        "#demo-reconstruction-scenario-ledger"
                     ).is_visible(timeout=5000),
                     "console_frame_visible": page.locator(
                         "#demo-reconstruction-console-frame"
@@ -1106,6 +1110,50 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 frame.locator("body").screenshot(path=str(inhibit_path))
                 frame.locator('section[aria-labelledby="outputs-heading"]').scroll_into_view_if_needed()
                 frame.locator('section[aria-labelledby="outputs-heading"]').screenshot(path=str(inhibit_outputs_path))
+                page.locator("#demo-reconstruction-scenario-ledger").screenshot(
+                    path=str(scenario_ledger_path)
+                )
+                scenario_ledger_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            rowCount: document.querySelectorAll("[data-scenario-ledger-row]").length,
+                            statusText: text("#demo-reconstruction-scenario-ledger-status"),
+                            activeRows: Array.from(
+                                document.querySelectorAll("[data-scenario-ledger-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-scenario-ledger-row")),
+                            maxReverseText: text('[data-scenario-ledger-row="max-reverse"]'),
+                            inhibitText: text('[data-scenario-ledger-row="inhibit-block"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-scenario-ledger-row="max-reverse"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const status = document.querySelector("#demo-reconstruction-output-mirror-status");
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        const row = document.querySelector('[data-scenario-ledger-row="max-reverse"]');
+                        return status
+                            && status.textContent.trim() === "DEPLOYED"
+                            && output
+                            && output.textContent.trim() === "ON"
+                            && row
+                            && row.getAttribute("aria-pressed") === "true";
+                    }""",
+                    timeout=5000,
+                )
+                scenario_ledger_outer_control = page.evaluate(
+                    """() => ({
+                        status: document.querySelector("#demo-reconstruction-output-mirror-status")?.textContent?.trim() || "",
+                        output: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
+                        activeRows: Array.from(
+                            document.querySelectorAll("[data-scenario-ledger-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-scenario-ledger-row")),
+                        maxReverseText: document
+                            .querySelector('[data-scenario-ledger-row="max-reverse"]')
+                            ?.textContent?.trim() || "",
+                    })"""
+                )
             finally:
                 browser.close()
     finally:
@@ -1137,6 +1185,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 completion_ladder_path,
                 review_packet_path,
                 custody_matrix_path,
+                scenario_ledger_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -1390,6 +1439,21 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "BLOCKED" in inhibit_output_mirror["custody"]
         )
         else "fail",
+        "scenario_ledger_readback": "pass"
+        if (
+            scenario_ledger_review["rowCount"] == 5
+            and "2/5" in scenario_ledger_review["statusText"]
+            and scenario_ledger_review["activeRows"] == ["inhibit-block"]
+            and "DEPLOYED" in scenario_ledger_review["maxReverseText"]
+            and "THR:ON" in scenario_ledger_review["maxReverseText"]
+            and "FAULT" in scenario_ledger_review["inhibitText"]
+            and "THR:BLOCKED" in scenario_ledger_review["inhibitText"]
+            and scenario_ledger_outer_control["status"] == "DEPLOYED"
+            and scenario_ledger_outer_control["output"] == "ON"
+            and scenario_ledger_outer_control["activeRows"] == ["max-reverse"]
+            and "DEPLOYED" in scenario_ledger_outer_control["maxReverseText"]
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -1412,6 +1476,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "completion_ladder": str(completion_ladder_path),
             "review_packet": str(review_packet_path),
             "custody_matrix": str(custody_matrix_path),
+            "scenario_ledger": str(scenario_ledger_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -1439,6 +1504,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_packet_review": review_packet_review,
         "review_packet_after_wire_focus": review_packet_after_wire_focus,
         "custody_matrix_review": custody_matrix_review,
+        "scenario_ledger_review": scenario_ledger_review,
+        "scenario_ledger_outer_control": scenario_ledger_outer_control,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
@@ -1529,6 +1596,7 @@ def main(argv: list[str] | None = None) -> int:
                 "preset_interactions": "fail",
                 "hud_output_linkage": "fail",
                 "output_mirror_sync": "fail",
+                "scenario_ledger_readback": "fail",
                 "boundary": "fail",
             },
             "error": str(exc),

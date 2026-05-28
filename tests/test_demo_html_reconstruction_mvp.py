@@ -196,6 +196,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-output-mirror"' in html
     assert 'id="demo-reconstruction-output-mirror-status"' in html
     assert 'id="demo-reconstruction-output-mirror-thr-output"' in html
+    assert 'id="demo-reconstruction-scenario-ledger"' in html
+    assert 'id="demo-reconstruction-scenario-ledger-status"' in html
+    assert 'id="demo-reconstruction-scenario-ledger-list"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -209,6 +212,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "审阅交付包" in html
     assert "交付链路总览" in html
     assert "演示舱输出镜像" in html
+    assert "场景读回记录" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
@@ -254,6 +258,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderCustodyMatrix" in script
     assert "updateCustodyActiveReadback" in script
     assert "updateCustodyOutputReadback" in script
+    assert "updateScenarioLedgerFromFrame" in script
+    assert "renderScenarioLedger" in script
+    assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
     assert "data-docx-trace-selected" in script
@@ -286,6 +293,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-custody-readback" in stylesheet
     assert ".demo-reconstruction-output-mirror" in stylesheet
     assert ".demo-reconstruction-output-mirror-values" in stylesheet
+    assert ".demo-reconstruction-scenario-ledger" in stylesheet
+    assert ".demo-reconstruction-scenario-row" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -378,6 +387,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["completion_ladder"].endswith(".png")
     assert payload["screenshots"]["review_packet"].endswith(".png")
     assert payload["screenshots"]["custody_matrix"].endswith(".png")
+    assert payload["screenshots"]["scenario_ledger"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -388,6 +398,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "trace_board_visible": True,
         "operator_guide_visible": True,
         "output_mirror_visible": True,
+        "scenario_ledger_visible": True,
         "console_frame_visible": True,
         "evidence_rail_visible": True,
     }
@@ -540,6 +551,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "FAULT" in payload["output_mirror"]["inhibit-block"]["custody"]
     assert "BLOCKED" in payload["output_mirror"]["inhibit-block"]["custody"]
     assert "BLOCKED" in payload["output_mirror"]["inhibit-block"]["thr"]
+    assert payload["scenario_ledger_review"]["rowCount"] == 5
+    assert "2/5" in payload["scenario_ledger_review"]["statusText"]
+    assert payload["scenario_ledger_review"]["activeRows"] == ["inhibit-block"]
+    assert "DEPLOYED" in payload["scenario_ledger_review"]["maxReverseText"]
+    assert "THR:ON" in payload["scenario_ledger_review"]["maxReverseText"]
+    assert "FAULT" in payload["scenario_ledger_review"]["inhibitText"]
+    assert "THR:BLOCKED" in payload["scenario_ledger_review"]["inhibitText"]
+    assert payload["scenario_ledger_outer_control"]["status"] == "DEPLOYED"
+    assert payload["scenario_ledger_outer_control"]["output"] == "ON"
+    assert payload["scenario_ledger_outer_control"]["activeRows"] == ["max-reverse"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
@@ -569,6 +590,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "preset_interactions": "pass",
         "hud_output_linkage": "pass",
         "output_mirror_sync": "pass",
+        "scenario_ledger_readback": "pass",
         "boundary": "pass",
     }
 

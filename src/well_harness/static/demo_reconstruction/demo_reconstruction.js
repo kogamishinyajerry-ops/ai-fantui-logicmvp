@@ -86,6 +86,8 @@
   const outputMirrorEtrac = $("demo-reconstruction-output-mirror-etrac");
   const outputMirrorEec = $("demo-reconstruction-output-mirror-eec");
   const outputMirrorThrOutput = $("demo-reconstruction-output-mirror-thr-output");
+  const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
+  const scenarioLedgerList = $("demo-reconstruction-scenario-ledger-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let latestDocxPayload = null;
   let sourceEntries = [];
@@ -99,6 +101,7 @@
   let nodeLabelMap = new Map();
   let nodeKindMap = new Map();
   let outputMirrorObserver = null;
+  let scenarioLedgerRecords = new Map();
 
   function readJson(value) {
     try {
@@ -644,12 +647,126 @@
     return value || fallback;
   }
 
+  function activeScenarioFromFrame(frameDocument) {
+    const button = frameDocument ? frameDocument.querySelector(".fan-preset-btn[aria-pressed='true']") : null;
+    if (!button || !button.dataset.preset) return null;
+    return {
+      id: button.dataset.preset,
+      label: button.textContent ? button.textContent.trim() : button.dataset.preset,
+    };
+  }
+
+  function scenarioOutputSnapshot(frameDocument) {
+    return {
+      status: frameText(frameDocument, "#fan-status-badge", "等待"),
+      logic: frameText(frameDocument, "#fan-hud-logic", "等待逻辑"),
+      thr: frameText(frameDocument, "#fan-out-thr-value", "--"),
+      tls: frameText(frameDocument, "#fan-out-tls115-value", "--"),
+      etrac: frameText(frameDocument, "#fan-out-etrac-value", "--"),
+      eec: frameText(frameDocument, "#fan-out-eec-value", "--"),
+      summary: frameText(frameDocument, "#fan-status-summary", "等待摘要"),
+    };
+  }
+
+  function applyScenarioPreset(presetId) {
+    if (!consoleFrame || !presetId) return;
+    const frameDocument = consoleFrame.contentDocument;
+    const button = frameDocument
+      ? frameDocument.querySelector(`.fan-preset-btn[data-preset="${presetId}"]`)
+      : null;
+    if (button && typeof button.click === "function") button.click();
+  }
+
+  function renderScenarioLedger(activeId) {
+    if (!scenarioLedgerList) return;
+    scenarioLedgerList.innerHTML = "";
+    const records = Array.from(scenarioLedgerRecords.values());
+    if (!records.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "demo-reconstruction-scenario-row";
+      empty.dataset.scenarioLedgerRow = "empty";
+      empty.textContent = "等待 demo 预设同步";
+      scenarioLedgerList.appendChild(empty);
+      setText(scenarioLedgerStatus, "等待预设");
+      return;
+    }
+    let captured = 0;
+    records.forEach((record) => {
+      if (record.captured) captured += 1;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-scenario-row";
+      button.dataset.scenarioLedgerRow = record.id;
+      button.setAttribute("aria-pressed", record.id === activeId ? "true" : "false");
+      button.addEventListener("click", () => applyScenarioPreset(record.id));
+
+      const head = document.createElement("div");
+      head.className = "demo-reconstruction-scenario-row-head";
+      const label = document.createElement("strong");
+      label.textContent = record.label || record.id;
+      const status = document.createElement("span");
+      status.textContent = record.captured ? record.status : "未记录";
+      head.append(label, status);
+
+      const detail = document.createElement("p");
+      detail.textContent = record.captured ? `${record.logic} · THR_LOCK ${record.thr}` : "点击记录该场景输出";
+
+      const values = document.createElement("div");
+      values.className = "demo-reconstruction-scenario-values";
+      [
+        ["TLS", record.tls],
+        ["ETRAC", record.etrac],
+        ["EEC", record.eec],
+        ["THR", record.thr],
+      ].forEach(([labelText, value]) => {
+        const chip = document.createElement("span");
+        chip.textContent = `${labelText}:${record.captured ? value : "--"}`;
+        values.appendChild(chip);
+      });
+
+      button.append(head, detail, values);
+      scenarioLedgerList.appendChild(button);
+    });
+    setText(scenarioLedgerStatus, `${captured}/${records.length} 已记录`);
+  }
+
+  function updateScenarioLedgerFromFrame() {
+    if (!scenarioLedgerList || !consoleFrame) return;
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument) {
+      renderScenarioLedger("");
+      return;
+    }
+    frameDocument.querySelectorAll(".fan-preset-btn[data-preset]").forEach((button) => {
+      const id = button.dataset.preset;
+      if (!id || scenarioLedgerRecords.has(id)) return;
+      scenarioLedgerRecords.set(id, {
+        id,
+        label: button.textContent ? button.textContent.trim() : id,
+        captured: false,
+      });
+    });
+    const active = activeScenarioFromFrame(frameDocument);
+    if (active) {
+      const snapshot = scenarioOutputSnapshot(frameDocument);
+      scenarioLedgerRecords.set(active.id, {
+        ...(scenarioLedgerRecords.get(active.id) || {}),
+        ...active,
+        ...snapshot,
+        captured: true,
+      });
+    }
+    renderScenarioLedger(active ? active.id : "");
+  }
+
   function updateOutputMirrorFromFrame() {
     if (!outputMirrorStatus || !consoleFrame) return;
     const frameDocument = consoleFrame.contentDocument;
     if (!frameDocument || !frameDocument.querySelector("#fan-status-badge")) {
       setText(outputMirrorStatus, "等待同步");
       updateCustodyOutputReadback();
+      updateScenarioLedgerFromFrame();
       return;
     }
     setText(outputMirrorStatus, frameText(frameDocument, "#fan-status-badge", "IDLE"));
@@ -661,6 +778,7 @@
     setText(outputMirrorEec, frameText(frameDocument, "#fan-out-eec-value", "--"));
     setText(outputMirrorThrOutput, frameText(frameDocument, "#fan-out-thr-value", "--"));
     updateCustodyOutputReadback();
+    updateScenarioLedgerFromFrame();
   }
 
   function installOutputMirrorObserver() {
@@ -677,6 +795,7 @@
       attributeFilter: ["data-state", "class"],
     });
     updateOutputMirrorFromFrame();
+    updateScenarioLedgerFromFrame();
   }
 
   function updateReviewPacketFromState() {
