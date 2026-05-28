@@ -28,7 +28,9 @@ The generator writes JSON, Markdown, and HTML artifacts under:
 The package is ready only when:
 
 - M31 is ready for owner decision.
+- M31 PR URL and head SHA match the handoff PR URL and head SHA.
 - M31 has no active blockers.
+- GitHub review-thread state is fetched successfully.
 - The handoff PR is mergeable.
 - No current non-outdated actionable review thread remains.
 - Remote checks are pass or warning-only.

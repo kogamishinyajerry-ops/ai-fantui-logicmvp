@@ -57,8 +57,12 @@ def _review_thread_summary(review_threads: list[dict[str, Any]]) -> dict[str, in
     current_unresolved = 0
     current_actionable = 0
     outdated_unresolved = 0
+    fetch_error_count = 0
     for thread in review_threads:
         if not isinstance(thread, dict):
+            continue
+        if thread.get("fetch_error"):
+            fetch_error_count += 1
             continue
         if thread.get("isResolved") is True:
             continue
@@ -78,13 +82,16 @@ def _review_thread_summary(review_threads: list[dict[str, Any]]) -> dict[str, in
         "current_unresolved_thread_count": current_unresolved,
         "current_actionable_thread_count": current_actionable,
         "outdated_unresolved_thread_count": outdated_unresolved,
+        "fetch_error_count": fetch_error_count,
     }
 
 
 def _overall_status(gates: dict[str, str]) -> str:
     hard_fail_keys = [
         "release_decision_input",
+        "release_decision_binding",
         "release_decision_blockers",
+        "review_thread_fetch",
         "current_actionable_reviews",
         "pr_mergeability",
         "remote_checks",
@@ -159,13 +166,27 @@ def build_multi_agent_owner_acceptance_handoff(
     checks_state = _checks_state(pr_status)
     remote_warning = checks_state in {"no_checks_reported", "pending_or_unknown"}
     merge_state = str(pr_status.get("mergeStateStatus") or pr_status.get("mergeable") or "")
+    release_pr_url = str(release_inputs.get("pr_url", ""))
+    handoff_pr_url = str(pr_status.get("url", ""))
+    release_head_ref_oid = str(release_inputs.get("head_ref_oid", ""))
+    handoff_head_ref_oid = str(pr_status.get("headRefOid", ""))
+    release_binding_match = (
+        bool(release_pr_url)
+        and bool(handoff_pr_url)
+        and release_pr_url == handoff_pr_url
+        and bool(release_head_ref_oid)
+        and bool(handoff_head_ref_oid)
+        and release_head_ref_oid == handoff_head_ref_oid
+    )
     m31_ready = release_decision_input.get("status") in {
         "ready_for_owner_decision",
         "ready_for_owner_decision_with_warnings",
     }
     gates = {
         "release_decision_input": _gate(m31_ready),
+        "release_decision_binding": _gate(release_binding_match),
         "release_decision_blockers": _gate(not release_blockers),
+        "review_thread_fetch": _gate(review_summary["fetch_error_count"] == 0),
         "current_actionable_reviews": _gate(review_summary["current_actionable_thread_count"] == 0),
         "outdated_review_threads": _gate(True, warning=review_summary["outdated_unresolved_thread_count"] > 0),
         "pr_mergeability": _gate(merge_state in {"CLEAN", "MERGEABLE"}),
@@ -176,6 +197,22 @@ def build_multi_agent_owner_acceptance_handoff(
     }
     status = _overall_status(gates)
     blockers = list(release_blockers)
+    if not release_binding_match:
+        blockers.append(
+            {
+                "blocker_id": "release-decision-input-binding-mismatch",
+                "status": "local_blocker",
+                "message": "M31 release decision input PR/head does not match the handoff PR/head.",
+            }
+        )
+    if review_summary["fetch_error_count"] > 0:
+        blockers.append(
+            {
+                "blocker_id": "review-thread-fetch-failed",
+                "status": "local_blocker",
+                "message": "Current GitHub review threads could not be fetched.",
+            }
+        )
     if review_summary["current_actionable_thread_count"] > 0:
         blockers.append(
             {
@@ -199,11 +236,11 @@ def build_multi_agent_owner_acceptance_handoff(
         "inputs": {
             "release_decision_input_id": str(release_decision_input.get("input_id", "")),
             "release_decision_status": str(release_decision_input.get("status", "")),
-            "release_decision_pr_url": str(release_inputs.get("pr_url", "")),
-            "release_decision_head_ref_oid": str(release_inputs.get("head_ref_oid", "")),
+            "release_decision_pr_url": release_pr_url,
+            "release_decision_head_ref_oid": release_head_ref_oid,
             "handoff_pr_number": int(pr_status.get("number", 0) or 0),
-            "handoff_pr_url": str(pr_status.get("url", "")),
-            "handoff_head_ref_oid": str(pr_status.get("headRefOid", "")),
+            "handoff_pr_url": handoff_pr_url,
+            "handoff_head_ref_oid": handoff_head_ref_oid,
             "handoff_merge_state": merge_state,
         },
         "summary": {
@@ -213,6 +250,8 @@ def build_multi_agent_owner_acceptance_handoff(
             "current_unresolved_thread_count": review_summary["current_unresolved_thread_count"],
             "current_actionable_thread_count": review_summary["current_actionable_thread_count"],
             "outdated_unresolved_thread_count": review_summary["outdated_unresolved_thread_count"],
+            "review_thread_fetch_error_count": review_summary["fetch_error_count"],
+            "release_decision_binding_match": release_binding_match,
             "control_plane": "repo_github_local_artifacts_only",
             "handoff_mode": "read_only_owner_acceptance_handoff",
         },
@@ -241,6 +280,7 @@ def build_multi_agent_owner_acceptance_handoff(
         "blockers": blockers,
         "risk_notes": [
             "This handoff is not a merge command and does not grant acceptance authority.",
+            "M31 release decision input must match the same PR URL and head SHA as this M32 handoff.",
             "Remote checks can remain a warning when GitHub reports no checks for the branch.",
             "Outdated unresolved review threads stay visible on GitHub but are not current actionable blockers.",
             "Notion and external planning surfaces stay outside this repo/GitHub/local-artifact boundary.",

@@ -113,6 +113,8 @@
         "current_unresolved_thread_count",
         "current_actionable_thread_count",
         "outdated_unresolved_thread_count",
+        "review_thread_fetch_error_count",
+        "release_decision_binding_match",
         "control_plane",
         "handoff_mode"
       ],
@@ -138,6 +140,13 @@
           "type": "integer",
           "minimum": 0
         },
+        "review_thread_fetch_error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "release_decision_binding_match": {
+          "type": "boolean"
+        },
         "control_plane": {
           "const": "repo_github_local_artifacts_only"
         },
@@ -151,7 +160,9 @@
       "additionalProperties": false,
       "required": [
         "release_decision_input",
+        "release_decision_binding",
         "release_decision_blockers",
+        "review_thread_fetch",
         "current_actionable_reviews",
         "outdated_review_threads",
         "pr_mergeability",
@@ -164,7 +175,13 @@
         "release_decision_input": {
           "$ref": "#/$defs/gate_status"
         },
+        "release_decision_binding": {
+          "$ref": "#/$defs/gate_status"
+        },
         "release_decision_blockers": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "review_thread_fetch": {
           "$ref": "#/$defs/gate_status"
         },
         "current_actionable_reviews": {

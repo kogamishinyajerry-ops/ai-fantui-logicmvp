@@ -81,6 +81,10 @@ def verify_multi_agent_owner_acceptance_handoff(package_path: Path) -> dict[str,
             mismatches.append("handoff_mode must be read_only_owner_acceptance_handoff")
         if summary.get("current_actionable_thread_count") != 0:
             mismatches.append("current_actionable_thread_count must be zero")
+        if summary.get("review_thread_fetch_error_count") != 0:
+            mismatches.append("review_thread_fetch_error_count must be zero")
+        if summary.get("release_decision_binding_match") is not True:
+            mismatches.append("release_decision_binding_match must be true")
         if summary.get("handoff_remote_checks_state") not in {
             "pass",
             "no_checks_reported",
@@ -94,7 +98,9 @@ def verify_multi_agent_owner_acceptance_handoff(package_path: Path) -> dict[str,
     else:
         for required in [
             "release_decision_input",
+            "release_decision_binding",
             "release_decision_blockers",
+            "review_thread_fetch",
             "current_actionable_reviews",
             "pr_mergeability",
             "control_plane_boundary",

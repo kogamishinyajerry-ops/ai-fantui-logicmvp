@@ -48,7 +48,7 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _run_release_decision_input(release_decision_input: Path) -> None:
+def _run_release_decision_input(release_decision_input: Path, *, pr_number: int) -> None:
     artifact_dir = release_decision_input.parent
     result = subprocess.run(
         [
@@ -57,6 +57,8 @@ def _run_release_decision_input(release_decision_input: Path) -> None:
             "--refresh-review-closure",
             "--artifact-dir",
             str(artifact_dir),
+            "--pr-number",
+            str(pr_number),
             "--format",
             "json",
         ],
@@ -147,9 +149,16 @@ def _load_review_threads(review_threads_json: Path | None, *, pr_number: int) ->
         timeout=120,
     )
     if result.returncode != 0:
-        return []
-    payload = json.loads(result.stdout)
-    return payload["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+        return [
+            {
+                "fetch_error": result.stderr.strip() or result.stdout.strip() or "review thread fetch failed",
+            }
+        ]
+    try:
+        payload = json.loads(result.stdout)
+        return payload["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+    except Exception as exc:
+        return [{"fetch_error": f"review thread payload parse failed: {exc}"}]
 
 
 def run_multi_agent_owner_acceptance_handoff(
@@ -163,7 +172,7 @@ def run_multi_agent_owner_acceptance_handoff(
 ) -> dict[str, Any]:
     """Generate and write the M32 owner acceptance handoff package."""
     if refresh_release_decision_input:
-        _run_release_decision_input(release_decision_input_path)
+        _run_release_decision_input(release_decision_input_path, pr_number=pr_number)
     release_decision_input = _load_json(release_decision_input_path)
     pr_status = _load_pr_status(pr_status_json, pr_number=pr_number)
     review_threads = _load_review_threads(review_threads_json, pr_number=pr_number)

@@ -48,11 +48,11 @@ def _script_env() -> dict[str, str]:
 
 def _m30_pr_status(remote_checks: list[dict] | None = None) -> dict:
     return {
-        "number": 270,
-        "url": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/pull/270",
+        "number": 271,
+        "url": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/pull/271",
         "state": "OPEN",
         "mergeStateStatus": "CLEAN",
-        "headRefOid": "a00b9d10e254c65e005e98ad069a4f8c3e5f1e5d",
+        "headRefOid": "74a4580f82d7a86c01bf3c7e0ccea2efc7e306bc",
         "statusCheckRollup": remote_checks or [],
         "reviews": [],
         "comments": [
@@ -61,7 +61,7 @@ def _m30_pr_status(remote_checks: list[dict] | None = None) -> dict:
                 "createdAt": "2026-05-28T09:13:16Z",
                 "body": (
                     "@codex review latest head "
-                    "a00b9d10e254c65e005e98ad069a4f8c3e5f1e5d"
+                    "74a4580f82d7a86c01bf3c7e0ccea2efc7e306bc"
                 ),
             },
             {
@@ -86,7 +86,7 @@ def _m30_thread(body: str) -> dict:
                     "createdAt": "2026-05-28T09:06:26Z",
                     "body": body,
                     "commit": {
-                        "oid": "a00b9d10e254c65e005e98ad069a4f8c3e5f1e5d",
+                        "oid": "74a4580f82d7a86c01bf3c7e0ccea2efc7e306bc",
                     },
                 }
             ]
@@ -214,6 +214,40 @@ def test_owner_acceptance_handoff_blocks_current_actionable_review() -> None:
     assert payload["gates"]["current_actionable_reviews"] == "fail"
     assert payload["summary"]["current_actionable_thread_count"] == 1
     assert payload["blockers"][0]["blocker_id"] == "current-actionable-review-threads"
+
+
+def test_owner_acceptance_handoff_blocks_release_decision_binding_mismatch() -> None:
+    mismatched_release = _release_decision_input()
+    mismatched_release["inputs"]["pr_url"] = (
+        "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/pull/270"
+    )
+    mismatched_release["inputs"]["head_ref_oid"] = "different-head"
+
+    payload = build_multi_agent_owner_acceptance_handoff(
+        release_decision_input=mismatched_release,
+        pr_status=_pr_status(status_check_rollup=[{"name": "validation", "conclusion": "SUCCESS"}]),
+        review_threads=[],
+        generated_at="2026-05-28T10:40:00Z",
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gates"]["release_decision_binding"] == "fail"
+    assert payload["summary"]["release_decision_binding_match"] is False
+    assert payload["blockers"][0]["blocker_id"] == "release-decision-input-binding-mismatch"
+
+
+def test_owner_acceptance_handoff_blocks_review_thread_fetch_error() -> None:
+    payload = build_multi_agent_owner_acceptance_handoff(
+        release_decision_input=_release_decision_input(),
+        pr_status=_pr_status(status_check_rollup=[{"name": "validation", "conclusion": "SUCCESS"}]),
+        review_threads=[{"fetch_error": "graphql failed"}],
+        generated_at="2026-05-28T10:40:00Z",
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gates"]["review_thread_fetch"] == "fail"
+    assert payload["summary"]["review_thread_fetch_error_count"] == 1
+    assert payload["blockers"][0]["blocker_id"] == "review-thread-fetch-failed"
 
 
 def test_owner_acceptance_handoff_blocks_release_decision_blocker() -> None:
