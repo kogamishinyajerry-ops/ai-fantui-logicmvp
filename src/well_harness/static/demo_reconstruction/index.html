@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p8">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p8" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p9">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p9" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -57,6 +57,30 @@
     <div class="demo-reconstruction-verdict">
       <strong id="demo-reconstruction-fidelity">复刻度：20/20 节点 · 23/23 连线</strong>
       <span id="demo-reconstruction-source-state">读取 golden demo 控制台</span>
+    </div>
+  </section>
+
+  <section id="demo-reconstruction-review-index" class="demo-reconstruction-review-index" data-review-index="demo-reconstruction" aria-label="审阅路径索引">
+    <div class="demo-reconstruction-review-index-head">
+      <div>
+        <p class="demo-reconstruction-kicker">REVIEW INDEX</p>
+        <h2>审阅路径索引</h2>
+      </div>
+      <strong id="demo-reconstruction-review-index-readiness">等待交付读回</strong>
+    </div>
+    <div class="demo-reconstruction-review-index-readback" aria-label="当前审阅读回">
+      <div><span>当前句子</span><strong id="demo-reconstruction-review-index-step">等待选择</strong></div>
+      <div><span>当前对象</span><strong id="demo-reconstruction-review-index-object">等待聚焦</strong></div>
+      <div><span>demo 输出</span><strong id="demo-reconstruction-review-index-output">等待输出</strong></div>
+    </div>
+    <div id="demo-reconstruction-review-index-list" class="demo-reconstruction-review-index-list" aria-label="跳转到审阅区域">
+      <button type="button" data-review-index-target="demo-reconstruction-docx-circuit-map" aria-pressed="true">DOCX 总览</button>
+      <button type="button" data-review-index-target="demo-reconstruction-docx-trace-board" aria-pressed="false">逐句链路</button>
+      <button type="button" data-review-index-target="demo-reconstruction-step-playback" aria-pressed="false">累计构建</button>
+      <button type="button" data-review-index-target="demo-reconstruction-custody-matrix" aria-pressed="false">交付链路</button>
+      <button type="button" data-review-index-target="demo-reconstruction-coverage-matrix" aria-pressed="false">对象覆盖</button>
+      <button type="button" data-review-index-target="demo-reconstruction-console-frame" aria-pressed="false">演示舱</button>
+      <button type="button" data-review-index-target="demo-reconstruction-scenario-ledger" aria-pressed="false">场景记录</button>
     </div>
   </section>
 

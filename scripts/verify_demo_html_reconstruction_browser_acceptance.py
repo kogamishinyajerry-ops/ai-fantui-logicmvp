@@ -122,6 +122,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     stamp = _utc_stamp()
     first_screen_path = artifact_dir / f"demo-reconstruction-mvp-first-screen-{stamp}.png"
     mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
+    review_index_path = artifact_dir / f"demo-reconstruction-review-index-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
@@ -166,6 +167,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.screenshot(path=str(first_screen_path), full_page=True)
                 first_screen_review = {
+                    "review_index_visible": page.locator(
+                        "#demo-reconstruction-review-index"
+                    ).is_visible(timeout=5000),
                     "source_map_visible": page.locator(
                         "#demo-reconstruction-docx-circuit-map"
                     ).is_visible(timeout=5000),
@@ -193,6 +197,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
                         return {
                             sourceEntryCount: document.querySelectorAll(".demo-reconstruction-source-entry").length,
+                            reviewIndexButtonCount: document.querySelectorAll("[data-review-index-target]").length,
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
@@ -209,6 +214,44 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             traceContract: text("#demo-reconstruction-trace-contract"),
                         };
                     }"""
+                )
+                page.locator("#demo-reconstruction-review-index").screenshot(
+                    path=str(review_index_path)
+                )
+                review_index_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            visible: !!document.querySelector("#demo-reconstruction-review-index"),
+                            buttonCount: document.querySelectorAll("[data-review-index-target]").length,
+                            readinessText: text("#demo-reconstruction-review-index-readiness"),
+                            stepText: text("#demo-reconstruction-review-index-step"),
+                            objectText: text("#demo-reconstruction-review-index-object"),
+                            outputText: text("#demo-reconstruction-review-index-output"),
+                            activeTargets: Array.from(
+                                document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-review-index-target")),
+                        };
+                    }"""
+                )
+                page.locator('[data-review-index-target="demo-reconstruction-scenario-ledger"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector(
+                            '[data-review-index-target="demo-reconstruction-scenario-ledger"][aria-pressed="true"]'
+                        );
+                        const target = document.querySelector("#demo-reconstruction-scenario-ledger");
+                        return !!active && !!target && window.scrollY > 0;
+                    }""",
+                    timeout=5000,
+                )
+                review_index_navigation = page.evaluate(
+                    """() => ({
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        scrollY: window.scrollY,
+                    })"""
                 )
                 page.locator('[data-trace-card][data-trace-anchor="P035-S05"]').click()
                 page.wait_for_function(
@@ -234,6 +277,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             pressedTraceCount: pressedCards.length,
                         };
                     }"""
+                )
+                review_index_after_trace = page.evaluate(
+                    """() => ({
+                        stepText: document
+                            .querySelector("#demo-reconstruction-review-index-step")
+                            ?.textContent?.trim() || "",
+                        objectText: document
+                            .querySelector("#demo-reconstruction-review-index-object")
+                            ?.textContent?.trim() || "",
+                    })"""
                 )
                 page.wait_for_function(
                     """() => {
@@ -1176,6 +1229,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             for path in (
                 first_screen_path,
                 mobile_first_screen_path,
+                review_index_path,
                 chain_svg_path,
                 keyboard_review_path,
                 review_deep_link_path,
@@ -1199,6 +1253,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
+            and source_map_review["reviewIndexButtonCount"] == 7
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
@@ -1210,6 +1265,18 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["selectedWireChipCount"] > 0
             and source_map_review["nodeCoverage"] == "20/20"
             and source_map_review["wireCoverage"] == "23/23"
+        )
+        else "fail",
+        "review_index_navigation": "pass"
+        if (
+            review_index_review["visible"]
+            and review_index_review["buttonCount"] == 7
+            and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
+            and "P035-S01" in review_index_review["stepText"]
+            and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
+            and review_index_navigation["scrollY"] > 0
+            and "P035-S05" in review_index_after_trace["stepText"]
+            and "等待聚焦" in review_index_after_trace["objectText"]
         )
         else "fail",
         "trace_selection_interaction": "pass"
@@ -1467,6 +1534,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "screenshots": {
             "first_screen": str(first_screen_path),
             "mobile_first_screen": str(mobile_first_screen_path),
+            "review_index": str(review_index_path),
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
             "review_deep_link": str(review_deep_link_path),
@@ -1488,6 +1556,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "embedded_palette": embedded_palette,
         "first_screen_review": first_screen_review,
         "source_map_review": source_map_review,
+        "review_index_review": review_index_review,
+        "review_index_navigation": review_index_navigation,
+        "review_index_after_trace": review_index_after_trace,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
@@ -1578,6 +1649,7 @@ def main(argv: list[str] | None = None) -> int:
                 "screenshots": "fail",
                 "first_screen_operator_guide": "fail",
                 "docx_sentence_circuit_map": "fail",
+                "review_index_navigation": "fail",
                 "trace_selection_interaction": "fail",
                 "embedded_trace_highlight": "fail",
                 "embedded_trace_chip_focus": "fail",
