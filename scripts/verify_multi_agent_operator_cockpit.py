@@ -14,6 +14,21 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT_DIR = Path("/tmp/ai-fantui-multi-agent-operator-cockpit")
 COCKPIT_NAME = "multi_agent_operator_cockpit_v0_1.json"
 SCHEMA_NAME = "multi_agent_operator_cockpit_v0_1.schema.json"
+RESPONSIVE_VIEWPORTS = [
+    {"name": "desktop", "width": 1366, "height": 768},
+    {"name": "mobile", "width": 390, "height": 844},
+]
+REQUIRED_TEXT = [
+    "Project Progress Cockpit",
+    "Multi-Agent Operator Cockpit",
+    "What Is Actually Moving",
+    "Active Agent Team",
+    "UltraWork Monitor",
+    "five_agent_context_cap",
+    "PackagingPRReadinessAgent",
+    "RUN-QUEUE-011",
+    "No active blockers",
+]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -38,6 +53,11 @@ def _parse_args() -> argparse.Namespace:
         default="text",
         help="Output format.",
     )
+    parser.add_argument(
+        "--skip-browser",
+        action="store_true",
+        help="Skip local HTML screenshot and geometry checks.",
+    )
     return parser.parse_args()
 
 
@@ -58,7 +78,104 @@ def _artifact_exists(path_value: Any) -> bool:
     return path.exists() and path.stat().st_size > 0
 
 
-def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
+def _browser_state(html_path: Path, screenshot_dir: Path) -> dict[str, Any]:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        return {
+            "status": "fail",
+            "mismatches": [f"playwright is not available: {exc}"],
+            "screenshots": {},
+            "states": {},
+        }
+
+    mismatches: list[str] = []
+    screenshots: dict[str, str] = {}
+    states: dict[str, dict[str, Any]] = {}
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        try:
+            for viewport in RESPONSIVE_VIEWPORTS:
+                page = browser.new_page(
+                    viewport={"width": viewport["width"], "height": viewport["height"]},
+                )
+                page.goto(html_path.resolve().as_uri(), wait_until="load")
+                page.wait_for_selector("h1", timeout=7000)
+                state = page.evaluate(
+                    """(requiredText) => {
+                        const bodyText = document.body?.innerText || "";
+                        const scrollContainers = [...document.querySelectorAll(".table-scroll")].map((element) => {
+                            const rect = element.getBoundingClientRect();
+                            return {
+                                width: Math.round(rect.width),
+                                scrollWidth: element.scrollWidth,
+                                hasInternalOverflow: element.scrollWidth > element.clientWidth + 2,
+                            };
+                        });
+                        return {
+                            title: document.title,
+                            h1: document.querySelector("h1")?.textContent || "",
+                            pageWidth: document.documentElement.scrollWidth,
+                            viewportWidth: window.innerWidth,
+                            noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                            requiredTextPresent: requiredText.every((item) => bodyText.includes(item)),
+                            missingText: requiredText.filter((item) => !bodyText.includes(item)),
+                            metricCount: document.querySelectorAll(".metric").length,
+                            progressCardCount: document.querySelectorAll(".progress-card").length,
+                            operatorViewCount: document.querySelectorAll(".view-card").length,
+                            agentRowCount: document.querySelectorAll("[data-operator-table='agents'] tbody tr").length,
+                            gateRowCount: document.querySelectorAll("[data-operator-table='gates'] tbody tr").length,
+                            tableScrollCount: scrollContainers.length,
+                            scrollContainers,
+                        };
+                    }""",
+                    REQUIRED_TEXT,
+                )
+                screenshot_path = screenshot_dir / f"multi-agent-operator-cockpit-{viewport['name']}.png"
+                page.screenshot(path=str(screenshot_path), full_page=True)
+                page.close()
+                screenshots[viewport["name"]] = str(screenshot_path)
+                states[viewport["name"]] = state
+                if not state.get("noHorizontalOverflow"):
+                    mismatches.append(f"{viewport['name']} viewport has horizontal page overflow")
+                if not state.get("requiredTextPresent"):
+                    missing = ", ".join(state.get("missingText", []))
+                    mismatches.append(f"{viewport['name']} viewport is missing required text: {missing}")
+                if state.get("metricCount") != 4:
+                    mismatches.append(f"{viewport['name']} viewport must expose four project metrics")
+                if state.get("progressCardCount") != 4:
+                    mismatches.append(f"{viewport['name']} viewport must expose four visible-progress cards")
+                if state.get("operatorViewCount") < 2:
+                    mismatches.append(f"{viewport['name']} viewport must expose linked operator views")
+                if state.get("agentRowCount") != 5:
+                    mismatches.append(f"{viewport['name']} viewport must expose five active agents")
+                if int(state.get("gateRowCount", 0)) < 4:
+                    mismatches.append(f"{viewport['name']} viewport must expose all operator gates")
+                if int(state.get("tableScrollCount", 0)) < 2:
+                    mismatches.append(f"{viewport['name']} viewport must wrap wide tables in scroll containers")
+                if viewport["name"] == "mobile" and not any(
+                    item.get("hasInternalOverflow")
+                    for item in state.get("scrollContainers", [])
+                    if isinstance(item, dict)
+                ):
+                    mismatches.append("mobile viewport must keep wide tables inside internal scroll containers")
+        finally:
+            browser.close()
+
+    return {
+        "status": "pass" if not mismatches else "fail",
+        "mismatches": mismatches,
+        "screenshots": screenshots,
+        "states": states,
+    }
+
+
+def verify_multi_agent_operator_cockpit(
+    cockpit_path: Path,
+    *,
+    run_browser: bool = True,
+) -> dict[str, Any]:
     mismatches: list[str] = []
     try:
         payload = _load_json(cockpit_path)
@@ -69,7 +186,14 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
             "schema_valid": False,
             "html_exists": False,
             "markdown_exists": False,
+            "browser_valid": False,
             "mismatches": [f"cockpit could not be loaded: {exc}"],
+            "browser": {
+                "status": "fail",
+                "mismatches": [],
+                "screenshots": {},
+                "states": {},
+            },
         }
 
     schema = _load_json(PROJECT_ROOT / "docs" / "json_schema" / SCHEMA_NAME)
@@ -166,6 +290,31 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
         ]:
             if marker not in html:
                 mismatches.append(f"cockpit HTML missing marker: {marker}")
+        for marker in [
+            'class="table-scroll"',
+            'data-operator-table="agents"',
+            'data-operator-table="gates"',
+        ]:
+            if marker not in html:
+                mismatches.append(f"cockpit HTML missing browser geometry marker: {marker}")
+
+    browser = {
+        "status": "skipped",
+        "mismatches": [],
+        "screenshots": {},
+        "states": {},
+    }
+    if run_browser:
+        if html_exists:
+            browser = _browser_state(html_path, cockpit_path.parent / "screenshots")
+            mismatches.extend(browser["mismatches"])
+        else:
+            browser = {
+                "status": "fail",
+                "mismatches": ["cockpit_html artifact is missing"],
+                "screenshots": {},
+                "states": {},
+            }
 
     return {
         "status": "pass" if not mismatches else "fail",
@@ -173,7 +322,9 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
         "schema_valid": not errors,
         "html_exists": html_exists,
         "markdown_exists": markdown_exists,
+        "browser_valid": browser["status"] == "pass",
         "mismatches": mismatches,
+        "browser": browser,
     }
 
 
@@ -181,6 +332,7 @@ def main() -> int:
     args = _parse_args()
     result = verify_multi_agent_operator_cockpit(
         _cockpit_path(artifact_dir=args.artifact_dir, cockpit_path=args.cockpit),
+        run_browser=not args.skip_browser,
     )
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
