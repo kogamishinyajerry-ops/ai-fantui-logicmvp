@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 from well_harness.ultrawork_monitor_dashboard import (
     SCHEMA_ID,
@@ -162,6 +163,7 @@ def test_ultrawork_dashboard_runner_and_checker_round_trip(tmp_path: Path) -> No
             payload["artifact_paths"]["dashboard_json"],
             "--format",
             "json",
+            "--skip-browser",
         ],
         cwd=PROJECT_ROOT,
         env=_script_env(),
@@ -176,6 +178,54 @@ def test_ultrawork_dashboard_runner_and_checker_round_trip(tmp_path: Path) -> No
     assert verify_payload["status"] == "pass"
     assert verify_payload["schema_valid"] is True
     assert verify_payload["html_exists"] is True
+    assert verify_payload["browser_valid"] is False
+    assert verify_payload["browser"]["status"] == "skipped"
+    assert verify_payload["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_ultrawork_dashboard_browser_gate_captures_geometry(tmp_path: Path) -> None:
+    run_result = subprocess.run(
+        [
+            sys.executable,
+            str(RUN_SCRIPT),
+            "--cursor",
+            str(_run_cursor(tmp_path, resume_mode="ready-to-resume")[1]),
+            "--artifact-dir",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert run_result.returncode == 0, run_result.stderr
+    payload = json.loads(run_result.stdout)
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--dashboard",
+            payload["artifact_paths"]["dashboard_json"],
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
     assert verify_payload["browser_valid"] is True
     assert verify_payload["mismatches"] == []
     browser = verify_payload["browser"]
