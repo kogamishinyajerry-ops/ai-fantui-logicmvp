@@ -165,6 +165,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-anchor"' in html
     assert 'id="demo-reconstruction-review-object"' in html
     assert 'id="demo-reconstruction-review-sync"' in html
+    assert 'id="demo-reconstruction-review-link"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -192,6 +193,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "handleCoverageKeyboardNavigation" in script
     assert "clearCircuitObjectFocus" in script
     assert "updateKeyboardReviewStatus" in script
+    assert "readReviewHashState" in script
+    assert "writeReviewHashState" in script
+    assert "applyReviewHashState" in script
+    assert "updateReviewLink" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -205,6 +210,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-coverage-tools" in stylesheet
     assert ".demo-reconstruction-keyboard-review" in stylesheet
     assert ".demo-reconstruction-keyboard-review strong" in stylesheet
+    assert ".demo-reconstruction-review-link" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -290,6 +296,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["mobile_first_screen"].endswith(".png")
     assert payload["screenshots"]["chain_svg"].endswith(".png")
     assert payload["screenshots"]["keyboard_review"].endswith(".png")
+    assert payload["screenshots"]["review_deep_link"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -352,6 +359,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["trace_switch_focus_reset_review"]["coverageTabStopIds"] == ["logic4"]
     assert payload["trace_switch_focus_reset_review"]["pressedCoverageIds"] == []
     assert "整句链路" in payload["trace_switch_focus_reset_review"]["reviewObjectText"]
+    assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
+    assert payload["review_deep_link"]["linkHref"].endswith(
+        "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
+    )
+    assert payload["review_deep_link"]["restoredSelectedAnchor"] == "P035-S05"
+    assert payload["review_deep_link"]["restoredQuery"] == "logic4"
+    assert payload["review_deep_link"]["restoredVisibleNodeCount"] == 1
+    assert payload["review_deep_link"]["restoredVisibleWireCount"] == 3
+    assert payload["review_deep_link"]["restoredFocusedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["review_deep_link"]["restoredObjectText"]
+    assert "wire_logic4_thr_lock" in payload["review_deep_link"]["restoredStatusText"]
     assert payload["source_chip_focus_review"]["sourceNodeFocusChipCount"] >= 20
     assert payload["source_chip_focus_review"]["sourceWireFocusChipCount"] >= 23
     assert payload["source_chip_focus_review"]["focusedNodeCount"] == 0
@@ -382,6 +400,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "coverage_keyboard_navigation": "pass",
         "review_cursor_status": "pass",
         "trace_switch_clears_object_focus": "pass",
+        "review_hash_link": "pass",
+        "review_hash_restore": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",

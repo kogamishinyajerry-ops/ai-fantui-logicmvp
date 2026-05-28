@@ -315,7 +315,7 @@ h2 { margin-bottom: 0; font-size: 18px; }
 }
 .demo-reconstruction-keyboard-review {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   border: 1px solid #d8dee8;
   border-radius: 8px;
@@ -337,6 +337,17 @@ h2 { margin-bottom: 0; font-size: 18px; }
   font-size: 12px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-link {
+  color: #2563eb;
+  font-size: 12px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+.demo-reconstruction-review-link:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
 }
 .demo-reconstruction-coverage-grid {
   display: grid;

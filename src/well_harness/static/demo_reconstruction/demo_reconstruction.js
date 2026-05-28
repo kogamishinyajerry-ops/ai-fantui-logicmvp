@@ -74,11 +74,13 @@
   const reviewAnchor = $("demo-reconstruction-review-anchor");
   const reviewObject = $("demo-reconstruction-review-object");
   const reviewSync = $("demo-reconstruction-review-sync");
+  const reviewLink = $("demo-reconstruction-review-link");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let traceSteps = [];
   let currentTraceStep = null;
   let selectedTraceIndex = -1;
   let currentCircuitFocus = {kind: "", id: ""};
+  let applyingReviewHashState = false;
 
   function readJson(value) {
     try {
@@ -223,6 +225,76 @@
     setText(reviewAnchor, anchorText);
     setText(reviewObject, objectText);
     setText(reviewSync, details.syncText || (embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "等待同步"));
+    updateReviewLink();
+  }
+
+  function readReviewHashState() {
+    const params = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+    const focus = params.get("focus") || "";
+    const focusParts = focus.split(":");
+    return {
+      step: params.get("step") || "",
+      focusKind: focusParts.length === 2 ? focusParts[0] : "",
+      focusId: focusParts.length === 2 ? focusParts[1] : "",
+      query: params.get("q") || "",
+    };
+  }
+
+  function reviewHashForState() {
+    const params = new URLSearchParams();
+    if (currentTraceStep && currentTraceStep.anchor) params.set("step", currentTraceStep.anchor);
+    if (currentCircuitFocus.kind && currentCircuitFocus.id) {
+      params.set("focus", `${currentCircuitFocus.kind}:${currentCircuitFocus.id}`);
+    }
+    const query = coverageSearch && coverageSearch.value ? coverageSearch.value.trim() : "";
+    if (query) params.set("q", query);
+    return params.toString();
+  }
+
+  function updateReviewLink() {
+    if (!reviewLink) return;
+    const hash = reviewHashForState();
+    const suffix = hash ? `#${hash}` : "";
+    reviewLink.href = `${window.location.pathname}${window.location.search}${suffix}`;
+  }
+
+  function writeReviewHashState() {
+    if (applyingReviewHashState) {
+      updateReviewLink();
+      return;
+    }
+    const hash = reviewHashForState();
+    const nextUrl = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ""}`;
+    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== nextUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+    updateReviewLink();
+  }
+
+  function applyReviewHashState() {
+    const state = readReviewHashState();
+    if (!state.step && !state.focusId && !state.query) {
+      updateReviewLink();
+      return false;
+    }
+    applyingReviewHashState = true;
+    try {
+      if (coverageSearch && coverageSearch.value !== state.query) {
+        coverageSearch.value = state.query;
+      }
+      updateCoverageFilter();
+      if (state.step) {
+        const step = traceSteps.find((item) => item && item.anchor === state.step);
+        if (step) setSelectedTrace(step, {writeHash: false});
+      }
+      if (state.focusKind && state.focusId) {
+        applyEmbeddedTraceFocus(state.focusKind, state.focusId);
+      }
+      updateReviewLink();
+    } finally {
+      applyingReviewHashState = false;
+    }
+    return true;
   }
 
   function setTraceCardTabStops(anchor) {
@@ -239,10 +311,10 @@
     if (card && typeof card.focus === "function") card.focus();
   }
 
-  function selectTraceByIndex(index, shouldFocus) {
+  function selectTraceByIndex(index, shouldFocus, options = {}) {
     if (!traceSteps.length) return;
     const nextIndex = Math.max(0, Math.min(traceSteps.length - 1, index));
-    setSelectedTrace(traceSteps[nextIndex]);
+    setSelectedTrace(traceSteps[nextIndex], options);
     if (shouldFocus) focusTraceCard(traceSteps[nextIndex].anchor);
   }
 
@@ -390,6 +462,7 @@
         objectId: id,
         syncText: "等待电路图同步",
       });
+      writeReviewHashState();
       return { matchCount: 0, ready: false };
     }
     ensureEmbeddedTraceStyle(frameDocument);
@@ -423,6 +496,7 @@
       objectId: id,
       syncText: embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "",
     });
+    writeReviewHashState();
     return { matchCount, ready: true };
   }
 
@@ -476,7 +550,7 @@
     updateCoverageFilter();
   }
 
-  function setSelectedTrace(step) {
+  function setSelectedTrace(step, options = {}) {
     if (!step || typeof step !== "object") return;
     clearCircuitObjectFocus();
     currentTraceStep = step;
@@ -492,6 +566,7 @@
     renderInlineChips(selectedWires, step.wire_ids, "demo-reconstruction-wire-chip", "无连线", "wire");
     renderInlineChips(selectedFolded, step.folded_predicates, "demo-reconstruction-folded-chip", "无折叠谓词");
     applyEmbeddedTraceHighlight(step);
+    if (options.writeHash !== false) writeReviewHashState();
   }
 
   function renderTraceBoard(payload) {
@@ -538,7 +613,7 @@
       card.addEventListener("keydown", handleTraceCardKeydown);
       traceCardList.appendChild(card);
     });
-    setSelectedTrace(steps[0]);
+    setSelectedTrace(steps[0], {writeHash: false});
   }
 
   function renderSourceEntries(entries) {
@@ -635,6 +710,7 @@
     renderCoverageMatrix(payload);
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
+    applyReviewHashState();
   }
 
   function renderCircuit(circuit, sourceLabel) {
@@ -677,12 +753,20 @@
 
   if (consoleFrame) {
     consoleFrame.addEventListener("load", () => {
-      if (currentTraceStep) applyEmbeddedTraceHighlight(currentTraceStep);
+      if (currentCircuitFocus.kind && currentCircuitFocus.id) {
+        applyEmbeddedTraceFocus(currentCircuitFocus.kind, currentCircuitFocus.id);
+      } else if (currentTraceStep) {
+        applyEmbeddedTraceHighlight(currentTraceStep);
+      }
     });
   }
   if (coverageSearch) {
-    coverageSearch.addEventListener("input", updateCoverageFilter);
+    coverageSearch.addEventListener("input", () => {
+      updateCoverageFilter();
+      writeReviewHashState();
+    });
   }
+  window.addEventListener("hashchange", applyReviewHashState);
 
   async function boot() {
     loadDocxSentenceCircuitMap()

@@ -124,6 +124,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
+    review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -540,6 +541,80 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                review_deep_link = page.evaluate(
+                    """() => ({
+                        hash: window.location.hash,
+                        linkHref: document.querySelector("#demo-reconstruction-review-link")?.href || "",
+                    })"""
+                )
+                restored_page = browser.new_page(viewport={"width": 1366, "height": 768})
+                try:
+                    restored_page.goto(
+                        f"{base_url}/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4",
+                        wait_until="networkidle",
+                    )
+                    restored_page.wait_for_function(
+                        """() => {
+                            const frame = document.querySelector("#demo-reconstruction-console-frame");
+                            const doc = frame && frame.contentDocument;
+                            const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                            const search = document.querySelector("#demo-reconstruction-coverage-search");
+                            const status = document.querySelector("#demo-reconstruction-embedded-highlight-status")?.textContent || "";
+                            return selected
+                                && selected.textContent.trim() === "P035-S05"
+                                && search
+                                && search.value === "logic4"
+                                && doc
+                                && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1
+                                && status.includes("wire_logic4_thr_lock");
+                        }""",
+                        timeout=7000,
+                    )
+                    restored_page.locator("#demo-reconstruction-docx-circuit-map").screenshot(
+                        path=str(review_deep_link_path)
+                    )
+                    restored_review = restored_page.evaluate(
+                        """() => {
+                            const frame = document.querySelector("#demo-reconstruction-console-frame");
+                            const doc = frame && frame.contentDocument;
+                            const visibleNodes = Array.from(
+                                document.querySelectorAll("[data-circuit-coverage-kind='node']")
+                            ).filter((button) => !button.hidden);
+                            const visibleWires = Array.from(
+                                document.querySelectorAll("[data-circuit-coverage-kind='wire']")
+                            ).filter((button) => !button.hidden);
+                            return {
+                                selectedAnchor: document
+                                    .querySelector("#demo-reconstruction-selected-anchor")
+                                    ?.textContent?.trim() || "",
+                                query: document.querySelector("#demo-reconstruction-coverage-search")?.value || "",
+                                visibleNodeCount: visibleNodes.length,
+                                visibleWireCount: visibleWires.length,
+                                focusedWireCount: doc
+                                    ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                    : 0,
+                                objectText: document
+                                    .querySelector("#demo-reconstruction-review-object")
+                                    ?.textContent?.trim() || "",
+                                statusText: document
+                                    .querySelector("#demo-reconstruction-embedded-highlight-status")
+                                    ?.textContent?.trim() || "",
+                            };
+                        }"""
+                    )
+                    review_deep_link.update(
+                        {
+                            "restoredSelectedAnchor": restored_review["selectedAnchor"],
+                            "restoredQuery": restored_review["query"],
+                            "restoredVisibleNodeCount": restored_review["visibleNodeCount"],
+                            "restoredVisibleWireCount": restored_review["visibleWireCount"],
+                            "restoredFocusedWireCount": restored_review["focusedWireCount"],
+                            "restoredObjectText": restored_review["objectText"],
+                            "restoredStatusText": restored_review["statusText"],
+                        }
+                    )
+                finally:
+                    restored_page.close()
                 page.locator('[data-trace-card][data-trace-anchor="P035-S02"]').click()
                 page.wait_for_function(
                     """() => {
@@ -708,6 +783,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 mobile_first_screen_path,
                 chain_svg_path,
                 keyboard_review_path,
+                review_deep_link_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -807,6 +883,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "整句链路" in trace_switch_focus_reset_review["reviewObjectText"]
         )
         else "fail",
+        "review_hash_link": "pass"
+        if (
+            review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
+            and review_deep_link["linkHref"].endswith(
+                "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
+            )
+        )
+        else "fail",
+        "review_hash_restore": "pass"
+        if (
+            review_deep_link["restoredSelectedAnchor"] == "P035-S05"
+            and review_deep_link["restoredQuery"] == "logic4"
+            and review_deep_link["restoredVisibleNodeCount"] == 1
+            and review_deep_link["restoredVisibleWireCount"] == 3
+            and review_deep_link["restoredFocusedWireCount"] == 1
+            and "wire_logic4_thr_lock" in review_deep_link["restoredObjectText"]
+            and "wire_logic4_thr_lock" in review_deep_link["restoredStatusText"]
+        )
+        else "fail",
         "source_chip_focus": "pass"
         if (
             source_chip_focus_review["sourceNodeFocusChipCount"] >= 20
@@ -851,6 +946,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "mobile_first_screen": str(mobile_first_screen_path),
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
+            "review_deep_link": str(review_deep_link_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -869,6 +965,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "coverage_filter_review": coverage_filter_review,
         "keyboard_review": keyboard_review,
         "trace_switch_focus_reset_review": trace_switch_focus_reset_review,
+        "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,
