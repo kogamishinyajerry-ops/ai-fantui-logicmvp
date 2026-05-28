@@ -307,6 +307,98 @@ h2 {
   font-size: 12px;
   line-height: 1.55;
 }
+.docx-circuit-trace-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid rgba(30, 103, 255, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+.docx-circuit-trace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.docx-circuit-trace-head h3 {
+  margin: 0;
+  color: var(--docx-text);
+  font-size: 13px;
+}
+.docx-circuit-trace-head span {
+  color: var(--docx-accent);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.docx-circuit-trace-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.docx-circuit-trace-summary div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--docx-border);
+  border-radius: 7px;
+  background: #f8fafc;
+  padding: 8px;
+}
+.docx-circuit-trace-summary dt {
+  color: var(--docx-muted);
+  font-size: 11px;
+}
+.docx-circuit-trace-summary dd {
+  margin: 0;
+  color: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.docx-circuit-trace-evidence strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--docx-muted);
+  font-size: 12px;
+}
+.docx-circuit-trace-evidence ul {
+  display: grid;
+  gap: 6px;
+  max-height: 170px;
+  margin: 0;
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+}
+.docx-circuit-trace-evidence li {
+  display: grid;
+  gap: 3px;
+  border-left: 3px solid #cbd5e1;
+  background: #f8fafc;
+  padding: 7px 8px;
+}
+.docx-circuit-trace-evidence li[data-source-kind="sequence_step"] {
+  border-left-color: var(--docx-accent);
+}
+.docx-circuit-trace-evidence li[data-source-kind="source_entry"] {
+  border-left-color: var(--docx-ok);
+}
+.docx-circuit-trace-evidence li strong {
+  margin: 0;
+  color: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.docx-circuit-trace-evidence li span {
+  color: var(--docx-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
 .docx-circuit-ladder {
   margin-top: 10px;
 }
@@ -384,6 +476,12 @@ h2 {
   stroke-linejoin: round;
   stroke-width: 2;
 }
+.docx-circuit-svg-wire-hit {
+  fill: rgba(30, 103, 255, 0);
+  stroke: none;
+  cursor: pointer;
+  pointer-events: all;
+}
 .docx-circuit-svg-wire[data-highlight="active"] {
   stroke: #44b986;
   stroke-width: 2.6;
@@ -392,10 +490,21 @@ h2 {
   stroke: #f5b23d;
   stroke-width: 3.4;
 }
+.docx-circuit-svg-wire[data-selected="true"] {
+  stroke: var(--docx-accent);
+  stroke-width: 4;
+}
 .docx-circuit-svg-node rect {
   fill: #ffffff;
   stroke: #cbd5e1;
   stroke-width: 1.2;
+}
+.docx-circuit-svg-node,
+.docx-circuit-svg-wire {
+  cursor: pointer;
+}
+.docx-circuit-svg-wire {
+  pointer-events: stroke;
 }
 .docx-circuit-svg-node[data-node-kind="logic"] rect {
   fill: #f6f9ff;
@@ -409,6 +518,10 @@ h2 {
   fill: #fff7df;
   stroke: #f5b23d;
   stroke-width: 2.4;
+}
+.docx-circuit-svg-node[data-selected="true"] rect {
+  stroke: var(--docx-accent);
+  stroke-width: 3;
 }
 .docx-circuit-svg-node-label {
   fill: var(--docx-text);
@@ -462,6 +575,11 @@ h2 {
   background: #fff7df;
   color: #7a4b00;
 }
+.docx-circuit-contract-chip[data-selected="true"] {
+  border-color: rgba(30, 103, 255, 0.65);
+  background: #eff6ff;
+  color: var(--docx-accent);
+}
 #docx-circuit-demo-frame {
   display: block;
   width: 100%;
@@ -504,6 +622,9 @@ h2 {
   }
   .docx-circuit-logic-ladder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .docx-circuit-trace-summary {
+    grid-template-columns: 1fr;
   }
 }
 

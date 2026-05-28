@@ -30,6 +30,7 @@
   };
 
   const LOGIC_IDS = ["logic1", "logic2", "logic3", "logic4"];
+  const TRACE_KIND_LABELS = {node: "节点", wire: "线束"};
   const DEMO_SCENARIOS = {
     "P035-S01": {
       label: "L1 / TLS 解锁",
@@ -108,6 +109,12 @@
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
+  const tracePanel = $("docx-circuit-trace-panel");
+  const traceSelectedId = $("docx-circuit-trace-selected-id");
+  const traceType = $("docx-circuit-trace-type");
+  const traceLogicLevel = $("docx-circuit-trace-logic-level");
+  const traceFolded = $("docx-circuit-trace-folded");
+  const traceEvidenceList = $("docx-circuit-trace-evidence-list");
   const logicLadder = $("docx-circuit-logic-ladder");
   const circuitSvg = $("docx-circuit-svg");
   const circuitSvgSummary = $("docx-circuit-svg-summary");
@@ -118,6 +125,7 @@
   const demoSyncStatus = $("docx-circuit-demo-sync-status");
   let currentPayload = null;
   let currentAnchor = DEFAULT_STEP_ANCHOR;
+  let selectedElement = {kind: "wire", id: "wire_logic4_thr_lock"};
 
   function setText(element, value) {
     if (element) element.textContent = value;
@@ -169,6 +177,164 @@
       .join(" ");
   }
 
+  function routeHitPoint(route) {
+    const points = Array.isArray(route) ? route : [];
+    if (points.length === 0) return {cx: 0, cy: 0};
+    let best = {length: -1, start: points[0], end: points[0]};
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const start = points[index];
+      const end = points[index + 1];
+      const length = Math.abs(end[0] - start[0]) + Math.abs(end[1] - start[1]);
+      if (length > best.length) best = {length, start, end};
+    }
+    return {
+      cx: (best.start[0] + best.end[0]) / 2,
+      cy: (best.start[1] + best.end[1]) / 2,
+    };
+  }
+
+  function circuitNodeById(id) {
+    return CIRCUIT_NODES.find((node) => node.id === id) || null;
+  }
+
+  function circuitEdgeById(id) {
+    return CIRCUIT_EDGES.find((edge) => edge.id === id) || null;
+  }
+
+  function relatedNodeIds(kind, id) {
+    if (kind === "node") return [id];
+    const edge = circuitEdgeById(id);
+    return edge ? [edge.source, edge.target] : [];
+  }
+
+  function matchingSteps(kind, id) {
+    const steps = currentPayload && Array.isArray(currentPayload.sequence_steps)
+      ? currentPayload.sequence_steps
+      : [];
+    const key = kind === "wire" ? "wire_ids" : "node_ids";
+    return steps.filter((step) => listFrom(step[key]).includes(id));
+  }
+
+  function matchingSourceEntries(kind, id) {
+    const entries = currentPayload && Array.isArray(currentPayload.source_entries)
+      ? currentPayload.source_entries
+      : [];
+    const nodeIds = relatedNodeIds(kind, id);
+    return entries.filter((entry) => listFrom(entry.node_ids).some((nodeId) => nodeIds.includes(nodeId)));
+  }
+
+  function logicLevelsForElement(kind, id, entries, steps) {
+    const values = new Set();
+    relatedNodeIds(kind, id).forEach((nodeId) => {
+      if (LOGIC_IDS.includes(nodeId)) values.add(nodeId.replace("logic", "L"));
+    });
+    entries.forEach((entry) => {
+      const match = String(entry.role || "").match(/L[1-4]/);
+      if (match) values.add(match[0]);
+    });
+    steps.forEach((step) => {
+      const match = `${step.title || ""} ${step.source_text || ""}`.match(/L[1-4]/);
+      if (match) values.add(match[0]);
+    });
+    return Array.from(values).sort();
+  }
+
+  function foldedPredicatesForSteps(steps) {
+    const values = new Set();
+    steps.forEach((step) => {
+      listFrom(step.folded_predicates).forEach((predicate) => values.add(predicate));
+    });
+    return Array.from(values);
+  }
+
+  function elementLabel(kind, id) {
+    if (kind === "wire") {
+      const edge = circuitEdgeById(id);
+      return edge ? `${id} · ${edge.source} -> ${edge.target}` : id;
+    }
+    const node = circuitNodeById(id);
+    return node ? `${node.label} · ${node.id}` : id;
+  }
+
+  function setSelectedElementState(kind, id) {
+    if (circuitSvg) {
+      circuitSvg.dataset.selectedElementType = kind;
+      circuitSvg.dataset.selectedElementId = id;
+      circuitSvg.querySelectorAll("[data-node-id], [data-wire-id]").forEach((item) => {
+        const itemKind = item.dataset.nodeId ? "node" : "wire";
+        const itemId = item.dataset.nodeId || item.dataset.wireId || "";
+        item.dataset.selected = itemKind === kind && itemId === id ? "true" : "false";
+      });
+    }
+    [nodeGrid, wireGrid].forEach((grid) => {
+      if (!grid) return;
+      grid.querySelectorAll(".docx-circuit-contract-chip").forEach((item) => {
+        const itemKind = item.dataset.nodeId ? "node" : "wire";
+        const itemId = item.dataset.nodeId || item.dataset.wireId || "";
+        item.dataset.selected = itemKind === kind && itemId === id ? "true" : "false";
+      });
+    });
+  }
+
+  function appendEvidenceItem(anchor, role, text, sourceKind) {
+    if (!traceEvidenceList) return;
+    const item = document.createElement("li");
+    const label = document.createElement("strong");
+    label.textContent = `${anchor} · ${role}`;
+    const body = document.createElement("span");
+    body.textContent = text;
+    item.dataset.sourceKind = sourceKind;
+    item.appendChild(label);
+    item.appendChild(body);
+    traceEvidenceList.appendChild(item);
+  }
+
+  function renderTracePanel(kind, id) {
+    const steps = matchingSteps(kind, id);
+    const entries = matchingSourceEntries(kind, id).slice(0, 4);
+    const logicLevels = logicLevelsForElement(kind, id, entries, steps);
+    const folded = foldedPredicatesForSteps(steps);
+
+    if (tracePanel) {
+      tracePanel.setAttribute("data-selected-element-type", kind);
+      tracePanel.setAttribute("data-selected-element-id", id);
+    }
+    setText(traceSelectedId, elementLabel(kind, id));
+    setText(traceType, TRACE_KIND_LABELS[kind] || kind);
+    setText(traceLogicLevel, logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
+    setText(traceFolded, folded.length > 0 ? folded.join("；") : "无折叠谓词");
+
+    if (!traceEvidenceList) return;
+    traceEvidenceList.innerHTML = "";
+    steps.forEach((step) => {
+      appendEvidenceItem(step.anchor || "P035", step.title || "P035 步骤", step.source_text || "", "sequence_step");
+    });
+    entries.forEach((entry) => {
+      appendEvidenceItem(entry.anchor || "DOCX", entry.role || "源文档条目", entry.text || "", "source_entry");
+    });
+    if (traceEvidenceList.children.length === 0) {
+      appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前元素没有出现在 sentence map 中。", "empty");
+    }
+  }
+
+  function selectCircuitElement(kind, id) {
+    selectedElement = {kind, id};
+    setSelectedElementState(kind, id);
+    renderTracePanel(kind, id);
+  }
+
+  function installElementInteraction(element, kind, id, label) {
+    element.setAttribute("role", "button");
+    element.setAttribute("tabindex", "0");
+    element.setAttribute("aria-label", `反查 ${TRACE_KIND_LABELS[kind] || kind} ${label || id}`);
+    element.addEventListener("click", () => selectCircuitElement(kind, id));
+    element.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectCircuitElement(kind, id);
+    });
+  }
+
   function renderSubcircuit() {
     if (!circuitSvg || circuitSvg.dataset.rendered === "true") return;
     circuitSvg.innerHTML = "";
@@ -191,9 +357,10 @@
 
     const wireGroup = makeSvgElement("g", {class: "docx-circuit-svg-wires"});
     CIRCUIT_EDGES.forEach((edge) => {
+      const pathData = routePath(edge.route);
       const path = makeSvgElement("path", {
         class: "docx-circuit-svg-wire",
-        d: routePath(edge.route),
+        d: pathData,
         "data-wire-id": edge.id,
         "data-source-node": edge.source,
         "data-target-node": edge.target,
@@ -201,7 +368,18 @@
         "data-current-step-match": "false",
         "marker-end": "url(#docx-circuit-arrow)",
       });
+      installElementInteraction(path, "wire", edge.id, `${edge.source} -> ${edge.target}`);
       wireGroup.appendChild(path);
+      const hitPoint = routeHitPoint(edge.route);
+      const hitBox = makeSvgElement("circle", {
+        class: "docx-circuit-svg-wire-hit",
+        "data-wire-hit-id": edge.id,
+        cx: hitPoint.cx,
+        cy: hitPoint.cy,
+        r: 10,
+      });
+      installElementInteraction(hitBox, "wire", edge.id, `${edge.source} -> ${edge.target}`);
+      wireGroup.appendChild(hitBox);
     });
     circuitSvg.appendChild(wireGroup);
 
@@ -234,6 +412,7 @@
         sub.textContent = node.sub;
         if (node.height > 34) group.appendChild(sub);
       }
+      installElementInteraction(group, "node", node.id, node.label);
       nodeGroup.appendChild(group);
     });
     circuitSvg.appendChild(nodeGroup);
@@ -396,6 +575,7 @@
     const source = payload && payload.source ? payload.source : {};
     const coverage = payload && payload.coverage ? payload.coverage : {};
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
+    currentPayload = payload;
     setText(sourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
     setText(
       sourceCount,
@@ -408,8 +588,8 @@
     renderSubcircuit();
     renderContractGrid(nodeGrid, contractIds(payload, "node_ids", Object.keys(NODE_LABELS).sort()), "node");
     renderContractGrid(wireGrid, contractIds(payload, "wire_ids", []), "wire");
-    currentPayload = payload;
     activateStep(currentAnchor);
+    selectCircuitElement(selectedElement.kind, selectedElement.id);
   }
 
   async function boot() {
