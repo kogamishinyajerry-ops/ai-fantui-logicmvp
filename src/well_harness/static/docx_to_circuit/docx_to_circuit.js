@@ -118,6 +118,9 @@
   const copyTracePacketButton = $("docx-circuit-copy-trace-packet");
   const copyReviewLinkButton = $("docx-circuit-copy-review-link");
   const copyStatus = $("docx-circuit-copy-status");
+  const sourceFocus = $("docx-circuit-source-focus");
+  const activeSourceEntry = $("docx-circuit-active-source-entry");
+  const showSourceEntryButton = $("docx-circuit-show-source-entry");
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
@@ -166,6 +169,10 @@
     return currentPayload && Array.isArray(currentPayload.source_entries)
       ? currentPayload.source_entries
       : [];
+  }
+
+  function sourceEntryByAnchor(anchor) {
+    return sourceEntries().find((item) => item.anchor === anchor) || null;
   }
 
   function sequenceSteps() {
@@ -725,6 +732,35 @@
     sourceIndexList.querySelectorAll("[data-source-entry-anchor]").forEach((item) => {
       item.dataset.active = item.dataset.sourceEntryAnchor === activeSourceEntryAnchor ? "true" : "false";
     });
+    renderActiveSourceEntryFocus();
+  }
+
+  function renderActiveSourceEntryFocus() {
+    if (!sourceFocus || !activeSourceEntry) return;
+    const entry = sourceEntryByAnchor(activeSourceEntryAnchor);
+    sourceFocus.dataset.hasSource = entry ? "true" : "false";
+    activeSourceEntry.textContent = entry
+      ? `${entry.anchor || "DOCX"} · ${entry.role || "源文条目"}`
+      : "未指定";
+    if (showSourceEntryButton) showSourceEntryButton.disabled = !entry;
+  }
+
+  function sourceEntryButtonForAnchor(anchor) {
+    if (!sourceIndexList || !anchor) return null;
+    return Array.from(sourceIndexList.querySelectorAll("[data-source-entry-anchor]"))
+      .find((item) => item.dataset.sourceEntryAnchor === anchor) || null;
+  }
+
+  function focusActiveSourceEntry() {
+    if (!activeSourceEntryAnchor) return;
+    let button = sourceEntryButtonForAnchor(activeSourceEntryAnchor);
+    if (!button) {
+      renderSourceIndex(sourceEntries());
+      button = sourceEntryButtonForAnchor(activeSourceEntryAnchor);
+    }
+    if (!button) return;
+    button.scrollIntoView({block: "center", inline: "nearest"});
+    button.focus({preventScroll: true});
   }
 
   function activateSourceEntry(anchor) {
@@ -1026,6 +1062,7 @@
   }
   if (copyTracePacketButton) copyTracePacketButton.addEventListener("click", copyTracePacket);
   if (copyReviewLinkButton) copyReviewLinkButton.addEventListener("click", copyReviewLink);
+  if (showSourceEntryButton) showSourceEntryButton.addEventListener("click", focusActiveSourceEntry);
   if (sourceIndexSearch) {
     sourceIndexSearch.addEventListener("input", () => {
       renderSourceIndex(sourceEntries());

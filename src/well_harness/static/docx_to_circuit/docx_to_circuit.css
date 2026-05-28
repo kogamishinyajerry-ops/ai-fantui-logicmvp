@@ -457,6 +457,37 @@ h2 {
   background: #ffffff;
   padding: 8px;
 }
+.docx-circuit-source-focus {
+  display: none;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(30, 103, 255, 0.24);
+  border-radius: 7px;
+  background: #f7faff;
+  padding: 8px 10px;
+}
+.docx-circuit-source-focus[data-has-source="true"] {
+  display: grid;
+}
+.docx-circuit-source-focus span {
+  color: var(--docx-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.docx-circuit-source-focus strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.docx-circuit-source-focus button {
+  white-space: nowrap;
+}
 .docx-circuit-tool-button {
   min-height: 32px;
   border: 1px solid var(--docx-border);

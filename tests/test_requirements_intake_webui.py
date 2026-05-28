@@ -6362,6 +6362,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-copy-trace-packet"' in html
     assert 'id="docx-circuit-copy-review-link"' in html
     assert 'id="docx-circuit-copy-status"' in html
+    assert 'id="docx-circuit-source-focus"' in html
+    assert 'id="docx-circuit-active-source-entry"' in html
+    assert 'id="docx-circuit-show-source-entry"' in html
     assert 'data-docx-circuit-source-index="true"' in html
     assert 'id="docx-circuit-source-index-count"' in html
     assert 'id="docx-circuit-source-index-search"' in html
@@ -6407,6 +6410,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function copyReviewLink" in script
     assert "function sourceEntryReviewUrl" in script
     assert "function copySourceEntryLink" in script
+    assert "function renderActiveSourceEntryFocus" in script
+    assert "function focusActiveSourceEntry" in script
     assert 'params.set("source"' in script
     assert "sourceEntryLinkAnchor" in script
     assert "hashchange" in script
@@ -6432,9 +6437,13 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert ".docx-circuit-source-index-controls" in stylesheet
     assert ".docx-circuit-source-index-button" in stylesheet
     assert ".docx-circuit-source-link-button" in stylesheet
+    assert ".docx-circuit-source-focus" in stylesheet
+    assert '.docx-circuit-source-focus[data-has-source="true"]' in stylesheet
     assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
     assert '"source_entry_link"' in review_link_gate
+    assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
+    assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
     assert ".docx-circuit-filter-toggle" in stylesheet
     assert ".docx-circuit-copy-status" in stylesheet
     assert "#docx-circuit-svg" in stylesheet

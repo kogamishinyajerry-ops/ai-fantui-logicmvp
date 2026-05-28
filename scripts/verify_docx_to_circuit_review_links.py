@@ -72,6 +72,13 @@ def _page_state(page: Any) -> dict[str, Any]:
             activeSourceEntryAnchor: document.querySelector(
                 "#docx-circuit-source-index-list [data-source-entry-anchor][data-active='true']"
             )?.dataset.sourceEntryAnchor || null,
+            activeSourceEntryLabel: document.querySelector("#docx-circuit-active-source-entry")?.textContent || null,
+            sourceFocusVisible: (() => {
+                const element = document.querySelector("#docx-circuit-source-focus");
+                return Boolean(element) && element.dataset.hasSource === "true" && getComputedStyle(element).display !== "none";
+            })(),
+            sourceFocusButtonDisabled: document.querySelector("#docx-circuit-show-source-entry")?.disabled || false,
+            focusedSourceEntryAnchor: document.activeElement?.dataset.sourceEntryAnchor || null,
             selectedElementId: document.querySelector("#docx-circuit-trace-panel")?.dataset.selectedElementId || null,
             selectedElementType: document.querySelector("#docx-circuit-trace-panel")?.dataset.selectedElementType || null,
             searchValue: document.querySelector("#docx-circuit-source-index-search")?.value || null,
@@ -137,6 +144,8 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 source_page = context.new_page()
                 source_page.goto(copied_source_entry, wait_until="networkidle")
                 source_state = _page_state(source_page)
+                source_page.locator("#docx-circuit-show-source-entry").click()
+                source_focus_state = _page_state(source_page)
                 source_page.screenshot(path=str(source_entry_path), full_page=True)
             finally:
                 browser.close()
@@ -149,6 +158,10 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "activeAnchor": "P035-S01",
         "sourceAnchor": "P035-S01",
         "activeSourceEntryAnchor": None,
+        "activeSourceEntryLabel": "未指定",
+        "sourceFocusVisible": False,
+        "sourceFocusButtonDisabled": True,
+        "focusedSourceEntryAnchor": None,
         "selectedElementId": "sw1",
         "selectedElementType": "node",
         "searchValue": "SW1",
@@ -162,6 +175,13 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     source_expected = {
         **current_expected,
         "activeSourceEntryAnchor": "P004",
+        "activeSourceEntryLabel": "P004 · 源文档条目",
+        "sourceFocusVisible": True,
+        "sourceFocusButtonDisabled": False,
+    }
+    source_focus_expected = {
+        **source_expected,
+        "focusedSourceEntryAnchor": "P004",
     }
     current_params = _hash_params(copied_current)
     source_params = _hash_params(copied_source_entry)
@@ -191,6 +211,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             and _state_matches(source_state, source_expected)
         )
         else "fail",
+        "source_entry_locator": "pass"
+        if _state_matches(source_focus_state, source_focus_expected)
+        else "fail",
         "screenshots": "pass"
         if all(
             path.exists() and path.stat().st_size > 0
@@ -214,6 +237,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "states": {
             "current_review": current_state,
             "source_entry": source_state,
+            "source_entry_locator": source_focus_state,
         },
         "screenshots": {
             "current_review": str(current_review_path),
@@ -278,6 +302,7 @@ def main(argv: list[str] | None = None) -> int:
                 "browser_boot": "fail",
                 "current_review_link": "fail",
                 "source_entry_link": "fail",
+                "source_entry_locator": "fail",
                 "screenshots": "fail",
                 "boundary": "fail",
             },
