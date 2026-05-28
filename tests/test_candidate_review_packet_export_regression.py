@@ -129,6 +129,66 @@ assert "well_harness.agent_review_packet" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
+def test_candidate_review_packet_route_serves_export_without_jsonschema() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import http.client
+import importlib.abc
+import json
+import sys
+import threading
+from http.server import ThreadingHTTPServer
+from well_harness.demo_server import (
+    CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE,
+    DemoRequestHandler,
+)
+
+assert "well_harness.agent_review_packet" not in sys.modules
+for module_name in list(sys.modules):
+    if module_name == "jsonschema" or module_name.startswith("jsonschema."):
+        sys.modules.pop(module_name)
+
+class BlockJsonschema(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "jsonschema" or fullname.startswith("jsonschema."):
+            raise ModuleNotFoundError("blocked optional jsonschema import")
+        return None
+
+sys.meta_path.insert(0, BlockJsonschema())
+server = ThreadingHTTPServer(("127.0.0.1", 0), DemoRequestHandler)
+thread = threading.Thread(target=server.serve_forever, daemon=True)
+thread.start()
+conn = http.client.HTTPConnection(*server.server_address, timeout=10)
+try:
+    conn.request("GET", CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE)
+    response = conn.getresponse()
+    body = response.read()
+finally:
+    conn.close()
+    server.shutdown()
+    server.server_close()
+
+assert response.status == 200, body.decode("utf-8", errors="replace")
+payload = json.loads(body)
+assert payload["kind"] == "ai-fantui-candidate-review-packet-export"
+assert payload["review_packet"]["kind"] == "ai-fantui-candidate-review-packet"
+assert "jsonschema" not in sys.modules
+""",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_make_test_gate_runs_review_packet_export_regression_command() -> None:
     makefile = MAKEFILE_PATH.read_text(encoding="utf-8")
 

@@ -44,7 +44,7 @@ Scope: Multi-Agent Control Logic Engineering System MVP, with `demo.html` digita
 | D1 | `demo.html` 复刻 MVP 控制台 | 6 施工队工时 | `/demo-reconstruction` 首屏入口、`demo.html 复刻 MVP 控制台` |
 | D2 | golden contract deterministic gate | 6 施工队工时 | `make demo-html-reconstruction-mvp` 验证 20/20 节点、23/23 连线、5 个预设、6 类状态输出 |
 | D3 | browser acceptance evidence | 6 施工队工时 | `make demo-html-reconstruction-browser-acceptance` 生成截图、像素可见性、预设交互和 HUD/输出联动证据 |
-| D4 | external review package | 4 施工队工时 | `make phase1-demo-mvp-review-package` 生成 `phase1_demo_mvp_review_package_v0_1.json` 和 `phase1_demo_mvp_review_report.md` |
+| D4 | M29 PR review handoff | 4 施工队工时 | `make multi-agent-merge-readiness` 生成 `multi_agent_merge_readiness_v0_1.json` 和 `multi_agent_merge_readiness_v0_1.html` |
 
 这个可演示包的产品入口固定为 `/demo-reconstruction`。它是当前对外阶段性成果；后续 M1-M12 的多 agent 队列、approved shell、repair loop 和 evidence packet 是施工队继续长期开发的工程支撑，不应该抢占第一演示入口。
 
