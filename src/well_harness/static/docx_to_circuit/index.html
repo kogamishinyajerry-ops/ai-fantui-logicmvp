@@ -37,7 +37,7 @@
   </div>
 </header>
 
-<main class="docx-circuit-shell" data-docx-circuit-main-entry="true">
+<main class="docx-circuit-shell" data-docx-circuit-main-entry="true" data-docx-circuit-review-workbench="interactive">
   <section class="docx-circuit-hero" aria-labelledby="docx-circuit-title">
     <div>
       <p class="docx-circuit-kicker">SOURCE DOCUMENT TO CIRCUIT</p>
@@ -93,14 +93,57 @@
         <p class="docx-circuit-kicker">P035 TO L1-L4</p>
         <h2>P035 工作过程拆解</h2>
       </div>
+      <div class="docx-circuit-active-step" aria-live="polite">
+        <span>当前审阅</span>
+        <strong id="docx-circuit-active-anchor">P035-S05</strong>
+      </div>
       <ol id="docx-circuit-sequence-list" class="docx-circuit-sequence-list">
         <li>正在读取原始 DOCX 到电路映射</li>
       </ol>
     </article>
+
+    <article id="docx-circuit-review-panel" class="docx-circuit-review-panel" aria-labelledby="docx-circuit-review-title" data-active-anchor="P035-S05">
+      <div class="docx-circuit-section-head">
+        <p class="docx-circuit-kicker">INTERACTIVE REVIEW</p>
+        <h2 id="docx-circuit-review-title">逐句电路审阅台</h2>
+      </div>
+
+      <section class="docx-circuit-source-card" aria-label="当前原文句子">
+        <span id="docx-circuit-source-anchor">P035-S05</span>
+        <strong id="docx-circuit-source-title">VDT90 与 L3 展开链路进入 L4</strong>
+        <p id="docx-circuit-source-text">等待读取原始 DOCX 句子。</p>
+      </section>
+
+      <section class="docx-circuit-ladder" aria-label="L1-L4 当前状态">
+        <div id="docx-circuit-logic-ladder" class="docx-circuit-logic-ladder">
+          <div data-logic-id="logic1"><span>L1</span><strong>TLS 解锁</strong></div>
+          <div data-logic-id="logic2"><span>L2</span><strong>ETRAC 供电</strong></div>
+          <div data-logic-id="logic3"><span>L3</span><strong>展开链路</strong></div>
+          <div data-logic-id="logic4"><span>L4</span><strong>THR_LOCK</strong></div>
+        </div>
+      </section>
+
+      <section class="docx-circuit-contract-map" aria-label="完整电路节点和连线高亮">
+        <div>
+          <h3>20 个节点</h3>
+          <div id="docx-circuit-node-grid" class="docx-circuit-contract-grid" data-contract-count="20"></div>
+        </div>
+        <div>
+          <h3>23 条连线</h3>
+          <div id="docx-circuit-wire-grid" class="docx-circuit-contract-grid docx-circuit-wire-grid" data-contract-count="23"></div>
+        </div>
+      </section>
+    </article>
+
     <article class="docx-circuit-demo-panel">
       <div class="docx-circuit-section-head">
         <p class="docx-circuit-kicker">DEMO.HTML CONTRACT</p>
         <h2>完整反推电路</h2>
+      </div>
+      <div class="docx-circuit-demo-sync" aria-live="polite">
+        <span>demo.html 同步场景</span>
+        <strong id="docx-circuit-demo-scenario">最大反推（展开到位）</strong>
+        <em id="docx-circuit-demo-sync-status">等待 iframe 加载</em>
       </div>
       <iframe id="docx-circuit-demo-frame" src="/demo.html?embed=1&amp;palette=codex-light" title="demo.html 完整反推逻辑电路"></iframe>
     </article>

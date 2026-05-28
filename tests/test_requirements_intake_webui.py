@@ -6343,18 +6343,32 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "/docx-to-circuit" in server_source
     assert 'data-ux-page-role="docx-to-circuit-main-entry"' in html
     assert 'data-docx-circuit-main-entry="true"' in html
+    assert 'data-docx-circuit-review-workbench="interactive"' in html
     assert "原始 DOCX 到完整电路" in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert 'href="/requirements-intake?source=official-docx"' in html
     assert 'href="/logic-builder?template=docx-l1-l4"' in html
     assert 'href="/demo-reconstruction"' in html
+    assert 'id="docx-circuit-review-panel"' in html
+    assert 'id="docx-circuit-source-anchor"' in html
+    assert 'id="docx-circuit-logic-ladder"' in html
+    assert 'id="docx-circuit-node-grid"' in html
+    assert 'id="docx-circuit-wire-grid"' in html
+    assert 'id="docx-circuit-demo-scenario"' in html
     assert 'id="docx-circuit-demo-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert "truth_effect:none" in html
     assert "controller_truth_modified:false" in html
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "docx-circuit-sequence-list" in script
+    assert "function activateStep" in script
+    assert "function applyDemoScenario" in script
+    assert "data-review-anchor" in script
+    assert "aria-pressed" in script
+    assert "wire_logic4_thr_lock" not in html
     assert ".docx-circuit-stage" in stylesheet
+    assert ".docx-circuit-review-panel" in stylesheet
+    assert ".docx-circuit-contract-chip[data-current-step-match=\"true\"]" in stylesheet
     assert "#docx-circuit-demo-frame" in stylesheet
 
     server, thread = _start_server()
