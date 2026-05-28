@@ -212,6 +212,38 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        if (!doc) return false;
+                        const nodes = doc.querySelectorAll(
+                            "#fan-chain-svg [data-docx-trace-selected='true'][data-node]"
+                        );
+                        const wires = doc.querySelectorAll(
+                            "#fan-chain-svg .chain-wire[data-docx-trace-selected='true']"
+                        );
+                        return nodes.length === 4 && wires.length === 3;
+                    }""",
+                    timeout=5000,
+                )
+                embedded_trace_highlight_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            selectedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            selectedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            stylePresent: !!(doc && doc.getElementById("demo-reconstruction-trace-highlight-style")),
+                            statusText: text("#demo-reconstruction-embedded-highlight-status"),
+                        };
+                    }"""
+                )
                 desktop_geometry = page.evaluate(
                     """() => ({
                         viewportWidth: window.innerWidth,
@@ -331,6 +363,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and trace_selection_review["pressedTraceCount"] == 1
         )
         else "fail",
+        "embedded_trace_highlight": "pass"
+        if (
+            embedded_trace_highlight_review["selectedNodeCount"] == 4
+            and embedded_trace_highlight_review["selectedWireCount"] == 3
+            and embedded_trace_highlight_review["stylePresent"]
+            and "P035-S05" in embedded_trace_highlight_review["statusText"]
+        )
+        else "fail",
         "responsive_geometry": "pass"
         if (
             desktop_geometry["noHorizontalOverflow"]
@@ -377,6 +417,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "first_screen_review": first_screen_review,
         "source_map_review": source_map_review,
         "trace_selection_review": trace_selection_review,
+        "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,
             "mobile": mobile_geometry,
@@ -444,6 +485,7 @@ def main(argv: list[str] | None = None) -> int:
                 "first_screen_operator_guide": "fail",
                 "docx_sentence_circuit_map": "fail",
                 "trace_selection_interaction": "fail",
+                "embedded_trace_highlight": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",
                 "node_wire_pixels": "fail",

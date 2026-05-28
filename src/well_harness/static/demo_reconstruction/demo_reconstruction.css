@@ -244,6 +244,17 @@ h2 { margin-bottom: 0; font-size: 18px; }
   color: #111827;
   font-size: 12px;
 }
+.demo-reconstruction-embedded-highlight-status {
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+}
 .demo-reconstruction-source-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
