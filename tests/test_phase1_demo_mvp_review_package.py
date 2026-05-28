@@ -547,8 +547,9 @@ def test_phase1_demo_mvp_review_package_make_target_is_wired() -> None:
 
     assert "PHASE1_DEMO_MVP_REVIEW_PACKAGE_ARTIFACT_DIR" in makefile
     assert "PHASE1_DEMO_MVP_CI_ARTIFACT_DIR" in makefile
-    assert "phase1-demo-mvp-review-package" in makefile
-    assert "verify-phase1-demo-mvp-ci-artifact" in makefile
+    assert "\nphase1-demo-mvp-review-package:\n" in makefile
+    assert "\nphase1-demo-mvp-ci-artifact:\n" in makefile
+    assert "\nverify-phase1-demo-mvp-ci-artifact:\n" in makefile
     assert "scripts/run_phase1_demo_mvp_review_package.py" in makefile
     assert "scripts/verify_phase1_demo_mvp_review_package.py" in makefile
     assert "scripts/verify_phase1_demo_mvp_ci_artifact.py" in makefile
@@ -560,6 +561,13 @@ def test_phase1_demo_mvp_review_package_make_target_is_wired() -> None:
     assert "scripts/run_phase1_demo_mvp_review_package.py" in release_runner
     assert "scripts/verify_phase1_demo_mvp_review_package.py" in release_runner
     assert "scripts/verify_phase1_demo_mvp_ci_artifact.py" in release_runner
+
+    verify_target = makefile.split("\nverify-phase1-demo-mvp-ci-artifact:\n", maxsplit=1)[1].split(
+        "\n\n",
+        maxsplit=1,
+    )[0]
+    assert "scripts/verify_phase1_demo_mvp_ci_artifact.py" in verify_target
+    assert "scripts/run_phase1_demo_mvp_review_package.py" not in verify_target
 
 
 def test_phase1_demo_mvp_gate_is_the_ci_entrypoint_after_standalone_demo_preflight() -> None:
