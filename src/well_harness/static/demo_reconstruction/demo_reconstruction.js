@@ -308,6 +308,7 @@
   }
 
   function refreshEmbeddedReviewFromCircuit() {
+    if (traceSteps.length) renderAssemblyMap(traceSteps);
     if (traceSteps.length) renderCircuitCompletionLadder(traceSteps);
     if (traceSteps.length) renderCustodyMatrix(traceSteps);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
