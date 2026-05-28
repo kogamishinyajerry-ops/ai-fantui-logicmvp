@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_owner_decision_request_v0_1.schema.json",
+  "title": "Multi-Agent Owner Decision Request v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "request_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "agent_team",
+    "inputs",
+    "summary",
+    "gates",
+    "decision_options",
+    "decision_input_template",
+    "decision_boundaries",
+    "pathspec_package",
+    "blockers",
+    "risk_notes",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_owner_decision_request_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-owner-decision-request"
+    },
+    "request_id": {
+      "const": "multi-agent-owner-decision-request-v0.1"
+    },
+    "status": {
+      "enum": [
+        "awaiting_owner_decision",
+        "awaiting_owner_decision_with_warnings",
+        "blocked"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim"],
+      "properties": {
+        "id": {"const": "M33"},
+        "name": {"type": "string", "minLength": 1},
+        "claim": {"const": "read_only_owner_decision_request_from_m32"}
+      }
+    },
+    "agent_team": {"type": "object"},
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_acceptance_handoff_id",
+        "owner_acceptance_handoff_status",
+        "source_pr_number",
+        "source_pr_url",
+        "source_head_ref_oid",
+        "source_merge_state"
+      ],
+      "properties": {
+        "owner_acceptance_handoff_id": {"type": "string"},
+        "owner_acceptance_handoff_status": {"type": "string"},
+        "source_pr_number": {"type": "integer"},
+        "source_pr_url": {"type": "string"},
+        "source_head_ref_oid": {"type": "string"},
+        "source_merge_state": {"type": "string"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_request_mode",
+        "decision_input_required",
+        "decision_recorded",
+        "recommended_owner_action",
+        "remote_checks_state",
+        "current_actionable_thread_count",
+        "outdated_unresolved_thread_count",
+        "control_plane"
+      ],
+      "properties": {
+        "decision_request_mode": {"const": "read_only_owner_decision_request"},
+        "decision_input_required": {"const": true},
+        "decision_recorded": {"const": false},
+        "recommended_owner_action": {"type": "string"},
+        "remote_checks_state": {"type": "string"},
+        "current_actionable_thread_count": {"type": "integer"},
+        "outdated_unresolved_thread_count": {"type": "integer"},
+        "control_plane": {"const": "repo_github_local_artifacts_only"}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": ["pass", "warning", "fail"]
+      },
+      "required": [
+        "owner_acceptance_handoff",
+        "m32_active_blockers",
+        "owner_decision_input_required",
+        "remote_checks_warning",
+        "owner_decision_authority",
+        "control_plane_boundary",
+        "pathspec_boundary"
+      ]
+    },
+    "decision_options": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "option_id",
+          "label",
+          "allowed",
+          "requires_explicit_owner_input",
+          "requires_remote_warning_acknowledgement",
+          "effect"
+        ],
+        "properties": {
+          "option_id": {
+            "enum": [
+              "accept_when_authorized",
+              "wait_for_remote_checks",
+              "request_review_followup",
+              "return_to_development"
+            ]
+          },
+          "label": {"type": "string", "minLength": 1},
+          "allowed": {"type": "boolean"},
+          "requires_explicit_owner_input": {"type": "boolean"},
+          "requires_remote_warning_acknowledgement": {"type": "boolean"},
+          "effect": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "decision_input_template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "decision_input_contract_version",
+        "template_mode",
+        "decision",
+        "rationale",
+        "source_request_id",
+        "source_handoff_id",
+        "source_pr_number",
+        "source_pr_url",
+        "remote_check_warning_acknowledged",
+        "attestation"
+      ],
+      "properties": {
+        "kind": {"const": "ai-fantui-multi-agent-owner-decision-input"},
+        "decision_input_contract_version": {"const": "v0.1"},
+        "template_mode": {"const": true},
+        "decision": {
+          "enum": [
+            "accept_when_authorized",
+            "wait_for_remote_checks",
+            "request_review_followup",
+            "return_to_development"
+          ]
+        },
+        "rationale": {"type": "string", "minLength": 1},
+        "source_request_id": {"const": "multi-agent-owner-decision-request-v0.1"},
+        "source_handoff_id": {"type": "string"},
+        "source_pr_number": {"type": "integer"},
+        "source_pr_url": {"type": "string"},
+        "remote_check_warning_acknowledged": {"type": "boolean"},
+        "attestation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["role", "decision_is_explicit", "acknowledged_boundaries"],
+          "properties": {
+            "role": {"const": "project_owner"},
+            "decision_is_explicit": {"const": false},
+            "acknowledged_boundaries": {
+              "type": "array",
+              "minItems": 5,
+              "items": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "decision_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_merge",
+        "self_approval",
+        "resolve_review_threads",
+        "owner_decision_recording",
+        "notion_control_plane_changes",
+        "artifact_cleanup"
+      ],
+      "properties": {
+        "auto_merge": {"const": "forbidden"},
+        "self_approval": {"const": "forbidden"},
+        "resolve_review_threads": {"const": "forbidden"},
+        "owner_decision_recording": {"const": "external_manual_input_only"},
+        "notion_control_plane_changes": {"const": "out_of_scope"},
+        "artifact_cleanup": {"const": "out_of_scope"}
+      }
+    },
+    "pathspec_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathspecs", "excluded_paths", "stage_command"],
+      "properties": {
+        "pathspecs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string"}
+        },
+        "excluded_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string"}
+        },
+        "stage_command": {"type": "string", "minLength": 1}
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "risk_notes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string"}
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_json",
+        "request_markdown",
+        "request_html",
+        "decision_input_template"
+      ],
+      "properties": {
+        "request_json": {"type": "string"},
+        "request_markdown": {"type": "string"},
+        "request_html": {"type": "string"},
+        "decision_input_template": {"type": "string"}
+      }
+    }
+  }
+}
