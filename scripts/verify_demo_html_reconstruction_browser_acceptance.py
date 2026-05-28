@@ -123,6 +123,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     first_screen_path = artifact_dir / f"demo-reconstruction-mvp-first-screen-{stamp}.png"
     mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
+    keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -431,6 +432,114 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S01"]').focus()
+                page.locator('[data-trace-card][data-trace-anchor="P035-S01"]').press("ArrowDown")
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const active = document.activeElement;
+                        return selected
+                            && selected.textContent.trim() === "P035-S02"
+                            && active
+                            && active.getAttribute("data-trace-anchor") === "P035-S02";
+                    }""",
+                    timeout=5000,
+                )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S02"]').press("End")
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const active = document.activeElement;
+                        return selected
+                            && selected.textContent.trim() === "P035-S05"
+                            && active
+                            && active.getAttribute("data-trace-anchor") === "P035-S05";
+                    }""",
+                    timeout=5000,
+                )
+                page.locator(
+                    '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="logic4"]'
+                ).focus()
+                page.locator(
+                    '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="logic4"]'
+                ).press("ArrowDown")
+                page.wait_for_function(
+                    """() => {
+                        const active = document.activeElement;
+                        return active
+                            && active.getAttribute("data-circuit-coverage-id") === "wire_logic3_logic4";
+                    }""",
+                    timeout=5000,
+                )
+                page.locator(
+                    '[data-circuit-coverage-kind="wire"][data-circuit-coverage-id="wire_logic3_logic4"]'
+                ).press("ArrowDown")
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const active = document.activeElement;
+                        const status = document
+                            .querySelector("#demo-reconstruction-embedded-highlight-status")
+                            ?.textContent || "";
+                        return active
+                            && active.getAttribute("data-circuit-coverage-kind") === "wire"
+                            && active.getAttribute("data-circuit-coverage-id") === "wire_logic4_thr_lock"
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1
+                            && status.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator("#demo-reconstruction-docx-circuit-map").screenshot(
+                    path=str(keyboard_review_path)
+                )
+                keyboard_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const active = document.activeElement;
+                        const visibleCoverageButtons = Array.from(
+                            document.querySelectorAll("[data-circuit-coverage-kind]")
+                        ).filter((button) => !button.hidden);
+                        return {
+                            traceSelectedAnchor: document
+                                .querySelector("#demo-reconstruction-selected-anchor")
+                                ?.textContent?.trim() || "",
+                            traceActiveAnchor: active && active.hasAttribute("data-trace-anchor")
+                                ? active.getAttribute("data-trace-anchor")
+                                : document.querySelector("[data-trace-card][tabindex='0']")
+                                    ?.getAttribute("data-trace-anchor") || "",
+                            traceTabStopAnchors: Array.from(
+                                document.querySelectorAll("[data-trace-card][tabindex='0']")
+                            ).map((button) => button.getAttribute("data-trace-anchor")),
+                            coverageActiveKind: active
+                                ? active.getAttribute("data-circuit-coverage-kind") || ""
+                                : "",
+                            coverageActiveId: active
+                                ? active.getAttribute("data-circuit-coverage-id") || ""
+                                : "",
+                            coverageTabStopIds: visibleCoverageButtons
+                                .filter((button) => button.getAttribute("tabindex") === "0")
+                                .map((button) => button.getAttribute("data-circuit-coverage-id")),
+                            focusedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            statusText: document
+                                .querySelector("#demo-reconstruction-embedded-highlight-status")
+                                ?.textContent?.trim() || "",
+                            reviewAnchorText: document
+                                .querySelector("#demo-reconstruction-review-anchor")
+                                ?.textContent?.trim() || "",
+                            reviewObjectText: document
+                                .querySelector("#demo-reconstruction-review-object")
+                                ?.textContent?.trim() || "",
+                            reviewSyncText: document
+                                .querySelector("#demo-reconstruction-review-sync")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 page.locator(
                     '.demo-reconstruction-sequence-step[data-trace-anchor="P035-S05"] [data-source-focus-kind="node"][data-source-focus-id="logic4"]'
                 ).click()
@@ -569,6 +678,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 first_screen_path,
                 mobile_first_screen_path,
                 chain_svg_path,
+                keyboard_review_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -637,6 +747,29 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in coverage_filter_review["focusStatusText"]
         )
         else "fail",
+        "keyboard_trace_navigation": "pass"
+        if (
+            keyboard_review["traceSelectedAnchor"] == "P035-S05"
+            and keyboard_review["traceActiveAnchor"] == "P035-S05"
+            and keyboard_review["traceTabStopAnchors"] == ["P035-S05"]
+        )
+        else "fail",
+        "coverage_keyboard_navigation": "pass"
+        if (
+            keyboard_review["coverageActiveKind"] == "wire"
+            and keyboard_review["coverageActiveId"] == "wire_logic4_thr_lock"
+            and keyboard_review["coverageTabStopIds"] == ["wire_logic4_thr_lock"]
+            and keyboard_review["focusedWireCount"] == 1
+            and "wire_logic4_thr_lock" in keyboard_review["statusText"]
+        )
+        else "fail",
+        "review_cursor_status": "pass"
+        if (
+            "P035-S05" in keyboard_review["reviewAnchorText"]
+            and "wire_logic4_thr_lock" in keyboard_review["reviewObjectText"]
+            and keyboard_review["reviewSyncText"]
+        )
+        else "fail",
         "source_chip_focus": "pass"
         if (
             source_chip_focus_review["sourceNodeFocusChipCount"] >= 20
@@ -680,6 +813,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "first_screen": str(first_screen_path),
             "mobile_first_screen": str(mobile_first_screen_path),
             "chain_svg": str(chain_svg_path),
+            "keyboard_review": str(keyboard_review_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -696,6 +830,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
         "coverage_matrix_review": coverage_matrix_review,
         "coverage_filter_review": coverage_filter_review,
+        "keyboard_review": keyboard_review,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,

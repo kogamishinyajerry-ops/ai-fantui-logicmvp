@@ -161,6 +161,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-coverage-matrix"' in html
     assert 'id="demo-reconstruction-coverage-search"' in html
     assert 'id="demo-reconstruction-coverage-filter-status"' in html
+    assert 'id="demo-reconstruction-keyboard-review"' in html
+    assert 'id="demo-reconstruction-review-anchor"' in html
+    assert 'id="demo-reconstruction-review-object"' in html
+    assert 'id="demo-reconstruction-review-sync"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -183,6 +187,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderCoverageMatrix" in script
     assert "updateCoverageFilter" in script
     assert "circuitCoverageKind" in script
+    assert "setTraceCardTabStops" in script
+    assert "handleTraceCardKeydown" in script
+    assert "handleCoverageKeyboardNavigation" in script
+    assert "updateKeyboardReviewStatus" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -194,6 +202,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
     assert ".demo-reconstruction-coverage-matrix" in stylesheet
     assert ".demo-reconstruction-coverage-tools" in stylesheet
+    assert ".demo-reconstruction-keyboard-review" in stylesheet
+    assert ".demo-reconstruction-keyboard-review strong" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -278,6 +288,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["first_screen"].endswith(".png")
     assert payload["screenshots"]["mobile_first_screen"].endswith(".png")
     assert payload["screenshots"]["chain_svg"].endswith(".png")
+    assert payload["screenshots"]["keyboard_review"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -326,6 +337,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "4/43" in payload["coverage_filter_review"]["statusText"]
     assert payload["coverage_filter_review"]["focusedWireCount"] == 1
     assert "wire_logic4_thr_lock" in payload["coverage_filter_review"]["focusStatusText"]
+    assert payload["keyboard_review"]["traceSelectedAnchor"] == "P035-S05"
+    assert payload["keyboard_review"]["traceActiveAnchor"] == "P035-S05"
+    assert payload["keyboard_review"]["traceTabStopAnchors"] == ["P035-S05"]
+    assert payload["keyboard_review"]["coverageActiveKind"] == "wire"
+    assert payload["keyboard_review"]["coverageActiveId"] == "wire_logic4_thr_lock"
+    assert payload["keyboard_review"]["coverageTabStopIds"] == ["wire_logic4_thr_lock"]
+    assert payload["keyboard_review"]["focusedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["keyboard_review"]["statusText"]
+    assert "P035-S05" in payload["keyboard_review"]["reviewAnchorText"]
+    assert "wire_logic4_thr_lock" in payload["keyboard_review"]["reviewObjectText"]
     assert payload["source_chip_focus_review"]["sourceNodeFocusChipCount"] >= 20
     assert payload["source_chip_focus_review"]["sourceWireFocusChipCount"] >= 23
     assert payload["source_chip_focus_review"]["focusedNodeCount"] == 0
@@ -352,6 +373,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "embedded_trace_chip_focus": "pass",
         "coverage_matrix_focus": "pass",
         "coverage_matrix_filter": "pass",
+        "keyboard_trace_navigation": "pass",
+        "coverage_keyboard_navigation": "pass",
+        "review_cursor_status": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
