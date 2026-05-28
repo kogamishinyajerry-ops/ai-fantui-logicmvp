@@ -121,6 +121,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     artifact_dir.mkdir(parents=True, exist_ok=True)
     stamp = _utc_stamp()
     first_screen_path = artifact_dir / f"demo-reconstruction-mvp-first-screen-{stamp}.png"
+    mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
@@ -144,8 +145,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
                 page.wait_for_selector("#demo-reconstruction-console-frame", timeout=5000)
+                page.wait_for_function(
+                    """() => {
+                        return document.querySelectorAll("[data-trace-card]").length >= 5
+                            && document.querySelectorAll(".demo-reconstruction-source-entry").length >= 10
+                            && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5;
+                    }""",
+                    timeout=7000,
+                )
                 page.screenshot(path=str(first_screen_path), full_page=True)
                 first_screen_review = {
+                    "source_map_visible": page.locator(
+                        "#demo-reconstruction-docx-circuit-map"
+                    ).is_visible(timeout=5000),
+                    "trace_board_visible": page.locator(
+                        "#demo-reconstruction-docx-trace-board"
+                    ).is_visible(timeout=5000),
                     "operator_guide_visible": page.locator(
                         "#demo-reconstruction-operator-guide"
                     ).is_visible(timeout=5000),
@@ -156,6 +171,75 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         "#demo-reconstruction-browser-evidence"
                     ).is_visible(timeout=5000),
                 }
+                source_map_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            sourceEntryCount: document.querySelectorAll(".demo-reconstruction-source-entry").length,
+                            sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
+                            traceCardCount: document.querySelectorAll("[data-trace-card]").length,
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            selectedNodeChipCount: document.querySelectorAll("#demo-reconstruction-selected-nodes .demo-reconstruction-chip").length,
+                            selectedWireChipCount: document.querySelectorAll("#demo-reconstruction-selected-wires .demo-reconstruction-chip").length,
+                            nodeCoverage: text("#demo-reconstruction-docx-node-coverage"),
+                            wireCoverage: text("#demo-reconstruction-docx-wire-coverage"),
+                            traceContract: text("#demo-reconstruction-trace-contract"),
+                        };
+                    }"""
+                )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        return selected && selected.textContent.trim() === "P035-S05";
+                    }""",
+                    timeout=5000,
+                )
+                trace_selection_review = page.evaluate(
+                    """() => {
+                        const pressedCards = Array.from(
+                            document.querySelectorAll("[data-trace-card][aria-pressed='true']")
+                        );
+                        const selectedCard = document.querySelector(
+                            "[data-trace-card][data-trace-anchor='P035-S05']"
+                        );
+                        return {
+                            selectedAnchorAfterClick: document
+                                .querySelector("#demo-reconstruction-selected-anchor")
+                                ?.textContent?.trim() || "",
+                            selectedLastPressed: selectedCard?.getAttribute("aria-pressed") === "true",
+                            pressedTraceCount: pressedCards.length,
+                        };
+                    }"""
+                )
+                desktop_geometry = page.evaluate(
+                    """() => ({
+                        viewportWidth: window.innerWidth,
+                        pageWidth: document.documentElement.scrollWidth,
+                        noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                    })"""
+                )
+
+                mobile_page = browser.new_page(viewport={"width": 390, "height": 844})
+                try:
+                    mobile_page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
+                    mobile_page.wait_for_selector("#demo-reconstruction-docx-trace-board", timeout=5000)
+                    mobile_page.wait_for_function(
+                        """() => document.querySelectorAll("[data-trace-card]").length >= 5""",
+                        timeout=7000,
+                    )
+                    mobile_page.screenshot(path=str(mobile_first_screen_path), full_page=True)
+                    mobile_geometry = mobile_page.evaluate(
+                        """() => ({
+                            viewportWidth: window.innerWidth,
+                            pageWidth: document.documentElement.scrollWidth,
+                            noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                            traceCardCount: document.querySelectorAll("[data-trace-card]").length,
+                            sourceMapVisible: !!document.querySelector("#demo-reconstruction-docx-circuit-map"),
+                        })"""
+                    )
+                finally:
+                    mobile_page.close()
 
                 frame_handle = page.locator("#demo-reconstruction-console-frame").element_handle()
                 frame = frame_handle.content_frame() if frame_handle else None
@@ -217,6 +301,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             path.exists() and path.stat().st_size > 0
             for path in (
                 first_screen_path,
+                mobile_first_screen_path,
                 chain_svg_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
@@ -227,6 +312,31 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         else "fail",
         "first_screen_operator_guide": "pass"
         if all(first_screen_review.values())
+        else "fail",
+        "docx_sentence_circuit_map": "pass"
+        if (
+            source_map_review["sourceEntryCount"] >= 10
+            and source_map_review["sequenceStepCount"] == 5
+            and source_map_review["traceCardCount"] == 5
+            and source_map_review["selectedNodeChipCount"] > 0
+            and source_map_review["selectedWireChipCount"] > 0
+            and source_map_review["nodeCoverage"] == "20/20"
+            and source_map_review["wireCoverage"] == "23/23"
+        )
+        else "fail",
+        "trace_selection_interaction": "pass"
+        if (
+            trace_selection_review["selectedAnchorAfterClick"] == "P035-S05"
+            and trace_selection_review["selectedLastPressed"]
+            and trace_selection_review["pressedTraceCount"] == 1
+        )
+        else "fail",
+        "responsive_geometry": "pass"
+        if (
+            desktop_geometry["noHorizontalOverflow"]
+            and mobile_geometry["noHorizontalOverflow"]
+            and mobile_geometry["traceCardCount"] == 5
+        )
         else "fail",
         "embedded_codex_light_palette": "pass"
         if (
@@ -253,6 +363,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "artifact_dir": str(artifact_dir),
         "screenshots": {
             "first_screen": str(first_screen_path),
+            "mobile_first_screen": str(mobile_first_screen_path),
             "chain_svg": str(chain_svg_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
@@ -264,6 +375,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         },
         "embedded_palette": embedded_palette,
         "first_screen_review": first_screen_review,
+        "source_map_review": source_map_review,
+        "trace_selection_review": trace_selection_review,
+        "responsive_geometry": {
+            "desktop": desktop_geometry,
+            "mobile": mobile_geometry,
+        },
         "interactions": {
             "max-reverse": max_reverse,
             "inhibit-block": inhibit,
@@ -325,6 +442,10 @@ def main(argv: list[str] | None = None) -> int:
                 "browser_boot": "fail",
                 "screenshots": "fail",
                 "first_screen_operator_guide": "fail",
+                "docx_sentence_circuit_map": "fail",
+                "trace_selection_interaction": "fail",
+                "responsive_geometry": "fail",
+                "embedded_codex_light_palette": "fail",
                 "node_wire_pixels": "fail",
                 "preset_interactions": "fail",
                 "hud_output_linkage": "fail",
