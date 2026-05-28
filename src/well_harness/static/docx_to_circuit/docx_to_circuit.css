@@ -170,7 +170,7 @@ h2 {
 }
 .docx-circuit-stage {
   display: grid;
-  grid-template-columns: minmax(300px, 0.34fr) minmax(360px, 0.38fr) minmax(620px, 1fr);
+  grid-template-columns: minmax(300px, 0.36fr) minmax(640px, 1fr);
   gap: 14px;
   align-items: start;
   margin-top: 14px;
@@ -341,6 +341,86 @@ h2 {
   font-size: 12px;
   line-height: 1.35;
 }
+.docx-circuit-svg-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.docx-circuit-svg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.docx-circuit-svg-head h3 {
+  margin: 0;
+  color: var(--docx-muted);
+  font-size: 12px;
+}
+.docx-circuit-svg-head span {
+  color: var(--docx-accent);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.docx-circuit-svg-frame {
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #fbfcfe;
+  overflow: auto;
+}
+#docx-circuit-svg {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 9 / 4;
+}
+#docx-circuit-arrow path {
+  fill: #9aa7ba;
+}
+.docx-circuit-svg-wire {
+  fill: none;
+  stroke: #c2cbda;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+.docx-circuit-svg-wire[data-highlight="active"] {
+  stroke: #44b986;
+  stroke-width: 2.6;
+}
+.docx-circuit-svg-wire[data-current-step-match="true"] {
+  stroke: #f5b23d;
+  stroke-width: 3.4;
+}
+.docx-circuit-svg-node rect {
+  fill: #ffffff;
+  stroke: #cbd5e1;
+  stroke-width: 1.2;
+}
+.docx-circuit-svg-node[data-node-kind="logic"] rect {
+  fill: #f6f9ff;
+}
+.docx-circuit-svg-node[data-highlight="active"] rect {
+  fill: #ecfdf3;
+  stroke: #44b986;
+  stroke-width: 1.6;
+}
+.docx-circuit-svg-node[data-current-step-match="true"] rect {
+  fill: #fff7df;
+  stroke: #f5b23d;
+  stroke-width: 2.4;
+}
+.docx-circuit-svg-node-label {
+  fill: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+.docx-circuit-svg-node-sub {
+  fill: var(--docx-muted);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+}
 .docx-circuit-contract-map {
   display: grid;
   gap: 10px;
@@ -390,6 +470,9 @@ h2 {
   border: 1px solid var(--docx-border);
   border-radius: 6px;
   background: #ffffff;
+}
+.docx-circuit-demo-panel {
+  grid-column: 1 / -1;
 }
 .docx-circuit-boundary {
   display: flex;

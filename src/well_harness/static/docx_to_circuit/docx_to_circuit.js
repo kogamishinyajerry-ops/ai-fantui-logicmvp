@@ -47,6 +47,55 @@
     "P035-S05": {label: "最大反推（展开到位）", preset: "max-reverse"},
   };
 
+  const CIRCUIT_NODES = [
+    {id: "sw1", label: "SW1", sub: "TRA -1.4..-6.2", kind: "input", x: 10, y: 40, width: 160, height: 28},
+    {id: "aircraft_on_ground", label: "GND", sub: "on ground", kind: "input", x: 10, y: 76, width: 160, height: 28},
+    {id: "radio_altitude_ft", label: "RA < 6 ft", sub: "radio altitude", kind: "input", x: 10, y: 112, width: 160, height: 28},
+    {id: "sw2", label: "SW2", sub: "TRA -5..-9.8", kind: "input", x: 10, y: 156, width: 160, height: 28},
+    {id: "engine_running", label: "ENGINE", sub: "running", kind: "input", x: 10, y: 192, width: 160, height: 28},
+    {id: "n1k", label: "N1K", sub: "< deploy limit", kind: "input", x: 10, y: 234, width: 160, height: 28},
+    {id: "eec_enable", label: "EEC ENABLE", sub: "enable", kind: "input", x: 10, y: 270, width: 160, height: 28},
+    {id: "reverser_inhibited", label: "!INHIBIT", sub: "not inhibited", kind: "input", x: 10, y: 306, width: 160, height: 28},
+    {id: "logic1", label: "L1", sub: "TLS power", kind: "logic", x: 260, y: 70, width: 160, height: 38},
+    {id: "logic2", label: "L2", sub: "ETRAC power", kind: "logic", x: 260, y: 170, width: 160, height: 38},
+    {id: "logic3", label: "L3", sub: "deploy chain", kind: "logic", x: 260, y: 260, width: 160, height: 50},
+    {id: "tls115", label: "TLS 115VAC", sub: "cmd", kind: "component", x: 500, y: 56, width: 160, height: 28},
+    {id: "tls_unlocked", label: "TLS UNLOCK", sub: "limit switch", kind: "component", x: 500, y: 92, width: 160, height: 28},
+    {id: "vdt90", label: "VDT90", sub: ">= 90%", kind: "component", x: 500, y: 128, width: 160, height: 28},
+    {id: "etrac_540v", label: "ETRAC 540V", sub: "cmd", kind: "component", x: 500, y: 156, width: 160, height: 28},
+    {id: "eec_deploy", label: "EEC DEPLOY", sub: "cmd", kind: "output", x: 500, y: 246, width: 160, height: 28},
+    {id: "pls_power", label: "PLS POWER", sub: "power", kind: "output", x: 500, y: 282, width: 160, height: 28},
+    {id: "pdu_motor", label: "PDU MOTOR", sub: "motor cmd", kind: "output", x: 500, y: 318, width: 160, height: 28},
+    {id: "logic4", label: "L4", sub: "VDT90 + L3", kind: "logic", x: 720, y: 130, width: 160, height: 38},
+    {id: "thr_lock", label: "THR_LOCK", sub: "release", kind: "output", x: 720, y: 200, width: 160, height: 34},
+  ];
+
+  const CIRCUIT_EDGES = [
+    {id: "wire_sw1_logic1", source: "sw1", target: "logic1", route: [[170, 54], [232, 54], [232, 78], [260, 78]]},
+    {id: "wire_ground_logic2", source: "aircraft_on_ground", target: "logic2", route: [[170, 90], [238, 90], [238, 184], [260, 184]]},
+    {id: "wire_ra_logic1", source: "radio_altitude_ft", target: "logic1", route: [[170, 126], [232, 126], [232, 98], [260, 98]]},
+    {id: "wire_logic1_tls115", source: "logic1", target: "tls115", route: [[420, 89], [460, 89], [460, 70], [500, 70]]},
+    {id: "wire_tls115_tls_unlocked", source: "tls115", target: "tls_unlocked", route: [[580, 84], [580, 92]]},
+    {id: "wire_sw2_logic2", source: "sw2", target: "logic2", route: [[170, 170], [234, 170], [234, 180], [260, 180]]},
+    {id: "wire_engine_logic2", source: "engine_running", target: "logic2", route: [[170, 206], [234, 206], [234, 196], [260, 196]]},
+    {id: "wire_tls_unlocked_logic3", source: "tls_unlocked", target: "logic3", route: [[660, 106], [702, 106], [702, 28], [246, 28], [246, 276], [260, 276]]},
+    {id: "wire_logic2_etrac", source: "logic2", target: "etrac_540v", route: [[420, 189], [460, 189], [460, 170], [500, 170]]},
+    {id: "wire_n1k_logic3", source: "n1k", target: "logic3", route: [[170, 248], [230, 248], [230, 270], [260, 270]]},
+    {id: "wire_eec_logic2", source: "eec_enable", target: "logic2", route: [[170, 284], [240, 284], [240, 200], [260, 200]]},
+    {id: "wire_engine_logic3", source: "engine_running", target: "logic3", route: [[170, 206], [244, 206], [244, 281], [260, 281]]},
+    {id: "wire_ground_logic3", source: "aircraft_on_ground", target: "logic3", route: [[170, 90], [244, 90], [244, 290], [260, 290]]},
+    {id: "wire_inh_logic1", source: "reverser_inhibited", target: "logic1", route: [[170, 320], [226, 320], [226, 88], [260, 88]]},
+    {id: "wire_inh_logic2", source: "reverser_inhibited", target: "logic2", route: [[226, 188], [260, 188]]},
+    {id: "wire_inh_logic3", source: "reverser_inhibited", target: "logic3", route: [[226, 304], [260, 304]]},
+    {id: "wire_logic3_eec", source: "logic3", target: "eec_deploy", route: [[420, 279], [465, 279], [465, 260], [500, 260]]},
+    {id: "wire_logic3_pls", source: "logic3", target: "pls_power", route: [[465, 279], [465, 296], [500, 296]]},
+    {id: "wire_logic3_pdu", source: "logic3", target: "pdu_motor", route: [[465, 296], [465, 332], [500, 332]]},
+    {id: "wire_pdu_vdt90", source: "pdu_motor", target: "vdt90", route: [[660, 332], [690, 332], [690, 142], [660, 142]]},
+    {id: "wire_vdt90_logic4", source: "vdt90", target: "logic4", route: [[660, 142], [720, 142]]},
+    {id: "wire_logic3_logic4", source: "logic3", target: "logic4", route: [[420, 298], [440, 298], [440, 368], [690, 368], [690, 162], [720, 162]]},
+    {id: "wire_logic4_thr_lock", source: "logic4", target: "thr_lock", route: [[800, 168], [800, 200]]},
+  ];
+
   const $ = (id) => document.getElementById(id);
   const sourcePath = $("docx-circuit-source-path");
   const sourceCount = $("docx-circuit-source-count");
@@ -60,6 +109,8 @@
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
   const logicLadder = $("docx-circuit-logic-ladder");
+  const circuitSvg = $("docx-circuit-svg");
+  const circuitSvgSummary = $("docx-circuit-svg-summary");
   const nodeGrid = $("docx-circuit-node-grid");
   const wireGrid = $("docx-circuit-wire-grid");
   const demoFrame = $("docx-circuit-demo-frame");
@@ -101,6 +152,108 @@
   function contractIds(payload, key, fallback) {
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
     return listFrom(contract[key]).length > 0 ? listFrom(contract[key]) : fallback;
+  }
+
+  function makeSvgElement(name, attributes) {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.entries(attributes || {}).forEach(([key, value]) => {
+      element.setAttribute(key, String(value));
+    });
+    return element;
+  }
+
+  function routePath(route) {
+    if (!Array.isArray(route) || route.length === 0) return "";
+    return route
+      .map(([x, y], index) => `${index === 0 ? "M" : "L"} ${x} ${y}`)
+      .join(" ");
+  }
+
+  function renderSubcircuit() {
+    if (!circuitSvg || circuitSvg.dataset.rendered === "true") return;
+    circuitSvg.innerHTML = "";
+    circuitSvg.dataset.nodeCount = String(CIRCUIT_NODES.length);
+    circuitSvg.dataset.wireCount = String(CIRCUIT_EDGES.length);
+    setText(circuitSvgSummary, `${CIRCUIT_NODES.length} 节点 · ${CIRCUIT_EDGES.length} 连线`);
+
+    const defs = makeSvgElement("defs");
+    const marker = makeSvgElement("marker", {
+      id: "docx-circuit-arrow",
+      markerWidth: 8,
+      markerHeight: 8,
+      refX: 7,
+      refY: 4,
+      orient: "auto",
+    });
+    marker.appendChild(makeSvgElement("path", {d: "M0,0 L8,4 L0,8 Z"}));
+    defs.appendChild(marker);
+    circuitSvg.appendChild(defs);
+
+    const wireGroup = makeSvgElement("g", {class: "docx-circuit-svg-wires"});
+    CIRCUIT_EDGES.forEach((edge) => {
+      const path = makeSvgElement("path", {
+        class: "docx-circuit-svg-wire",
+        d: routePath(edge.route),
+        "data-wire-id": edge.id,
+        "data-source-node": edge.source,
+        "data-target-node": edge.target,
+        "data-highlight": "idle",
+        "data-current-step-match": "false",
+        "marker-end": "url(#docx-circuit-arrow)",
+      });
+      wireGroup.appendChild(path);
+    });
+    circuitSvg.appendChild(wireGroup);
+
+    const nodeGroup = makeSvgElement("g", {class: "docx-circuit-svg-nodes"});
+    CIRCUIT_NODES.forEach((node) => {
+      const group = makeSvgElement("g", {
+        class: "docx-circuit-svg-node",
+        transform: `translate(${node.x} ${node.y})`,
+        "data-node-id": node.id,
+        "data-node-kind": node.kind,
+        "data-highlight": "idle",
+        "data-current-step-match": "false",
+      });
+      group.appendChild(makeSvgElement("rect", {width: node.width, height: node.height, rx: node.kind === "logic" ? 5 : 4}));
+      const label = makeSvgElement("text", {
+        x: node.width / 2,
+        y: node.height > 34 ? 16 : 18,
+        "text-anchor": "middle",
+        class: "docx-circuit-svg-node-label",
+      });
+      label.textContent = node.label;
+      group.appendChild(label);
+      if (node.sub) {
+        const sub = makeSvgElement("text", {
+          x: node.width / 2,
+          y: node.height > 34 ? 31 : 0,
+          "text-anchor": "middle",
+          class: "docx-circuit-svg-node-sub",
+        });
+        sub.textContent = node.sub;
+        if (node.height > 34) group.appendChild(sub);
+      }
+      nodeGroup.appendChild(group);
+    });
+    circuitSvg.appendChild(nodeGroup);
+    circuitSvg.dataset.rendered = "true";
+  }
+
+  function setSvgHighlights(cumulativeNodes, currentNodes, cumulativeWires, currentWires) {
+    if (!circuitSvg) return;
+    circuitSvg.dataset.activeNodeCount = String(cumulativeNodes.size);
+    circuitSvg.dataset.activeWireCount = String(cumulativeWires.size);
+    circuitSvg.querySelectorAll("[data-node-id]").forEach((item) => {
+      const id = item.dataset.nodeId;
+      item.dataset.highlight = cumulativeNodes.has(id) ? "active" : "idle";
+      item.dataset.currentStepMatch = currentNodes.has(id) ? "true" : "false";
+    });
+    circuitSvg.querySelectorAll("[data-wire-id]").forEach((item) => {
+      const id = item.dataset.wireId;
+      item.dataset.highlight = cumulativeWires.has(id) ? "active" : "idle";
+      item.dataset.currentStepMatch = currentWires.has(id) ? "true" : "false";
+    });
   }
 
   function renderContractGrid(container, ids, kind) {
@@ -194,6 +347,7 @@
     if (demoFrame) demoFrame.dataset.activeSequenceAnchor = step.anchor;
     setGridHighlights(nodeGrid, "node", cumulativeNodes, currentNodes);
     setGridHighlights(wireGrid, "wire", cumulativeWires, currentWires);
+    setSvgHighlights(cumulativeNodes, currentNodes, cumulativeWires, currentWires);
     setLogicHighlights(cumulativeNodes, currentNodes);
     if (sequenceList) {
       sequenceList.querySelectorAll("[data-source-anchor]").forEach((item) => {
@@ -251,6 +405,7 @@
     setText(wireCount, `${coverage.covered_wire_count || 0}/${contract.wire_count || EXPECTED_WIRE_COUNT}`);
     setText(sequenceCount, `P035 · ${coverage.sequence_step_count || 0} 步`);
     renderSequence(payload && payload.sequence_steps);
+    renderSubcircuit();
     renderContractGrid(nodeGrid, contractIds(payload, "node_ids", Object.keys(NODE_LABELS).sort()), "node");
     renderContractGrid(wireGrid, contractIds(payload, "wire_ids", []), "wire");
     currentPayload = payload;

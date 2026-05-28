@@ -6352,6 +6352,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-review-panel"' in html
     assert 'id="docx-circuit-source-anchor"' in html
     assert 'id="docx-circuit-logic-ladder"' in html
+    assert 'id="docx-circuit-svg"' in html
+    assert 'data-visual-contract="docx-l1-l4-subcircuit"' in html
+    assert 'data-node-count="20"' in html
+    assert 'data-wire-count="23"' in html
     assert 'id="docx-circuit-node-grid"' in html
     assert 'id="docx-circuit-wire-grid"' in html
     assert 'id="docx-circuit-demo-scenario"' in html
@@ -6363,11 +6367,18 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "docx-circuit-sequence-list" in script
     assert "function activateStep" in script
     assert "function applyDemoScenario" in script
+    assert "function renderSubcircuit" in script
+    assert "function setSvgHighlights" in script
+    assert "CIRCUIT_NODES" in script
+    assert "CIRCUIT_EDGES" in script
     assert "data-review-anchor" in script
     assert "aria-pressed" in script
     assert "wire_logic4_thr_lock" not in html
     assert ".docx-circuit-stage" in stylesheet
     assert ".docx-circuit-review-panel" in stylesheet
+    assert "#docx-circuit-svg" in stylesheet
+    assert ".docx-circuit-svg-wire[data-current-step-match=\"true\"]" in stylesheet
+    assert ".docx-circuit-svg-node[data-current-step-match=\"true\"]" in stylesheet
     assert ".docx-circuit-contract-chip[data-current-step-match=\"true\"]" in stylesheet
     assert "#docx-circuit-demo-frame" in stylesheet
 
