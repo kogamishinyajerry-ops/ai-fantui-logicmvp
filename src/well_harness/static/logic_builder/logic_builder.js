@@ -2342,7 +2342,7 @@
       const uniqueAnchors = Array.from(new Map(sourceAnchors.map((item) => [item.id, item])).values());
       return {
         id,
-        source: sourceId,
+        "source": sourceId,
         target: targetId,
         label: `${sourceId} -> ${targetId}`,
         route: points,
@@ -2362,10 +2362,10 @@
       nodes,
       wires,
       junctions: [
-        {id: "junction_reverser_logic2", x: 226, y: 188, source: "reverser_inhibited", state: "idle"},
-        {id: "junction_reverser_logic3", x: 226, y: 304, source: "reverser_inhibited", state: "idle"},
-        {id: "junction_logic3_pls", x: 465, y: 279, source: "logic3", state: "idle"},
-        {id: "junction_logic3_pdu", x: 465, y: 296, source: "logic3", state: "idle"},
+        {id: "junction_reverser_logic2", x: 226, y: 188, "source": "reverser_inhibited", state: "idle"},
+        {id: "junction_reverser_logic3", x: 226, y: 304, "source": "reverser_inhibited", state: "idle"},
+        {id: "junction_logic3_pls", x: 465, y: 279, "source": "logic3", state: "idle"},
+        {id: "junction_logic3_pdu", x: 465, y: 296, "source": "logic3", state: "idle"},
       ],
       badges: [
         {id: "stage", label: "DOCX L1-L4", x: 678, y: 18, width: 96, height: 24},
@@ -2390,7 +2390,7 @@
     }));
     const drawingEdges = circuitView.wires.map((wire) => ({
       id: wire.id,
-      source: wire.source,
+      "source": wire.source,
       target: wire.target,
       label: wire.label,
       route: wire.route,
