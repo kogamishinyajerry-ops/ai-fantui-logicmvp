@@ -2441,6 +2441,9 @@
   }
 
   async function requestDrawingUpdate(interpretationPayload) {
+    if (!state.requirementsPayload) {
+      throw new Error("缺少原始需求上下文，请先从需求理解页进入。");
+    }
     if (!state.drawingPayload) {
       throw new Error("没有可更新的逻辑图纸。");
     }
@@ -2454,6 +2457,7 @@
       body: JSON.stringify({
         provider: provider.value,
         allow_fallback: provider.value !== "deepseek",
+        requirements_payload: state.requirementsPayload,
         drawing_payload: state.drawingPayload,
         interpretation_payload: confirmed,
       }),

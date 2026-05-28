@@ -20,11 +20,6 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
-from well_harness.agent_review_packet import (
-    CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE,
-    CandidateReviewPacketError,
-    load_candidate_review_packet_export,
-)
 from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
@@ -96,6 +91,7 @@ CONTENT_TYPES = {
     ".ico": "image/x-icon",
     ".png": "image/png",
 }
+CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE = "/logic-builder/candidate-review-packet.json"
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 SYSTEM_SNAPSHOT_POST_PATH = "/api/system-snapshot"
 TRA_L4_LOCK_DEG = -14.0
@@ -625,8 +621,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE:
             try:
+                from well_harness.agent_review_packet import load_candidate_review_packet_export
+
                 self._send_json(200, load_candidate_review_packet_export())
-            except (FileNotFoundError, OSError, json.JSONDecodeError, CandidateReviewPacketError) as exc:
+            except (FileNotFoundError, OSError, ImportError, json.JSONDecodeError, ValueError) as exc:
                 self._send_json(
                     500,
                     {
@@ -5702,6 +5700,13 @@ def build_requirements_logic_update_response(
             "field": "drawing_payload",
             "message": "drawing_payload must be an object.",
         }, 400
+    requirements_payload = request_payload.get("requirements_payload")
+    if requirements_payload is not None and not isinstance(requirements_payload, dict):
+        return None, {
+            "error": "invalid_requirements_payload",
+            "field": "requirements_payload",
+            "message": "requirements_payload must be an object when present.",
+        }, 400
     interpretation_payload = request_payload.get("interpretation_payload")
     if not isinstance(interpretation_payload, dict):
         return None, {
@@ -5713,6 +5718,7 @@ def build_requirements_logic_update_response(
         payload = update_logic_drawing(
             drawing_payload,
             interpretation_payload,
+            requirements_payload=requirements_payload,
             provider=provider_raw or "deepseek",
         )
     except RequirementsIntakeError as exc:
@@ -5726,6 +5732,7 @@ def build_requirements_logic_update_response(
                 fallback_payload = update_logic_drawing(
                     drawing_payload,
                     interpretation_payload,
+                    requirements_payload=requirements_payload,
                     provider="minimax",
                 )
             except RequirementsIntakeError as fallback_exc:

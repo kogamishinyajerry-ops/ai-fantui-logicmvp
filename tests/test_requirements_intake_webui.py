@@ -42,6 +42,7 @@ from well_harness.requirements_intake.logic_builder import (
     _build_l1_l4_circuit_view,
     _drawing_prompt,
     _normalize_logic_drawing,
+    _payload_sha256,
 )
 
 
@@ -3423,6 +3424,7 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
 def test_update_logic_drawing_calls_model_for_full_updated_drawing(monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-secret")
     captured: dict[str, object] = {}
+    requirements_payload = _ready_requirements_payload()
     interpretation = {
         "kind": "ai-fantui-logic-change-interpretation",
         "version": 1,
@@ -3496,6 +3498,7 @@ def test_update_logic_drawing_calls_model_for_full_updated_drawing(monkeypatch):
     result = update_logic_drawing(
         _ready_drawing_payload(),
         interpretation,
+        requirements_payload=requirements_payload,
         provider="deepseek",
         request_post=fake_post,
     )
@@ -3508,6 +3511,14 @@ def test_update_logic_drawing_calls_model_for_full_updated_drawing(monkeypatch):
     assert result["status"] == "draft_ready"
     assert result["nodes"][0]["description_zh"] == "RA<7ft"
     assert result["parameter_panels"][0]["default"] == 7.0
+    assert result["source_requirements_sha256"] == _payload_sha256(requirements_payload)
+    contracts = result["agent_output_contract_v0_1"]
+    requirement_ids = {
+        item["id"]
+        for item in contracts["logic_ir"]["agent_output"]["payload"]["requirements"]
+    }
+    assert requirement_ids == {"REQ-DRAWING-STRUCTURE"}
+    assert "REQ-UNSPECIFIED-CANDIDATE" not in requirement_ids
     assert result["change_applied"]["source_interpretation_sha256"]
     assert result["truth_effect"] == "none"
 
@@ -5116,6 +5127,7 @@ def test_demo_server_logic_update_endpoint_uses_model_updater(monkeypatch):
             "/api/requirements-intake/update-logic-drawing",
             {
                 "provider": "deepseek",
+                "requirements_payload": _ready_requirements_payload(),
                 "drawing_payload": _ready_drawing_payload(),
                 "interpretation_payload": interpretation,
             },
@@ -5129,6 +5141,7 @@ def test_demo_server_logic_update_endpoint_uses_model_updater(monkeypatch):
     assert payload["kind"] == "ai-fantui-logic-link-drawing"
     assert payload["change_applied"]["source_interpretation_sha256"] == "change123"
     assert captured["interpretation_payload"]["status"] == "confirmed_by_user"
+    assert captured["kwargs"]["requirements_payload"]["kind"] == "ai-fantui-requirements-intake-analysis"
     assert captured["kwargs"]["provider"] == "deepseek"
 
 

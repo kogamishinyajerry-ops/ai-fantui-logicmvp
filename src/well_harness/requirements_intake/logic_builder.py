@@ -1500,7 +1500,12 @@ def _attach_drawing_source_context(
         edge["provenance"] = _str(edge.get("provenance") or source_edge.get("provenance"), "model_inference")
 
 
-def _normalize_logic_drawing(raw: str, requirements_payload: dict[str, Any]) -> dict[str, Any]:
+def _normalize_logic_drawing(
+    raw: str,
+    requirements_payload: dict[str, Any],
+    *,
+    attach_agent_contracts: bool = True,
+) -> dict[str, Any]:
     try:
         parsed = _extract_json_object(_strip_model_json(raw))
     except json.JSONDecodeError as exc:
@@ -1550,7 +1555,8 @@ def _normalize_logic_drawing(raw: str, requirements_payload: dict[str, Any]) -> 
     if circuit_view is not None:
         circuit_view["source_requirements_sha256"] = source_sha
         drawing["circuit_view"] = circuit_view
-    _attach_logic_ir_agent_contracts(drawing, requirements_payload)
+    if attach_agent_contracts:
+        _attach_logic_ir_agent_contracts(drawing, requirements_payload)
     return drawing
 
 
@@ -3289,10 +3295,13 @@ def update_logic_drawing(
     drawing_payload: dict[str, Any],
     interpretation_payload: dict[str, Any],
     *,
+    requirements_payload: dict[str, Any] | None = None,
     provider: str = "deepseek",
     request_post: RequestPost | None = None,
 ) -> dict[str, Any]:
     _validate_drawing_payload(drawing_payload)
+    if requirements_payload is not None:
+        _validate_requirements_payload(requirements_payload)
     if not isinstance(interpretation_payload, dict):
         raise RequirementsIntakeError("invalid_logic_change_interpretation", "interpretation_payload must be an object.")
     if interpretation_payload.get("kind") != LOGIC_CHANGE_INTERPRETATION_KIND:
@@ -3314,8 +3323,14 @@ def update_logic_drawing(
         request_post=request_post,
         max_tokens=LOGIC_DRAWING_MAX_TOKENS,
     )
-    updated = _normalize_logic_drawing(content, drawing_payload)
-    if drawing_payload.get("source_requirements_sha256"):
+    updated = _normalize_logic_drawing(
+        content,
+        requirements_payload or drawing_payload,
+        attach_agent_contracts=requirements_payload is not None,
+    )
+    if requirements_payload is not None:
+        updated["source_requirements_sha256"] = _payload_sha256(requirements_payload)
+    elif drawing_payload.get("source_requirements_sha256"):
         updated["source_requirements_sha256"] = _str(drawing_payload.get("source_requirements_sha256"))
     interpretation_sha = _payload_sha256(interpretation_payload)
     updated["source_drawing_sha256"] = _payload_sha256(drawing_payload)
