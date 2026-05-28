@@ -177,6 +177,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-playback-active-step"' in html
     assert 'id="demo-reconstruction-playback-node-count"' in html
     assert 'id="demo-reconstruction-playback-wire-count"' in html
+    assert 'id="demo-reconstruction-assembly-map"' in html
+    assert 'id="demo-reconstruction-assembly-summary"' in html
+    assert 'id="demo-reconstruction-assembly-list"' in html
+    assert 'id="demo-reconstruction-assembly-final"' in html
     assert 'id="demo-reconstruction-object-provenance"' in html
     assert 'id="demo-reconstruction-provenance-object"' in html
     assert 'id="demo-reconstruction-provenance-source-count"' in html
@@ -213,6 +217,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "审阅路径索引" in html
     assert "原始 DOCX 逐句到完整电路" in html
     assert "逐句构建轨道" in html
+    assert "逐句装配总览" in html
     assert "对象反查证据板" in html
     assert "电路邻接读回" in html
     assert "电路完成阶梯" in html
@@ -253,6 +258,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderStepPlaybackRail" in script
     assert "applyStepPlayback" in script
     assert "cumulativeTraceContract" in script
+    assert "renderAssemblyMap" in script
+    assert "assemblyOutputLabelForStep" in script
+    assert "setAssemblyButtonState" in script
     assert "renderObjectProvenance" in script
     assert "objectProvenanceRecords" in script
     assert "renderSignalNeighborhood" in script
@@ -292,6 +300,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-step-playback" in stylesheet
     assert ".demo-reconstruction-playback-steps" in stylesheet
     assert ".demo-reconstruction-playback-button" in stylesheet
+    assert ".demo-reconstruction-assembly-map" in stylesheet
+    assert ".demo-reconstruction-assembly-list" in stylesheet
+    assert ".demo-reconstruction-assembly-card" in stylesheet
     assert ".demo-reconstruction-object-provenance" in stylesheet
     assert ".demo-reconstruction-provenance-list" in stylesheet
     assert ".demo-reconstruction-signal-neighborhood" in stylesheet
@@ -391,6 +402,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["first_screen"].endswith(".png")
     assert payload["screenshots"]["mobile_first_screen"].endswith(".png")
     assert payload["screenshots"]["review_index"].endswith(".png")
+    assert payload["screenshots"]["assembly_map"].endswith(".png")
     assert payload["screenshots"]["chain_svg"].endswith(".png")
     assert payload["screenshots"]["keyboard_review"].endswith(".png")
     assert payload["screenshots"]["review_deep_link"].endswith(".png")
@@ -408,6 +420,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["pixel_visibility"]["chain_svg"]["wire_count"] == 23
     assert payload["first_screen_review"] == {
         "review_index_visible": True,
+        "assembly_map_visible": True,
         "source_map_visible": True,
         "trace_board_visible": True,
         "operator_guide_visible": True,
@@ -417,10 +430,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "evidence_rail_visible": True,
     }
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
-    assert payload["source_map_review"]["reviewIndexButtonCount"] == 7
+    assert payload["source_map_review"]["reviewIndexButtonCount"] == 8
     assert payload["source_map_review"]["sequenceStepCount"] == 5
     assert payload["source_map_review"]["traceCardCount"] == 5
     assert payload["source_map_review"]["playbackStepCount"] == 5
+    assert payload["source_map_review"]["assemblyStepCount"] == 5
     assert payload["source_map_review"]["ladderStepCount"] == 5
     assert payload["source_map_review"]["custodyStepCount"] == 5
     assert payload["source_map_review"]["coverageNodeButtonCount"] == 20
@@ -430,7 +444,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["nodeCoverage"] == "20/20"
     assert payload["source_map_review"]["wireCoverage"] == "23/23"
     assert payload["review_index_review"]["visible"] is True
-    assert payload["review_index_review"]["buttonCount"] == 7
+    assert payload["review_index_review"]["buttonCount"] == 8
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
@@ -441,6 +455,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_navigation"]["scrollY"] > 0
     assert "P035-S05" in payload["review_index_after_trace"]["stepText"]
     assert "等待聚焦" in payload["review_index_after_trace"]["objectText"]
+    assert payload["assembly_map_review"]["visible"] is True
+    assert payload["assembly_map_review"]["itemCount"] == 5
+    assert payload["assembly_map_review"]["actionCount"] == 5
+    assert payload["assembly_map_review"]["focusChipCount"] >= 43
+    assert payload["assembly_map_review"]["completeCount"] == 1
+    assert "5/5" in payload["assembly_map_review"]["summaryText"]
+    assert "20/20" in payload["assembly_map_review"]["summaryText"]
+    assert "23/23" in payload["assembly_map_review"]["summaryText"]
+    assert "THR_LOCK" in payload["assembly_map_review"]["finalText"]
+    assert "完整 demo 电路闭合" in payload["assembly_map_review"]["s05Text"]
+    assert "TLS 解锁" in payload["assembly_map_review"]["s01Text"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -490,6 +515,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "18/20" in payload["step_playback_review"]["nodeCountText"]
     assert "20/23" in payload["step_playback_review"]["wireCountText"]
     assert "累计构建" in payload["step_playback_review"]["reviewObjectText"]
+    assert payload["assembly_map_action_review"]["activeStep"] == "P035-S05"
+    assert payload["assembly_map_action_review"]["activeButtonCount"] == 1
+    assert payload["assembly_map_action_review"]["highlightedNodeCount"] == 20
+    assert payload["assembly_map_action_review"]["highlightedWireCount"] == 23
+    assert "累计构建" in payload["assembly_map_action_review"]["reviewObjectText"]
     assert "logic4" in payload["object_provenance_review"]["objectText"]
     assert payload["object_provenance_review"]["sourceCount"] >= 2
     assert payload["object_provenance_review"]["stepCount"] >= 1
@@ -594,6 +624,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "first_screen_operator_guide": "pass",
         "docx_sentence_circuit_map": "pass",
         "review_index_navigation": "pass",
+        "assembly_map_readback": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",

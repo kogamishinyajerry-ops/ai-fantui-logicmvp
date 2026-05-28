@@ -123,6 +123,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     first_screen_path = artifact_dir / f"demo-reconstruction-mvp-first-screen-{stamp}.png"
     mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
     review_index_path = artifact_dir / f"demo-reconstruction-review-index-{stamp}.png"
+    assembly_map_path = artifact_dir / f"demo-reconstruction-assembly-map-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
@@ -170,6 +171,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "review_index_visible": page.locator(
                         "#demo-reconstruction-review-index"
                     ).is_visible(timeout=5000),
+                    "assembly_map_visible": page.locator(
+                        "#demo-reconstruction-assembly-map"
+                    ).is_visible(timeout=5000),
                     "source_map_visible": page.locator(
                         "#demo-reconstruction-docx-circuit-map"
                     ).is_visible(timeout=5000),
@@ -201,6 +205,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
+                            assemblyStepCount: document.querySelectorAll("[data-assembly-step]").length,
                             ladderStepCount: document.querySelectorAll("[data-ladder-step]").length,
                             custodyStepCount: document.querySelectorAll("[data-custody-step]").length,
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
@@ -217,6 +222,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.locator("#demo-reconstruction-review-index").screenshot(
                     path=str(review_index_path)
+                )
+                page.locator("#demo-reconstruction-assembly-map").screenshot(
+                    path=str(assembly_map_path)
                 )
                 review_index_review = page.evaluate(
                     """() => {
@@ -252,6 +260,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         ).map((button) => button.getAttribute("data-review-index-target")),
                         scrollY: window.scrollY,
                     })"""
+                )
+                assembly_map_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            visible: !!document.querySelector("#demo-reconstruction-assembly-map"),
+                            itemCount: document.querySelectorAll("[data-assembly-step]").length,
+                            actionCount: document.querySelectorAll("[data-assembly-step-button]").length,
+                            focusChipCount: document.querySelectorAll("[data-assembly-focus-id]").length,
+                            completeCount: document.querySelectorAll("[data-assembly-complete='true']").length,
+                            summaryText: text("#demo-reconstruction-assembly-summary"),
+                            finalText: text("#demo-reconstruction-assembly-final"),
+                            s01Text: text('[data-assembly-step="P035-S01"]'),
+                            s05Text: text('[data-assembly-step="P035-S05"]'),
+                        };
+                    }"""
                 )
                 page.locator('[data-trace-card][data-trace-anchor="P035-S05"]').click()
                 page.wait_for_function(
@@ -995,6 +1019,46 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-assembly-step-button="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const activeStep = document.querySelector("#demo-reconstruction-playback-active-step");
+                        const action = document.querySelector('[data-assembly-step-button="P035-S05"]');
+                        return activeStep
+                            && activeStep.textContent.includes("P035-S05")
+                            && action
+                            && action.getAttribute("aria-pressed") === "true"
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length === 20
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 23;
+                    }""",
+                    timeout=5000,
+                )
+                assembly_map_action_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            activeStep: document
+                                .querySelector("#demo-reconstruction-playback-active-step")
+                                ?.textContent?.trim() || "",
+                            activeButtonCount: document.querySelectorAll(
+                                "[data-assembly-step-button][aria-pressed='true']"
+                            ).length,
+                            highlightedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            reviewObjectText: document
+                                .querySelector("#demo-reconstruction-review-object")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 page.locator(
                     '.demo-reconstruction-sequence-step[data-trace-anchor="P035-S05"] [data-source-focus-kind="node"][data-source-focus-id="logic4"]'
                 ).click()
@@ -1230,6 +1294,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 first_screen_path,
                 mobile_first_screen_path,
                 review_index_path,
+                assembly_map_path,
                 chain_svg_path,
                 keyboard_review_path,
                 review_deep_link_path,
@@ -1253,10 +1318,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
-            and source_map_review["reviewIndexButtonCount"] == 7
+            and source_map_review["reviewIndexButtonCount"] == 8
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
+            and source_map_review["assemblyStepCount"] == 5
             and source_map_review["ladderStepCount"] == 5
             and source_map_review["custodyStepCount"] == 5
             and source_map_review["coverageNodeButtonCount"] == 20
@@ -1270,13 +1336,33 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_navigation": "pass"
         if (
             review_index_review["visible"]
-            and review_index_review["buttonCount"] == 7
+            and review_index_review["buttonCount"] == 8
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and "P035-S01" in review_index_review["stepText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
             and review_index_navigation["scrollY"] > 0
             and "P035-S05" in review_index_after_trace["stepText"]
             and "等待聚焦" in review_index_after_trace["objectText"]
+        )
+        else "fail",
+        "assembly_map_readback": "pass"
+        if (
+            assembly_map_review["visible"]
+            and assembly_map_review["itemCount"] == 5
+            and assembly_map_review["actionCount"] == 5
+            and assembly_map_review["focusChipCount"] >= 43
+            and assembly_map_review["completeCount"] == 1
+            and "5/5" in assembly_map_review["summaryText"]
+            and "20/20" in assembly_map_review["summaryText"]
+            and "23/23" in assembly_map_review["summaryText"]
+            and "THR_LOCK" in assembly_map_review["finalText"]
+            and "完整 demo 电路闭合" in assembly_map_review["s05Text"]
+            and "TLS 解锁" in assembly_map_review["s01Text"]
+            and assembly_map_action_review["activeStep"] == "P035-S05"
+            and assembly_map_action_review["activeButtonCount"] == 1
+            and assembly_map_action_review["highlightedNodeCount"] == 20
+            and assembly_map_action_review["highlightedWireCount"] == 23
+            and "累计构建" in assembly_map_action_review["reviewObjectText"]
         )
         else "fail",
         "trace_selection_interaction": "pass"
@@ -1535,6 +1621,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "first_screen": str(first_screen_path),
             "mobile_first_screen": str(mobile_first_screen_path),
             "review_index": str(review_index_path),
+            "assembly_map": str(assembly_map_path),
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
             "review_deep_link": str(review_deep_link_path),
@@ -1559,6 +1646,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_review": review_index_review,
         "review_index_navigation": review_index_navigation,
         "review_index_after_trace": review_index_after_trace,
+        "assembly_map_review": assembly_map_review,
+        "assembly_map_action_review": assembly_map_action_review,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
@@ -1650,6 +1739,7 @@ def main(argv: list[str] | None = None) -> int:
                 "first_screen_operator_guide": "fail",
                 "docx_sentence_circuit_map": "fail",
                 "review_index_navigation": "fail",
+                "assembly_map_readback": "fail",
                 "trace_selection_interaction": "fail",
                 "embedded_trace_highlight": "fail",
                 "embedded_trace_chip_focus": "fail",
