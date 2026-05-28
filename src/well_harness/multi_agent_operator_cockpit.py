@@ -423,6 +423,13 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
       border-collapse: collapse;
       font-size: 14px;
     }}
+    .table-scroll {{
+      max-width: 100%;
+      overflow-x: auto;
+    }}
+    .table-scroll table {{
+      min-width: 620px;
+    }}
     th, td {{
       text-align: left;
       border-bottom: 1px solid var(--line);
@@ -507,11 +514,11 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
     <section>
       <h2>Active Agent Team</h2>
       <p>Mode <code>{_escape(cockpit['agent_team']['mode'])}</code>, team size <code>{_escape(cockpit['agent_team']['team_size'])}</code>. {_escape(cockpit['agent_team']['retired_role_policy'])}</p>
-      <table><tbody>{team}</tbody></table>
+      <div class="table-scroll"><table data-operator-table="agents"><tbody>{team}</tbody></table></div>
     </section>
     <section>
       <h2>Gates</h2>
-      <table><tbody>{gates}</tbody></table>
+      <div class="table-scroll"><table data-operator-table="gates"><tbody>{gates}</tbody></table></div>
     </section>
     <section>
       <h2>Blockers</h2>

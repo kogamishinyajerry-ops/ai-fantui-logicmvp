@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_operator_cockpit import (
     SCHEMA_ID,
@@ -142,6 +143,9 @@ def test_multi_agent_operator_cockpit_html_exposes_operator_views(tmp_path: Path
     assert "repo_github_local_artifacts" in html
     assert "src/well_harness/controller.py" in html
     assert "src/well_harness/demo_server.py" in html
+    assert 'class="table-scroll"' in html
+    assert 'data-operator-table="agents"' in html
+    assert 'data-operator-table="gates"' in html
 
 
 def test_multi_agent_operator_cockpit_runner_and_checker_round_trip(tmp_path: Path) -> None:
@@ -178,6 +182,7 @@ def test_multi_agent_operator_cockpit_runner_and_checker_round_trip(tmp_path: Pa
             payload["artifact_paths"]["cockpit_json"],
             "--format",
             "json",
+            "--skip-browser",
         ],
         cwd=PROJECT_ROOT,
         env=_script_env(),
@@ -192,10 +197,74 @@ def test_multi_agent_operator_cockpit_runner_and_checker_round_trip(tmp_path: Pa
         "cockpit_path": payload["artifact_paths"]["cockpit_json"],
         "html_exists": True,
         "markdown_exists": True,
+        "browser": {
+            "mismatches": [],
+            "screenshots": {},
+            "states": {},
+            "status": "skipped",
+        },
+        "browser_valid": False,
         "mismatches": [],
         "schema_valid": True,
         "status": "pass",
     }
+
+
+@pytest.mark.e2e
+def test_multi_agent_operator_cockpit_browser_gate_captures_geometry(tmp_path: Path) -> None:
+    run_result = subprocess.run(
+        [
+            sys.executable,
+            str(RUN_SCRIPT),
+            "--artifact-dir",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=420,
+    )
+    assert run_result.returncode == 0, run_result.stderr
+    payload = json.loads(run_result.stdout)
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--cockpit",
+            payload["artifact_paths"]["cockpit_json"],
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["agentRowCount"] == 5
+    assert browser["states"]["mobile"]["agentRowCount"] == 5
+    assert any(
+        item["hasInternalOverflow"]
+        for item in browser["states"]["mobile"]["scrollContainers"]
+    )
 
 
 def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
@@ -210,6 +279,10 @@ def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
     assert "verify-multi-agent-operator-cockpit" in makefile
     assert "scripts/run_multi_agent_operator_cockpit.py --format json" in makefile
     assert "scripts/verify_multi_agent_operator_cockpit.py --format json" in makefile
+    verifier = VERIFY_SCRIPT.read_text(encoding="utf-8")
+    assert "browser_valid" in verifier
+    assert "noHorizontalOverflow" in verifier
+    assert "data-operator-table='agents'" in verifier
 
     expected_pathspecs = [
         "docs/coordination/multi-agent-operator-cockpit.md",

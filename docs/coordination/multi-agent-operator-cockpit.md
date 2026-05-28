@@ -128,8 +128,13 @@ make multi-agent-operator-cockpit
 make verify-multi-agent-operator-cockpit
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`, `UltraWork Monitor`, `five_agent_context_cap`, `PackagingPRReadinessAgent`, `RUN-QUEUE-011`, and `repo_github_local_artifacts` without desktop or mobile layout overflow.
+Browser gate: `make verify-multi-agent-operator-cockpit` opens the generated
+HTML, captures desktop and mobile screenshots under the artifact directory, and
+verifies it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`,
+`UltraWork Monitor`, `five_agent_context_cap`, `PackagingPRReadinessAgent`,
+`RUN-QUEUE-011`, and `repo_github_local_artifacts` without desktop or mobile
+page overflow.
 
-The same browser gate should also verify the visible simplification markers:
+The same browser gate verifies the visible simplification markers:
 `Project Progress Cockpit`, `What Is Actually Moving`, `Simplified Delivery
 Flow`, `Visible product work`, and `UltraWork position`.
