@@ -18,6 +18,63 @@ MARKDOWN_NAME = "multi_agent_operator_cockpit_v0_1.md"
 HTML_NAME = "multi_agent_operator_cockpit_v0_1.html"
 
 
+VISIBLE_PROGRESS_CARDS: tuple[dict[str, str], ...] = (
+    {
+        "label": "Visible product work",
+        "value": "Project cockpit first",
+        "detail": "Default next slices should expose progress in a local UI before adding more governance packets.",
+    },
+    {
+        "label": "Simplified agent flow",
+        "value": "5 active agents",
+        "detail": "Legacy role names remain task labels; they are not extra active participants.",
+    },
+    {
+        "label": "UltraWork position",
+        "value": "Monitor only",
+        "detail": "UltraWork is a read-only signal source, not the main development narrative.",
+    },
+    {
+        "label": "Release boundary",
+        "value": "Owner decides",
+        "detail": "Acceptance still requires an explicit project-owner decision outside this packet.",
+    },
+)
+
+SIMPLIFIED_DELIVERY_FLOW: tuple[dict[str, str], ...] = (
+    {
+        "step": "1",
+        "label": "Ship a visible UI or product slice",
+        "gate": "Focused unit tests for the touched surface.",
+    },
+    {
+        "step": "2",
+        "label": "Run the smallest deterministic gate",
+        "gate": "Use full suite only for milestone, PR, or release boundaries.",
+    },
+    {
+        "step": "3",
+        "label": "Open it locally and check geometry",
+        "gate": "Desktop and mobile screenshots must be nonblank with no horizontal overflow.",
+    },
+    {
+        "step": "4",
+        "label": "Package only explicit pathspecs",
+        "gate": "No unrelated docs, artifacts, control-plane files, or controller truth changes.",
+    },
+    {
+        "step": "5",
+        "label": "Ask for owner decision only when needed",
+        "gate": "Do not invent acceptance, merge approval, or review-thread resolution.",
+    },
+)
+
+NEXT_VISIBLE_SLICE = (
+    "Default to a workbench or demo UI improvement next: make the change visible locally, "
+    "validate the touched surface, then package only that slice."
+)
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -125,7 +182,10 @@ def build_multi_agent_operator_cockpit(
         },
         "agent_team": _copy_agent_team(ultrawork_dashboard),
         "summary": {
-            "headline": "Multi-agent construction line is monitorable and packageable.",
+            "headline": (
+                "Project progress is visible; the multi-agent lane is capped at five "
+                "and UltraWork is monitor-only."
+            ),
             "project_status": str(project_status.get("status", "")),
             "ultrawork_status": str(ultrawork_dashboard.get("status", "")),
             "completed_count": completed_count,
@@ -228,6 +288,21 @@ def render_multi_agent_operator_cockpit_markdown(cockpit: dict[str, Any]) -> str
 def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
     """Render a responsive static HTML cockpit."""
     summary = cockpit["summary"]
+    progress_cards = "\n".join(
+        "<article class=\"progress-card\">"
+        f"<span>{_escape(item['label'])}</span>"
+        f"<strong>{_escape(item['value'])}</strong>"
+        f"<p>{_escape(item['detail'])}</p>"
+        "</article>"
+        for item in VISIBLE_PROGRESS_CARDS
+    )
+    flow_steps = "\n".join(
+        "<li>"
+        f"<strong>{_escape(item['step'])}. {_escape(item['label'])}</strong>"
+        f"<span>{_escape(item['gate'])}</span>"
+        "</li>"
+        for item in SIMPLIFIED_DELIVERY_FLOW
+    )
     views = "\n".join(
         "<article class=\"view-card\">"
         f"<span>{_escape(view['label'])}</span>"
@@ -267,7 +342,7 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Multi-Agent Operator Cockpit</title>
+  <title>Project Progress Cockpit</title>
   <style>
     :root {{
       color-scheme: light;
@@ -310,24 +385,28 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
       margin-bottom: 18px;
     }}
     .metrics {{ grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }}
-    .views {{ grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }}
-    section, .metric, .view-card {{
+    .views, .progress {{ grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }}
+    section, .metric, .view-card, .progress-card {{
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 16px;
     }}
-    .metric span, .view-card span {{
+    .metric span, .view-card span, .progress-card span {{
       display: block;
       color: var(--muted);
       font-size: 12px;
       margin-bottom: 6px;
     }}
-    .metric strong, .view-card strong {{
+    .metric strong, .view-card strong, .progress-card strong {{
       display: block;
       font-size: 22px;
       line-height: 1.2;
       overflow-wrap: anywhere;
+    }}
+    .progress-card p {{
+      margin-top: 8px;
+      color: var(--muted);
     }}
     code {{
       display: inline-block;
@@ -367,6 +446,24 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
       border-left: 5px solid var(--warn);
       background: var(--warn-bg);
     }}
+    .flow {{
+      counter-reset: flow;
+      list-style: none;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }}
+    .flow li {{
+      display: grid;
+      gap: 5px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }}
+    .flow span {{
+      color: var(--muted);
+    }}
     @media (max-width: 720px) {{
       header, main {{ padding: 20px 16px; }}
       h1 {{ font-size: 24px; }}
@@ -376,8 +473,9 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
 </head>
 <body>
   <header>
-    <h1>Multi-Agent Operator Cockpit</h1>
+    <h1>Project Progress Cockpit</h1>
     <p class="subtitle">{_escape(summary['headline'])}</p>
+    <p class="subtitle">M22 Multi-Agent Operator Cockpit is now presented as a smaller project-progress surface.</p>
   </header>
   <main>
     <div class="grid metrics">
@@ -386,8 +484,20 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
       <div class="metric"><span>Resume sample open</span><strong>{_escape(summary['open_approved_count'])}</strong></div>
       <div class="metric"><span>Selected next</span><strong>{_escape(summary['selected_next_record_id'])}</strong></div>
     </div>
+    <section>
+      <h2>What Is Actually Moving</h2>
+      <div class="grid progress">{progress_cards}</div>
+    </section>
+    <section>
+      <h2>Simplified Delivery Flow</h2>
+      <ol class="flow">{flow_steps}</ol>
+    </section>
     <section class="grid decision">
-      <h2>Recommended Next Step</h2>
+      <h2>Next Visible Slice</h2>
+      <p>{_escape(NEXT_VISIBLE_SLICE)}</p>
+    </section>
+    <section class="grid decision">
+      <h2>Owner Gate Note</h2>
       <p>{_escape(summary['recommended_next_step'])}</p>
     </section>
     <section>

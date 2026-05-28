@@ -122,7 +122,17 @@ def test_multi_agent_operator_cockpit_html_exposes_operator_views(tmp_path: Path
     )
     html = render_multi_agent_operator_cockpit_html(cockpit)
 
+    assert "Project Progress Cockpit" in html
     assert "Multi-Agent Operator Cockpit" in html
+    assert "What Is Actually Moving" in html
+    assert "Simplified Delivery Flow" in html
+    assert "Visible product work" in html
+    assert "UltraWork position" in html
+    assert "Ship a visible UI or product slice" in html
+    assert "Next Visible Slice" in html
+    assert "Default to a workbench or demo UI improvement next" in html
+    assert "Owner Gate Note" in html
+    assert "Monitor only" in html
     assert "five_agent_context_cap" in html
     assert "ChiefEngineerOrchestrator" in html
     assert "PackagingPRReadinessAgent" in html
@@ -194,6 +204,8 @@ def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
     mvp_doc = MVP_DOC_PATH.read_text(encoding="utf-8")
 
     assert "MULTI_AGENT_OPERATOR_COCKPIT_ARTIFACT_DIR" in makefile
+    assert "project-progress-cockpit" in makefile
+    assert "verify-project-progress-cockpit" in makefile
     assert "multi-agent-operator-cockpit" in makefile
     assert "verify-multi-agent-operator-cockpit" in makefile
     assert "scripts/run_multi_agent_operator_cockpit.py --format json" in makefile
@@ -218,6 +230,9 @@ def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
     assert "artifacts/**" in doc
     assert "repo/GitHub/local-artifact boundary" in doc
     assert "five-agent active team" in doc
+    assert "Project Progress Cockpit" in doc
+    assert "Simplified Delivery Flow" in doc
+    assert "make project-progress-cockpit" in doc
     assert "M22" in mvp_doc
     assert "five-agent active team" in mvp_doc
-    assert "make multi-agent-operator-cockpit" in mvp_doc
+    assert "make project-progress-cockpit" in mvp_doc

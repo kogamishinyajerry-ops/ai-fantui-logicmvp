@@ -1,11 +1,16 @@
-# Multi-Agent Operator Cockpit
+# Project Progress Cockpit
 
 Date: 2026-05-27
-Status: M22 read-only operator package
+Status: M22 read-only operator package, simplified as the visible project progress cockpit
 
 ## Purpose
 
-This package gives the multi-agent construction lane one local operator cockpit. It combines:
+This package gives the project one local progress cockpit. It keeps the old
+M22 operator cockpit contract, but the visible page now starts with what is
+actually moving: product/UI work, the simplified five-agent flow, UltraWork as
+monitor-only, and the explicit owner-decision boundary.
+
+It combines:
 
 - Project Manager Status Summary;
 - UltraWork Monitor;
@@ -17,6 +22,15 @@ This package gives the multi-agent construction lane one local operator cockpit.
 It is a read-only package. It does not activate M21 streamed-authoring implementation, edit controller truth, alter external planning configuration, or add a live server route.
 
 ## Local Entry
+
+```sh
+make project-progress-cockpit
+```
+
+This is the preferred human-facing entry. It is an alias for the same bounded
+M22 artifact.
+
+Legacy entry:
 
 ```sh
 make multi-agent-operator-cockpit
@@ -31,8 +45,31 @@ Default output:
 Verifier:
 
 ```sh
+make verify-project-progress-cockpit
+```
+
+Legacy verifier:
+
+```sh
 make verify-multi-agent-operator-cockpit
 ```
+
+## Simplified Delivery Flow
+
+Use this smaller loop for future slices:
+
+1. Ship a visible UI or product slice.
+2. Run the smallest deterministic gate for the touched surface.
+3. Open it locally and check desktop/mobile geometry.
+4. Package only explicit pathspecs.
+5. Ask for owner decision only when a release/acceptance boundary needs it.
+
+UltraWork remains a read-only monitor signal. It should not be the main
+development narrative or a reason to add more active agents.
+
+The visible cockpit separates the next product/UI slice from the owner gate:
+the default next slice should be a local workbench or demo UI improvement, while
+owner acceptance remains a separate release decision.
 
 ## M22 Boundary
 
@@ -92,3 +129,7 @@ make verify-multi-agent-operator-cockpit
 ```
 
 Browser gate: open the generated HTML and verify it shows `Multi-Agent Operator Cockpit`, `Project Manager Status`, `UltraWork Monitor`, `five_agent_context_cap`, `PackagingPRReadinessAgent`, `RUN-QUEUE-011`, and `repo_github_local_artifacts` without desktop or mobile layout overflow.
+
+The same browser gate should also verify the visible simplification markers:
+`Project Progress Cockpit`, `What Is Actually Moving`, `Simplified Delivery
+Flow`, `Visible product work`, and `UltraWork position`.
