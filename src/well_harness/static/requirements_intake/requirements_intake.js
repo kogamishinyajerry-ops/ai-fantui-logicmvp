@@ -181,6 +181,12 @@
     if (!analyzeButton.disabled) analyzeButton.textContent = defaultAnalyzeLabel();
   }
 
+  function enableAnalyzeAfterDocumentLoad() {
+    if (!analyzeButton) return;
+    analyzeButton.disabled = false;
+    syncAnalyzeButtonLabel();
+  }
+
   function setPreflightLiveState(text, stateName) {
     if (preflightLiveState) preflightLiveState.textContent = text;
     if (preflightLiveCard) preflightLiveCard.dataset.state = stateName || "checking";
@@ -258,10 +264,7 @@
       if (nextStepCopy) {
         nextStepCopy.textContent = "已载入官方 DOCX；点击分析后进入 L1-L4 逻辑复刻。";
       }
-      if (analyzeButton) {
-        analyzeButton.disabled = false;
-        syncAnalyzeButtonLabel();
-      }
+      enableAnalyzeAfterDocumentLoad();
     } catch (error) {
       state.uploadMode = "base64";
       state.uploadBase64 = "";
@@ -515,6 +518,7 @@
       textArea.value = String(reader.result || "");
       textArea.placeholder = defaultTextAreaPlaceholder;
       fileState.textContent = `${Math.ceil(file.size / 1024)} KB`;
+      enableAnalyzeAfterDocumentLoad();
       finishTask("文档已载入", "文本文件读取完成，可以点击“分析需求”。");
       setStatus("文档已载入", "ok");
     };
@@ -537,6 +541,7 @@
       textArea.value = "";
       textArea.placeholder = defaultTextAreaPlaceholder;
       fileState.textContent = `${Math.ceil(file.size / 1024)} KB · DOCX`;
+      enableAnalyzeAfterDocumentLoad();
       finishTask("DOCX 已载入", "文档读取完成，点击“分析需求”后后端会提取正文并调用模型。");
       setStatus("DOCX 已载入", "ok");
     };
@@ -1308,6 +1313,7 @@
     renderClarificationWorkbench({status: "idle", open_questions: []});
     renderNextStep(null);
     renderBurdenSummary(null);
+    enableAnalyzeAfterDocumentLoad();
     processPanel.classList.remove("is-active", "is-complete", "is-error");
     processTitle.textContent = "等待任务";
     processDetail.textContent = "上传或粘贴需求后开始分析。";

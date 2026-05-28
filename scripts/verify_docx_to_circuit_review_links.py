@@ -341,6 +341,65 @@ def _requirements_official_docx_state_matches(state: dict[str, Any]) -> bool:
     )
 
 
+def _requirements_official_docx_failure_recovery_state(page: Any, base_url: str) -> dict[str, Any]:
+    def fail_official_source(route: Any) -> None:
+        route.fulfill(
+            status=404,
+            content_type="application/json",
+            body=json.dumps({"error": "official_docx_source_unavailable"}),
+        )
+
+    page.route("**/api/requirements-intake/official-docx-source", fail_official_source)
+    page.goto(f"{base_url}/requirements-intake?source=official-docx", wait_until="networkidle")
+    page.wait_for_function(
+        """() => {
+            const state = document.querySelector("#requirements-file-state");
+            const button = document.querySelector("#requirements-analyze");
+            return state?.textContent.includes("官方 DOCX 载入失败") && button?.disabled;
+        }""",
+        timeout=7000,
+    )
+    page.set_input_files(
+        "#requirements-file",
+        str(PROJECT_ROOT / "uploads" / "20260409-thrust-reverser-control-logic.docx"),
+    )
+    page.wait_for_function(
+        """() => {
+            const state = document.querySelector("#requirements-file-state");
+            const form = document.querySelector("#requirements-form");
+            const button = document.querySelector("#requirements-analyze");
+            return state?.textContent.includes("DOCX")
+              && form?.dataset.uploadMode === "base64"
+              && button
+              && !button.disabled;
+        }""",
+        timeout=7000,
+    )
+    return page.evaluate(
+        """() => ({
+            documentName: document.querySelector("#requirements-document-name")?.value || null,
+            fileState: document.querySelector("#requirements-file-state")?.textContent || null,
+            uploadMode: document.querySelector("#requirements-form")?.dataset.uploadMode || null,
+            analyzeDisabled: Boolean(document.querySelector("#requirements-analyze")?.disabled),
+            status: document.querySelector("#requirements-status")?.textContent || null,
+            placeholder: document.querySelector("#requirements-text")?.placeholder || null,
+        })"""
+    )
+
+
+def _requirements_official_docx_failure_recovery_matches(state: dict[str, Any]) -> bool:
+    return all(
+        [
+            state.get("documentName") == "20260409-thrust-reverser-control-logic.docx",
+            "DOCX" in str(state.get("fileState") or ""),
+            state.get("uploadMode") == "base64",
+            state.get("analyzeDisabled") is False,
+            state.get("status") == "DOCX 已载入",
+            not state.get("placeholder"),
+        ]
+    )
+
+
 def _logic_template_query_state(page: Any, base_url: str) -> dict[str, Any]:
     page.goto(f"{base_url}/logic-builder?template=docx-l1-l4", wait_until="networkidle")
     page.wait_for_function(
@@ -481,6 +540,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     workbench_anchor_path = artifact_dir / f"docx-to-circuit-workbench-anchor-{stamp}.png"
     workbench_anchor_reopen_path = artifact_dir / f"docx-to-circuit-workbench-anchor-reopen-{stamp}.png"
     requirements_official_docx_path = artifact_dir / f"requirements-official-docx-link-{stamp}.png"
+    requirements_official_docx_recovery_path = (
+        artifact_dir / f"requirements-official-docx-failure-recovery-{stamp}.png"
+    )
     logic_template_query_path = artifact_dir / f"logic-template-query-link-{stamp}.png"
     responsive_paths = {
         item["name"]: artifact_dir / f"docx-to-circuit-responsive-{item['name']}-{stamp}.png"
@@ -490,6 +552,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     console_errors: list[str] = []
     responsive_states: dict[str, dict[str, Any]] = {}
     requirements_official_docx_state: dict[str, Any] = {}
+    requirements_official_docx_recovery_state: dict[str, Any] = {}
     logic_template_query_state: dict[str, Any] = {}
     workbench_anchor_state: dict[str, Any] = {}
     workbench_anchor_reopen_state: dict[str, Any] = {}
@@ -520,6 +583,17 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 )
                 requirements_page.screenshot(path=str(requirements_official_docx_path), full_page=True)
                 requirements_page.close()
+
+                requirements_recovery_page = context.new_page()
+                requirements_official_docx_recovery_state = _requirements_official_docx_failure_recovery_state(
+                    requirements_recovery_page,
+                    base_url,
+                )
+                requirements_recovery_page.screenshot(
+                    path=str(requirements_official_docx_recovery_path),
+                    full_page=True,
+                )
+                requirements_recovery_page.close()
 
                 logic_page = context.new_page()
                 logic_template_query_state = _logic_template_query_state(logic_page, base_url)
@@ -679,6 +753,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "requirements_official_docx_link": "pass"
         if _requirements_official_docx_state_matches(requirements_official_docx_state)
         else "fail",
+        "requirements_official_docx_failure_recovery": "pass"
+        if _requirements_official_docx_failure_recovery_matches(requirements_official_docx_recovery_state)
+        else "fail",
         "logic_template_query_link": "pass"
         if _logic_template_query_state_matches(logic_template_query_state)
         else "fail",
@@ -706,6 +783,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 workbench_anchor_path,
                 workbench_anchor_reopen_path,
                 requirements_official_docx_path,
+                requirements_official_docx_recovery_path,
                 logic_template_query_path,
                 *responsive_paths.values(),
             )
@@ -743,6 +821,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         },
         "states": {
             "requirements_official_docx": requirements_official_docx_state,
+            "requirements_official_docx_failure_recovery": requirements_official_docx_recovery_state,
             "logic_template_query": logic_template_query_state,
             "current_review": current_state,
             "source_entry": source_state,
@@ -758,6 +837,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             "workbench_anchor": str(workbench_anchor_path),
             "workbench_anchor_reopen": str(workbench_anchor_reopen_path),
             "requirements_official_docx": str(requirements_official_docx_path),
+            "requirements_official_docx_failure_recovery": str(requirements_official_docx_recovery_path),
             "logic_template_query": str(logic_template_query_path),
             "responsive": {
                 name: str(path)

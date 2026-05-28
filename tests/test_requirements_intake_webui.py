@@ -6508,6 +6508,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert '"source_entry_link"' in review_link_gate
     assert '"review_packet_markdown_json"' in review_link_gate
     assert '"requirements_official_docx_link"' in review_link_gate
+    assert '"requirements_official_docx_failure_recovery"' in review_link_gate
     assert '"submittedDocumentBase64Length"' in review_link_gate
     assert '"submittedHasDocumentBase64"' in review_link_gate
     assert '"submittedHasDocumentText"' in review_link_gate
@@ -6543,6 +6544,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "OFFICIAL_DOCX_SOURCE" in requirements_script
     assert "function requestedOfficialDocxSource" in requirements_script
     assert "function applyOfficialDocxSource" in requirements_script
+    assert "function enableAnalyzeAfterDocumentLoad" in requirements_script
+    assert "enableAnalyzeAfterDocumentLoad();" in requirements_script
     assert "/api/requirements-intake/official-docx-source" in requirements_script
     assert 'state.uploadMode = "base64"' in requirements_script
     assert "payload.document_base64" in requirements_script
