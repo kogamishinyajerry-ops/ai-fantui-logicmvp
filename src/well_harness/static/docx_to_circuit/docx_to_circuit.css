@@ -307,6 +307,48 @@ h2 {
   color: var(--docx-muted);
   font-size: 11px;
 }
+.docx-circuit-source-index-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px auto;
+  gap: 6px;
+}
+.docx-circuit-source-index-controls label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.docx-circuit-source-index-controls label span {
+  color: var(--docx-muted);
+  font-size: 10px;
+}
+.docx-circuit-source-index-controls input,
+.docx-circuit-source-index-controls select,
+.docx-circuit-source-index-controls button {
+  min-height: 31px;
+  border: 1px solid var(--docx-border);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--docx-text);
+  font-size: 12px;
+}
+.docx-circuit-source-index-controls input,
+.docx-circuit-source-index-controls select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+}
+.docx-circuit-source-index-controls button {
+  align-self: end;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 6px 9px;
+}
+.docx-circuit-source-index-controls input:focus,
+.docx-circuit-source-index-controls select:focus,
+.docx-circuit-source-index-controls button:focus-visible {
+  border-color: rgba(30, 103, 255, 0.55);
+  outline: none;
+}
 .docx-circuit-source-index-list {
   display: grid;
   gap: 6px;
@@ -751,6 +793,9 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .docx-circuit-trace-summary {
+    grid-template-columns: 1fr;
+  }
+  .docx-circuit-source-index-controls {
     grid-template-columns: 1fr;
   }
 }

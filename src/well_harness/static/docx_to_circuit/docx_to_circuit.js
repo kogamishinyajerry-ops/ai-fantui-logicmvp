@@ -105,6 +105,9 @@
   const sequenceCount = $("docx-circuit-sequence-count");
   const sequenceList = $("docx-circuit-sequence-list");
   const sourceIndexCount = $("docx-circuit-source-index-count");
+  const sourceIndexSearch = $("docx-circuit-source-index-search");
+  const sourceIndexLevel = $("docx-circuit-source-index-level");
+  const sourceIndexClear = $("docx-circuit-source-index-clear");
   const sourceIndexList = $("docx-circuit-source-index-list");
   const activeAnchor = $("docx-circuit-active-anchor");
   const reviewPanel = $("docx-circuit-review-panel");
@@ -134,6 +137,7 @@
   let currentPayload = null;
   let currentAnchor = DEFAULT_STEP_ANCHOR;
   let selectedElement = {kind: "wire", id: "wire_logic4_thr_lock"};
+  let activeSourceEntryAnchor = "";
 
   function setText(element, value) {
     if (element) element.textContent = value;
@@ -196,6 +200,14 @@
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (value.length <= limit) return value;
     return `${value.slice(0, limit - 1)}…`;
+  }
+
+  function sourceIndexQuery() {
+    return sourceIndexSearch ? sourceIndexSearch.value.trim().toLowerCase() : "";
+  }
+
+  function sourceIndexLevelValue() {
+    return sourceIndexLevel ? sourceIndexLevel.value : "all";
   }
 
   function makeSvgElement(name, attributes) {
@@ -596,10 +608,40 @@
     return primaryElementForStep(step);
   }
 
+  function sourceEntryLevels(entry) {
+    const values = new Set();
+    const roleMatch = String(entry && entry.role || "").match(/L[1-4]/);
+    if (roleMatch) values.add(roleMatch[0]);
+    const step = stepForSourceEntry(entry);
+    listFrom(step && step.node_ids).forEach((nodeId) => {
+      if (LOGIC_IDS.includes(nodeId)) values.add(nodeId.replace("logic", "L"));
+    });
+    return Array.from(values).sort();
+  }
+
+  function sourceEntrySearchText(entry) {
+    return [
+      entry && entry.anchor,
+      entry && entry.role,
+      entry && entry.text,
+      listFrom(entry && entry.node_ids).join(" "),
+    ].join(" ").toLowerCase();
+  }
+
+  function filteredSourceEntries(entries) {
+    const query = sourceIndexQuery();
+    const level = sourceIndexLevelValue();
+    return listFrom(entries)
+      .filter((entry) => listFrom(entry.node_ids).length > 0)
+      .filter((entry) => !query || sourceEntrySearchText(entry).includes(query))
+      .filter((entry) => level === "all" || sourceEntryLevels(entry).includes(level));
+  }
+
   function setSourceIndexState(anchor) {
+    activeSourceEntryAnchor = anchor || "";
     if (!sourceIndexList) return;
     sourceIndexList.querySelectorAll("[data-source-entry-anchor]").forEach((item) => {
-      item.dataset.active = item.dataset.sourceEntryAnchor === anchor ? "true" : "false";
+      item.dataset.active = item.dataset.sourceEntryAnchor === activeSourceEntryAnchor ? "true" : "false";
     });
   }
 
@@ -771,14 +813,20 @@
     if (!sourceIndexList) return;
     sourceIndexList.innerHTML = "";
     const mappedEntries = listFrom(entries).filter((entry) => listFrom(entry.node_ids).length > 0);
-    setText(sourceIndexCount, mappedEntries.length > 0 ? `${mappedEntries.length} 条` : "无条目");
-    if (mappedEntries.length === 0) {
+    const visibleEntries = filteredSourceEntries(entries);
+    setText(
+      sourceIndexCount,
+      visibleEntries.length === mappedEntries.length
+        ? `${visibleEntries.length} 条`
+        : `${visibleEntries.length} / ${mappedEntries.length}`,
+    );
+    if (visibleEntries.length === 0) {
       const empty = document.createElement("li");
-      empty.textContent = "暂无可关联条目。";
+      empty.textContent = mappedEntries.length === 0 ? "暂无可关联条目。" : "无匹配条目。";
       sourceIndexList.appendChild(empty);
       return;
     }
-    mappedEntries.forEach((entry) => {
+    visibleEntries.forEach((entry) => {
       const item = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
@@ -795,6 +843,7 @@
       item.appendChild(button);
       sourceIndexList.appendChild(item);
     });
+    setSourceIndexState(activeSourceEntryAnchor);
   }
 
   function renderPayload(payload) {
@@ -840,6 +889,19 @@
     evidenceOnlyToggle.addEventListener("change", () => renderTracePanel(selectedElement.kind, selectedElement.id));
   }
   if (copyTracePacketButton) copyTracePacketButton.addEventListener("click", copyTracePacket);
+  if (sourceIndexSearch) {
+    sourceIndexSearch.addEventListener("input", () => renderSourceIndex(sourceEntries()));
+  }
+  if (sourceIndexLevel) {
+    sourceIndexLevel.addEventListener("change", () => renderSourceIndex(sourceEntries()));
+  }
+  if (sourceIndexClear) {
+    sourceIndexClear.addEventListener("click", () => {
+      if (sourceIndexSearch) sourceIndexSearch.value = "";
+      if (sourceIndexLevel) sourceIndexLevel.value = "all";
+      renderSourceIndex(sourceEntries());
+    });
+  }
 
   boot();
 })();

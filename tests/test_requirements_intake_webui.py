@@ -6359,6 +6359,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-copy-status"' in html
     assert 'data-docx-circuit-source-index="true"' in html
     assert 'id="docx-circuit-source-index-count"' in html
+    assert 'id="docx-circuit-source-index-search"' in html
+    assert 'id="docx-circuit-source-index-level"' in html
+    assert 'id="docx-circuit-source-index-clear"' in html
     assert 'id="docx-circuit-source-index-list"' in html
     assert 'id="docx-circuit-source-anchor"' in html
     assert 'id="docx-circuit-trace-panel"' in html
@@ -6389,6 +6392,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function renderSourceIndex" in script
     assert "function activateSourceEntry" in script
     assert "function stepForSourceEntry" in script
+    assert "function filteredSourceEntries" in script
+    assert "function sourceEntryLevels" in script
+    assert "function sourceIndexQuery" in script
     assert "function currentTracePacket" in script
     assert "function copyTracePacket" in script
     assert "data-source-entry-anchor" in script
@@ -6406,6 +6412,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert ".docx-circuit-review-panel" in stylesheet
     assert ".docx-circuit-review-toolbar" in stylesheet
     assert ".docx-circuit-source-index-panel" in stylesheet
+    assert ".docx-circuit-source-index-controls" in stylesheet
     assert ".docx-circuit-source-index-button" in stylesheet
     assert ".docx-circuit-filter-toggle" in stylesheet
     assert ".docx-circuit-copy-status" in stylesheet

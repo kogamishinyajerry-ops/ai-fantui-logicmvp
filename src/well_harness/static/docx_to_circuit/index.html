@@ -105,6 +105,23 @@
           <h3>源文索引</h3>
           <span id="docx-circuit-source-index-count">待加载</span>
         </div>
+        <div class="docx-circuit-source-index-controls" aria-label="源文索引筛选">
+          <label>
+            <span>搜索</span>
+            <input id="docx-circuit-source-index-search" type="search" placeholder="开关 / 角度 / 电源">
+          </label>
+          <label>
+            <span>逻辑层</span>
+            <select id="docx-circuit-source-index-level">
+              <option value="all">全部</option>
+              <option value="L1">L1</option>
+              <option value="L2">L2</option>
+              <option value="L3">L3</option>
+              <option value="L4">L4</option>
+            </select>
+          </label>
+          <button id="docx-circuit-source-index-clear" type="button">清空</button>
+        </div>
         <ol id="docx-circuit-source-index-list" class="docx-circuit-source-index-list">
           <li>正在读取源文条目</li>
         </ol>
