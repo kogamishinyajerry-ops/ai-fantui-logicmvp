@@ -41,3 +41,13 @@ make verify-multi-agent-release-decision-input
 The verifier requires a ready M30 closure, zero actionable review threads, a
 clean/mergeable PR state, the five-agent roster cap, and the explicit boundary
 that automation must not merge or self-approve.
+
+The verifier opens the generated decision-input HTML in desktop/mobile browser
+viewports, captures screenshots, and fails on missing owner-decision labels or
+page-level horizontal overflow. Unit tests can disable this browser path with
+`--skip-browser`; the Makefile gate keeps it enabled.
+
+Browser gate: the generated HTML must show `Multi-Agent Release Decision Input`,
+`five_agent_context_cap`, `PackagingPRReadinessAgent`,
+`repo_github_local_artifacts_only`, and the recommended owner action with
+desktop/mobile screenshots and no horizontal layout overflow.
