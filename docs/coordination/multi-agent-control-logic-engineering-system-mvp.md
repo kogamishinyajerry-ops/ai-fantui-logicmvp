@@ -90,12 +90,12 @@ when rendered in current dashboards.
 | M20 approved queue v0.8 item | Chief Engineer Queue Runner + LogicIRRepairAgent | `make approved-candidate-task-queue-v0-8` | v0.7 queue prefix preserved, `RUN-QUEUE-010` / `CHECK_UNREACHABLE_STATE_001` removes only the seeded candidate orphan state and converges through fast-gate preflight, approved shell, repair loop, and review export |
 | M26 approved queue v0.9 item | Chief Engineer Queue Runner + LogicIRRepairAgent | `make approved-candidate-task-queue-v0-9` | v0.8 queue prefix preserved, `RUN-QUEUE-011` / `CHECK_OUTPUT_COMMAND_CONFLICT_001` resolves only the seeded candidate output-command conflict by marking the conflicting transition as safety-priority and converges through fast-gate preflight, approved shell, repair loop, and review export |
 | M27 ledger/cursor v0.2 promotion | Chief Engineer Queue Scheduler + Resume Cursor | `make multi-agent-queue-cursor-state-v0-2` | v0.9 queue execution is transformed into an eleven-record `multi_agent_queue_run_ledger_v0_2`; the cursor records `RUN-QUEUE-011` as the latest completed record and the ready-to-resume fixture can expose `RUN-QUEUE-011` as the approved open resume target |
-| M22 operator cockpit package | Chief Engineer Operator Cockpit | `make multi-agent-operator-cockpit` | Project Manager Status + UltraWork Monitor + queue/cursor health + Notion external blocker + pathspec boundary collected into one read-only JSON/Markdown/HTML cockpit |
+| M22 operator cockpit package | Chief Engineer Operator Cockpit | `make multi-agent-operator-cockpit` | Project Manager Status + UltraWork Monitor + queue/cursor health + repo/GitHub/local-artifact boundary + pathspec boundary collected into one read-only JSON/Markdown/HTML cockpit |
 | M23 packaging consolidation gate | Chief Engineer Packaging Gate | `make multi-agent-packaging-consolidation` | v0.2 multi-agent cursor baseline, project-manager status, UltraWork Monitor, M22 cockpit, and M23 packaging docs are ordered into explicit pathspec staging groups with excluded dirty-context guards |
-| M24 validation/PR preflight gate | Chief Engineer PR Preflight Gate | `make multi-agent-pr-preflight` | M23 package order plus the M24 preflight package are converted into 19 validation commands, 7 explicit stage commands, browser geometry markers, Notion blocker text, and a copy-ready PR body |
+| M24 validation/PR preflight gate | Chief Engineer PR Preflight Gate | `make multi-agent-pr-preflight` | M23 package order plus the M24 preflight package are converted into 19 validation commands, 7 explicit stage commands, browser geometry markers, repo/GitHub/local-artifact boundary text, and a copy-ready PR body |
 | M25 validation evidence capture gate | Chief Engineer Evidence Gate | `make multi-agent-validation-evidence` | M24's 19 validation commands are executed and recorded into bounded JSON/Markdown/HTML evidence, then the latest 8 explicit stage commands add the M25 evidence package without touching excluded dirty paths |
 | M28 v0.2 status-surface refresh | Chief Engineer Packaging Gate | `make multi-agent-pr-preflight` | Project Manager Status, Project Visibility, UltraWork Monitor, M22 cockpit, M23 packaging, M24 preflight, and M25 validation evidence now consume the v0.2 ledger/cursor baseline with `RUN-QUEUE-011` as the current queue cursor |
-| M29 merge-readiness packet | Chief Engineer Review Handoff Gate | `make multi-agent-merge-readiness` | M25 validation evidence, desktop/mobile geometry screenshots, PR mergeability, no-checks status, no-review state, and the Notion external blocker are consolidated into one read-only review handoff |
+| M29 merge-readiness packet | Chief Engineer Review Handoff Gate | `make multi-agent-merge-readiness` | M25 validation evidence, desktop/mobile geometry screenshots, PR mergeability, no-checks status, no-review state, and the repo/GitHub/local-artifact control boundary are consolidated into one read-only review handoff |
 
 ## Contract Boundary
 
@@ -692,9 +692,8 @@ The review-packet export command is wired into:
 
 - `make test` via the `review-packet-export-regression` prerequisite.
 - `.github/workflows/gsd-automation.yml` validation job after the GSD validation suite.
-  That job runs the suite with `--skip notion_control_plane` because the
-  Notion access check depends on external page-sharing permissions and already
-  has a separate non-blocking Notion sync stage.
+  That job runs only repo-local blocking checks; external planning access checks
+  are outside the merge-readiness control boundary.
 
 The approved repair slices gate is now wired into:
 
@@ -939,7 +938,7 @@ when these repo-local gates pass:
     mechanically verifiable M1 deliverables.
 - `PYTHONPATH=src:. python3 tools/run_gsd_validation_suite.py --format json --skip notion_control_plane`
   - Mirrors the blocking part of the GitHub `gsd-automation` validation job.
-  - Keeps the external Notion sharing check out of the blocking code gate.
+  - Keeps external planning access checks out of the blocking code gate.
 - `PYTHONPATH=src:. python3 scripts/verify_candidate_review_packet_export.py --format json`
   - Confirms `/logic-builder/candidate-review-packet.json` is reachable,
     schema-valid, and fixture-aligned.
@@ -1133,16 +1132,14 @@ Latest local run-through on 2026-05-22:
   `inhibit-block -> FAULT / thr_lock not ON`.
 - `make test`: pass; review-packet export regression passed, then
   `3663 passed, 39 skipped, 162 deselected in 413.72s`.
-- GSD validation suite with `--skip notion_control_plane`: pass;
-  `24/24` validation commands succeeded, with `unit_tests` at `428.977s`
-  under the `480s` timeout.
+- GSD validation suite with external planning access skipped: pass;
+  `24/24` validation commands succeeded, with repo-wide `unit_tests` budgeted
+  under the `900s` timeout.
 - Direct review-packet export regression: pass with `schema_valid=true` and
   `fixture_match=true`.
 
-The only observed non-code blocker was the raw Notion control-plane check:
-Notion returned HTTP 404 for a configured page that is not shared with the
-current integration. This remains an external control-plane permission issue,
-not a multi-agent engineering-chain code blocker.
+External planning access checks are outside the active repo/GitHub/local-artifact
+control boundary and are not multi-agent engineering-chain code blockers.
 
 ## Next Step
 

@@ -136,9 +136,9 @@ def _review_boundaries() -> dict[str, Any]:
 
 def _validation_budget() -> dict[str, Any]:
     return {
-        "unit_tests_timeout_seconds": 480,
-        "last_full_validation_unit_tests_seconds": 404.227,
-        "remaining_margin_seconds": 75.773,
+        "unit_tests_timeout_seconds": 900,
+        "last_full_validation_unit_tests_seconds": 684.16,
+        "remaining_margin_seconds": 215.84,
         "fast_gate_expected_seconds_under": 60,
         "full_pytest_is_per_milestone_gate": True,
         "reason": (

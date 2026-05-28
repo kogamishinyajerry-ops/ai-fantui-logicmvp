@@ -16,7 +16,6 @@ COCKPIT_ID = "multi-agent-operator-cockpit-v0.1"
 JSON_NAME = "multi_agent_operator_cockpit_v0_1.json"
 MARKDOWN_NAME = "multi_agent_operator_cockpit_v0_1.md"
 HTML_NAME = "multi_agent_operator_cockpit_v0_1.html"
-NOTION_BLOCKER_ID = "notion-control-plane-404"
 
 
 def _utc_now() -> str:
@@ -34,18 +33,6 @@ def _path(payload: dict[str, Any], *keys: str) -> str:
 
 def _gate_status(value: bool) -> str:
     return "pass" if value else "fail"
-
-
-def _notion_external_blocker_present(ultrawork_dashboard: dict[str, Any]) -> bool:
-    blockers = ultrawork_dashboard.get("blockers", [])
-    if not isinstance(blockers, list):
-        return False
-    return any(
-        isinstance(item, dict)
-        and item.get("blocker_id") == NOTION_BLOCKER_ID
-        and item.get("status") == "external_blocker"
-        for item in blockers
-    )
 
 
 def _all_gate_values_pass(gates: dict[str, Any]) -> bool:
@@ -110,7 +97,6 @@ def build_multi_agent_operator_cockpit(
     ui_layout_modified = bool(boundary.get("ui_layout_modified", True))
     project_status_ok = project_status.get("status") == "pass"
     ultrawork_status_ok = ultrawork_dashboard.get("status") == "pass"
-    notion_blocker_ok = _notion_external_blocker_present(ultrawork_dashboard)
     local_boundary_ok = not controller_truth_modified and not ui_layout_modified
 
     gates = {
@@ -118,7 +104,6 @@ def build_multi_agent_operator_cockpit(
         "ultrawork_monitor": _gate_status(ultrawork_status_ok),
         "queue_cursor": _gate_status(_path(project_status, "cursor", "status") == "pass"),
         "operator_boundary": _gate_status(local_boundary_ok),
-        "notion_blocker_classification": _gate_status(notion_blocker_ok),
     }
     status = "pass" if _all_gate_values_pass(gates) else "fail"
     completed_count = int(_path(project_status, "completed", "completed_count") or 0)
@@ -170,7 +155,7 @@ def build_multi_agent_operator_cockpit(
         "dependency_boundary": {
             "controller_truth_modified": controller_truth_modified,
             "ui_layout_modified": ui_layout_modified,
-            "notion_control_plane": "external_blocker",
+            "control_plane_source": "repo_github_local_artifacts",
             "pathspec_package": "docs/coordination/multi-agent-operator-cockpit.md",
             "excluded_paths": [
                 "src/well_harness/controller.py",
@@ -205,7 +190,7 @@ def render_multi_agent_operator_cockpit_markdown(cockpit: dict[str, Any]) -> str
     blockers = "\n".join(
         f"- {item['blocker_id']} ({item['status']}): {item['message']}"
         for item in cockpit["blockers"]
-    )
+    ) or "- none"
     team = "\n".join(
         f"- {item['name']}: {item['scope']}"
         for item in cockpit["agent_team"]["active_agents"]
@@ -265,7 +250,7 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
         f"{_escape(item['message'])}"
         "</li>"
         for item in cockpit["blockers"]
-    )
+    ) or "<li>No active blockers.</li>"
     team = "\n".join(
         "<tr>"
         f"<td>{_escape(item['name'])}</td>"
@@ -424,6 +409,7 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
     </section>
     <section>
       <h2>Excluded Paths</h2>
+      <p>Control boundary <code>{_escape(cockpit['dependency_boundary']['control_plane_source'])}</code>.</p>
       <ul>{excluded}</ul>
     </section>
   </main>

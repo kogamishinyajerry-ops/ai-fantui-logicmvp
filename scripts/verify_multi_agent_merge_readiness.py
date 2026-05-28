@@ -65,7 +65,7 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
         location = f" at {path}" if path else ""
         mismatches.append(f"merge readiness schema validation failed{location}: {error.message}")
 
-    if payload.get("status") not in {"ready_for_review", "ready_with_external_blocker"}:
+    if payload.get("status") not in {"ready_for_review", "ready_with_warnings"}:
         mismatches.append("readiness status must be ready, not blocked")
 
     summary = payload.get("summary", {})
@@ -80,8 +80,8 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
             mismatches.append("geometry_check_count must cover five pages across two viewports")
         if summary.get("mergeable") != "MERGEABLE":
             mismatches.append("PR mergeability must be MERGEABLE")
-        if summary.get("notion_blocker") != "external_blocker":
-            mismatches.append("Notion blocker must remain external")
+        if summary.get("control_plane") != "repo_github_local_artifacts":
+            mismatches.append("control_plane must be repo_github_local_artifacts")
 
     gates = payload.get("gates", {})
     if not isinstance(gates, dict):
@@ -91,7 +91,6 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
             "validation_evidence",
             "geometry_gate",
             "pathspec_boundary",
-            "notion_external_blocker",
             "pr_mergeability",
         ]:
             if gates.get(required) != "pass":
@@ -117,13 +116,12 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
                 mismatches.append(f"geometry screenshot missing: {item.get('screenshot')}")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     expected_agents = {
         "ChiefEngineerOrchestrator",
@@ -163,7 +161,7 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
             "PackagingPRReadinessAgent",
             "RUN-QUEUE-011",
             "19 validation commands passed",
-            "notion-control-plane-404",
+            "repo_github_local_artifacts",
             "MERGEABLE",
         ]:
             if marker not in html:

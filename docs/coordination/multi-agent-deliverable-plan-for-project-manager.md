@@ -211,7 +211,7 @@ M4 不包含：
 - controller truth 修改
 - UI layout polish
 - 认证级结论
-- 外部 Notion/GitHub 权限自动写入
+- 外部规划/GitHub 权限自动写入
 - 对 M1/M2/M3 子包的语义放宽
 
 ## M5 交付物
@@ -246,7 +246,7 @@ M5 不包含：
 - 自动合并或自批准
 - 认证级结论
 - 绕过 approved-task shell 的自由执行
-- 外部 Notion/GitHub 权限自动写入
+- 外部规划/GitHub 权限自动写入
 
 ## M6 交付物
 
@@ -318,7 +318,7 @@ M7 不包含：
 
 ## M8 交付物
 
-M8 的目标是解决 M7 后暴露出的长 gate 压力：`unit_tests` 已经接近长回归预算，当前 GSD blocking validation 将预算稳定在 480 秒，不适合让每个小施工 slice 都先跑完整回归。M8 新增一个 fast construction gate，作为 approved task shell 的轻量前置门；它只验证 M1-M7 关键机器产物和边界，不替代 `make test` 或 GSD blocking validation。
+M8 的目标是解决 M7 后暴露出的长 gate 压力：`unit_tests` 已经接近长回归预算，当前 GSD blocking validation 将预算稳定在 900 秒，不适合让每个小施工 slice 都先跑完整回归。M8 新增一个 fast construction gate，作为 approved task shell 的轻量前置门；它只验证 M1-M7 关键机器产物和边界，不替代 `make test` 或 GSD blocking validation。
 
 | 编号 | 交付物 | 工时预算 | 验收证据 |
 | --- | --- | --- | --- |

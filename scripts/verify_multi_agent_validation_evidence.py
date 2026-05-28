@@ -144,16 +144,15 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
                 mismatches.append(f"stage command includes excluded marker {marker}")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     note = payload.get("pr_evidence_note", "")
-    for marker in ["19 validation commands passed", "notion-control-plane-404"]:
+    for marker in ["19 validation commands passed", "Repo, GitHub, and local artifacts"]:
         if marker not in note:
             mismatches.append(f"PR evidence note missing marker: {marker}")
 
@@ -173,7 +172,7 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             "multi-agent-cursor-baseline-v0-2-01",
             "m24-pr-preflight-03",
             "m25-validation-evidence",
-            "notion-control-plane-404",
+            "repo-github-local-artifacts",
             "19 validation commands passed",
         ]:
             if marker not in html:

@@ -88,11 +88,7 @@ def test_ultrawork_dashboard_schema_validates_ready_resume_payload(tmp_path: Pat
     assert "EvidenceRepairAgent" not in {lane["agent"] for lane in dashboard["agent_lanes"]}
     assert "RequirementRepairAgent" not in {lane["agent"] for lane in dashboard["agent_lanes"]}
     assert "SimulationTestAgent" not in {lane["agent"] for lane in dashboard["agent_lanes"]}
-    assert any(
-        blocker["blocker_id"] == "notion-control-plane-404"
-        and blocker["status"] == "external_blocker"
-        for blocker in dashboard["blockers"]
-    )
+    assert dashboard["blockers"] == []
 
 
 def test_ultrawork_dashboard_schema_validates_idle_payload(tmp_path: Path) -> None:
@@ -126,7 +122,7 @@ def test_ultrawork_dashboard_html_exposes_lanes_gates_and_blockers(tmp_path: Pat
     assert "PackagingPRReadinessAgent" in html
     assert "RUN-QUEUE-011" in html
     assert "LogicIRRepairAgent" in html
-    assert "notion-control-plane-404" in html
+    assert "No active blockers" in html
     assert "source_ledger_checker" in html
     assert 'class="table-scroll"' in html
 
@@ -215,7 +211,7 @@ def test_ultrawork_monitor_local_entry_and_pathspec_package_are_bounded() -> Non
     assert "src/well_harness/demo_server.py" in package
     assert "src/well_harness/static/**" in package
     assert ".planning/**" in package
-    assert "Notion 404 remains an external control-plane blocker" in package
+    assert "Repo, GitHub, and local artifacts are the active control surfaces" in package
     assert "five-agent active team" in package
 
 

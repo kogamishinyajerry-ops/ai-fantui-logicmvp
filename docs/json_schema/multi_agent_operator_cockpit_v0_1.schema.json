@@ -138,8 +138,7 @@
         "project_status",
         "ultrawork_monitor",
         "queue_cursor",
-        "operator_boundary",
-        "notion_blocker_classification"
+        "operator_boundary"
       ],
       "properties": {
         "project_status": {
@@ -152,9 +151,6 @@
           "enum": ["pass", "fail"]
         },
         "operator_boundary": {
-          "enum": ["pass", "fail"]
-        },
-        "notion_blocker_classification": {
           "enum": ["pass", "fail"]
         }
       }
@@ -186,7 +182,7 @@
       "required": [
         "controller_truth_modified",
         "ui_layout_modified",
-        "notion_control_plane",
+        "control_plane_source",
         "pathspec_package",
         "excluded_paths"
       ],
@@ -197,8 +193,8 @@
         "ui_layout_modified": {
           "const": false
         },
-        "notion_control_plane": {
-          "const": "external_blocker"
+        "control_plane_source": {
+          "const": "repo_github_local_artifacts"
         },
         "pathspec_package": {
           "const": "docs/coordination/multi-agent-operator-cockpit.md"

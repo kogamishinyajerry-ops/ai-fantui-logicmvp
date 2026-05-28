@@ -120,18 +120,17 @@ def verify_multi_agent_pr_preflight(package_path: Path) -> dict[str, Any]:
                 mismatches.append(f"stage command includes excluded marker {marker}")
 
     blockers = payload.get("blockers", [])
-    if not any(
+    if any(
         isinstance(item, dict)
-        and item.get("blocker_id") == "notion-control-plane-404"
-        and item.get("status") == "external_blocker"
+        and "notion" in str(item.get("blocker_id", "")).lower()
         for item in blockers
     ):
-        mismatches.append("Notion 404 must remain an external blocker")
+        mismatches.append("external planning blockers must not be recorded as active blockers")
 
     pr_body = payload.get("pr_body", {})
     body = pr_body.get("body", "") if isinstance(pr_body, dict) else ""
     for marker in [
-        "notion-control-plane-404",
+        "Repo, GitHub, and local artifacts",
         "git add -f --",
         "make verify-multi-agent-packaging-consolidation",
         "make verify-multi-agent-pr-preflight",
@@ -157,7 +156,7 @@ def verify_multi_agent_pr_preflight(package_path: Path) -> dict[str, Any]:
             "multi-agent-cursor-baseline-v0-2",
             "ultrawork-monitor",
             "m23-packaging-consolidation",
-            "notion-control-plane-404",
+            "repo-github-local-artifacts",
             "git add -f --",
         ]:
             if marker not in html:

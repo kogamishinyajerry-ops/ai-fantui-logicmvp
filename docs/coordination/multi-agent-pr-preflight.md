@@ -5,13 +5,13 @@ Status: M24 read-only validation and PR body gate
 
 ## Purpose
 
-This package turns the M23 explicit pathspec boundary into a PR-ready preflight packet. It does not stage, commit, push, merge, self-approve, or write to Notion.
+This package turns the M23 explicit pathspec boundary into a PR-ready preflight packet. It does not stage, commit, push, merge, self-approve, or write to external planning systems.
 
 The packet answers three questions:
 
 1. Which validation commands must be run before staging?
 2. Which exact pathspec commands should be used after validation?
-3. Which PR body text preserves the Notion blocker and dirty-worktree boundary?
+3. Which PR body text preserves the repo/GitHub/local artifact boundary and dirty-worktree boundary?
 
 ## Local Entry
 
@@ -61,9 +61,9 @@ tools/run_gsd_validation_suite.py
 .planning/**
 ```
 
-## Notion Blocker
+## Control-Plane Boundary
 
-`notion-control-plane-404` remains an external control-plane blocker. This preflight package must not change Notion configuration or rewrite the blocker as a local code failure.
+Repo/GitHub/local artifacts are the active control surfaces for this preflight package. External planning systems are outside the blocking validation path.
 
 ## Verification
 
@@ -80,4 +80,4 @@ make multi-agent-pr-preflight
 make verify-multi-agent-pr-preflight
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent PR Preflight`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m23-packaging-consolidation`, `notion-control-plane-404`, and `git add -f --` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent PR Preflight`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m23-packaging-consolidation`, `repo-github-local-artifacts`, and `git add -f --` without desktop or mobile layout overflow.

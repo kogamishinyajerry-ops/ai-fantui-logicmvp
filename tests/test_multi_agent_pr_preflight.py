@@ -73,19 +73,13 @@ def test_multi_agent_pr_preflight_schema_validates_payload() -> None:
     ]
     assert any("git add -f --" in command for command in payload["stage_commands"])
     assert any("tests/test_multi_agent_pr_preflight.py" in command for command in payload["stage_commands"])
-    assert "notion-control-plane-404" in payload["pr_body"]["body"]
+    assert "Repo, GitHub, and local artifacts" in payload["pr_body"]["body"]
     assert "make verify-multi-agent-packaging-consolidation" in payload["pr_body"]["body"]
     assert "make verify-multi-agent-pr-preflight" in payload["pr_body"]["body"]
     assert "Makefile" in payload["pr_body"]["body"]
     assert "docs/coordination/multi-agent-pr-preflight.md" in payload["pr_body"]["body"]
     assert "src/well_harness/controller.py" in payload["excluded_paths"]
-    assert payload["blockers"] == [
-        {
-            "blocker_id": "notion-control-plane-404",
-            "status": "external_blocker",
-            "message": "Notion control-plane HTTP 404 remains outside this packaging slice.",
-        }
-    ]
+    assert payload["blockers"] == []
 
 
 def test_multi_agent_pr_preflight_html_exposes_validation_and_pr_body() -> None:
@@ -100,7 +94,7 @@ def test_multi_agent_pr_preflight_html_exposes_validation_and_pr_body() -> None:
     assert "ultrawork-monitor" in html
     assert "m23-packaging-consolidation" in html
     assert "m24-pr-preflight" in html
-    assert "notion-control-plane-404" in html
+    assert "repo-github-local-artifacts" in html
     assert "git add -f --" in html
     assert "Browser Geometry Gate" in html
 
@@ -172,7 +166,7 @@ def test_multi_agent_pr_preflight_is_wired_into_docs_and_makefile() -> None:
         assert marker in doc
     assert "19 validation commands" in doc
     assert "git add -f --" in doc
-    assert "notion-control-plane-404" in doc
+    assert "repo/GitHub/local artifact boundary" in doc
     assert "src/well_harness/controller.py" in doc
 
     assert "M24" in mvp_doc

@@ -166,7 +166,7 @@
     "pr_body": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "body", "notion_blocker_note"],
+      "required": ["title", "body", "control_plane_note"],
       "properties": {
         "title": {
           "type": "string",
@@ -176,7 +176,7 @@
           "type": "string",
           "minLength": 1
         },
-        "notion_blocker_note": {
+        "control_plane_note": {
           "type": "string",
           "minLength": 1
         }

@@ -18,7 +18,6 @@ EVIDENCE_ID = "multi-agent-validation-evidence-v0.1"
 JSON_NAME = "multi_agent_validation_evidence_v0_1.json"
 MARKDOWN_NAME = "multi_agent_validation_evidence_v0_1.md"
 HTML_NAME = "multi_agent_validation_evidence_v0_1.html"
-NOTION_BLOCKER_ID = "notion-control-plane-404"
 M25_PACKAGE_ID = "m25-validation-evidence"
 M25_PATHSPECS = [
     "Makefile",
@@ -190,7 +189,7 @@ def build_multi_agent_validation_evidence(
     pr_evidence_note = (
         f"{summary['passed_command_count']} validation commands passed; "
         f"{summary['failed_command_count']} failed. "
-        f"`{NOTION_BLOCKER_ID}` remains an external control-plane blocker."
+        "Repo, GitHub, and local artifacts are the active control surfaces."
     )
     return {
         "$schema": SCHEMA_ID,
@@ -256,8 +255,8 @@ def render_multi_agent_validation_evidence_markdown(payload: dict[str, Any]) -> 
         f"{stages}\n\n"
         "## Excluded Paths\n\n"
         f"{excluded}\n\n"
-        "## Notion Blocker\n\n"
-        f"- `{NOTION_BLOCKER_ID}` remains an external control-plane blocker.\n"
+        "## Control-Plane Boundary\n\n"
+        "- Repo, GitHub, and local artifacts are the active control surfaces.\n"
     )
 
 
@@ -376,8 +375,8 @@ def render_multi_agent_validation_evidence_html(payload: dict[str, Any]) -> str:
       {stage_commands}
     </section>
     <section>
-      <h2>External Blocker</h2>
-      <p><code>{NOTION_BLOCKER_ID}</code> remains an external control-plane blocker.</p>
+      <h2>Control-Plane Boundary</h2>
+      <p><code>repo-github-local-artifacts</code> is the active control boundary for this validation evidence.</p>
     </section>
   </main>
 </body>

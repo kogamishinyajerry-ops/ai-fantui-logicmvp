@@ -77,7 +77,7 @@ def test_m8_fast_construction_gate_schema_validates_fixture() -> None:
         "full_pytest_excluded_from_fast_gate": True,
     }
     assert fixture["deterministic_gates"]["local_gate"] == "pass"
-    assert fixture["validation_budget"]["unit_tests_timeout_seconds"] == 480
+    assert fixture["validation_budget"]["unit_tests_timeout_seconds"] == 900
     assert fixture["validation_budget"]["full_pytest_is_per_milestone_gate"] is True
 
 

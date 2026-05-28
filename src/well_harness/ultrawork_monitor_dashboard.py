@@ -16,7 +16,6 @@ DASHBOARD_ID = "ultrawork-monitor-dashboard-v0.1"
 JSON_NAME = "ultrawork_monitor_dashboard_v0_1.json"
 HTML_NAME = "ultrawork_monitor_dashboard_v0_1.html"
 PROJECT_SUBAGENT_DIR = ".claude/agents"
-NOTION_BLOCKER_ID = "notion-control-plane-404"
 
 
 def _utc_now() -> str:
@@ -98,16 +97,6 @@ def build_ultrawork_monitor_dashboard(
                 "message": "Controller truth or UI layout boundary gate is not passing.",
             }
         )
-    blockers.append(
-        {
-            "blocker_id": NOTION_BLOCKER_ID,
-            "status": "external_blocker",
-            "message": (
-                "Notion control-plane HTTP 404 remains outside this dashboard slice; "
-                "do not change Notion configuration from this monitor."
-            ),
-        }
-    )
     next_action = str(resume_policy.get("next_action", "stop_for_review"))
     return {
         "$schema": SCHEMA_ID,
@@ -192,7 +181,7 @@ def render_ultrawork_dashboard_html(dashboard: dict[str, Any]) -> str:
         f"{html.escape(str(item.get('message', '')))}</li>"
         for item in blockers
         if isinstance(item, dict)
-    )
+    ) or "<li>No active blockers.</li>"
     team_rows = "\n".join(
         "<tr>"
         f"<td>{html.escape(str(agent.get('name', '')))}</td>"

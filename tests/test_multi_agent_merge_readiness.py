@@ -72,13 +72,7 @@ def _validation_evidence() -> dict:
             "src/well_harness/static/**",
             ".planning/**",
         ],
-        "blockers": [
-            {
-                "blocker_id": "notion-control-plane-404",
-                "status": "external_blocker",
-                "message": "Notion control-plane HTTP 404 remains outside this packaging slice.",
-            }
-        ],
+        "blockers": [],
     }
 
 
@@ -140,7 +134,7 @@ def test_multi_agent_merge_readiness_schema_validates_payload(tmp_path: Path) ->
 
     assert _schema()["$id"] == SCHEMA_ID
     jsonschema.Draft202012Validator(_schema()).validate(payload)
-    assert payload["status"] == "ready_with_external_blocker"
+    assert payload["status"] == "ready_with_warnings"
     assert payload["milestone"]["id"] == "M29"
     assert payload["summary"]["passed_command_count"] == 19
     assert payload["summary"]["remote_checks_state"] == "no_checks_reported"
@@ -176,7 +170,7 @@ def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path)
     assert "PackagingPRReadinessAgent" in html
     assert "RUN-QUEUE-011" in html
     assert "19 validation commands passed" in html
-    assert "notion-control-plane-404" in html
+    assert "repo_github_local_artifacts" in html
     assert "MERGEABLE" in html
     assert "no_checks_reported" in html
 
@@ -247,7 +241,7 @@ def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status
         pr_number=269,
     )
 
-    assert payload["status"] == "ready_with_external_blocker"
+    assert payload["status"] == "ready_with_warnings"
     assert payload["artifact_paths"]["readiness_html"].endswith(
         "multi_agent_merge_readiness_v0_1.html"
     )
@@ -280,7 +274,7 @@ def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
     for pathspec in expected_pathspecs:
         assert pathspec in doc
 
-    assert "notion-control-plane-404" in doc
+    assert "repo/GitHub/local-artifact control boundary" in doc
     assert "19 validation commands" in doc
     assert "five-agent active team" in doc
     assert "M29" in mvp_doc
