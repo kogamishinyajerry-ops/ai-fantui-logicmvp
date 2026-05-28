@@ -433,6 +433,168 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-assembly-map {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.demo-reconstruction-assembly-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.demo-reconstruction-assembly-head h3 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 15px;
+}
+.demo-reconstruction-assembly-head p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.demo-reconstruction-assembly-head > strong {
+  min-width: 230px;
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f9fafb;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 6px 9px;
+  text-align: right;
+}
+.demo-reconstruction-assembly-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-reconstruction-assembly-item {
+  min-width: 0;
+}
+.demo-reconstruction-assembly-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 236px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-assembly-item[data-assembly-complete="true"] .demo-reconstruction-assembly-card {
+  border-color: #0f766e;
+  background: #ecfdf3;
+}
+.demo-reconstruction-assembly-row-head {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 7px;
+}
+.demo-reconstruction-assembly-row-head strong {
+  color: #2563eb;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-assembly-row-head span {
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-assembly-step-action {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #344054;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 3px 7px;
+}
+.demo-reconstruction-assembly-step-action:hover,
+.demo-reconstruction-assembly-step-action:focus-visible,
+.demo-reconstruction-assembly-chip:is(button):hover,
+.demo-reconstruction-assembly-chip:is(button):focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-assembly-step-action[aria-pressed="true"] {
+  border-color: #0f766e;
+  color: #0f766e;
+  font-weight: 700;
+}
+.demo-reconstruction-assembly-metrics,
+.demo-reconstruction-assembly-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.demo-reconstruction-assembly-metrics span,
+.demo-reconstruction-assembly-chip {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475467;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 2px 6px;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-assembly-chip:is(button) {
+  cursor: pointer;
+  text-align: left;
+}
+.demo-reconstruction-assembly-card p {
+  margin: 0;
+  color: #0f766e;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-assembly-groups {
+  display: grid;
+  gap: 7px;
+}
+.demo-reconstruction-assembly-group {
+  display: grid;
+  gap: 4px;
+}
+.demo-reconstruction-assembly-group > strong {
+  color: #111827;
+  font-size: 11px;
+}
+.demo-reconstruction-assembly-final {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-assembly-final span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-assembly-final strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .demo-reconstruction-circuit-ladder {
   display: grid;
   gap: 12px;
@@ -1454,6 +1616,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-trace-head,
   .demo-reconstruction-trace-grid,
   .demo-reconstruction-playback-head,
+  .demo-reconstruction-assembly-head,
   .demo-reconstruction-ladder-head,
   .demo-reconstruction-review-packet-head,
   .demo-reconstruction-custody-head,
@@ -1493,6 +1656,9 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-playback-head {
     display: grid;
   }
+  .demo-reconstruction-assembly-head {
+    display: grid;
+  }
   .demo-reconstruction-ladder-head {
     display: grid;
   }
@@ -1502,6 +1668,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-custody-head {
     display: grid;
   }
+  .demo-reconstruction-assembly-head > strong,
   .demo-reconstruction-ladder-head > strong,
   .demo-reconstruction-review-packet-head > strong,
   .demo-reconstruction-custody-head > strong {
@@ -1546,6 +1713,9 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-playback-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-assembly-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .demo-reconstruction-ladder-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1576,6 +1746,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-review-index-readback,
   .demo-reconstruction-keyboard-review,
   .demo-reconstruction-playback-summary,
+  .demo-reconstruction-assembly-final,
   .demo-reconstruction-provenance-summary,
   .demo-reconstruction-neighborhood-summary,
   .demo-reconstruction-neighborhood-grid,
@@ -1589,6 +1760,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-trace-card-list,
   .demo-reconstruction-review-index-list,
   .demo-reconstruction-playback-steps,
+  .demo-reconstruction-assembly-list,
   .demo-reconstruction-ladder-list,
   .demo-reconstruction-custody-list {
     grid-template-columns: 1fr;

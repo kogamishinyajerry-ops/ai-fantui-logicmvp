@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p9">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p9" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p10">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p10" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -77,6 +77,7 @@
       <button type="button" data-review-index-target="demo-reconstruction-docx-circuit-map" aria-pressed="true">DOCX 总览</button>
       <button type="button" data-review-index-target="demo-reconstruction-docx-trace-board" aria-pressed="false">逐句链路</button>
       <button type="button" data-review-index-target="demo-reconstruction-step-playback" aria-pressed="false">累计构建</button>
+      <button type="button" data-review-index-target="demo-reconstruction-assembly-map" aria-pressed="false">装配总览</button>
       <button type="button" data-review-index-target="demo-reconstruction-custody-matrix" aria-pressed="false">交付链路</button>
       <button type="button" data-review-index-target="demo-reconstruction-coverage-matrix" aria-pressed="false">对象覆盖</button>
       <button type="button" data-review-index-target="demo-reconstruction-console-frame" aria-pressed="false">演示舱</button>
@@ -151,6 +152,22 @@
       </div>
       <div id="demo-reconstruction-playback-step-list" class="demo-reconstruction-playback-steps" aria-label="逐句累计构建步骤">
         <button type="button" class="demo-reconstruction-playback-button" data-playback-step="loading">正在读取构建轨道</button>
+      </div>
+    </div>
+    <div id="demo-reconstruction-assembly-map" class="demo-reconstruction-assembly-map" data-assembly-map="docx-to-demo-circuit" aria-label="逐句生成 demo.html 电路装配总览">
+      <div class="demo-reconstruction-assembly-head">
+        <div>
+          <h3>逐句装配总览</h3>
+          <p>把每个工作过程片段新增的节点、连线、关键输出和最终 demo 电路闭合状态放在同一条装配清单里。</p>
+        </div>
+        <strong id="demo-reconstruction-assembly-summary">等待装配读回</strong>
+      </div>
+      <ol id="demo-reconstruction-assembly-list" class="demo-reconstruction-assembly-list">
+        <li>正在读取逐句装配清单</li>
+      </ol>
+      <div class="demo-reconstruction-assembly-final" aria-label="最终装配状态">
+        <span>最终电路</span>
+        <strong id="demo-reconstruction-assembly-final">等待完整电路</strong>
       </div>
     </div>
     <div id="demo-reconstruction-circuit-ladder" class="demo-reconstruction-circuit-ladder" data-circuit-ladder="p035-readback" aria-label="P035 逐句电路完成阶梯">

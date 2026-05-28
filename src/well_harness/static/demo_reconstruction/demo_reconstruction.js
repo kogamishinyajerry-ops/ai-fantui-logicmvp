@@ -60,6 +60,9 @@
   const playbackActiveStep = $("demo-reconstruction-playback-active-step");
   const playbackNodeCount = $("demo-reconstruction-playback-node-count");
   const playbackWireCount = $("demo-reconstruction-playback-wire-count");
+  const assemblySummary = $("demo-reconstruction-assembly-summary");
+  const assemblyList = $("demo-reconstruction-assembly-list");
+  const assemblyFinal = $("demo-reconstruction-assembly-final");
   const ladderSummary = $("demo-reconstruction-ladder-summary");
   const ladderList = $("demo-reconstruction-ladder-list");
   const provenanceObject = $("demo-reconstruction-provenance-object");
@@ -412,12 +415,20 @@
     });
   }
 
+  function setAssemblyButtonState(anchor) {
+    document.querySelectorAll("[data-assembly-step-button]").forEach((button) => {
+      const selected = button.dataset.assemblyStepButton === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
   function updateStepPlaybackSummary(contract) {
     if (!contract) return;
     setText(playbackActiveStep, contract.anchor);
     setText(playbackNodeCount, `${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`);
     setText(playbackWireCount, `${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`);
     setPlaybackButtonState(contract.anchor);
+    setAssemblyButtonState(contract.anchor);
   }
 
   function syncStepPlaybackToTrace(step) {
@@ -510,6 +521,158 @@
   function ladderMilestonesForStep(step) {
     const nodeIds = Array.isArray(step && step.node_ids) ? step.node_ids : [];
     return nodeIds.filter(isLadderMilestoneNode).map(ladderMilestoneLabel);
+  }
+
+  function assemblyOutputLabelForStep(step, contract) {
+    const nodeIds = Array.isArray(step && step.node_ids) ? step.node_ids : [];
+    const milestones = ladderMilestonesForStep(step);
+    if (
+      contract.node_ids.length === EXPECTED_NODE_COUNT
+      && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+    ) {
+      return "完整 demo 电路闭合 · THR_LOCK 输出可读";
+    }
+    if (
+      nodeIds.some((value) => ["eec_deploy", "pls_power", "pdu_motor"].includes(value))
+      || milestones.some((value) => value.includes("PDU") || value.includes("PLS") || value.includes("EEC"))
+    ) {
+      return "展开执行链路进入 EEC / PLS / PDU";
+    }
+    if (
+      nodeIds.includes("etrac_540v")
+      || milestones.some((value) => value.includes("ETRAC"))
+    ) {
+      return "540VDC / ETRAC 供电链路进入电路";
+    }
+    if (
+      nodeIds.includes("tls115")
+      || nodeIds.includes("tls_unlocked")
+      || milestones.some((value) => value.includes("TLS"))
+    ) {
+      return "TLS 解锁前级进入电路";
+    }
+    return "前置输入链路进入电路";
+  }
+
+  function appendAssemblyChips(container, label, values, kind = "") {
+    const group = document.createElement("div");
+    group.className = "demo-reconstruction-assembly-group";
+    const title = document.createElement("strong");
+    title.textContent = label;
+    const chips = document.createElement("div");
+    chips.className = "demo-reconstruction-assembly-chips";
+    const list = Array.isArray(values) ? values : [];
+    if (!list.length) {
+      const empty = document.createElement("span");
+      empty.className = "demo-reconstruction-assembly-chip";
+      empty.textContent = "无新增";
+      chips.appendChild(empty);
+    } else {
+      list.forEach((value) => {
+        const chip = kind ? document.createElement("button") : document.createElement("span");
+        chip.className = "demo-reconstruction-assembly-chip";
+        chip.textContent = value;
+        if (kind) {
+          chip.type = "button";
+          chip.dataset.assemblyFocusKind = kind;
+          chip.dataset.assemblyFocusId = value;
+          chip.addEventListener("click", (event) => {
+            event.stopPropagation();
+            applyEmbeddedTraceFocus(kind, value);
+          });
+        }
+        chips.appendChild(chip);
+      });
+    }
+    group.append(title, chips);
+    container.appendChild(group);
+  }
+
+  function renderAssemblyMap(steps) {
+    if (!assemblyList) return;
+    assemblyList.innerHTML = "";
+    if (!Array.isArray(steps) || steps.length === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "逐句装配暂无数据";
+      assemblyList.appendChild(empty);
+      setText(assemblySummary, "0/5 句 · 0/20 节点 · 0/23 连线");
+      setText(assemblyFinal, "等待完整电路");
+      return;
+    }
+
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const previous = index > 0 ? cumulativeTraceContract(index - 1) : {node_ids: [], wire_ids: []};
+      const previousNodes = new Set(previous.node_ids);
+      const previousWires = new Set(previous.wire_ids);
+      const newNodes = contract.node_ids.filter((nodeId) => !previousNodes.has(nodeId));
+      const newWires = contract.wire_ids.filter((wireId) => !previousWires.has(wireId));
+      const milestones = ladderMilestonesForStep(step);
+
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-assembly-item";
+      li.dataset.assemblyStep = step.anchor || "";
+      li.dataset.assemblyComplete = contract.node_ids.length === EXPECTED_NODE_COUNT
+        && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+        ? "true"
+        : "false";
+
+      const card = document.createElement("div");
+      card.className = "demo-reconstruction-assembly-card";
+
+      const header = document.createElement("div");
+      header.className = "demo-reconstruction-assembly-row-head";
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "demo-reconstruction-assembly-step-action";
+      action.dataset.assemblyStepButton = step.anchor || "";
+      action.setAttribute("aria-pressed", "false");
+      action.textContent = "回放";
+      action.addEventListener("click", () => applyStepPlayback(index));
+      header.append(anchor, title, action);
+
+      const metrics = document.createElement("div");
+      metrics.className = "demo-reconstruction-assembly-metrics";
+      [
+        `累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`,
+        `累计 ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+        `新增 ${newNodes.length} 节点`,
+        `新增 ${newWires.length} 连线`,
+      ].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        metrics.appendChild(chip);
+      });
+
+      const output = document.createElement("p");
+      output.textContent = assemblyOutputLabelForStep(step, contract);
+
+      const groups = document.createElement("div");
+      groups.className = "demo-reconstruction-assembly-groups";
+      appendAssemblyChips(groups, "新增节点", newNodes, "node");
+      appendAssemblyChips(groups, "新增连线", newWires, "wire");
+      appendAssemblyChips(groups, "关键输出", milestones);
+
+      card.append(header, metrics, output, groups);
+      li.appendChild(card);
+      assemblyList.appendChild(li);
+    });
+
+    const finalContract = cumulativeTraceContract(steps.length - 1);
+    const finalStep = steps[steps.length - 1] || {};
+    setText(
+      assemblySummary,
+      `${steps.length}/5 句 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    setText(
+      assemblyFinal,
+      `${finalStep.anchor || "P035-S05"} · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${assemblyOutputLabelForStep(finalStep, finalContract)}`,
+    );
+    setAssemblyButtonState(currentTraceStep && currentTraceStep.anchor ? currentTraceStep.anchor : steps[0].anchor);
   }
 
   function renderCircuitCompletionLadder(steps) {
@@ -1490,6 +1653,7 @@
     });
     setSelectedTrace(steps[0], {writeHash: false});
     renderStepPlaybackRail(steps);
+    renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
     renderCustodyMatrix(steps);
   }
