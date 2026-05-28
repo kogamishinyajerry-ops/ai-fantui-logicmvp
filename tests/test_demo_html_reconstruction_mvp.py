@@ -185,6 +185,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "circuitCoverageKind" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
+    assert "sourceFocusKind" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
@@ -325,6 +326,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "4/43" in payload["coverage_filter_review"]["statusText"]
     assert payload["coverage_filter_review"]["focusedWireCount"] == 1
     assert "wire_logic4_thr_lock" in payload["coverage_filter_review"]["focusStatusText"]
+    assert payload["source_chip_focus_review"]["sourceNodeFocusChipCount"] >= 20
+    assert payload["source_chip_focus_review"]["sourceWireFocusChipCount"] >= 23
+    assert payload["source_chip_focus_review"]["focusedNodeCount"] == 0
+    assert payload["source_chip_focus_review"]["focusedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["source_chip_focus_review"]["statusText"]
     assert payload["responsive_geometry"]["desktop"]["noHorizontalOverflow"] is True
     assert payload["responsive_geometry"]["mobile"]["noHorizontalOverflow"] is True
     assert payload["embedded_palette"]["html_class"] is True
@@ -346,6 +352,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "embedded_trace_chip_focus": "pass",
         "coverage_matrix_focus": "pass",
         "coverage_matrix_filter": "pass",
+        "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
         "node_wire_pixels": "pass",
