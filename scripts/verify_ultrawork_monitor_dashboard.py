@@ -90,6 +90,8 @@ def _required_browser_text(payload: dict[str, Any]) -> list[str]:
             for key in ("blocker_id", "status", "message"):
                 value = str(blocker.get(key, ""))
                 if value:
+                    if key == "status":
+                        value = value.replace("_", " ")
                     required.append(value)
     else:
         required.append("No active blockers")

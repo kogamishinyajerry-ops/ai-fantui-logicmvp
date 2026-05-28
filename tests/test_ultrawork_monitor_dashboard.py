@@ -212,6 +212,23 @@ def test_ultrawork_browser_required_text_is_derived_from_payload(tmp_path: Path)
     assert "five_agent_context_cap" in idle_required
     assert "No active blockers" in idle_required
 
+    blocked_dashboard = {
+        **idle_dashboard,
+        "blockers": [
+            {
+                "blocker_id": "boundary-gate",
+                "status": "local_blocker",
+                "message": "Controller truth or UI layout boundary gate is not passing.",
+            }
+        ],
+    }
+    blocked_required = ultrawork_verifier._required_browser_text(blocked_dashboard)
+
+    assert "No active blockers" not in blocked_required
+    assert "local blocker" in blocked_required
+    assert "local_blocker" not in blocked_required
+    assert "boundary-gate" in blocked_required
+
 
 def test_ultrawork_browser_gate_reports_chromium_launch_failure(monkeypatch, tmp_path: Path) -> None:
     class BrokenPlaywright:
