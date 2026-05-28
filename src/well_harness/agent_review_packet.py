@@ -531,6 +531,10 @@ def validate_candidate_review_packet_export(packet: dict[str, Any]) -> None:
         raise CandidateReviewPacketError(
             "candidate review packet export boundary must match embedded review_packet"
         )
+    if packet.get("human_review_required") is not review_packet.get("human_review_required"):
+        raise CandidateReviewPacketError(
+            "candidate review packet export human_review_required must match embedded review_packet"
+        )
     ref = packet.get("review_packet_ref", {})
     if ref.get("schema") != CANDIDATE_REVIEW_PACKET_SCHEMA_ID:
         raise CandidateReviewPacketError("candidate review packet export ref schema mismatch")

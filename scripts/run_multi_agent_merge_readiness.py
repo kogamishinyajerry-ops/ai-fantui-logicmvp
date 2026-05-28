@@ -129,6 +129,7 @@ def _load_pr_status(pr_status_json: Path | None, *, pr_number: int) -> dict[str,
 
 
 def _changed_paths_from_pr_status(pr_status: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
     base_ref = pr_status.get("baseRefName")
     if isinstance(base_ref, str) and base_ref:
         for candidate in (f"origin/{base_ref}", base_ref):
@@ -142,18 +143,54 @@ def _changed_paths_from_pr_status(pr_status: dict[str, Any]) -> list[str]:
                 timeout=120,
             )
             if result.returncode == 0:
-                return [line for line in result.stdout.splitlines() if line]
+                paths.extend(line for line in result.stdout.splitlines() if line)
+                break
 
     files = pr_status.get("files", [])
-    if isinstance(files, list):
-        paths = [
+    if not paths and isinstance(files, list):
+        paths.extend(
             str(item.get("path"))
             for item in files
             if isinstance(item, dict) and item.get("path")
-        ]
-        if paths:
-            return paths
-    return []
+        )
+
+    paths.extend(_changed_paths_from_worktree())
+    return _dedupe_paths(paths)
+
+
+def _changed_paths_from_worktree() -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1"],
+        cwd=PROJECT_ROOT,
+        env=_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    if result.returncode != 0:
+        return []
+    paths: list[str] = []
+    for line in result.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        path = line[3:]
+        if " -> " in path:
+            path = path.rsplit(" -> ", 1)[1]
+        path = path.strip('"')
+        if path:
+            paths.append(path)
+    return paths
+
+
+def _dedupe_paths(paths: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for path in paths:
+        if path not in seen:
+            unique.append(path)
+            seen.add(path)
+    return unique
 
 
 def _ensure_source_html() -> None:

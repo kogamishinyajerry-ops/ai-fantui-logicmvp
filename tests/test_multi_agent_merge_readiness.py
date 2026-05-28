@@ -332,6 +332,39 @@ def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status
     assert Path(payload["artifact_paths"]["readiness_json"]).exists()
 
 
+def test_multi_agent_merge_readiness_changed_paths_include_dirty_worktree(
+    monkeypatch,
+) -> None:
+    module = _load_runner_module()
+
+    class Result:
+        def __init__(self, returncode: int, stdout: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, **_kwargs):
+        if command[:3] == ["git", "diff", "--name-only"]:
+            return Result(0, "docs/coordination/multi-agent-merge-readiness.md\n")
+        if command[:3] == ["git", "status", "--porcelain=v1"]:
+            return Result(
+                0,
+                " M src/well_harness/demo_server.py\n"
+                "A  tests/test_multi_agent_merge_readiness.py\n"
+                "?? artifacts/local-screenshot.png\n",
+            )
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    assert module._changed_paths_from_pr_status({"baseRefName": "main"}) == [
+        "docs/coordination/multi-agent-merge-readiness.md",
+        "src/well_harness/demo_server.py",
+        "tests/test_multi_agent_merge_readiness.py",
+        "artifacts/local-screenshot.png",
+    ]
+
+
 def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
     makefile = MAKEFILE_PATH.read_text(encoding="utf-8")
     pyproject = PYPROJECT_PATH.read_text(encoding="utf-8")
