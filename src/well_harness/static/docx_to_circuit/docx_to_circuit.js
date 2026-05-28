@@ -104,6 +104,8 @@
   const wireCount = $("docx-circuit-wire-count");
   const sequenceCount = $("docx-circuit-sequence-count");
   const sequenceList = $("docx-circuit-sequence-list");
+  const sourceIndexCount = $("docx-circuit-source-index-count");
+  const sourceIndexList = $("docx-circuit-source-index-list");
   const activeAnchor = $("docx-circuit-active-anchor");
   const reviewPanel = $("docx-circuit-review-panel");
   const prevStepButton = $("docx-circuit-prev-step");
@@ -155,6 +157,12 @@
     return Array.isArray(values) ? values.filter(Boolean) : [];
   }
 
+  function sourceEntries() {
+    return currentPayload && Array.isArray(currentPayload.source_entries)
+      ? currentPayload.source_entries
+      : [];
+  }
+
   function sequenceSteps() {
     return currentPayload && Array.isArray(currentPayload.sequence_steps)
       ? currentPayload.sequence_steps
@@ -182,6 +190,12 @@
   function contractIds(payload, key, fallback) {
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
     return listFrom(contract[key]).length > 0 ? listFrom(contract[key]) : fallback;
+  }
+
+  function compactText(text, limit) {
+    const value = String(text || "").replace(/\s+/g, " ").trim();
+    if (value.length <= limit) return value;
+    return `${value.slice(0, limit - 1)}…`;
   }
 
   function makeSvgElement(name, attributes) {
@@ -230,25 +244,19 @@
   }
 
   function matchingSteps(kind, id) {
-    const steps = currentPayload && Array.isArray(currentPayload.sequence_steps)
-      ? currentPayload.sequence_steps
-      : [];
+    const steps = sequenceSteps();
     const key = kind === "wire" ? "wire_ids" : "node_ids";
     return steps.filter((step) => listFrom(step[key]).includes(id));
   }
 
   function matchingSourceEntries(kind, id) {
-    const entries = currentPayload && Array.isArray(currentPayload.source_entries)
-      ? currentPayload.source_entries
-      : [];
+    const entries = sourceEntries();
     const nodeIds = relatedNodeIds(kind, id);
     return entries.filter((entry) => listFrom(entry.node_ids).some((nodeId) => nodeIds.includes(nodeId)));
   }
 
   function sourceEntriesForNodes(nodeIds) {
-    const entries = currentPayload && Array.isArray(currentPayload.source_entries)
-      ? currentPayload.source_entries
-      : [];
+    const entries = sourceEntries();
     const ids = new Set(listFrom(nodeIds));
     return entries.filter((entry) => listFrom(entry.node_ids).some((nodeId) => ids.has(nodeId)));
   }
@@ -576,6 +584,35 @@
     return selectedElement;
   }
 
+  function stepForSourceEntry(entry) {
+    const entryNodes = new Set(listFrom(entry && entry.node_ids));
+    return sequenceSteps().find((step) => listFrom(step.node_ids).some((nodeId) => entryNodes.has(nodeId))) || null;
+  }
+
+  function primaryElementForSourceEntry(entry, step) {
+    const nodes = listFrom(entry && entry.node_ids);
+    const knownNode = nodes.find((nodeId) => circuitNodeById(nodeId));
+    if (knownNode) return {kind: "node", id: knownNode};
+    return primaryElementForStep(step);
+  }
+
+  function setSourceIndexState(anchor) {
+    if (!sourceIndexList) return;
+    sourceIndexList.querySelectorAll("[data-source-entry-anchor]").forEach((item) => {
+      item.dataset.active = item.dataset.sourceEntryAnchor === anchor ? "true" : "false";
+    });
+  }
+
+  function activateSourceEntry(anchor) {
+    const entry = sourceEntries().find((item) => item.anchor === anchor);
+    if (!entry) return;
+    const step = stepForSourceEntry(entry);
+    if (step) activateStep(step.anchor, {sourceEntryAnchor: anchor});
+    const target = primaryElementForSourceEntry(entry, step);
+    selectCircuitElement(target.kind, target.id);
+    setSourceIndexState(anchor);
+  }
+
   function activateRelativeStep(delta) {
     const steps = sequenceSteps();
     if (steps.length === 0) return;
@@ -689,6 +726,7 @@
     }
     applyDemoScenario(step);
     setReviewNavigationState(activeIndex, steps);
+    if (!options || !options.sourceEntryAnchor) setSourceIndexState("");
     if (options && options.selectStepElement) {
       const primary = primaryElementForStep(step);
       selectCircuitElement(primary.kind, primary.id);
@@ -729,6 +767,36 @@
     });
   }
 
+  function renderSourceIndex(entries) {
+    if (!sourceIndexList) return;
+    sourceIndexList.innerHTML = "";
+    const mappedEntries = listFrom(entries).filter((entry) => listFrom(entry.node_ids).length > 0);
+    setText(sourceIndexCount, mappedEntries.length > 0 ? `${mappedEntries.length} 条` : "无条目");
+    if (mappedEntries.length === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "暂无可关联条目。";
+      sourceIndexList.appendChild(empty);
+      return;
+    }
+    mappedEntries.forEach((entry) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "docx-circuit-source-index-button";
+      button.dataset.sourceEntryAnchor = entry.anchor || "";
+      button.dataset.active = "false";
+      const label = document.createElement("strong");
+      label.textContent = `${entry.anchor || "DOCX"} · ${entry.role || "源文条目"}`;
+      const summary = document.createElement("span");
+      summary.textContent = compactText(entry.text, 58);
+      button.appendChild(label);
+      button.appendChild(summary);
+      button.addEventListener("click", () => activateSourceEntry(entry.anchor));
+      item.appendChild(button);
+      sourceIndexList.appendChild(item);
+    });
+  }
+
   function renderPayload(payload) {
     const source = payload && payload.source ? payload.source : {};
     const coverage = payload && payload.coverage ? payload.coverage : {};
@@ -743,6 +811,7 @@
     setText(wireCount, `${coverage.covered_wire_count || 0}/${contract.wire_count || EXPECTED_WIRE_COUNT}`);
     setText(sequenceCount, `P035 · ${coverage.sequence_step_count || 0} 步`);
     renderSequence(payload && payload.sequence_steps);
+    renderSourceIndex(payload && payload.source_entries);
     renderSubcircuit();
     renderContractGrid(nodeGrid, contractIds(payload, "node_ids", Object.keys(NODE_LABELS).sort()), "node");
     renderContractGrid(wireGrid, contractIds(payload, "wire_ids", []), "wire");
