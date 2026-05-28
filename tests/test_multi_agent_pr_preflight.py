@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_pr_preflight import (
     SCHEMA_ID,
@@ -98,6 +99,8 @@ def test_multi_agent_pr_preflight_html_exposes_validation_and_pr_body() -> None:
     assert "repo-github-local-artifacts" in html
     assert "git add -f --" in html
     assert "Browser Geometry Gate" in html
+    assert 'class="validation-command"' in html
+    assert 'class="stage-command"' in html
 
 
 def test_multi_agent_pr_preflight_runner_and_checker_round_trip(tmp_path: Path) -> None:
@@ -132,6 +135,7 @@ def test_multi_agent_pr_preflight_runner_and_checker_round_trip(tmp_path: Path) 
             payload["artifact_paths"]["preflight_json"],
             "--format",
             "json",
+            "--skip-browser",
         ],
         cwd=PROJECT_ROOT,
         env=_script_env(),
@@ -142,14 +146,70 @@ def test_multi_agent_pr_preflight_runner_and_checker_round_trip(tmp_path: Path) 
     )
     assert verify_result.returncode == 0, verify_result.stderr
     verify_payload = json.loads(verify_result.stdout)
-    assert verify_payload == {
-        "html_exists": True,
-        "markdown_exists": True,
-        "mismatches": [],
-        "package_path": payload["artifact_paths"]["preflight_json"],
-        "schema_valid": True,
-        "status": "pass",
-    }
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["package_path"] == payload["artifact_paths"]["preflight_json"]
+    assert verify_payload["schema_valid"] is True
+    assert verify_payload["html_exists"] is True
+    assert verify_payload["markdown_exists"] is True
+    assert verify_payload["browser_valid"] is False
+    assert verify_payload["browser"]["status"] == "skipped"
+    assert verify_payload["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_multi_agent_pr_preflight_browser_gate_captures_geometry(tmp_path: Path) -> None:
+    run_result = subprocess.run(
+        [
+            sys.executable,
+            str(RUN_SCRIPT),
+            "--artifact-dir",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert run_result.returncode == 0, run_result.stderr
+    payload = json.loads(run_result.stdout)
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            payload["artifact_paths"]["preflight_json"],
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["packageCardCount"] == len(EXPECTED_ORDER)
+    assert browser["states"]["mobile"]["packageCardCount"] == len(EXPECTED_ORDER)
+    assert browser["states"]["desktop"]["validationCommandCount"] == payload["summary"]["validation_command_count"]
+    assert browser["states"]["mobile"]["stageCommandCount"] == payload["summary"]["stage_command_count"]
 
 
 def test_multi_agent_pr_preflight_is_wired_into_docs_and_makefile() -> None:
@@ -162,6 +222,7 @@ def test_multi_agent_pr_preflight_is_wired_into_docs_and_makefile() -> None:
     assert "verify-multi-agent-pr-preflight" in makefile
     assert "scripts/run_multi_agent_pr_preflight.py --format json" in makefile
     assert "scripts/verify_multi_agent_pr_preflight.py --format json" in makefile
+    assert "--skip-browser" in Path(__file__).read_text(encoding="utf-8")
 
     for marker in EXPECTED_ORDER:
         assert marker in doc
@@ -169,6 +230,7 @@ def test_multi_agent_pr_preflight_is_wired_into_docs_and_makefile() -> None:
     assert "git add -f --" in doc
     assert "repo/GitHub/local artifact boundary" in doc
     assert "src/well_harness/controller.py" in doc
+    assert "desktop/mobile screenshots" in doc
 
     assert "M24" in mvp_doc
     assert "make multi-agent-pr-preflight" in mvp_doc
