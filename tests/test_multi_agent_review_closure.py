@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_review_closure import (
     SCHEMA_ID,
@@ -207,9 +208,58 @@ def test_multi_agent_review_closure_html_exposes_owner_handoff() -> None:
     assert "repo_github_local_artifacts_only" in html
     assert "project_owner_acceptance_or_merge_when_authorized" in html
     assert "prior_codex_issue_covered_by_latest_clean_review" in html
+    assert "five_agent_context_cap" in html
+    assert "PackagingPRReadinessAgent" in html
+    assert 'class="gate-row"' in html
+    assert 'class="agent-row"' in html
+    assert 'class="thread-row"' in html
+    assert 'class="pathspec-item"' in html
 
 
 def test_multi_agent_review_closure_writer_and_checker_round_trip(tmp_path: Path) -> None:
+    payload = build_multi_agent_review_closure(
+        pr_status=_pr_status(),
+        review_threads=_threads(),
+        generated_at="2026-05-28T08:00:00Z",
+    )
+    written = write_multi_agent_review_closure_artifacts(
+        payload,
+        artifact_dir=tmp_path / "closure",
+    )
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            written["artifact_paths"]["closure_json"],
+            "--format",
+            "json",
+            "--skip-browser",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["package_path"] == written["artifact_paths"]["closure_json"]
+    assert verify_payload["schema_valid"] is True
+    assert verify_payload["html_exists"] is True
+    assert verify_payload["markdown_exists"] is True
+    assert verify_payload["browser_valid"] is False
+    assert verify_payload["browser"]["status"] == "skipped"
+    assert verify_payload["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_multi_agent_review_closure_browser_gate_captures_geometry(
+    tmp_path: Path,
+) -> None:
     payload = build_multi_agent_review_closure(
         pr_status=_pr_status(),
         review_threads=_threads(),
@@ -236,16 +286,25 @@ def test_multi_agent_review_closure_writer_and_checker_round_trip(tmp_path: Path
         check=False,
         timeout=120,
     )
+
     assert verify_result.returncode == 0, verify_result.stderr
     verify_payload = json.loads(verify_result.stdout)
-    assert verify_payload == {
-        "html_exists": True,
-        "markdown_exists": True,
-        "mismatches": [],
-        "package_path": written["artifact_paths"]["closure_json"],
-        "schema_valid": True,
-        "status": "pass",
-    }
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["gateRowCount"] == len(payload["gates"])
+    assert browser["states"]["mobile"]["agentRowCount"] == payload["agent_team"]["team_size"]
+    assert browser["states"]["desktop"]["threadRowCount"] == len(payload["review_threads"])
+    assert browser["states"]["mobile"]["pathspecItemCount"] == len(
+        payload["pathspec_package"]["pathspecs"],
+    )
 
 
 def test_multi_agent_review_closure_runner_uses_supplied_fixtures(tmp_path: Path) -> None:
@@ -274,3 +333,5 @@ def test_multi_agent_review_closure_makefile_and_docs_are_wired() -> None:
     assert "verify-multi-agent-review-closure" in makefile
     assert "M30" in doc
     assert "repo_github_local_artifacts_only" in doc
+    assert "desktop/mobile" in doc
+    assert "screenshots" in doc

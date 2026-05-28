@@ -44,6 +44,17 @@ Verify:
 make verify-multi-agent-review-closure
 ```
 
+The verifier opens the generated closure HTML in desktop and mobile browser
+viewports, captures screenshots, and fails on missing closure labels or
+page-level horizontal overflow. Unit tests can disable this browser path with
+`--skip-browser`; the Makefile gate keeps it enabled.
+
 The package is intentionally read-only. If GitHub still displays unresolved
 threads after a clean latest-head Codex result, the packet records them as
 classification evidence instead of resolving them from automation.
+
+Browser gate: the generated HTML must show `Multi-Agent Review Closure`,
+`five_agent_context_cap`, `PackagingPRReadinessAgent`,
+`repo_github_local_artifacts_only`, and
+`project_owner_acceptance_or_merge_when_authorized` with desktop/mobile
+screenshots and no horizontal layout overflow.
