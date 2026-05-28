@@ -101,4 +101,4 @@ make ultrawork-monitor-dashboard
 make verify-ultrawork-monitor-dashboard
 ```
 
-Browser gate: open `/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html` and verify the page shows `UltraWork Monitor`, `five_agent_context_cap`, `RUN-QUEUE-011`, `LogicIRRepairAgent`, `PackagingPRReadinessAgent`, and `No active blockers`.
+Browser gate: `make verify-ultrawork-monitor-dashboard` opens `/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html`, captures desktop/mobile screenshots under `screenshots/`, and verifies the page shows `UltraWork Monitor`, `five_agent_context_cap`, `RUN-QUEUE-011`, `LogicIRRepairAgent`, `PackagingPRReadinessAgent`, and `No active blockers` without page-level horizontal overflow.

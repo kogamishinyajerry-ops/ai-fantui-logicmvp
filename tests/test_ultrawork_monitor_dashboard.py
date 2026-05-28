@@ -176,7 +176,22 @@ def test_ultrawork_dashboard_runner_and_checker_round_trip(tmp_path: Path) -> No
     assert verify_payload["status"] == "pass"
     assert verify_payload["schema_valid"] is True
     assert verify_payload["html_exists"] is True
+    assert verify_payload["browser_valid"] is True
     assert verify_payload["mismatches"] == []
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["agentRowCount"] == 5
+    assert browser["states"]["mobile"]["agentRowCount"] == 5
+    assert any(
+        item["hasInternalOverflow"]
+        for item in browser["states"]["mobile"]["scrollContainers"]
+    )
 
 
 def test_ultrawork_monitor_local_entry_and_pathspec_package_are_bounded() -> None:
@@ -189,6 +204,9 @@ def test_ultrawork_monitor_local_entry_and_pathspec_package_are_bounded() -> Non
     assert "scripts/run_ultrawork_monitor_dashboard.py --resume-mode ready-to-resume" in makefile
     assert "scripts/verify_ultrawork_monitor_dashboard.py --format json" in makefile
     assert "ultrawork_monitor_dashboard_v0_1.html" in makefile
+    verifier = VERIFY_SCRIPT.read_text(encoding="utf-8")
+    assert "browser_valid" in verifier
+    assert "noHorizontalOverflow" in verifier
 
     expected_pathspecs = [
         "Makefile",
