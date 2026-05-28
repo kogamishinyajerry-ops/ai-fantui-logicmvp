@@ -62,6 +62,12 @@
   const provenanceStepCount = $("demo-reconstruction-provenance-step-count");
   const provenanceSourceList = $("demo-reconstruction-provenance-source-list");
   const provenanceStepList = $("demo-reconstruction-provenance-step-list");
+  const neighborhoodObject = $("demo-reconstruction-neighborhood-object");
+  const neighborhoodInCount = $("demo-reconstruction-neighborhood-in-count");
+  const neighborhoodOutCount = $("demo-reconstruction-neighborhood-out-count");
+  const neighborhoodIncoming = $("demo-reconstruction-neighborhood-incoming");
+  const neighborhoodOutgoing = $("demo-reconstruction-neighborhood-outgoing");
+  const neighborhoodAdjacent = $("demo-reconstruction-neighborhood-adjacent");
   const reviewPacketReadiness = $("demo-reconstruction-review-packet-readiness");
   const reviewPacketSource = $("demo-reconstruction-review-packet-source");
   const reviewPacketContract = $("demo-reconstruction-review-packet-contract");
@@ -749,6 +755,147 @@
     return {sourceMatches, stepMatches};
   }
 
+  function nodeDisplayLabel(nodeId) {
+    return nodeLabelMap.get(nodeId) || nodeId;
+  }
+
+  function wireDisplayLabel(wireId) {
+    const endpoints = wireEndpointsForId(wireId);
+    if (!endpoints.length) return wireId;
+    return `${wireId} · ${nodeDisplayLabel(endpoints[0])} -> ${nodeDisplayLabel(endpoints[1])}`;
+  }
+
+  function wireRecordsForNode(nodeId, direction) {
+    const records = [];
+    wireEndpointMap.forEach((endpoints, wireId) => {
+      const [source, target] = endpoints;
+      const matches = direction === "incoming" ? target === nodeId : source === nodeId;
+      if (!matches) return;
+      const peer = direction === "incoming" ? source : target;
+      records.push({
+        kind: "wire",
+        id: wireId,
+        label: wireDisplayLabel(wireId),
+        meta: direction === "incoming" ? `来自 ${nodeDisplayLabel(peer)}` : `指向 ${nodeDisplayLabel(peer)}`,
+      });
+    });
+    return records;
+  }
+
+  function adjacentNodeRecordsForNode(nodeId) {
+    const seen = new Set();
+    const records = [];
+    wireEndpointMap.forEach((endpoints) => {
+      const [source, target] = endpoints;
+      let peer = "";
+      if (source === nodeId) peer = target;
+      if (target === nodeId) peer = source;
+      if (!peer || seen.has(peer)) return;
+      seen.add(peer);
+      records.push({
+        kind: "node",
+        id: peer,
+        label: nodeDisplayLabel(peer),
+        meta: peer,
+      });
+    });
+    return records;
+  }
+
+  function siblingWireRecordsForWire(wireId) {
+    const endpoints = wireEndpointsForId(wireId);
+    if (!endpoints.length) return [];
+    const [source, target] = endpoints;
+    const records = [];
+    wireEndpointMap.forEach((candidateEndpoints, candidateWireId) => {
+      if (candidateWireId === wireId) return;
+      const sharesEndpoint = candidateEndpoints.includes(source) || candidateEndpoints.includes(target);
+      if (!sharesEndpoint) return;
+      records.push({
+        kind: "wire",
+        id: candidateWireId,
+        label: wireDisplayLabel(candidateWireId),
+        meta: "共享端点",
+      });
+    });
+    return records;
+  }
+
+  function signalNeighborhoodRecords(kind, id) {
+    if (kind === "node") {
+      const incoming = wireRecordsForNode(id, "incoming");
+      const outgoing = wireRecordsForNode(id, "outgoing");
+      return {
+        incoming,
+        outgoing,
+        adjacent: adjacentNodeRecordsForNode(id),
+      };
+    }
+    if (kind === "wire") {
+      const endpoints = wireEndpointsForId(id);
+      const source = endpoints[0] || "";
+      const target = endpoints[1] || "";
+      return {
+        incoming: source
+          ? [{kind: "node", id: source, label: nodeDisplayLabel(source), meta: "连线起点"}]
+          : [],
+        outgoing: target
+          ? [{kind: "node", id: target, label: nodeDisplayLabel(target), meta: "连线终点"}]
+          : [],
+        adjacent: siblingWireRecordsForWire(id),
+      };
+    }
+    return {incoming: [], outgoing: [], adjacent: []};
+  }
+
+  function renderNeighborhoodList(list, records, emptyText) {
+    if (!list) return;
+    list.innerHTML = "";
+    if (!records.length) {
+      const empty = document.createElement("li");
+      empty.className = "demo-reconstruction-neighborhood-item";
+      empty.textContent = emptyText;
+      list.appendChild(empty);
+      return;
+    }
+    records.forEach((record) => {
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-neighborhood-item";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.neighborhoodFocusKind = record.kind;
+      button.dataset.neighborhoodFocusId = record.id;
+      const label = document.createElement("strong");
+      label.textContent = record.label;
+      const meta = document.createElement("span");
+      meta.textContent = record.meta || record.id;
+      button.append(label, meta);
+      button.addEventListener("click", () => applyEmbeddedTraceFocus(record.kind, record.id));
+      li.appendChild(button);
+      list.appendChild(li);
+    });
+  }
+
+  function renderSignalNeighborhood(kind, id) {
+    if (!neighborhoodObject) return;
+    if (!kind || !id) {
+      setText(neighborhoodObject, "等待对象");
+      setText(neighborhoodInCount, "0 上游");
+      setText(neighborhoodOutCount, "0 下游");
+      renderNeighborhoodList(neighborhoodIncoming, [], "聚焦对象后显示上游。");
+      renderNeighborhoodList(neighborhoodOutgoing, [], "聚焦对象后显示下游。");
+      renderNeighborhoodList(neighborhoodAdjacent, [], "聚焦对象后显示相邻对象。");
+      return;
+    }
+    const records = signalNeighborhoodRecords(kind, id);
+    setText(neighborhoodObject, reviewObjectLabel(kind, id));
+    setText(neighborhoodInCount, `${records.incoming.length} 上游`);
+    setText(neighborhoodOutCount, `${records.outgoing.length} 下游`);
+    renderNeighborhoodList(neighborhoodIncoming, records.incoming, "无上游对象。");
+    renderNeighborhoodList(neighborhoodOutgoing, records.outgoing, "无下游对象。");
+    renderNeighborhoodList(neighborhoodAdjacent, records.adjacent, "无相邻对象。");
+  }
+
   function renderProvenanceList(list, records, emptyText, kind, id, labelKey) {
     if (!list) return;
     list.innerHTML = "";
@@ -781,6 +928,7 @@
       setText(provenanceStepCount, "0 步");
       renderProvenanceList(provenanceSourceList, [], "聚焦节点或连线后显示源 DOCX。", "", "", "role");
       renderProvenanceList(provenanceStepList, [], "聚焦节点或连线后显示 P035 步骤。", "", "", "title");
+      renderSignalNeighborhood("", "");
       return;
     }
     const {sourceMatches, stepMatches} = objectProvenanceRecords(kind, id);
@@ -804,6 +952,7 @@
       "title",
     );
     updateReviewPacketFromState();
+    renderSignalNeighborhood(kind, id);
   }
 
   function writeReviewHashState() {

@@ -177,6 +177,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-provenance-step-count"' in html
     assert 'id="demo-reconstruction-provenance-source-list"' in html
     assert 'id="demo-reconstruction-provenance-step-list"' in html
+    assert 'id="demo-reconstruction-signal-neighborhood"' in html
+    assert 'id="demo-reconstruction-neighborhood-object"' in html
+    assert 'id="demo-reconstruction-neighborhood-incoming"' in html
+    assert 'id="demo-reconstruction-neighborhood-outgoing"' in html
+    assert 'id="demo-reconstruction-neighborhood-adjacent"' in html
     assert 'id="demo-reconstruction-circuit-ladder"' in html
     assert 'id="demo-reconstruction-ladder-summary"' in html
     assert 'id="demo-reconstruction-ladder-list"' in html
@@ -199,6 +204,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "原始 DOCX 逐句到完整电路" in html
     assert "逐句构建轨道" in html
     assert "对象反查证据板" in html
+    assert "电路邻接读回" in html
     assert "电路完成阶梯" in html
     assert "审阅交付包" in html
     assert "交付链路总览" in html
@@ -235,6 +241,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "cumulativeTraceContract" in script
     assert "renderObjectProvenance" in script
     assert "objectProvenanceRecords" in script
+    assert "renderSignalNeighborhood" in script
+    assert "signalNeighborhoodRecords" in script
+    assert "wireRecordsForNode" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -266,6 +275,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-playback-button" in stylesheet
     assert ".demo-reconstruction-object-provenance" in stylesheet
     assert ".demo-reconstruction-provenance-list" in stylesheet
+    assert ".demo-reconstruction-signal-neighborhood" in stylesheet
+    assert ".demo-reconstruction-neighborhood-list" in stylesheet
     assert ".demo-reconstruction-circuit-ladder" in stylesheet
     assert ".demo-reconstruction-ladder-item" in stylesheet
     assert ".demo-reconstruction-review-packet" in stylesheet
@@ -363,6 +374,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["review_deep_link"].endswith(".png")
     assert payload["screenshots"]["step_playback"].endswith(".png")
     assert payload["screenshots"]["object_provenance"].endswith(".png")
+    assert payload["screenshots"]["signal_neighborhood"].endswith(".png")
     assert payload["screenshots"]["completion_ladder"].endswith(".png")
     assert payload["screenshots"]["review_packet"].endswith(".png")
     assert payload["screenshots"]["custody_matrix"].endswith(".png")
@@ -445,6 +457,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["object_provenance_review"]["stepCount"] >= 1
     assert any("logic4" in item for item in payload["object_provenance_review"]["sourceItems"])
     assert any("P035-S05" in item for item in payload["object_provenance_review"]["stepItems"])
+    assert "logic4" in payload["signal_neighborhood_review"]["objectText"]
+    assert payload["signal_neighborhood_review"]["incomingCount"] == 2
+    assert payload["signal_neighborhood_review"]["outgoingCount"] == 1
+    assert payload["signal_neighborhood_review"]["adjacentCount"] == 3
+    assert "wire_vdt90_logic4" in payload["signal_neighborhood_review"]["incomingText"]
+    assert "wire_logic3_logic4" in payload["signal_neighborhood_review"]["incomingText"]
+    assert "wire_logic4_thr_lock" in payload["signal_neighborhood_review"]["outgoingText"]
+    assert "THR_LOCK" in payload["signal_neighborhood_review"]["adjacentText"]
+    assert "wire_logic4_thr_lock" in payload["signal_neighborhood_wire_review"]["objectText"]
+    assert "L4" in payload["signal_neighborhood_wire_review"]["incomingText"]
+    assert "THR_LOCK" in payload["signal_neighborhood_wire_review"]["outgoingText"]
     assert "wire_logic4_thr_lock" in payload["wire_provenance_review"]["objectText"]
     assert payload["wire_provenance_review"]["sourceCount"] >= 2
     assert payload["wire_provenance_review"]["stepCount"] >= 1
@@ -533,6 +556,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "trace_switch_clears_object_focus": "pass",
         "step_playback_cumulative_circuit": "pass",
         "object_provenance_traceability": "pass",
+        "signal_neighborhood_readback": "pass",
         "completion_ladder_readback": "pass",
         "review_packet_readiness": "pass",
         "custody_matrix_readback": "pass",

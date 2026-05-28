@@ -127,6 +127,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
     step_playback_path = artifact_dir / f"demo-reconstruction-step-playback-{stamp}.png"
     object_provenance_path = artifact_dir / f"demo-reconstruction-object-provenance-{stamp}.png"
+    signal_neighborhood_path = artifact_dir / f"demo-reconstruction-signal-neighborhood-{stamp}.png"
     completion_ladder_path = artifact_dir / f"demo-reconstruction-completion-ladder-{stamp}.png"
     review_packet_path = artifact_dir / f"demo-reconstruction-review-packet-{stamp}.png"
     custody_matrix_path = artifact_dir / f"demo-reconstruction-custody-matrix-{stamp}.png"
@@ -381,6 +382,59 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             )
                         ).map((item) => item.textContent.trim()),
                     })"""
+                )
+                page.locator("#demo-reconstruction-signal-neighborhood").screenshot(
+                    path=str(signal_neighborhood_path)
+                )
+                signal_neighborhood_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            objectText: text("#demo-reconstruction-neighborhood-object"),
+                            inCountText: text("#demo-reconstruction-neighborhood-in-count"),
+                            outCountText: text("#demo-reconstruction-neighborhood-out-count"),
+                            incomingCount: document.querySelectorAll("#demo-reconstruction-neighborhood-incoming [data-neighborhood-focus-id]").length,
+                            outgoingCount: document.querySelectorAll("#demo-reconstruction-neighborhood-outgoing [data-neighborhood-focus-id]").length,
+                            adjacentCount: document.querySelectorAll("#demo-reconstruction-neighborhood-adjacent [data-neighborhood-focus-id]").length,
+                            incomingText: text("#demo-reconstruction-neighborhood-incoming"),
+                            outgoingText: text("#demo-reconstruction-neighborhood-outgoing"),
+                            adjacentText: text("#demo-reconstruction-neighborhood-adjacent"),
+                        };
+                    }"""
+                )
+                page.locator(
+                    '#demo-reconstruction-neighborhood-outgoing [data-neighborhood-focus-id="wire_logic4_thr_lock"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const object = document.querySelector("#demo-reconstruction-neighborhood-object");
+                        const incoming = document.querySelectorAll(
+                            "#demo-reconstruction-neighborhood-incoming [data-neighborhood-focus-id]"
+                        );
+                        const outgoing = document.querySelectorAll(
+                            "#demo-reconstruction-neighborhood-outgoing [data-neighborhood-focus-id]"
+                        );
+                        const status = document.querySelector("#demo-reconstruction-embedded-highlight-status")?.textContent || "";
+                        return object
+                            && object.textContent.includes("wire_logic4_thr_lock")
+                            && incoming.length === 1
+                            && outgoing.length === 1
+                            && status.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                signal_neighborhood_wire_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            objectText: text("#demo-reconstruction-neighborhood-object"),
+                            inCountText: text("#demo-reconstruction-neighborhood-in-count"),
+                            outCountText: text("#demo-reconstruction-neighborhood-out-count"),
+                            incomingText: text("#demo-reconstruction-neighborhood-incoming"),
+                            outgoingText: text("#demo-reconstruction-neighborhood-outgoing"),
+                            adjacentText: text("#demo-reconstruction-neighborhood-adjacent"),
+                        };
+                    }"""
                 )
                 page.locator("#demo-reconstruction-circuit-ladder").screenshot(
                     path=str(completion_ladder_path)
@@ -1079,6 +1133,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 review_deep_link_path,
                 step_playback_path,
                 object_provenance_path,
+                signal_neighborhood_path,
                 completion_ladder_path,
                 review_packet_path,
                 custody_matrix_path,
@@ -1213,6 +1268,21 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and any("P035-S05" in item for item in wire_provenance_review["stepItems"])
         )
         else "fail",
+        "signal_neighborhood_readback": "pass"
+        if (
+            "logic4" in signal_neighborhood_review["objectText"]
+            and signal_neighborhood_review["incomingCount"] == 2
+            and signal_neighborhood_review["outgoingCount"] == 1
+            and signal_neighborhood_review["adjacentCount"] == 3
+            and "wire_vdt90_logic4" in signal_neighborhood_review["incomingText"]
+            and "wire_logic3_logic4" in signal_neighborhood_review["incomingText"]
+            and "wire_logic4_thr_lock" in signal_neighborhood_review["outgoingText"]
+            and "THR_LOCK" in signal_neighborhood_review["adjacentText"]
+            and "wire_logic4_thr_lock" in signal_neighborhood_wire_review["objectText"]
+            and "L4" in signal_neighborhood_wire_review["incomingText"]
+            and "THR_LOCK" in signal_neighborhood_wire_review["outgoingText"]
+        )
+        else "fail",
         "completion_ladder_readback": "pass"
         if (
             completion_ladder_review["stepCount"] == 5
@@ -1338,6 +1408,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "review_deep_link": str(review_deep_link_path),
             "step_playback": str(step_playback_path),
             "object_provenance": str(object_provenance_path),
+            "signal_neighborhood": str(signal_neighborhood_path),
             "completion_ladder": str(completion_ladder_path),
             "review_packet": str(review_packet_path),
             "custody_matrix": str(custody_matrix_path),
@@ -1361,6 +1432,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "trace_switch_focus_reset_review": trace_switch_focus_reset_review,
         "step_playback_review": step_playback_review,
         "object_provenance_review": object_provenance_review,
+        "signal_neighborhood_review": signal_neighborhood_review,
+        "signal_neighborhood_wire_review": signal_neighborhood_wire_review,
         "wire_provenance_review": wire_provenance_review,
         "completion_ladder_review": completion_ladder_review,
         "review_packet_review": review_packet_review,
@@ -1445,6 +1518,7 @@ def main(argv: list[str] | None = None) -> int:
                 "coverage_matrix_filter": "fail",
                 "step_playback_cumulative_circuit": "fail",
                 "object_provenance_traceability": "fail",
+                "signal_neighborhood_readback": "fail",
                 "completion_ladder_readback": "fail",
                 "review_packet_readiness": "fail",
                 "custody_matrix_readback": "fail",
