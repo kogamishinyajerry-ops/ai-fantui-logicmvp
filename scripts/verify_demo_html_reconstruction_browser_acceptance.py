@@ -384,6 +384,53 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator("#demo-reconstruction-coverage-search").fill("logic4")
+                page.wait_for_function(
+                    """() => {
+                        const visibleNodes = Array.from(
+                            document.querySelectorAll("[data-circuit-coverage-kind='node']")
+                        ).filter((button) => !button.hidden);
+                        const visibleWires = Array.from(
+                            document.querySelectorAll("[data-circuit-coverage-kind='wire']")
+                        ).filter((button) => !button.hidden);
+                        const status = document
+                            .querySelector("#demo-reconstruction-coverage-filter-status")
+                            ?.textContent || "";
+                        return visibleNodes.length === 1
+                            && visibleWires.length === 3
+                            && status.includes("4/43");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator(
+                    '[data-circuit-coverage-kind="wire"][data-circuit-coverage-id="wire_logic4_thr_lock"]'
+                ).click()
+                coverage_filter_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const visibleNodes = Array.from(
+                            document.querySelectorAll("[data-circuit-coverage-kind='node']")
+                        ).filter((button) => !button.hidden);
+                        const visibleWires = Array.from(
+                            document.querySelectorAll("[data-circuit-coverage-kind='wire']")
+                        ).filter((button) => !button.hidden);
+                        return {
+                            query: document.querySelector("#demo-reconstruction-coverage-search")?.value || "",
+                            visibleNodeCount: visibleNodes.length,
+                            visibleWireCount: visibleWires.length,
+                            statusText: document
+                                .querySelector("#demo-reconstruction-coverage-filter-status")
+                                ?.textContent?.trim() || "",
+                            focusedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            focusStatusText: document
+                                .querySelector("#demo-reconstruction-embedded-highlight-status")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 desktop_geometry = page.evaluate(
                     """() => ({
                         viewportWidth: window.innerWidth,
@@ -533,6 +580,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in coverage_matrix_review["statusText"]
         )
         else "fail",
+        "coverage_matrix_filter": "pass"
+        if (
+            coverage_filter_review["query"] == "logic4"
+            and coverage_filter_review["visibleNodeCount"] == 1
+            and coverage_filter_review["visibleWireCount"] == 3
+            and "4/43" in coverage_filter_review["statusText"]
+            and coverage_filter_review["focusedWireCount"] == 1
+            and "wire_logic4_thr_lock" in coverage_filter_review["focusStatusText"]
+        )
+        else "fail",
         "responsive_geometry": "pass"
         if (
             desktop_geometry["noHorizontalOverflow"]
@@ -582,6 +639,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
         "coverage_matrix_review": coverage_matrix_review,
+        "coverage_filter_review": coverage_filter_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,
             "mobile": mobile_geometry,
@@ -652,6 +710,7 @@ def main(argv: list[str] | None = None) -> int:
                 "embedded_trace_highlight": "fail",
                 "embedded_trace_chip_focus": "fail",
                 "coverage_matrix_focus": "fail",
+                "coverage_matrix_filter": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",
                 "node_wire_pixels": "fail",

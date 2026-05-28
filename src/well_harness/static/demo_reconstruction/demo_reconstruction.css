@@ -288,6 +288,31 @@ h2 { margin-bottom: 0; font-size: 18px; }
   font-size: 12px;
   text-align: right;
 }
+.demo-reconstruction-coverage-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 320px) max-content;
+  align-items: center;
+  gap: 10px;
+}
+.demo-reconstruction-coverage-tools input {
+  min-width: 0;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 10px;
+}
+.demo-reconstruction-coverage-tools input:focus {
+  border-color: #2563eb;
+  outline: 2px solid #bfdbfe;
+}
+.demo-reconstruction-coverage-tools span {
+  color: #475467;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
 .demo-reconstruction-coverage-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -594,7 +619,8 @@ button.demo-reconstruction-chip:focus-visible {
     padding: 16px 12px 28px;
   }
   .demo-reconstruction-source-metrics,
-  .demo-reconstruction-metrics {
+  .demo-reconstruction-metrics,
+  .demo-reconstruction-coverage-tools {
     grid-template-columns: 1fr;
   }
   .demo-reconstruction-trace-card-list {

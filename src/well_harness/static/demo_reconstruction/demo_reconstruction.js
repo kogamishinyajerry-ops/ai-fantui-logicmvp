@@ -67,6 +67,8 @@
   const selectedFolded = $("demo-reconstruction-selected-folded");
   const embeddedHighlightStatus = $("demo-reconstruction-embedded-highlight-status");
   const coverageContract = $("demo-reconstruction-coverage-contract");
+  const coverageSearch = $("demo-reconstruction-coverage-search");
+  const coverageFilterStatus = $("demo-reconstruction-coverage-filter-status");
   const coverageNodeList = $("demo-reconstruction-coverage-node-list");
   const coverageWireList = $("demo-reconstruction-coverage-wire-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
@@ -274,6 +276,21 @@
     return button;
   }
 
+  function updateCoverageFilter() {
+    const query = (coverageSearch && coverageSearch.value ? coverageSearch.value : "").trim().toLowerCase();
+    const buttons = [
+      ...Array.from(coverageNodeList ? coverageNodeList.querySelectorAll("button") : []),
+      ...Array.from(coverageWireList ? coverageWireList.querySelectorAll("button") : []),
+    ];
+    let visibleCount = 0;
+    buttons.forEach((button) => {
+      const matches = !query || button.textContent.toLowerCase().includes(query);
+      button.hidden = !matches;
+      if (matches) visibleCount += 1;
+    });
+    setText(coverageFilterStatus, `${visibleCount}/${buttons.length} 对象`);
+  }
+
   function renderCoverageMatrix(payload) {
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
     const nodeIds = Array.isArray(contract.node_ids) ? contract.node_ids : [];
@@ -290,6 +307,7 @@
       coverageWireList.innerHTML = "";
       wireIds.forEach((wireId) => coverageWireList.appendChild(renderCoverageButton("wire", wireId)));
     }
+    updateCoverageFilter();
   }
 
   function setSelectedTrace(step) {
@@ -489,6 +507,9 @@
     consoleFrame.addEventListener("load", () => {
       if (currentTraceStep) applyEmbeddedTraceHighlight(currentTraceStep);
     });
+  }
+  if (coverageSearch) {
+    coverageSearch.addEventListener("input", updateCoverageFilter);
   }
 
   async function boot() {
