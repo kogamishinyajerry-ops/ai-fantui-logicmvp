@@ -1543,6 +1543,19 @@ def test_streamed_logic_authoring_session_proposes_one_atomic_edit_with_source_c
     }
 
 
+def test_streamed_logic_authoring_session_schema_exists_and_validates_payload():
+    import jsonschema
+
+    requirements_payload = _ready_requirements_payload()
+    drawing_payload = _ready_drawing_payload()
+    result = build_streamed_logic_authoring_session(requirements_payload, drawing_payload)
+    schema_path = REPO_ROOT / "docs" / "json_schema" / "streamed_logic_authoring_session_v1.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+
+    jsonschema.Draft202012Validator.check_schema(schema)
+    jsonschema.Draft202012Validator(schema).validate(result)
+
+
 def test_streamed_logic_authoring_session_uses_natural_language_prompt_to_choose_candidate():
     baseline = build_streamed_logic_authoring_session(
         _ready_requirements_payload(),

@@ -55,7 +55,13 @@ def _resolve_artifact_path(path_value: Any, artifact_dir: Path) -> Path | None:
     path = Path(path_value)
     candidates = []
     if path.is_absolute():
-        candidates.append(path)
+        candidates.extend(
+            [
+                path,
+                artifact_dir / path.name,
+                artifact_dir / "browser-acceptance" / path.name,
+            ]
+        )
     else:
         candidates.extend(
             [

@@ -454,6 +454,62 @@ def test_phase1_demo_mvp_ci_artifact_checker_accepts_downloaded_artifact_directo
     assert all(Path(path).exists() for path in payload["artifact_paths"]["screenshots"])
 
 
+def test_phase1_demo_mvp_ci_artifact_checker_resolves_stale_absolute_paths_by_basename(
+    tmp_path: Path,
+) -> None:
+    downloaded_artifact = _make_downloaded_phase1_artifact(tmp_path)
+    package_path = downloaded_artifact / "phase1_demo_mvp_review_package_v0_1.json"
+    package = json.loads(package_path.read_text(encoding="utf-8"))
+    stale_ci_root = tmp_path / "stale-ci-runner-output"
+    package["artifact_paths"] = {
+        "package": str(stale_ci_root / "phase1_demo_mvp_review_package_v0_1.json"),
+        "markdown_report": str(stale_ci_root / "phase1_demo_mvp_review_report.md"),
+        "demo_gate_json": str(stale_ci_root / "demo_html_reconstruction_mvp_gate.json"),
+        "browser_acceptance_json": str(
+            stale_ci_root / "demo_html_reconstruction_browser_acceptance.json"
+        ),
+    }
+    package["browser_acceptance"]["screenshots"] = {
+        name: str(stale_ci_root / "browser-acceptance" / Path(path).name)
+        for name, path in package["browser_acceptance"]["screenshots"].items()
+    }
+    package_path.write_text(
+        json.dumps(package, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    verify = subprocess.run(
+        [
+            sys.executable,
+            str(CI_ARTIFACT_VERIFIER_SCRIPT_PATH),
+            "--artifact-dir",
+            str(downloaded_artifact),
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert verify.returncode == 0, verify.stderr
+    payload = json.loads(verify.stdout)
+    assert payload["status"] == "pass"
+    assert payload["artifact_paths"]["markdown_report"] == str(
+        downloaded_artifact / "phase1_demo_mvp_review_report.md"
+    )
+    assert payload["artifact_paths"]["browser_acceptance_json"] == str(
+        downloaded_artifact / "demo_html_reconstruction_browser_acceptance.json"
+    )
+    assert all(
+        str(downloaded_artifact) in path
+        for path in payload["artifact_paths"]["screenshots"]
+    )
+
+
 def test_phase1_demo_mvp_ci_artifact_checker_rejects_missing_screenshot(
     tmp_path: Path,
 ) -> None:
