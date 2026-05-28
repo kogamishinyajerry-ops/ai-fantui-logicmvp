@@ -51,6 +51,9 @@
   const coverageFilterStatus = $("demo-reconstruction-coverage-filter-status");
   const coverageNodeList = $("demo-reconstruction-coverage-node-list");
   const coverageWireList = $("demo-reconstruction-coverage-wire-list");
+  const topologySummary = $("demo-reconstruction-topology-summary");
+  const topologyReadback = $("demo-reconstruction-topology-readback");
+  const topologyList = $("demo-reconstruction-topology-list");
   const reviewAnchor = $("demo-reconstruction-review-anchor");
   const reviewObject = $("demo-reconstruction-review-object");
   const reviewSync = $("demo-reconstruction-review-sync");
@@ -307,7 +310,129 @@
     return wireEndpointMap.get(wireId) || [];
   }
 
+  function topologyWireIds() {
+    const contract = latestDocxPayload && latestDocxPayload.circuit_contract
+      ? latestDocxPayload.circuit_contract
+      : {};
+    if (Array.isArray(contract.wire_ids) && contract.wire_ids.length) return contract.wire_ids;
+    return Array.from(wireEndpointMap.keys());
+  }
+
+  function firstTraceStepForWire(wireId) {
+    return traceSteps.find((step) => Array.isArray(step && step.wire_ids) && step.wire_ids.includes(wireId)) || null;
+  }
+
+  function sourceAnchorsForWire(wireId, endpoints) {
+    const endpointIds = Array.isArray(endpoints) ? endpoints : [];
+    const anchors = [];
+    sourceEntries.forEach((entry) => {
+      if (!entry || !entry.anchor || anchors.includes(entry.anchor)) return;
+      const hasWire = Array.isArray(entry.wire_ids) && entry.wire_ids.includes(wireId);
+      const hasEndpoint = endpointIds.length
+        && Array.isArray(entry.node_ids)
+        && endpointIds.some((endpointId) => entry.node_ids.includes(endpointId));
+      if (hasWire || hasEndpoint) anchors.push(entry.anchor);
+    });
+    return anchors.slice(0, 4);
+  }
+
+  function setTopologyRowState(wireId) {
+    document.querySelectorAll("[data-topology-wire-row]").forEach((button) => {
+      const selected = button.dataset.topologyWireRow === wireId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function updateTopologyReadback(wireId) {
+    if (!topologyReadback) return;
+    if (!wireId) {
+      setText(topologyReadback, "等待连线聚焦");
+      setTopologyRowState("");
+      return;
+    }
+    const endpoints = wireEndpointsForId(wireId);
+    const step = firstTraceStepForWire(wireId);
+    const anchors = sourceAnchorsForWire(wireId, endpoints);
+    const source = endpoints[0] ? nodeDisplayLabel(endpoints[0]) : "source";
+    const target = endpoints[1] ? nodeDisplayLabel(endpoints[1]) : "target";
+    setText(
+      topologyReadback,
+      `${wireId} · ${source} -> ${target} · 首次 ${step ? step.anchor : "待匹配"} · DOCX ${anchors.join(" / ") || "待匹配"}`,
+    );
+    setTopologyRowState(wireId);
+  }
+
+  function renderTopologyMatrix() {
+    if (!topologyList) return;
+    const wireIds = topologyWireIds();
+    topologyList.innerHTML = "";
+    if (!wireIds.length || wireEndpointMap.size === 0) {
+      const empty = document.createElement("li");
+      empty.textContent = "完整电路拓扑暂无数据";
+      topologyList.appendChild(empty);
+      setText(topologySummary, `${wireIds.length}/23 连线 · 等待端点`);
+      updateTopologyReadback("");
+      return;
+    }
+
+    wireIds.forEach((wireId, index) => {
+      const endpoints = wireEndpointsForId(wireId);
+      const step = firstTraceStepForWire(wireId);
+      const anchors = sourceAnchorsForWire(wireId, endpoints);
+      const source = endpoints[0] ? nodeDisplayLabel(endpoints[0]) : "source";
+      const target = endpoints[1] ? nodeDisplayLabel(endpoints[1]) : "target";
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-topology-item";
+      li.dataset.topologyWire = wireId;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-topology-row";
+      button.dataset.topologyWireRow = wireId;
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => {
+        applyEmbeddedTraceFocus("wire", wireId);
+        updateTopologyReadback(wireId);
+      });
+
+      const head = document.createElement("div");
+      head.className = "demo-reconstruction-topology-row-head";
+      const title = document.createElement("strong");
+      title.textContent = `${String(index + 1).padStart(2, "0")} · ${wireId}`;
+      const path = document.createElement("span");
+      path.textContent = `${source} -> ${target}`;
+      head.append(title, path);
+
+      const meta = document.createElement("div");
+      meta.className = "demo-reconstruction-topology-meta";
+      [
+        `首次 ${step ? step.anchor : "待匹配"}`,
+        `DOCX ${anchors.join(" / ") || "待匹配"}`,
+      ].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        meta.appendChild(chip);
+      });
+
+      button.append(head, meta);
+      li.appendChild(button);
+      topologyList.appendChild(li);
+    });
+
+    setText(
+      topologySummary,
+      `${wireIds.length}/${EXPECTED_WIRE_COUNT} 连线 · ${traceSteps.length}/5 步 · ${wireEndpointMap.size}/${EXPECTED_WIRE_COUNT} 端点映射`,
+    );
+    if (currentCircuitFocus.kind === "wire" && currentCircuitFocus.id) {
+      updateTopologyReadback(currentCircuitFocus.id);
+    } else {
+      setText(topologyReadback, `${wireIds.length}/${EXPECTED_WIRE_COUNT} 条 demo.html 连线可聚焦`);
+      setTopologyRowState("");
+    }
+  }
+
   function refreshEmbeddedReviewFromCircuit() {
+    renderTopologyMatrix();
     if (traceSteps.length) renderAssemblyMap(traceSteps);
     if (traceSteps.length) renderCircuitCompletionLadder(traceSteps);
     if (traceSteps.length) renderCustodyMatrix(traceSteps);
@@ -1411,6 +1536,7 @@
   function clearCircuitObjectFocus() {
     currentCircuitFocus = {kind: "", id: ""};
     setCoverageButtonTabStops("", "");
+    updateTopologyReadback("");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
@@ -1525,6 +1651,11 @@
     });
     const unit = kind === "wire" ? "条匹配" : "个匹配";
     setText(embeddedHighlightStatus, `聚焦${label}：${id} · ${matchCount} ${unit}`);
+    if (kind === "wire") {
+      updateTopologyReadback(id);
+    } else {
+      setTopologyRowState("");
+    }
     updateKeyboardReviewStatus({
       objectKind: kind,
       objectId: id,
@@ -1657,6 +1788,7 @@
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
     renderCustodyMatrix(steps);
+    renderTopologyMatrix();
   }
 
   function renderSourceEntries(entries) {
@@ -1695,6 +1827,7 @@
       li.appendChild(chips);
       sourceEntryList.appendChild(li);
     });
+    renderTopologyMatrix();
   }
 
   function renderSequenceSteps(steps) {
@@ -1785,6 +1918,7 @@
     renderList(wireList, wires, wireLabel);
     updateNodeMetadataFromNodes(nodes);
     updateWireEndpointMapFromWires(wires);
+    renderTopologyMatrix();
     refreshEmbeddedReviewFromCircuit();
     updateReviewPacketFromState();
     updateReviewIndexStatus();

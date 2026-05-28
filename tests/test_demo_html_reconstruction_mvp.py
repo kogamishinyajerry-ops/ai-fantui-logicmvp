@@ -167,6 +167,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-coverage-matrix"' in html
     assert 'id="demo-reconstruction-coverage-search"' in html
     assert 'id="demo-reconstruction-coverage-filter-status"' in html
+    assert 'id="demo-reconstruction-topology-matrix"' in html
+    assert 'id="demo-reconstruction-topology-summary"' in html
+    assert 'id="demo-reconstruction-topology-readback"' in html
+    assert 'id="demo-reconstruction-topology-list"' in html
     assert 'id="demo-reconstruction-keyboard-review"' in html
     assert 'id="demo-reconstruction-review-anchor"' in html
     assert 'id="demo-reconstruction-review-object"' in html
@@ -225,6 +229,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "交付链路总览" in html
     assert "演示舱输出镜像" in html
     assert "场景读回记录" in html
+    assert "完整电路拓扑矩阵" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
@@ -266,6 +271,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderSignalNeighborhood" in script
     assert "signalNeighborhoodRecords" in script
     assert "wireRecordsForNode" in script
+    assert "renderTopologyMatrix" in script
+    assert "topologyWireIds" in script
+    assert "updateTopologyReadback" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -294,6 +302,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
     assert ".demo-reconstruction-coverage-matrix" in stylesheet
     assert ".demo-reconstruction-coverage-tools" in stylesheet
+    assert ".demo-reconstruction-topology-matrix" in stylesheet
+    assert ".demo-reconstruction-topology-list" in stylesheet
+    assert ".demo-reconstruction-topology-row" in stylesheet
     assert ".demo-reconstruction-keyboard-review" in stylesheet
     assert ".demo-reconstruction-keyboard-review strong" in stylesheet
     assert ".demo-reconstruction-review-link" in stylesheet
@@ -403,6 +414,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["mobile_first_screen"].endswith(".png")
     assert payload["screenshots"]["review_index"].endswith(".png")
     assert payload["screenshots"]["assembly_map"].endswith(".png")
+    assert payload["screenshots"]["topology_matrix"].endswith(".png")
     assert payload["screenshots"]["chain_svg"].endswith(".png")
     assert payload["screenshots"]["keyboard_review"].endswith(".png")
     assert payload["screenshots"]["review_deep_link"].endswith(".png")
@@ -421,6 +433,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["first_screen_review"] == {
         "review_index_visible": True,
         "assembly_map_visible": True,
+        "topology_matrix_visible": True,
         "source_map_visible": True,
         "trace_board_visible": True,
         "operator_guide_visible": True,
@@ -430,11 +443,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "evidence_rail_visible": True,
     }
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
-    assert payload["source_map_review"]["reviewIndexButtonCount"] == 8
+    assert payload["source_map_review"]["reviewIndexButtonCount"] == 9
     assert payload["source_map_review"]["sequenceStepCount"] == 5
     assert payload["source_map_review"]["traceCardCount"] == 5
     assert payload["source_map_review"]["playbackStepCount"] == 5
     assert payload["source_map_review"]["assemblyStepCount"] == 5
+    assert payload["source_map_review"]["topologyRowCount"] == 23
     assert payload["source_map_review"]["ladderStepCount"] == 5
     assert payload["source_map_review"]["custodyStepCount"] == 5
     assert payload["source_map_review"]["coverageNodeButtonCount"] == 20
@@ -444,7 +458,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["nodeCoverage"] == "20/20"
     assert payload["source_map_review"]["wireCoverage"] == "23/23"
     assert payload["review_index_review"]["visible"] is True
-    assert payload["review_index_review"]["buttonCount"] == 8
+    assert payload["review_index_review"]["buttonCount"] == 9
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
@@ -466,6 +480,18 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "THR_LOCK" in payload["assembly_map_review"]["finalText"]
     assert "完整 demo 电路闭合" in payload["assembly_map_review"]["s05Text"]
     assert "TLS 解锁" in payload["assembly_map_review"]["s01Text"]
+    assert payload["topology_matrix_review"]["visible"] is True
+    assert payload["topology_matrix_review"]["rowCount"] == 23
+    assert payload["topology_matrix_review"]["buttonCount"] == 23
+    assert "23/23" in payload["topology_matrix_review"]["summaryText"]
+    assert "23/23" in payload["topology_matrix_review"]["readbackText"]
+    assert "wire_ra_logic1" in payload["topology_matrix_review"]["firstText"]
+    assert "wire_logic4_thr_lock" in payload["topology_matrix_review"]["s05Text"]
+    assert "P035-S05" in payload["topology_matrix_review"]["s05Text"]
+    assert payload["topology_focus_review"]["activeRows"] == ["wire_logic4_thr_lock"]
+    assert payload["topology_focus_review"]["highlightedWireCount"] == 1
+    assert "P035-S05" in payload["topology_focus_review"]["readbackText"]
+    assert "wire_logic4_thr_lock" in payload["topology_focus_review"]["reviewObjectText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -625,6 +651,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "docx_sentence_circuit_map": "pass",
         "review_index_navigation": "pass",
         "assembly_map_readback": "pass",
+        "topology_matrix_readback": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",

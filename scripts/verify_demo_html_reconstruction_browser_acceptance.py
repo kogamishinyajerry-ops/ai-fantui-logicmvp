@@ -124,6 +124,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
     review_index_path = artifact_dir / f"demo-reconstruction-review-index-{stamp}.png"
     assembly_map_path = artifact_dir / f"demo-reconstruction-assembly-map-{stamp}.png"
+    topology_matrix_path = artifact_dir / f"demo-reconstruction-topology-matrix-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
@@ -174,6 +175,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "assembly_map_visible": page.locator(
                         "#demo-reconstruction-assembly-map"
                     ).is_visible(timeout=5000),
+                    "topology_matrix_visible": page.locator(
+                        "#demo-reconstruction-topology-matrix"
+                    ).is_visible(timeout=5000),
                     "source_map_visible": page.locator(
                         "#demo-reconstruction-docx-circuit-map"
                     ).is_visible(timeout=5000),
@@ -206,6 +210,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
                             assemblyStepCount: document.querySelectorAll("[data-assembly-step]").length,
+                            topologyRowCount: document.querySelectorAll("[data-topology-wire]").length,
                             ladderStepCount: document.querySelectorAll("[data-ladder-step]").length,
                             custodyStepCount: document.querySelectorAll("[data-custody-step]").length,
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
@@ -225,6 +230,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.locator("#demo-reconstruction-assembly-map").screenshot(
                     path=str(assembly_map_path)
+                )
+                page.locator("#demo-reconstruction-topology-matrix").screenshot(
+                    path=str(topology_matrix_path)
                 )
                 review_index_review = page.evaluate(
                     """() => {
@@ -274,6 +282,55 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             finalText: text("#demo-reconstruction-assembly-final"),
                             s01Text: text('[data-assembly-step="P035-S01"]'),
                             s05Text: text('[data-assembly-step="P035-S05"]'),
+                        };
+                    }"""
+                )
+                topology_matrix_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            visible: !!document.querySelector("#demo-reconstruction-topology-matrix"),
+                            rowCount: document.querySelectorAll("[data-topology-wire]").length,
+                            buttonCount: document.querySelectorAll("[data-topology-wire-row]").length,
+                            summaryText: text("#demo-reconstruction-topology-summary"),
+                            readbackText: text("#demo-reconstruction-topology-readback"),
+                            firstText: text('[data-topology-wire="wire_ra_logic1"]'),
+                            s05Text: text('[data-topology-wire="wire_logic4_thr_lock"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-topology-wire-row="wire_logic4_thr_lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const row = document.querySelector('[data-topology-wire-row="wire_logic4_thr_lock"]');
+                        const readback = document.querySelector("#demo-reconstruction-topology-readback")?.textContent || "";
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && readback.includes("P035-S05")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1;
+                    }""",
+                    timeout=5000,
+                )
+                topology_focus_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            activeRows: Array.from(
+                                document.querySelectorAll("[data-topology-wire-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-topology-wire-row")),
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            readbackText: document
+                                .querySelector("#demo-reconstruction-topology-readback")
+                                ?.textContent?.trim() || "",
+                            reviewObjectText: document
+                                .querySelector("#demo-reconstruction-review-object")
+                                ?.textContent?.trim() || "",
                         };
                     }"""
                 )
@@ -1295,6 +1352,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 mobile_first_screen_path,
                 review_index_path,
                 assembly_map_path,
+                topology_matrix_path,
                 chain_svg_path,
                 keyboard_review_path,
                 review_deep_link_path,
@@ -1318,11 +1376,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
-            and source_map_review["reviewIndexButtonCount"] == 8
+            and source_map_review["reviewIndexButtonCount"] == 9
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
             and source_map_review["assemblyStepCount"] == 5
+            and source_map_review["topologyRowCount"] == 23
             and source_map_review["ladderStepCount"] == 5
             and source_map_review["custodyStepCount"] == 5
             and source_map_review["coverageNodeButtonCount"] == 20
@@ -1336,7 +1395,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_navigation": "pass"
         if (
             review_index_review["visible"]
-            and review_index_review["buttonCount"] == 8
+            and review_index_review["buttonCount"] == 9
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and "P035-S01" in review_index_review["stepText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
@@ -1363,6 +1422,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and assembly_map_action_review["highlightedNodeCount"] == 20
             and assembly_map_action_review["highlightedWireCount"] == 23
             and "累计构建" in assembly_map_action_review["reviewObjectText"]
+        )
+        else "fail",
+        "topology_matrix_readback": "pass"
+        if (
+            topology_matrix_review["visible"]
+            and topology_matrix_review["rowCount"] == 23
+            and topology_matrix_review["buttonCount"] == 23
+            and "23/23" in topology_matrix_review["summaryText"]
+            and "23/23" in topology_matrix_review["readbackText"]
+            and "wire_ra_logic1" in topology_matrix_review["firstText"]
+            and "wire_logic4_thr_lock" in topology_matrix_review["s05Text"]
+            and "P035-S05" in topology_matrix_review["s05Text"]
+            and topology_focus_review["activeRows"] == ["wire_logic4_thr_lock"]
+            and topology_focus_review["highlightedWireCount"] == 1
+            and "P035-S05" in topology_focus_review["readbackText"]
+            and "wire_logic4_thr_lock" in topology_focus_review["reviewObjectText"]
         )
         else "fail",
         "trace_selection_interaction": "pass"
@@ -1622,6 +1697,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "mobile_first_screen": str(mobile_first_screen_path),
             "review_index": str(review_index_path),
             "assembly_map": str(assembly_map_path),
+            "topology_matrix": str(topology_matrix_path),
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
             "review_deep_link": str(review_deep_link_path),
@@ -1648,6 +1724,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_after_trace": review_index_after_trace,
         "assembly_map_review": assembly_map_review,
         "assembly_map_action_review": assembly_map_action_review,
+        "topology_matrix_review": topology_matrix_review,
+        "topology_focus_review": topology_focus_review,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
@@ -1740,6 +1818,7 @@ def main(argv: list[str] | None = None) -> int:
                 "docx_sentence_circuit_map": "fail",
                 "review_index_navigation": "fail",
                 "assembly_map_readback": "fail",
+                "topology_matrix_readback": "fail",
                 "trace_selection_interaction": "fail",
                 "embedded_trace_highlight": "fail",
                 "embedded_trace_chip_focus": "fail",
