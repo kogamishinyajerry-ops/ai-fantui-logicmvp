@@ -49,11 +49,11 @@ def _script_env() -> dict[str, str]:
 
 def _m30_pr_status() -> dict:
     return {
-        "number": 270,
-        "url": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/pull/270",
+        "number": 271,
+        "url": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/pull/271",
         "state": "OPEN",
         "mergeStateStatus": "CLEAN",
-        "headRefOid": "a00b9d10e254c65e005e98ad069a4f8c3e5f1e5d",
+        "headRefOid": "74a4580f82d7a86c01bf3c7e0ccea2efc7e306bc",
         "statusCheckRollup": [],
         "reviews": [],
         "comments": [
@@ -62,7 +62,7 @@ def _m30_pr_status() -> dict:
                 "createdAt": "2026-05-28T09:13:16Z",
                 "body": (
                     "@codex review latest head "
-                    "a00b9d10e254c65e005e98ad069a4f8c3e5f1e5d"
+                    "74a4580f82d7a86c01bf3c7e0ccea2efc7e306bc"
                 ),
             },
             {
@@ -86,7 +86,7 @@ def _m30_thread() -> dict:
                     "author": {"login": "chatgpt-codex-connector"},
                     "createdAt": "2026-05-28T09:06:26Z",
                     "body": "**P2 Prior issue now covered by latest clean review**",
-                    "commit": {"oid": "a00b9d10e254c65e005e98ad069a4f8c3e5f1e5d"},
+                    "commit": {"oid": "74a4580f82d7a86c01bf3c7e0ccea2efc7e306bc"},
                 }
             ]
         },
