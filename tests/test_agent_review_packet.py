@@ -152,6 +152,31 @@ def test_candidate_review_packet_export_builder_wraps_review_packet_for_external
     assert export_packet["human_review_required"] is True
 
 
+@pytest.mark.parametrize(
+    ("field_name", "bad_value"),
+    [
+        ("schema_version", "0.2"),
+        ("source_route", "logic-builder"),
+        ("export_route", "logic-builder/candidate-review-packet.json"),
+        ("storage", "database"),
+        ("status", "stale"),
+    ],
+)
+def test_candidate_review_packet_export_fallback_rejects_invalid_exporter_contract(
+    field_name: str,
+    bad_value: str,
+) -> None:
+    review = _review_packet_module()
+    export_packet = _load_json(EXPORT_FIXTURE_PATH)
+    export_packet["exporter"][field_name] = bad_value
+
+    with pytest.raises(review.CandidateReviewPacketError):
+        review._fallback_review_packet_export_validate(
+            export_packet,
+            "candidate review packet export",
+        )
+
+
 def test_review_packet_exposes_blocked_safety_chain_without_approval() -> None:
     review = _review_packet_module()
     packet = _logic_ir_packet()

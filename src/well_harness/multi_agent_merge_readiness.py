@@ -117,7 +117,13 @@ def _pathspec_boundary_ok(validation_evidence: dict[str, Any]) -> bool:
 
 
 def _overall_status(gates: dict[str, str]) -> str:
-    hard_fail_keys = ["validation_evidence", "geometry_gate", "pathspec_boundary", "pr_mergeability"]
+    hard_fail_keys = [
+        "validation_evidence",
+        "geometry_gate",
+        "pathspec_boundary",
+        "pr_mergeability",
+        "remote_checks",
+    ]
     if any(gates.get(key) == "fail" for key in hard_fail_keys):
         return "blocked"
     if gates.get("notion_external_blocker") != "pass":

@@ -160,6 +160,25 @@ def test_multi_agent_merge_readiness_schema_validates_payload(tmp_path: Path) ->
     assert payload["pr_status"]["mergeable"] == "MERGEABLE"
 
 
+def test_multi_agent_merge_readiness_blocks_failed_remote_checks(tmp_path: Path) -> None:
+    pr_status = _pr_status()
+    pr_status["statusCheckRollup"] = [
+        {"name": "validation", "conclusion": "FAILURE"},
+    ]
+
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=_validation_evidence(),
+        pr_status=pr_status,
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["gates"]["remote_checks"] == "fail"
+    assert payload["summary"]["remote_checks_state"] == "fail"
+    assert payload["status"] == "blocked"
+
+
 def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path) -> None:
     payload = build_multi_agent_merge_readiness(
         validation_evidence=_validation_evidence(),

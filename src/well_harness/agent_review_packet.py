@@ -176,6 +176,18 @@ def _fallback_review_packet_export_validate(packet: dict[str, Any], label: str) 
     _missing_fields(exporter, REQUIRED_REVIEW_PACKET_EXPORTER_FIELDS, f"{label} exporter")
     if exporter.get("agent_name") != CANDIDATE_REVIEW_PACKET_EXPORT_AGENT_NAME:
         raise CandidateReviewPacketError(f"{label} exporter.agent_name is invalid")
+    if exporter.get("schema_version") != CANDIDATE_REVIEW_PACKET_EXPORT_SCHEMA_VERSION:
+        raise CandidateReviewPacketError(f"{label} exporter.schema_version is invalid")
+    if not isinstance(exporter.get("export_id"), str) or not exporter.get("export_id"):
+        raise CandidateReviewPacketError(f"{label} exporter.export_id is invalid")
+    for field_name in ("source_route", "export_route"):
+        route = exporter.get(field_name)
+        if not isinstance(route, str) or not route.startswith("/"):
+            raise CandidateReviewPacketError(f"{label} exporter.{field_name} is invalid")
+    if exporter.get("storage") not in {"reference_packet", "artifact_file"}:
+        raise CandidateReviewPacketError(f"{label} exporter.storage is invalid")
+    if exporter.get("status") != "available":
+        raise CandidateReviewPacketError(f"{label} exporter.status is invalid")
 
     ref = packet.get("review_packet_ref")
     if not isinstance(ref, dict):
