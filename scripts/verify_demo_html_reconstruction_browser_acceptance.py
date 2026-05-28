@@ -128,6 +128,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     step_playback_path = artifact_dir / f"demo-reconstruction-step-playback-{stamp}.png"
     object_provenance_path = artifact_dir / f"demo-reconstruction-object-provenance-{stamp}.png"
     completion_ladder_path = artifact_dir / f"demo-reconstruction-completion-ladder-{stamp}.png"
+    review_packet_path = artifact_dir / f"demo-reconstruction-review-packet-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -390,6 +391,26 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator("#demo-reconstruction-review-packet").screenshot(
+                    path=str(review_packet_path)
+                )
+                review_packet_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const gates = Array.from(document.querySelectorAll("[data-review-packet-gate]"));
+                        return {
+                            visible: !!document.querySelector("#demo-reconstruction-review-packet"),
+                            readinessText: text("#demo-reconstruction-review-packet-readiness"),
+                            sourceText: text("#demo-reconstruction-review-packet-source"),
+                            contractText: text("#demo-reconstruction-review-packet-contract"),
+                            stepText: text("#demo-reconstruction-review-packet-step"),
+                            objectText: text("#demo-reconstruction-review-packet-object"),
+                            gateCount: gates.length,
+                            passGateCount: gates.filter((gate) => gate.dataset.packetGateStatus === "pass").length,
+                            gateLabels: gates.map((gate) => gate.textContent.trim()),
+                        };
+                    }"""
+                )
                 page.locator(
                     '[data-circuit-coverage-kind="wire"][data-circuit-coverage-id="wire_logic4_thr_lock"]'
                 ).click()
@@ -431,6 +452,17 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             )
                         ).map((item) => item.textContent.trim()),
                     })"""
+                )
+                review_packet_after_wire_focus = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const gates = Array.from(document.querySelectorAll("[data-review-packet-gate]"));
+                        return {
+                            readinessText: text("#demo-reconstruction-review-packet-readiness"),
+                            objectText: text("#demo-reconstruction-review-packet-object"),
+                            passGateCount: gates.filter((gate) => gate.dataset.packetGateStatus === "pass").length,
+                        };
+                    }"""
                 )
                 page.locator(
                     '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="thr_lock"]'
@@ -952,6 +984,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 step_playback_path,
                 object_provenance_path,
                 completion_ladder_path,
+                review_packet_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -1094,6 +1127,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "23/23" in completion_ladder_review["s05Text"]
         )
         else "fail",
+        "review_packet_readiness": "pass"
+        if (
+            review_packet_review["visible"]
+            and review_packet_review["gateCount"] == 5
+            and review_packet_review["passGateCount"] >= 4
+            and review_packet_after_wire_focus["passGateCount"] == 5
+            and "uploads/20260409-thrust-reverser-control-logic.docx" in review_packet_review["sourceText"]
+            and "20/20" in review_packet_review["contractText"]
+            and "23/23" in review_packet_review["contractText"]
+            and "P035-S05" in review_packet_review["stepText"]
+            and "wire_logic4_thr_lock" in review_packet_after_wire_focus["objectText"]
+        )
+        else "fail",
         "review_hash_link": "pass"
         if (
             review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -1162,6 +1208,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "step_playback": str(step_playback_path),
             "object_provenance": str(object_provenance_path),
             "completion_ladder": str(completion_ladder_path),
+            "review_packet": str(review_packet_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -1184,6 +1231,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "object_provenance_review": object_provenance_review,
         "wire_provenance_review": wire_provenance_review,
         "completion_ladder_review": completion_ladder_review,
+        "review_packet_review": review_packet_review,
+        "review_packet_after_wire_focus": review_packet_after_wire_focus,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
@@ -1260,6 +1309,7 @@ def main(argv: list[str] | None = None) -> int:
                 "step_playback_cumulative_circuit": "fail",
                 "object_provenance_traceability": "fail",
                 "completion_ladder_readback": "fail",
+                "review_packet_readiness": "fail",
                 "source_chip_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",
