@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import os
 import secrets
@@ -237,6 +238,8 @@ REQUIREMENTS_FAULT_INJECTION_PREPARE_PATH = "/api/requirements-intake/prepare-fa
 REQUIREMENTS_FAULT_INJECTION_SANDBOX_PATH = "/api/requirements-intake/prepare-fault-injection/sandbox"
 REQUIREMENTS_LIVE_DEMO_REPLAY_PATH = "/api/requirements-intake/deepseek-live-demo-replay"
 REQUIREMENTS_PROVIDER_STATUS_PATH = "/api/requirements-intake/provider-status"
+REQUIREMENTS_OFFICIAL_DOCX_SOURCE_PATH = "/api/requirements-intake/official-docx-source"
+OFFICIAL_THRUST_REVERSER_DOCX_RELATIVE_PATH = Path("uploads/20260409-thrust-reverser-control-logic.docx")
 DEEPSEEK_LIVE_DEMO_ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "deepseek-live-full-chain"
 DEEPSEEK_REPLAY_LOCAL_STORAGE_KEYS = {
     "requirements": "ai-fantui-requirements-intake-ready-v1",
@@ -555,6 +558,22 @@ def deepseek_live_demo_replay_payload(artifact_dir: Path | None = None) -> dict[
     }
 
 
+def official_docx_source_payload() -> dict[str, Any]:
+    source_path = (REPO_ROOT / OFFICIAL_THRUST_REVERSER_DOCX_RELATIVE_PATH).resolve()
+    source_path.relative_to(REPO_ROOT)
+    blob = source_path.read_bytes()
+    return {
+        "kind": "ai-fantui-official-docx-source",
+        "version": 1,
+        "document_name": str(OFFICIAL_THRUST_REVERSER_DOCX_RELATIVE_PATH),
+        "document_base64": base64.b64encode(blob).decode("ascii"),
+        "byte_size": len(blob),
+        "sha256": hashlib.sha256(blob).hexdigest(),
+        "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "source_scope": "repo_uploads_read_only",
+    }
+
+
 class DemoRequestHandler(BaseHTTPRequestHandler):
     """Serve the static demo shell and a thin JSON API around DemoAnswer."""
 
@@ -623,6 +642,18 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     },
                 )
             return
+        if parsed.path == REQUIREMENTS_OFFICIAL_DOCX_SOURCE_PATH:
+            try:
+                self._send_json(200, official_docx_source_payload())
+            except FileNotFoundError as exc:
+                self._send_json(
+                    404,
+                    {
+                        "error": "official_docx_source_missing",
+                        "missing_file": str(exc),
+                    },
+                )
+            return
         if parsed.path == DEMO_RECONSTRUCTION_DOCX_CIRCUIT_MAP_PATH:
             try:
                 self._send_json(200, build_thrust_reverser_docx_sentence_circuit_map())
@@ -671,6 +702,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path in ("/demo-reconstruction", "/demo-reconstruction/", "/demo_reconstruction.html"):
             self._serve_static("demo_reconstruction/index.html")
+            return
+
+        if parsed.path in ("/docx-to-circuit", "/docx-to-circuit/", "/docx_to_circuit.html"):
+            self._serve_static("docx_to_circuit/index.html")
             return
 
         if parsed.path in ("/workbench/start", "/workbench/start.html"):

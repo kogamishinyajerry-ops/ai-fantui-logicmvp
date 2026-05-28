@@ -5851,6 +5851,8 @@ def test_requirements_intake_engineer_ui_does_not_expose_backend_payloads():
 def test_landing_page_links_requirements_intake_tool():
     html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
 
+    assert "/docx-to-circuit" in html
+    assert "原始 DOCX 到完整电路" in html
     assert "/requirements-intake" in html
     assert "需求理解工作台" in html
     assert "/fault-injection-prepare" in html
@@ -5958,6 +5960,24 @@ def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
     assert "make demo-html-reconstruction-mvp" in html
     assert "make demo-html-reconstruction-browser-acceptance" in html
     assert html.index('id="home-first-phase-mvp"') < html.index('id="home-default-mode-grid"')
+
+
+def test_landing_page_promotes_docx_to_circuit_as_primary_main_entry():
+    html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="home-docx-to-circuit-mainline"' in html
+    assert 'data-primary-docx-entry="original-docx-to-complete-circuit"' in html
+    assert 'id="home-docx-to-circuit-entry"' in html
+    assert 'href="/docx-to-circuit"' in html
+    assert 'data-home-priority="source-to-circuit"' in html
+    assert 'id="home-primary-next"' in html
+    primary_next = html.split('id="home-primary-next"', 1)[1].split(">", 1)[0]
+    assert 'href="/docx-to-circuit"' in primary_next
+    assert 'data-primary-entry="docx-source-to-circuit"' in primary_next
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert "L1-L4 逻辑复刻" in html
+    assert "demo.html 完整电路" in html
+    assert html.index('id="home-docx-to-circuit-mainline"') < html.index('id="home-first-phase-mvp"')
 
 
 def test_deepseek_subproject_primary_nav_does_not_promote_canvas_workbench():
@@ -6293,8 +6313,10 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert 'id="logic-reconstruction-mode-panel"' in html
     assert 'id="logic-reconstruction-mode"' in html
     assert 'id="logic-reconstruction-fidelity"' in html
+    assert 'id="logic-docx-circuit-bridge"' in html
     assert 'id="logic-demo-bridge"' in html
     assert '接入同一组杆位快照后会同步点亮电路图。' in html
+    assert 'href="/docx-to-circuit"' in html
     assert '打开对齐视图' in html
     assert '查看 demo.html 高保真复刻' not in html
     bridge_html = html.split('id="logic-demo-bridge"', 1)[1].split(">", 1)[0]
@@ -6306,7 +6328,259 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert "链路覆盖：20/20 节点 · 23/23 连线" in script
     assert "当前模式：概念图，尚未对齐演示舱电路" in script
     assert "当前模式：demo.html 高保真复刻" not in script
+    assert "function requestedDocxTemplate" in script
+    assert "function renderRequestedDocxTemplate" in script
+    assert 'params.get("template") === "docx-l1-l4"' in script
+    docx_template_block = script.split("function buildDocxTemplateCircuitView()", 1)[1].split(
+        "function requestedDocxTemplate",
+        1,
+    )[0]
+    for label in [
+        "TLS 115VAC cmd",
+        "TLS_Unlocked LS",
+        "ETRAC 540VDC cmd",
+        "PLS power",
+        "PDU motor cmd",
+        "VDT90 (>=90% deploy)",
+        "THR_LOCK release",
+    ]:
+        assert label in docx_template_block
+    for legacy_label in ["LATCH -> CAUT", '"caut"', '"caut1"', '"caut2"', '"caut3"']:
+        assert legacy_label not in docx_template_block
     assert ".logic-reconstruction-mode-panel" in stylesheet
+
+
+def test_official_docx_source_payload_round_trips_through_docx_extractor():
+    payload = demo_server.official_docx_source_payload()
+    assert payload["kind"] == "ai-fantui-official-docx-source"
+    assert payload["document_name"] == "uploads/20260409-thrust-reverser-control-logic.docx"
+    blob = base64.b64decode(payload["document_base64"], validate=True)
+    assert len(blob) == payload["byte_size"]
+    assert payload["byte_size"] > 100_000
+
+    text, document_name = demo_server.extract_document_text_from_payload(
+        {
+            "document_name": payload["document_name"],
+            "document_base64": payload["document_base64"],
+        }
+    )
+    assert document_name == payload["document_name"]
+    assert len(text) > 1_000
+    assert any(term in text for term in ("SW1", "TRA", "反推"))
+
+
+def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
+    html_path = STATIC_ROOT / "docx_to_circuit" / "index.html"
+    script_path = STATIC_ROOT / "docx_to_circuit" / "docx_to_circuit.js"
+    stylesheet_path = STATIC_ROOT / "docx_to_circuit" / "docx_to_circuit.css"
+    html = html_path.read_text(encoding="utf-8")
+    script = script_path.read_text(encoding="utf-8")
+    stylesheet = stylesheet_path.read_text(encoding="utf-8")
+    server_source = (REPO_ROOT / "src" / "well_harness" / "demo_server.py").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    review_link_gate = (REPO_ROOT / "scripts" / "verify_docx_to_circuit_review_links.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "/docx-to-circuit" in server_source
+    assert "REQUIREMENTS_OFFICIAL_DOCX_SOURCE_PATH" in server_source
+    assert "official_docx_source_payload" in server_source
+    assert '"document_base64"' in server_source
+    assert 'data-ux-page-role="docx-to-circuit-main-entry"' in html
+    assert 'data-docx-circuit-main-entry="true"' in html
+    assert 'data-docx-circuit-review-workbench="interactive"' in html
+    assert 'id="docx-circuit-workbench-bar"' in html
+    assert 'data-docx-circuit-workbench-bar="true"' in html
+    assert "原始 DOCX 到完整电路" in html
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert 'href="/requirements-intake?source=official-docx"' in html
+    assert 'href="/logic-builder?template=docx-l1-l4"' in html
+    assert 'href="/demo-reconstruction"' in html
+    assert 'id="docx-circuit-review-panel"' in html
+    assert 'data-docx-circuit-sentence-toolbar="true"' in html
+    assert 'id="docx-circuit-prev-step"' in html
+    assert 'id="docx-circuit-next-step"' in html
+    assert 'id="docx-circuit-step-position"' in html
+    assert 'id="docx-circuit-element-evidence-only"' in html
+    assert 'id="docx-circuit-copy-trace-packet"' in html
+    assert 'id="docx-circuit-copy-review-link"' in html
+    assert 'id="docx-circuit-copy-status"' in html
+    assert 'id="docx-circuit-source-focus"' in html
+    assert 'id="docx-circuit-active-source-entry"' in html
+    assert 'id="docx-circuit-show-source-entry"' in html
+    assert 'id="docx-circuit-review-packet-preview"' in html
+    assert 'id="docx-circuit-review-packet-preview-text"' in html
+    assert 'data-docx-circuit-source-index="true"' in html
+    assert 'id="docx-circuit-source-index-count"' in html
+    assert 'id="docx-circuit-source-index-search"' in html
+    assert 'id="docx-circuit-source-index-level"' in html
+    assert 'id="docx-circuit-source-index-clear"' in html
+    assert 'id="docx-circuit-source-index-list"' in html
+    assert 'id="docx-circuit-source-anchor"' in html
+    assert 'id="docx-circuit-trace-panel"' in html
+    assert 'data-selected-element-id="wire_logic4_thr_lock"' in html
+    assert 'id="docx-circuit-trace-evidence-list"' in html
+    assert 'id="docx-circuit-logic-ladder"' in html
+    assert 'id="docx-circuit-svg"' in html
+    assert 'data-visual-contract="docx-l1-l4-subcircuit"' in html
+    assert 'data-node-count="20"' in html
+    assert 'data-wire-count="23"' in html
+    assert 'id="docx-circuit-node-grid"' in html
+    assert 'id="docx-circuit-wire-grid"' in html
+    assert 'id="docx-circuit-demo-scenario"' in html
+    assert 'id="docx-circuit-demo-panel"' in html
+    assert 'data-docx-circuit-demo-column="true"' in html
+    assert 'id="docx-circuit-demo-frame"' in html
+    assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
+    assert "truth_effect:none" in html
+    assert "controller_truth_modified:false" in html
+    assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
+    assert "docx-circuit-sequence-list" in script
+    assert "function activateStep" in script
+    assert "function applyDemoScenario" in script
+    assert "function renderSubcircuit" in script
+    assert "function setSvgHighlights" in script
+    assert "function selectCircuitElement" in script
+    assert "function renderTracePanel" in script
+    assert "function matchingSourceEntries" in script
+    assert "function activateRelativeStep" in script
+    assert "function renderSourceIndex" in script
+    assert "function activateSourceEntry" in script
+    assert "function stepForSourceEntry" in script
+    assert "function filteredSourceEntries" in script
+    assert "function sourceEntryLevels" in script
+    assert "function sourceIndexQuery" in script
+    assert "WORKBENCH_SECTION_ANCHORS" in script
+    assert "function hasReviewHashParams" in script
+    assert "function normalizedWorkbenchSectionAnchor" in script
+    assert "function applyReviewHashState" in script
+    assert "function writeReviewHash" in script
+    assert "function writeWorkbenchSectionHash" in script
+    assert "function handleWorkbenchAnchorClick" in script
+    assert "function parseHashElement" in script
+    assert "function currentReviewUrl" in script
+    assert "function copyReviewLink" in script
+    assert "function sourceEntryReviewUrl" in script
+    assert "function copySourceEntryLink" in script
+    assert "function renderActiveSourceEntryFocus" in script
+    assert "function focusActiveSourceEntry" in script
+    assert 'params.set("source"' in script
+    assert 'params.set("section"' in script
+    assert "sourceEntryLinkAnchor" in script
+    assert "hashchange" in script
+    assert "URLSearchParams" in script
+    assert "history.replaceState" in script
+    assert "function currentTracePacket" in script
+    assert "function tracePacketMarkdown" in script
+    assert "function markdownEvidenceList" in script
+    assert "function currentTraceMarkdown" in script
+    assert "function renderTracePacketPreview" in script
+    assert "function copyTracePacket" in script
+    assert "data-source-entry-anchor" in script
+    assert "data-evidence-scope" in script
+    assert "data-selected-element-id" in script
+    assert "docx-circuit-svg-wire-hit" in script
+    assert "data-wire-hit-id" in script
+    assert "docx_circuit_review_packet" in script
+    assert "DOCX Circuit Review Packet" in script
+    assert "```json" in script
+    assert "审阅包 Markdown 已复制" in script
+    assert "CIRCUIT_NODES" in script
+    assert "CIRCUIT_EDGES" in script
+    assert "data-review-anchor" in script
+    assert "aria-pressed" in script
+    assert "wire_logic4_thr_lock" in html
+    assert ".docx-circuit-stage" in stylesheet
+    assert ".docx-circuit-workbench-bar" in stylesheet
+    assert ".docx-circuit-review-panel" in stylesheet
+    assert ".docx-circuit-review-toolbar" in stylesheet
+    assert ".docx-circuit-source-index-panel" in stylesheet
+    assert ".docx-circuit-source-index-controls" in stylesheet
+    assert ".docx-circuit-source-index-button" in stylesheet
+    assert ".docx-circuit-source-link-button" in stylesheet
+    assert ".docx-circuit-source-focus" in stylesheet
+    assert '.docx-circuit-source-focus[data-has-source="true"]' in stylesheet
+    assert ".docx-circuit-review-packet-preview" in stylesheet
+    assert "#docx-circuit-demo-frame" in stylesheet
+    assert "height: 430px" in stylesheet
+    assert ".docx-circuit-source-focus strong" in stylesheet
+    assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
+    assert '"source_entry_link"' in review_link_gate
+    assert '"review_packet_markdown_json"' in review_link_gate
+    assert '"requirements_official_docx_link"' in review_link_gate
+    assert '"requirements_official_docx_failure_recovery"' in review_link_gate
+    assert '"submittedDocumentBase64Length"' in review_link_gate
+    assert '"submittedHasDocumentBase64"' in review_link_gate
+    assert '"submittedHasDocumentText"' in review_link_gate
+    assert '"logic_template_query_link"' in review_link_gate
+    assert '"workbench_anchor_preserves_review_state"' in review_link_gate
+    assert "DOCX_TO_CIRCUIT_REVIEW_BASE_REF" in review_link_gate
+    assert "origin/codex/docx-sentence-circuit-demo" in review_link_gate
+    assert '"merge-base"' in review_link_gate
+    assert '"--cached"' in review_link_gate
+    assert '"committed"' in review_link_gate
+    assert '"staged"' in review_link_gate
+    assert '"unstaged"' in review_link_gate
+    assert "markdown_with_json" in review_link_gate
+    assert "preview_matches_clipboard" in review_link_gate
+    assert "workbenchThreeColumn" in review_link_gate
+    assert "demoPanelInline" in review_link_gate
+    assert "RESPONSIVE_VIEWPORTS" in review_link_gate
+    assert '"responsive_layout"' in review_link_gate
+    assert "noHorizontalOverflow" in review_link_gate
+    assert "sourceLocatorFocused" in review_link_gate
+    assert "docx-to-circuit-responsive-" in review_link_gate
+    assert "docx-to-circuit-workbench-anchor-" in review_link_gate
+    assert "docx-to-circuit-workbench-anchor-reopen-" in review_link_gate
+    assert "requirements-official-docx-link-" in review_link_gate
+    assert "logic-template-query-link-" in review_link_gate
+    assert '"source_entry_locator"' in review_link_gate
+    assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
+    assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
+    assert '"section": "docx-circuit-demo-panel"' in review_link_gate
+    assert '"workbench_anchor_reopen"' in review_link_gate
+    requirements_script = (STATIC_ROOT / "requirements_intake" / "requirements_intake.js").read_text(encoding="utf-8")
+    logic_script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+    assert "OFFICIAL_DOCX_SOURCE" in requirements_script
+    assert "function requestedOfficialDocxSource" in requirements_script
+    assert "function applyOfficialDocxSource" in requirements_script
+    assert "function enableAnalyzeAfterDocumentLoad" in requirements_script
+    assert "enableAnalyzeAfterDocumentLoad();" in requirements_script
+    assert "/api/requirements-intake/official-docx-source" in requirements_script
+    assert 'state.uploadMode = "base64"' in requirements_script
+    assert "payload.document_base64" in requirements_script
+    assert "document_base64" in requirements_script
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in requirements_script
+    assert "function requestedDocxTemplate" in logic_script
+    assert "function renderRequestedDocxTemplate" in logic_script
+    assert ".docx-circuit-filter-toggle" in stylesheet
+    assert ".docx-circuit-copy-status" in stylesheet
+    assert "#docx-circuit-svg" in stylesheet
+    assert ".docx-circuit-trace-panel" in stylesheet
+    assert ".docx-circuit-svg-wire-hit" in stylesheet
+    assert ".docx-circuit-trace-evidence li[data-source-kind=\"sequence_step\"]" in stylesheet
+    assert ".docx-circuit-svg-wire[data-current-step-match=\"true\"]" in stylesheet
+    assert ".docx-circuit-svg-node[data-current-step-match=\"true\"]" in stylesheet
+    assert ".docx-circuit-svg-wire[data-selected=\"true\"]" in stylesheet
+    assert ".docx-circuit-svg-node[data-selected=\"true\"]" in stylesheet
+    assert ".docx-circuit-contract-chip[data-current-step-match=\"true\"]" in stylesheet
+    assert "#docx-circuit-demo-frame" in stylesheet
+
+    server, thread = _start_server()
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+        conn.request("GET", "/docx-to-circuit")
+        response = conn.getresponse()
+        body = response.read().decode("utf-8")
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert response.status == 200
+    assert "docx-circuit-demo-frame" in body
+    assert "原始 DOCX 到完整电路" in body
 
 
 def test_demo_reconstruction_page_is_productized_main_mvp_console():
@@ -6790,6 +7064,8 @@ def test_logic_builder_exposes_five_entry_mode_dock_command_palette_and_bottom_d
         "syncDrawerToCircuitInputs",
         "handleRunAction",
         "hydrateDrawerFromHash",
+        "selected_final_docx_l1_l4_circuit_v1",
+        "wire_logic4_thr_lock",
     ]:
         assert token in script
 

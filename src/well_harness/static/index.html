@@ -199,6 +199,42 @@
     border-color: var(--home-active);
     background: rgba(0,229,160,0.26);
   }
+  .home-docx-to-circuit-mainline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    border: 1px solid rgba(30, 103, 255, 0.30);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(30,103,255,0.09), rgba(22,167,101,0.05));
+    margin: 0 0 18px;
+    padding: 16px 18px;
+  }
+  .home-docx-to-circuit-mainline h2 {
+    margin: 0 0 6px;
+    color: var(--home-text);
+    font-size: 16px;
+  }
+  .home-docx-to-circuit-mainline p {
+    margin: 0;
+    color: var(--home-dim);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .home-docx-to-circuit-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .home-docx-to-circuit-steps span {
+    border: 1px solid rgba(30, 103, 255, 0.22);
+    border-radius: 999px;
+    color: var(--home-text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 5px 8px;
+  }
   @media (max-width: 960px) {
     .home-default-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -373,6 +409,7 @@
   @media (max-width: 720px) {
     .home-first-phase-mvp { grid-template-columns: 1fr; }
     .home-first-phase-demo-link { width: 100%; white-space: normal; }
+    .home-docx-to-circuit-mainline { grid-template-columns: 1fr; }
     .home-primary-action { grid-template-columns: 1fr; }
     .home-primary-next { width: 100%; white-space: normal; }
   }
@@ -715,6 +752,22 @@
     </div>
   </section>
 
+  <section id="home-docx-to-circuit-mainline" class="home-docx-to-circuit-mainline" data-primary-docx-entry="original-docx-to-complete-circuit" aria-labelledby="home-docx-to-circuit-title">
+    <div>
+      <h2 id="home-docx-to-circuit-title">原始 DOCX 到完整电路</h2>
+      <p>
+        从 <strong>uploads/20260409-thrust-reverser-control-logic.docx</strong> 开始，
+        串联需求解析、L1-L4 逻辑复刻和 demo.html 20/23 完整电路验收。
+      </p>
+      <div class="home-docx-to-circuit-steps" aria-label="原始 DOCX 到电路三段路径">
+        <span>1 原始 DOCX</span>
+        <span>2 L1-L4 逻辑复刻</span>
+        <span>3 demo.html 完整电路</span>
+      </div>
+    </div>
+    <a id="home-docx-to-circuit-entry" class="home-primary-next" href="/docx-to-circuit" data-home-priority="source-to-circuit">打开原始 DOCX 到完整电路</a>
+  </section>
+
   <section id="home-first-phase-mvp" class="home-first-phase-mvp" data-first-phase-deliverable="demo-html-reconstruction-mvp" aria-labelledby="home-first-phase-title">
     <div>
       <h2 id="home-first-phase-title">第一阶段可演示交付物</h2>
@@ -828,10 +881,10 @@
 
   <section class="home-primary-action" aria-label="首页主流程入口">
     <div>
-      <h2>从需求开始</h2>
-      <p>主流程会依次进入需求理解、逻辑绘制、故障准备和沙盒审查；下方四步卡片仅作流程预览。</p>
+      <h2>从原始 DOCX 开始</h2>
+      <p>先进入原文档到完整电路主入口；下方四步卡片仍保留需求理解、逻辑绘制、故障准备和沙盒审查的流程预览。</p>
     </div>
-    <a id="home-primary-next" class="home-primary-next" href="/requirements-intake" data-primary-next-action="true" data-primary-entry="deepseek-v4-pro">下一步：进入需求理解</a>
+    <a id="home-primary-next" class="home-primary-next" href="/docx-to-circuit" data-primary-next-action="true" data-primary-entry="docx-source-to-circuit">下一步：原始 DOCX 到完整电路</a>
   </section>
 
   <p class="home-flow-preview-label">四步流程预览</p>
