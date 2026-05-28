@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_owner_acceptance_handoff import (
     build_multi_agent_owner_acceptance_handoff,
@@ -217,9 +218,59 @@ def test_owner_decision_request_html_exposes_no_decision_boundary() -> None:
     assert "Decision recorded" in html
     assert "notion_control_plane_changes" in html
     assert "external_manual_input_only" in html
+    assert "Decision Input Template" in html
+    assert "five_agent_context_cap" in html
+    assert "PackagingPRReadinessAgent" in html
+    assert 'class="gate-row"' in html
+    assert 'class="option-row"' in html
+    assert 'class="agent-row"' in html
+    assert 'class="template-row"' in html
+    assert 'class="boundary-row"' in html
+    assert 'class="pathspec-item"' in html
 
 
 def test_owner_decision_request_writer_and_checker_round_trip(tmp_path: Path) -> None:
+    payload = build_multi_agent_owner_decision_request(
+        owner_acceptance_handoff=_owner_acceptance_handoff(),
+        generated_at="2026-05-28T11:20:00Z",
+    )
+    written = write_multi_agent_owner_decision_request_artifacts(
+        payload,
+        artifact_dir=tmp_path / "request",
+    )
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            written["artifact_paths"]["request_json"],
+            "--format",
+            "json",
+            "--skip-browser",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert verify_result.returncode == 0, verify_result.stderr
+    result = json.loads(verify_result.stdout)
+    assert result["status"] == "pass"
+    assert result["html_exists"] is True
+    assert result["markdown_exists"] is True
+    assert result["template_exists"] is True
+    assert result["browser_valid"] is False
+    assert result["browser"]["status"] == "skipped"
+    assert result["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_owner_decision_request_browser_gate_captures_geometry(
+    tmp_path: Path,
+) -> None:
     payload = build_multi_agent_owner_decision_request(
         owner_acceptance_handoff=_owner_acceptance_handoff(),
         generated_at="2026-05-28T11:20:00Z",
@@ -245,10 +296,27 @@ def test_owner_decision_request_writer_and_checker_round_trip(tmp_path: Path) ->
         check=False,
         timeout=120,
     )
+
     assert verify_result.returncode == 0, verify_result.stderr
-    result = json.loads(verify_result.stdout)
-    assert result["status"] == "pass"
-    assert result["template_exists"] is True
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["gateRowCount"] == len(payload["gates"])
+    assert browser["states"]["mobile"]["optionRowCount"] == len(payload["decision_options"])
+    assert browser["states"]["desktop"]["agentRowCount"] == payload["agent_team"]["team_size"]
+    assert browser["states"]["mobile"]["templateRowCount"] >= 4
+    assert browser["states"]["desktop"]["boundaryRowCount"] == len(payload["decision_boundaries"])
+    assert browser["states"]["mobile"]["pathspecItemCount"] == len(
+        payload["pathspec_package"]["pathspecs"],
+    )
 
 
 def test_owner_decision_request_runner_uses_supplied_handoff(tmp_path: Path) -> None:
@@ -279,3 +347,5 @@ def test_owner_decision_request_makefile_and_docs_are_wired() -> None:
     assert "verify-multi-agent-owner-decision-request" in makefile
     assert "M33" in doc
     assert "repo_github_local_artifacts_only" in doc
+    assert "desktop/mobile" in doc
+    assert "screenshots" in doc

@@ -282,19 +282,51 @@ def render_multi_agent_owner_decision_request_html(payload: dict[str, Any]) -> s
     """Render responsive HTML owner decision request."""
     summary = payload["summary"]
     gate_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"gate-row\">"
         f"<td data-label=\"Gate\">{_escape(name.replace('_', ' '))}</td>"
         f"<td data-label=\"Status\"><span class=\"badge badge-{_escape(status)}\">{_escape(status)}</span></td>"
         "</tr>"
         for name, status in payload["gates"].items()
     )
+    team_rows = "\n".join(
+        "<tr class=\"agent-row\">"
+        f"<td data-label=\"Agent\">{_escape(item['name'])}</td>"
+        f"<td data-label=\"Scope\">{_escape(item['scope'])}</td>"
+        "</tr>"
+        for item in payload["agent_team"]["active_agents"]
+    )
     option_rows = "\n".join(
-        "<tr>"
-        f"<td data-label=\"Option\">{_escape(item['option_id'])}</td>"
+        "<tr class=\"option-row\">"
+        f"<td data-label=\"Option\"><strong>{_escape(item['label'])}</strong><br><code>{_escape(item['option_id'])}</code></td>"
         f"<td data-label=\"Allowed\">{_escape(item['allowed'])}</td>"
+        f"<td data-label=\"Warning ack\">{_escape(item['requires_remote_warning_acknowledgement'])}</td>"
         f"<td data-label=\"Effect\">{_escape(item['effect'])}</td>"
         "</tr>"
         for item in payload["decision_options"]
+    )
+    template = payload["decision_input_template"]
+    template_rows = "\n".join(
+        "<tr class=\"template-row\">"
+        f"<td data-label=\"Field\">{_escape(name)}</td>"
+        f"<td data-label=\"Value\">{_escape(value)}</td>"
+        "</tr>"
+        for name, value in [
+            ("template_mode", template["template_mode"]),
+            ("decision", template["decision"]),
+            ("remote_check_warning_acknowledged", template["remote_check_warning_acknowledged"]),
+            ("decision_is_explicit", template["attestation"]["decision_is_explicit"]),
+        ]
+    )
+    boundary_rows = "\n".join(
+        "<tr class=\"boundary-row\">"
+        f"<td data-label=\"Boundary\">{_escape(name)}</td>"
+        f"<td data-label=\"Status\">{_escape(status)}</td>"
+        "</tr>"
+        for name, status in payload["decision_boundaries"].items()
+    )
+    pathspec_items = "\n".join(
+        f"<li class=\"pathspec-item\"><code>{_escape(item)}</code></li>"
+        for item in payload["pathspec_package"]["pathspecs"]
     )
     risks = "\n".join(f"<li>{_escape(item)}</li>" for item in payload["risk_notes"])
     return f"""<!doctype html>
@@ -342,7 +374,8 @@ def render_multi_agent_owner_decision_request_html(payload: dict[str, Any]) -> s
       padding: 16px;
     }}
     .metric span {{ display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }}
-    .metric strong {{ display: block; font-size: 22px; line-height: 1.2; overflow-wrap: anywhere; }}
+    .metric strong {{ display: block; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }}
+    .table-scroll {{ overflow-x: auto; max-width: 100%; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
     th, td {{ border-bottom: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }}
     th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; }}
@@ -388,24 +421,58 @@ def render_multi_agent_owner_decision_request_html(payload: dict[str, Any]) -> s
       <p>PR <code>{_escape(payload['inputs']['source_pr_number'])}</code>: <code>{_escape(payload['inputs']['source_pr_url'])}</code></p>
       <p>Head <code>{_escape(payload['inputs']['source_head_ref_oid'])}</code>; merge state <code>{_escape(payload['inputs']['source_merge_state'])}</code>.</p>
       <p>M32 handoff <code>{_escape(payload['inputs']['owner_acceptance_handoff_id'])}</code> is <code>{_escape(payload['inputs']['owner_acceptance_handoff_status'])}</code>.</p>
+      <p>Request mode <code>{_escape(summary['decision_request_mode'])}</code>.</p>
+    </section>
+    <section>
+      <h2>Active Agent Team</h2>
+      <p>Mode <code>{_escape(payload['agent_team']['mode'])}</code>, team size <code>{_escape(payload['agent_team']['team_size'])}</code>. {_escape(payload['agent_team']['retired_role_policy'])}</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Agent</th><th>Scope</th></tr></thead>
+          <tbody>{team_rows}</tbody>
+        </table>
+      </div>
     </section>
     <section>
       <h2>Gates</h2>
-      <table>
-        <thead><tr><th>Gate</th><th>Status</th></tr></thead>
-        <tbody>{gate_rows}</tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Gate</th><th>Status</th></tr></thead>
+          <tbody>{gate_rows}</tbody>
+        </table>
+      </div>
     </section>
     <section>
       <h2>Decision Options</h2>
-      <table>
-        <thead><tr><th>Option</th><th>Allowed</th><th>Effect</th></tr></thead>
-        <tbody>{option_rows}</tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Option</th><th>Allowed</th><th>Warning Ack</th><th>Effect</th></tr></thead>
+          <tbody>{option_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>Decision Input Template</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Field</th><th>Value</th></tr></thead>
+          <tbody>{template_rows}</tbody>
+        </table>
+      </div>
     </section>
     <section>
       <h2>Decision Boundaries</h2>
-      <p>auto_merge <code>{_escape(payload['decision_boundaries']['auto_merge'])}</code>; self_approval <code>{_escape(payload['decision_boundaries']['self_approval'])}</code>; resolve_review_threads <code>{_escape(payload['decision_boundaries']['resolve_review_threads'])}</code>; owner_decision_recording <code>{_escape(payload['decision_boundaries']['owner_decision_recording'])}</code>; notion_control_plane_changes <code>{_escape(payload['decision_boundaries']['notion_control_plane_changes'])}</code>.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Boundary</th><th>Status</th></tr></thead>
+          <tbody>{boundary_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>Pathspec Package</h2>
+      <ul>{pathspec_items}</ul>
+      <p>Stage command: <code>{_escape(payload['pathspec_package']['stage_command'])}</code></p>
     </section>
     <section>
       <h2>Risks</h2>
