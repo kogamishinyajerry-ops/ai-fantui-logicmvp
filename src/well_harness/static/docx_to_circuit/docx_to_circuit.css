@@ -938,6 +938,16 @@ h2 {
   .docx-circuit-workbench-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .docx-circuit-source-focus {
+    grid-template-columns: 1fr;
+  }
+  .docx-circuit-source-focus strong {
+    white-space: normal;
+  }
+  #docx-circuit-demo-frame {
+    height: 430px;
+    min-height: 430px;
+  }
   h1 {
     font-size: 24px;
   }

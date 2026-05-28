@@ -29,6 +29,11 @@ RESTRICTED_PATHS = [
     ".planning",
     "tools/gsd_notion_sync.py",
 ]
+RESPONSIVE_VIEWPORTS = [
+    {"name": "desktop", "width": 1366, "height": 768, "expected_columns": "three"},
+    {"name": "tablet", "width": 900, "height": 900, "expected_columns": "single"},
+    {"name": "mobile", "width": 390, "height": 844, "expected_columns": "single"},
+]
 
 
 def _utc_stamp() -> str:
@@ -113,6 +118,105 @@ def _state_matches(state: dict[str, Any], expected: dict[str, Any]) -> bool:
     return all(state.get(key) == value for key, value in expected.items())
 
 
+def _responsive_state(page: Any) -> dict[str, Any]:
+    page.wait_for_selector('#docx-circuit-svg[data-rendered="true"]', timeout=7000)
+    return page.evaluate(
+        """() => {
+            const stage = document.querySelector(".docx-circuit-stage");
+            const navLinks = [...document.querySelectorAll("#docx-circuit-workbench-bar a")];
+            const navTops = new Set(navLinks.map((link) => Math.round(link.getBoundingClientRect().top)));
+            const preview = document.querySelector("#docx-circuit-review-packet-preview");
+            const previewText = document.querySelector("#docx-circuit-review-packet-preview-text");
+            const sourceFocus = document.querySelector("#docx-circuit-source-focus");
+            const review = document.querySelector("#docx-circuit-review-panel");
+            const demo = document.querySelector("#docx-circuit-demo-panel");
+            const columns = stage
+                ? getComputedStyle(stage).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean)
+                : [];
+            const reviewRect = review?.getBoundingClientRect();
+            const demoRect = demo?.getBoundingClientRect();
+            return {
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                pageWidth: document.documentElement.scrollWidth,
+                noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                workbenchNavCount: navLinks.length,
+                workbenchNavRows: navTops.size,
+                stageColumnCount: columns.length,
+                desktopDemoInline: Boolean(
+                    reviewRect && demoRect && demoRect.left > reviewRect.left && demoRect.width > 320
+                ),
+                sourceFocusVisible: Boolean(
+                    sourceFocus
+                    && sourceFocus.dataset.hasSource === "true"
+                    && getComputedStyle(sourceFocus).display !== "none"
+                ),
+                sourceLocatorFocused: document.activeElement?.dataset.sourceEntryAnchor === "P004",
+                reviewPacketPreviewOpen: Boolean(preview?.open),
+                reviewPacketPreviewVisible: Boolean(
+                    previewText
+                    && previewText.textContent.includes("## DOCX Circuit Review Packet")
+                    && previewText.getBoundingClientRect().height > 0
+                ),
+                visibleNodeCount: document.querySelectorAll("#docx-circuit-svg [data-node-id]").length,
+                visibleWireCount: document.querySelectorAll("#docx-circuit-svg [data-wire-id]").length,
+                hitPointCount: document.querySelectorAll("#docx-circuit-svg [data-wire-hit-id]").length,
+            };
+        }"""
+    )
+
+
+def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> bool:
+    if expected_columns == "three":
+        columns_match = state.get("stageColumnCount", 0) >= 3 and state.get("desktopDemoInline") is True
+    else:
+        columns_match = state.get("stageColumnCount") == 1
+    return all(
+        [
+            columns_match,
+            state.get("noHorizontalOverflow") is True,
+            state.get("workbenchNavCount") == 4,
+            state.get("sourceFocusVisible") is True,
+            state.get("sourceLocatorFocused") is True,
+            state.get("reviewPacketPreviewOpen") is True,
+            state.get("reviewPacketPreviewVisible") is True,
+            state.get("visibleNodeCount") == 20,
+            state.get("visibleWireCount") == 23,
+            state.get("hitPointCount") == 23,
+        ]
+    )
+
+
+def _capture_responsive_state(
+    context: Any,
+    url: str,
+    viewport: dict[str, Any],
+    screenshot_path: Path,
+) -> dict[str, Any]:
+    page = context.new_page()
+    page.set_viewport_size({"width": viewport["width"], "height": viewport["height"]})
+    page.goto(url, wait_until="networkidle")
+    page.wait_for_selector("#docx-circuit-show-source-entry", timeout=7000)
+    page.locator("#docx-circuit-review-packet-preview summary").click()
+    page.wait_for_function(
+        """() => {
+            const preview = document.querySelector("#docx-circuit-review-packet-preview");
+            const text = document.querySelector("#docx-circuit-review-packet-preview-text");
+            return preview?.open && text?.textContent.includes("## DOCX Circuit Review Packet");
+        }""",
+        timeout=7000,
+    )
+    page.locator("#docx-circuit-show-source-entry").click()
+    page.wait_for_function(
+        """() => document.activeElement?.dataset.sourceEntryAnchor === "P004" """,
+        timeout=7000,
+    )
+    state = _responsive_state(page)
+    page.screenshot(path=str(screenshot_path), full_page=True)
+    page.close()
+    return state
+
+
 def _review_packet_markdown_valid(value: str) -> bool:
     required = [
         "## DOCX Circuit Review Packet",
@@ -137,8 +241,13 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     current_review_path = artifact_dir / f"docx-to-circuit-current-review-link-{stamp}.png"
     review_packet_preview_path = artifact_dir / f"docx-to-circuit-review-packet-preview-{stamp}.png"
     source_entry_path = artifact_dir / f"docx-to-circuit-source-entry-link-{stamp}.png"
+    responsive_paths = {
+        item["name"]: artifact_dir / f"docx-to-circuit-responsive-{item['name']}-{stamp}.png"
+        for item in RESPONSIVE_VIEWPORTS
+    }
     restricted = _restricted_diff()
     console_errors: list[str] = []
+    responsive_states: dict[str, dict[str, Any]] = {}
 
     server, thread, base_url = _start_server()
     current_link = f"{base_url}/docx-to-circuit#step=P035-S01&el=node%3Asw1&q=SW1&level=L1"
@@ -204,6 +313,13 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 source_page.locator("#docx-circuit-show-source-entry").click()
                 source_focus_state = _page_state(source_page)
                 source_page.screenshot(path=str(source_entry_path), full_page=True)
+                for viewport in RESPONSIVE_VIEWPORTS:
+                    responsive_states[viewport["name"]] = _capture_responsive_state(
+                        context,
+                        copied_source_entry,
+                        viewport,
+                        responsive_paths[viewport["name"]],
+                    )
             finally:
                 browser.close()
     finally:
@@ -283,7 +399,21 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "screenshots": "pass"
         if all(
             path.exists() and path.stat().st_size > 0
-            for path in (current_review_path, review_packet_preview_path, source_entry_path)
+            for path in (
+                current_review_path,
+                review_packet_preview_path,
+                source_entry_path,
+                *responsive_paths.values(),
+            )
+        )
+        else "fail",
+        "responsive_layout": "pass"
+        if all(
+            _responsive_state_matches(
+                responsive_states.get(viewport["name"], {}),
+                viewport["expected_columns"],
+            )
+            for viewport in RESPONSIVE_VIEWPORTS
         )
         else "fail",
         "boundary": "pass" if not restricted else "fail",
@@ -311,10 +441,15 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             "source_entry": source_state,
             "source_entry_locator": source_focus_state,
         },
+        "responsive_states": responsive_states,
         "screenshots": {
             "current_review": str(current_review_path),
             "review_packet_preview": str(review_packet_preview_path),
             "source_entry": str(source_entry_path),
+            "responsive": {
+                name: str(path)
+                for name, path in responsive_paths.items()
+            },
         },
         "console_errors": console_errors,
         "restricted_diff": restricted,

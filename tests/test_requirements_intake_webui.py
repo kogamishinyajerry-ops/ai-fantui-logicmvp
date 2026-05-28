@@ -6454,6 +6454,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert ".docx-circuit-source-focus" in stylesheet
     assert '.docx-circuit-source-focus[data-has-source="true"]' in stylesheet
     assert ".docx-circuit-review-packet-preview" in stylesheet
+    assert "#docx-circuit-demo-frame" in stylesheet
+    assert "height: 430px" in stylesheet
+    assert ".docx-circuit-source-focus strong" in stylesheet
     assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
     assert '"source_entry_link"' in review_link_gate
     assert '"review_packet_markdown_json"' in review_link_gate
@@ -6461,6 +6464,11 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "preview_matches_clipboard" in review_link_gate
     assert "workbenchThreeColumn" in review_link_gate
     assert "demoPanelInline" in review_link_gate
+    assert "RESPONSIVE_VIEWPORTS" in review_link_gate
+    assert '"responsive_layout"' in review_link_gate
+    assert "noHorizontalOverflow" in review_link_gate
+    assert "sourceLocatorFocused" in review_link_gate
+    assert "docx-to-circuit-responsive-" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
     assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
