@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p6">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p6" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p7">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p7" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -243,6 +243,33 @@
           <section aria-label="支撑该对象的 P035 拆解步骤">
             <strong>P035 步骤</strong>
             <ol id="demo-reconstruction-provenance-step-list" class="demo-reconstruction-provenance-list"></ol>
+          </section>
+        </div>
+      </div>
+      <div id="demo-reconstruction-signal-neighborhood" class="demo-reconstruction-signal-neighborhood" data-signal-neighborhood="circuit-adjacency" aria-label="电路对象邻接读回">
+        <div class="demo-reconstruction-neighborhood-head">
+          <div>
+            <h3>电路邻接读回</h3>
+            <p>聚焦节点或连线后，沿 demo.html 完整电路图读出上游、下游和相邻对象。</p>
+          </div>
+          <div class="demo-reconstruction-neighborhood-summary">
+            <span id="demo-reconstruction-neighborhood-object">等待对象</span>
+            <strong id="demo-reconstruction-neighborhood-in-count">0 上游</strong>
+            <strong id="demo-reconstruction-neighborhood-out-count">0 下游</strong>
+          </div>
+        </div>
+        <div class="demo-reconstruction-neighborhood-grid">
+          <section aria-label="上游对象">
+            <strong>上游</strong>
+            <ol id="demo-reconstruction-neighborhood-incoming" class="demo-reconstruction-neighborhood-list"></ol>
+          </section>
+          <section aria-label="下游对象">
+            <strong>下游</strong>
+            <ol id="demo-reconstruction-neighborhood-outgoing" class="demo-reconstruction-neighborhood-list"></ol>
+          </section>
+          <section aria-label="相邻对象">
+            <strong>相邻</strong>
+            <ol id="demo-reconstruction-neighborhood-adjacent" class="demo-reconstruction-neighborhood-list"></ol>
           </section>
         </div>
       </div>
