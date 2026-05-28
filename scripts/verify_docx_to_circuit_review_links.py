@@ -286,14 +286,51 @@ def _logic_template_query_state(page: Any, base_url: str) -> dict[str, Any]:
             viewMode: document.querySelector("#logic-canvas")?.dataset.viewMode || null,
             modeText: document.querySelector("#logic-reconstruction-mode")?.textContent || null,
             fidelityText: document.querySelector("#logic-reconstruction-fidelity")?.textContent || null,
-            localStorageHasDocxTemplate: (() => {
+            templateState: (() => {
                 try {
-                    return Boolean(
-                        localStorage.getItem("ai-fantui-logic-builder-drawing-v1")
-                            ?.includes("local-docx-l1-l4-template")
-                    );
+                    const raw = localStorage.getItem("ai-fantui-logic-builder-drawing-v1");
+                    const payload = raw ? JSON.parse(raw) : null;
+                    const view = payload?.circuit_view || {};
+                    const nodes = Array.isArray(view.nodes) ? view.nodes : [];
+                    const wires = Array.isArray(view.wires) ? view.wires : [];
+                    const drawingNodes = Array.isArray(payload?.nodes) ? payload.nodes : [];
+                    const nodeIds = nodes.map((node) => node.id);
+                    const drawingNodeIds = drawingNodes.map((node) => node.id);
+                    const labels = nodes.map((node) => node.label || "").join(" ");
+                    const requiredNodes = [
+                        "logic1",
+                        "logic2",
+                        "logic3",
+                        "logic4",
+                        "tls115",
+                        "tls_unlocked",
+                        "etrac_540v",
+                        "pls_power",
+                        "pdu_motor",
+                        "vdt90",
+                        "thr_lock",
+                    ];
+                    const legacyNodes = ["logic_and", "latch", "caut", "caut1", "caut2", "caut3"];
+                    return {
+                        hasDocxTemplate: Boolean(raw?.includes("local-docx-l1-l4-template")),
+                        layout: view.layout || null,
+                        nodeCount: nodes.length,
+                        wireCount: wires.length,
+                        drawingNodeCount: drawingNodes.length,
+                        hasRequiredNodes: requiredNodes.every((id) => nodeIds.includes(id)),
+                        drawingHasRequiredNodes: requiredNodes.every((id) => drawingNodeIds.includes(id)),
+                        hasRequiredLabels: [
+                            "TLS 115VAC",
+                            "ETRAC 540VDC",
+                            "PLS power",
+                            "PDU motor",
+                            "VDT90",
+                            "THR_LOCK",
+                        ].every((label) => labels.includes(label)),
+                        hasLegacyPlaceholderNodes: legacyNodes.some((id) => nodeIds.includes(id) || drawingNodeIds.includes(id)),
+                    };
                 } catch (error) {
-                    return false;
+                    return {error: String(error)};
                 }
             })(),
         })"""
@@ -307,7 +344,15 @@ def _logic_template_query_state_matches(state: dict[str, Any]) -> bool:
             state.get("viewMode") == "circuit",
             state.get("modeText") == "当前模式：演示舱一致电路图",
             state.get("fidelityText") == "链路覆盖：20/20 节点 · 23/23 连线",
-            state.get("localStorageHasDocxTemplate") is True,
+            state.get("templateState", {}).get("hasDocxTemplate") is True,
+            state.get("templateState", {}).get("layout") == "selected_final_docx_l1_l4_circuit_v1",
+            state.get("templateState", {}).get("nodeCount") == 20,
+            state.get("templateState", {}).get("wireCount") == 23,
+            state.get("templateState", {}).get("drawingNodeCount") == 20,
+            state.get("templateState", {}).get("hasRequiredNodes") is True,
+            state.get("templateState", {}).get("drawingHasRequiredNodes") is True,
+            state.get("templateState", {}).get("hasRequiredLabels") is True,
+            state.get("templateState", {}).get("hasLegacyPlaceholderNodes") is False,
         ]
     )
 

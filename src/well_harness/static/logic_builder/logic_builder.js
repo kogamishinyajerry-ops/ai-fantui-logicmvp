@@ -1301,22 +1301,42 @@
   function applyDocxTemplateRunVisualState(action) {
     if (!isDocxTemplateCircuit() || !circuitSvg) return;
     const activeNodeIds = new Set([
-      "ra",
+      "radio_altitude_ft",
+      "aircraft_on_ground",
+      "engine_running",
+      "eec_enable",
       "sw1",
+      "sw2",
+      "logic1",
+      "logic2",
+      "tls115",
+      "tls_unlocked",
+      "etrac_540v",
+      "n1k",
+      "logic3",
+      "eec_deploy",
+      "pls_power",
+      "pdu_motor",
       "vdt",
-      "tra",
-      "l1_threshold",
-      "l2_threshold",
-      "and_top",
-      "and1",
-      "prio",
-      "inhib",
-      "latch",
-      "caut1",
-      "caut2",
+      "vdt90",
+      "logic4",
+      "thr_lock",
     ]);
-    const blockedNodeIds = new Set(["caut3"]);
-    const activeWireTargets = new Set(["l1_threshold", "l2_threshold", "and_top", "and1", "prio", "inhib", "latch", "caut1", "caut2"]);
+    const blockedNodeIds = new Set(["reverser_inhibited"]);
+    const activeWireTargets = new Set([
+      "logic1",
+      "logic2",
+      "logic3",
+      "tls115",
+      "tls_unlocked",
+      "etrac_540v",
+      "eec_deploy",
+      "pls_power",
+      "pdu_motor",
+      "vdt90",
+      "logic4",
+      "thr_lock",
+    ]);
     circuitSvg.querySelectorAll(".logic-circuit-node").forEach((element) => {
       const nodeId = element.dataset.demoNodeId || "";
       let stateName = activeNodeIds.has(nodeId) ? "active" : "idle";
@@ -2133,117 +2153,249 @@
   }
 
   function buildDocxTemplateCircuitView() {
-    const anchor = (id, quote) => ({id, kind: "DOCX", quote_zh: quote || id});
-    const node = (id, label, role, x, y, width, height, state, anchorId, quote) => ({
-      id,
-      linked_node_id: id,
-      row_id: "",
-      circuit_role: role,
-      label,
-      node_kind: role === "gate" ? "logic" : (role === "input" ? "input" : "output"),
-      description_zh: quote || label,
-      x,
-      y,
-      width,
-      height,
-      state,
-      source_anchors: [anchor(anchorId || id, quote || label)],
-      source_anchor_ids: [anchorId || id],
-      provenance_kind: "source",
-    });
-    const wire = (id, sourceId, targetId, route, state = "active") => {
-      const item = {
+    const anchor = (id, quote, kind = "DOCX") => ({id, kind, quote_zh: quote || id});
+    const anchors = {
+      logic1: anchor("L1", "工作逻辑1：RA<6ft 且 SW1 进入 TRA [-1.4,-6.2] 区间，输出 TLS 115VAC。"),
+      logic2: anchor("L2", "工作逻辑2：SW2 有效且 TRA 区间满足时，输出 ETRAC 540VDC。"),
+      logic3: anchor("L3", "工作逻辑3：TLS/PLS 反馈满足后，驱动 EEC deploy、PLS power、PDU motor。"),
+      logic4: anchor("L4", "工作逻辑4：VDT 达到 90% deploy 且 TRA<=-11.74deg，THR_LOCK release。"),
+      local: anchor("demo-cabin-context", "演示舱运行上下文，本地补齐；不改变控制真值。", "local"),
+    };
+    const sourceAnchorsById = {
+      sw1: [anchors.logic1],
+      radio_altitude_ft: [anchors.logic1],
+      logic1: [anchors.logic1],
+      tls115: [anchors.logic1],
+      tls_unlocked: [anchors.logic1],
+      sw2: [anchors.logic2],
+      logic2: [anchors.logic2],
+      etrac_540v: [anchors.logic2],
+      aircraft_on_ground: [anchors.local],
+      engine_running: [anchors.local],
+      n1k: [anchors.local],
+      eec_enable: [anchors.local],
+      reverser_inhibited: [anchors.local],
+      logic3: [anchors.logic3],
+      eec_deploy: [anchors.logic3],
+      pls_power: [anchors.logic3],
+      pdu_motor: [anchors.logic3],
+      vdt90: [anchors.logic4],
+      logic4: [anchors.logic4],
+      thr_lock: [anchors.logic4],
+    };
+    const linkedNodeById = {
+      sw1: "sw1",
+      radio_altitude_ft: "ra_lt_6ft",
+      sw2: "sw2",
+      logic1: "logic1",
+      logic2: "logic2",
+      logic3: "logic3",
+      tls115: "tls_cmd",
+      tls_unlocked: "tls_cmd",
+      vdt90: "vdt_90",
+      etrac_540v: "etrac_cmd",
+      eec_deploy: "pls_pdu_cmd",
+      pls_power: "pls_pdu_cmd",
+      pdu_motor: "pls_pdu_cmd",
+      logic4: "logic4",
+      thr_lock: "thr_lock_release",
+    };
+    const descriptions = {
+      sw1: "SW1 进入 TRA [-1.4,-6.2] 区间，用于 L1/TLS 条件。",
+      aircraft_on_ground: "演示舱在地状态，本地补齐为运行上下文。",
+      radio_altitude_ft: "RA<6ft，触发 TLS 解锁路径。",
+      sw2: "SW2 进入 TRA [-5,-9.8] 区间，用于 L2/ETRAC 条件。",
+      engine_running: "发动机运行状态，本地补齐为运行上下文。",
+      n1k: "N1K 门限，本地补齐为 L3 运行约束。",
+      eec_enable: "EEC 允许，本地补齐为执行链上下文。",
+      reverser_inhibited: "反推抑制必须为 false；本地补齐为安全上下文。",
+      logic1: "L1 输出 TLS 115VAC 解锁命令。",
+      logic2: "L2 输出 ETRAC 540VDC 供电命令。",
+      logic3: "L3 驱动 EEC deploy、PLS power、PDU motor。",
+      tls115: "TLS 115VAC command。",
+      tls_unlocked: "TLS 解锁反馈。",
+      vdt90: "反推展开达到 90% 的 VDT 反馈。",
+      etrac_540v: "ETRAC 540VDC command。",
+      eec_deploy: "EEC deploy command。",
+      pls_power: "PLS power command。",
+      pdu_motor: "PDU motor command。",
+      logic4: "L4 汇合 L3 与 VDT90，控制 THR_LOCK release。",
+      thr_lock: "THR_LOCK release，DOCX L1-L4 链路末端输出。",
+    };
+    const activeNodes = new Set(["aircraft_on_ground", "radio_altitude_ft", "engine_running", "eec_enable"]);
+    const blockedNodes = new Set(["logic1", "logic2", "logic3", "logic4", "thr_lock"]);
+    const nodeSpecs = [
+      ["sw1", "SW1 · TRA [-1.4,-6.2]", "input", 10, 40, 160, 28],
+      ["aircraft_on_ground", "aircraft_on_ground", "input", 10, 76, 160, 28],
+      ["radio_altitude_ft", "RA < 6 ft", "input", 10, 112, 160, 28],
+      ["sw2", "SW2 · TRA [-5,-9.8]", "input", 10, 156, 160, 28],
+      ["engine_running", "engine_running", "input", 10, 192, 160, 28],
+      ["n1k", "N1K < max_n1k", "input", 10, 234, 160, 28],
+      ["eec_enable", "eec_enable", "input", 10, 270, 160, 28],
+      ["reverser_inhibited", "NOT reverser_inhibited", "input", 10, 306, 160, 28],
+      ["logic1", "L1", "logic", 260, 70, 160, 38],
+      ["logic2", "L2", "logic", 260, 170, 160, 38],
+      ["logic3", "L3", "logic", 260, 260, 160, 50],
+      ["tls115", "TLS 115VAC cmd", "component", 500, 56, 160, 28],
+      ["tls_unlocked", "TLS_Unlocked LS", "component", 500, 92, 160, 28],
+      ["vdt90", "VDT90 (>=90% deploy)", "component", 500, 128, 160, 28],
+      ["etrac_540v", "ETRAC 540VDC cmd", "component", 500, 156, 160, 28],
+      ["eec_deploy", "EEC_deploy cmd", "output", 500, 246, 160, 28],
+      ["pls_power", "PLS power", "output", 500, 282, 160, 28],
+      ["pdu_motor", "PDU motor cmd", "output", 500, 318, 160, 28],
+      ["logic4", "L4", "logic", 720, 130, 160, 38],
+      ["thr_lock", "THR_LOCK release", "output", 720, 200, 160, 34],
+    ];
+    const roleForNode = (id, x, kind) => {
+      if (kind === "logic") return "gate";
+      if (id === "thr_lock") return "final_output";
+      if (x >= 500) return "intermediate";
+      return "input";
+    };
+    const nodes = nodeSpecs.map(([id, label, kind, x, y, width, height]) => {
+      const sourceAnchors = sourceAnchorsById[id] || [anchors.local];
+      return {
         id,
-        label: `${sourceId} -> ${targetId}`,
-        route,
-        state,
-        source_anchors: [anchor(`wire-${id}`, `${sourceId} 到 ${targetId}`)],
-        source_anchor_ids: [`wire-${id}`],
-        provenance: "source",
+        linked_node_id: linkedNodeById[id] || "",
+        row_id: id.startsWith("logic") ? id : "",
+        circuit_role: roleForNode(id, x, kind),
+        label,
+        node_kind: kind,
+        description_zh: descriptions[id] || label,
+        x,
+        y,
+        width,
+        height,
+        state: blockedNodes.has(id) ? "blocked" : (activeNodes.has(id) ? "active" : "idle"),
+        source_anchors: sourceAnchors,
+        source_anchor_ids: sourceAnchors.map((item) => item.id),
+        provenance: sourceAnchors.some((item) => item.kind === "DOCX") ? "docx_body" : "demo_cabin_context",
       };
-      item.source = sourceId;
-      item.target = targetId;
-      return item;
+    });
+    const rowAnchors = {
+      logic1: [anchors.logic1],
+      logic2: [anchors.logic2],
+      logic3: [anchors.logic3],
+      logic4: [anchors.logic4],
     };
-    const junction = (id, sourceId, x, y, state = "active") => {
-      const item = {id, x, y, state};
-      item.source = sourceId;
-      return item;
-    };
+    const rows = [
+      ["logic1", "L1", "TLS 解锁", 89, ["sw1", "radio_altitude_ft", "reverser_inhibited"], ["tls115"]],
+      ["logic2", "L2", "ETRAC 供电", 189, ["aircraft_on_ground", "sw2", "engine_running", "eec_enable", "reverser_inhibited"], ["etrac_540v"]],
+      ["logic3", "L3", "EEC/PLS/PDU 展开链路", 285, ["tls_unlocked", "n1k", "engine_running", "aircraft_on_ground", "reverser_inhibited"], ["eec_deploy", "pls_power", "pdu_motor", "logic4"]],
+      ["logic4", "L4", "VDT90 到 THR_LOCK", 149, ["vdt90", "logic3"], ["thr_lock"]],
+    ].map(([id, label, title, centerY, inputs, outputs]) => {
+      const gate = nodes.find((node) => node.id === id) || {};
+      const sourceAnchors = rowAnchors[id] || [anchors.local];
+      return {
+        id,
+        label,
+        title_zh: title,
+        center_y: centerY,
+        inputs,
+        outputs,
+        gate: {
+          id,
+          label,
+          gate_type: "AND",
+          x: gate.x,
+          y: gate.y,
+          width: gate.width,
+          height: gate.height,
+          source_anchors: sourceAnchors,
+          source_anchor_ids: sourceAnchors.map((item) => item.id),
+        },
+        source_anchors: sourceAnchors,
+        source_anchor_ids: sourceAnchors.map((item) => item.id),
+      };
+    });
+    const route = (...points) => points.map(([x, y]) => ({x, y}));
+    const wireSpecs = [
+      ["wire_sw1_logic1", "sw1", "logic1", route([170, 54], [232, 54], [232, 78], [260, 78])],
+      ["wire_ground_logic2", "aircraft_on_ground", "logic2", route([170, 90], [238, 90], [238, 184], [260, 184])],
+      ["wire_ra_logic1", "radio_altitude_ft", "logic1", route([170, 126], [232, 126], [232, 98], [260, 98])],
+      ["wire_logic1_tls115", "logic1", "tls115", route([420, 89], [460, 89], [460, 70], [500, 70])],
+      ["wire_tls115_tls_unlocked", "tls115", "tls_unlocked", route([580, 84], [580, 92])],
+      ["wire_sw2_logic2", "sw2", "logic2", route([170, 170], [234, 170], [234, 180], [260, 180])],
+      ["wire_engine_logic2", "engine_running", "logic2", route([170, 206], [234, 206], [234, 196], [260, 196])],
+      ["wire_tls_unlocked_logic3", "tls_unlocked", "logic3", route([660, 106], [702, 106], [702, 28], [246, 28], [246, 276], [260, 276])],
+      ["wire_logic2_etrac", "logic2", "etrac_540v", route([420, 189], [460, 189], [460, 170], [500, 170])],
+      ["wire_n1k_logic3", "n1k", "logic3", route([170, 248], [230, 248], [230, 270], [260, 270])],
+      ["wire_eec_logic2", "eec_enable", "logic2", route([170, 284], [240, 284], [240, 200], [260, 200])],
+      ["wire_engine_logic3", "engine_running", "logic3", route([170, 206], [244, 206], [244, 281], [260, 281])],
+      ["wire_ground_logic3", "aircraft_on_ground", "logic3", route([170, 90], [244, 90], [244, 290], [260, 290])],
+      ["wire_inh_logic1", "reverser_inhibited", "logic1", route([170, 320], [226, 320], [226, 88], [260, 88])],
+      ["wire_inh_logic2", "reverser_inhibited", "logic2", route([226, 188], [260, 188])],
+      ["wire_inh_logic3", "reverser_inhibited", "logic3", route([226, 304], [260, 304])],
+      ["wire_logic3_eec", "logic3", "eec_deploy", route([420, 279], [465, 279], [465, 260], [500, 260])],
+      ["wire_logic3_pls", "logic3", "pls_power", route([465, 279], [465, 296], [500, 296])],
+      ["wire_logic3_pdu", "logic3", "pdu_motor", route([465, 296], [465, 332], [500, 332])],
+      ["wire_pdu_vdt90", "pdu_motor", "vdt90", route([660, 332], [690, 332], [690, 142], [660, 142])],
+      ["wire_vdt90_logic4", "vdt90", "logic4", route([660, 142], [720, 142])],
+      ["wire_logic3_logic4", "logic3", "logic4", route([420, 298], [440, 298], [440, 368], [690, 368], [690, 162], [720, 162])],
+      ["wire_logic4_thr_lock", "logic4", "thr_lock", route([800, 168], [800, 200])],
+    ];
+    const wires = wireSpecs.map(([id, sourceId, targetId, points]) => {
+      const sourceAnchors = [
+        ...(sourceAnchorsById[sourceId] || []),
+        ...(sourceAnchorsById[targetId] || []),
+      ];
+      const uniqueAnchors = Array.from(new Map(sourceAnchors.map((item) => [item.id, item])).values());
+      return {
+        id,
+        source: sourceId,
+        target: targetId,
+        label: `${sourceId} -> ${targetId}`,
+        route: points,
+        state: targetId === "thr_lock" ? "blocked" : (activeNodes.has(sourceId) ? "active" : "idle"),
+        provenance: uniqueAnchors.some((item) => item.kind === "DOCX") ? "docx_body" : "demo_cabin_context",
+        source_anchors: uniqueAnchors.length ? uniqueAnchors : [anchors.local],
+        source_anchor_ids: (uniqueAnchors.length ? uniqueAnchors : [anchors.local]).map((item) => item.id),
+      };
+    });
     return {
       kind: "ai-fantui-l1-l4-circuit-view",
       version: 1,
       layout: "selected_final_docx_l1_l4_circuit_v1",
-      canvas: {width: 1180, height: 430},
+      canvas: {width: 900, height: 400},
       source_requirements_sha256: "local-docx-l1-l4-template",
-      rows: [
-        {id: "l1", label: "L1", title_zh: "L1 告警门限", center_y: 86, inputs: ["ra", "sw1"], outputs: ["caut1"], source_anchors: [anchor("2.1.1-1")]},
-        {id: "l2", label: "L2", title_zh: "L2 告警门限", center_y: 154, inputs: ["ra", "sw1"], outputs: ["caut2"], source_anchors: [anchor("2.1.1-2")]},
-        {id: "l3", label: "L3", title_zh: "优先级与抑制", center_y: 252, inputs: ["vdt", "tra"], outputs: ["caut3"], source_anchors: [anchor("2.1.2")]},
-        {id: "l4", label: "L4", title_zh: "反推允许锁存", center_y: 322, inputs: ["flight_mode"], outputs: ["cancel"], source_anchors: [anchor("2.2.2")]},
-      ],
-      nodes: [
-        node("ra", "RA", "input", 70, 46, 96, 46, "active", "2.1.1-1", "高度 235 ft"),
-        node("sw1", "SW1", "input", 70, 112, 96, 46, "active", "2.1.1-2", "DTM Switch ON"),
-        node("sw2", "SW2", "input", 70, 178, 96, 46, "idle", "2.1.1-2", "DTM Switch OFF"),
-        node("vdt", "VDT", "input", 70, 244, 96, 46, "active", "2.2.1-1", "地速 132 kt"),
-        node("tra", "TRA", "input", 70, 310, 96, 46, "active", "2.1.3-1", "门限 350 ft"),
-        node("l1_threshold", "L1 门限", "gate", 270, 58, 92, 48, "active", "2.1.1-1", ">= 250 ft"),
-        node("l2_threshold", "L2 门限", "gate", 270, 128, 92, 48, "active", "2.1.1-2", ">= 100 ft"),
-        node("and_top", "AND", "gate", 430, 94, 70, 46, "active", "2.1.1-3", "L1/L2 汇合"),
-        node("and1", "AND1", "gate", 290, 238, 88, 48, "active", "2.1.1-4", "与门"),
-        node("prio", "PRIO", "gate", 440, 238, 96, 48, "active", "2.1.2.2", "优先级锁存"),
-        node("inhib", "INHIB", "gate", 594, 238, 102, 48, "active", "2.2.1", "抑制逻辑"),
-        node("flight_mode", "FLIGHT MODE", "input", 594, 330, 112, 48, "idle", "2.2.1-1", "飞行模式 0"),
-        node("latch", "LATCH", "gate", 785, 238, 102, 48, "active", "2.2.2", "反推允许"),
-        node("run_probe", "帧 00:03.24", "intermediate", 746, 84, 112, 42, "active", "run-frame", "运行帧"),
-        node("source_badge", "来源锁定", "intermediate", 916, 330, 96, 38, "active", "source-lock", "证据覆盖"),
-        node("caut1", "L1 告警", "final_output", 970, 58, 96, 48, "active", "2.1.1-5", "CAUT1"),
-        node("caut2", "L2 告警", "final_output", 970, 126, 96, 48, "active", "2.1.1-6", "CAUT2"),
-        node("caut3", "TRA 门限告警", "final_output", 970, 194, 104, 52, "blocked", "2.1.3-1", "CAUT3"),
-        node("cancel", "取消逻辑", "output", 970, 270, 104, 48, "idle", "2.2.3", "Cancel"),
-        node("coverage", "20/23", "intermediate", 1028, 350, 70, 34, "active", "coverage", "节点 20/20 连线 23/23"),
-      ],
-      wires: [
-        wire("ra_l1", "ra", "l1_threshold", [{x: 166, y: 69}, {x: 214, y: 69}, {x: 214, y: 82}, {x: 270, y: 82}]),
-        wire("ra_l2", "ra", "l2_threshold", [{x: 166, y: 69}, {x: 228, y: 69}, {x: 228, y: 152}, {x: 270, y: 152}]),
-        wire("sw1_l2", "sw1", "l2_threshold", [{x: 166, y: 135}, {x: 270, y: 135}]),
-        wire("sw2_and1", "sw2", "and1", [{x: 166, y: 201}, {x: 214, y: 201}, {x: 214, y: 250}, {x: 290, y: 250}], "idle"),
-        wire("vdt_and1", "vdt", "and1", [{x: 166, y: 267}, {x: 290, y: 267}]),
-        wire("tra_and1", "tra", "and1", [{x: 166, y: 333}, {x: 228, y: 333}, {x: 228, y: 274}, {x: 290, y: 274}]),
-        wire("sw1_and1", "sw1", "and1", [{x: 166, y: 135}, {x: 238, y: 135}, {x: 238, y: 262}, {x: 290, y: 262}]),
-        wire("l1_and", "l1_threshold", "and_top", [{x: 362, y: 82}, {x: 398, y: 82}, {x: 398, y: 108}, {x: 430, y: 108}]),
-        wire("l2_and", "l2_threshold", "and_top", [{x: 362, y: 152}, {x: 398, y: 152}, {x: 398, y: 126}, {x: 430, y: 126}]),
-        wire("and_latch", "and_top", "latch", [{x: 500, y: 117}, {x: 748, y: 117}, {x: 748, y: 252}, {x: 785, y: 252}]),
-        wire("and1_prio", "and1", "prio", [{x: 378, y: 262}, {x: 440, y: 262}]),
-        wire("prio_inhib", "prio", "inhib", [{x: 536, y: 262}, {x: 594, y: 262}]),
-        wire("inhib_latch", "inhib", "latch", [{x: 696, y: 262}, {x: 785, y: 262}]),
-        wire("flight_inhib", "flight_mode", "inhib", [{x: 650, y: 330}, {x: 650, y: 286}], "idle"),
-        wire("flight_latch", "flight_mode", "latch", [{x: 706, y: 354}, {x: 835, y: 354}, {x: 835, y: 286}], "idle"),
-        wire("latch_bus", "latch", "caut1", [{x: 887, y: 262}, {x: 920, y: 262}, {x: 920, y: 82}, {x: 970, y: 82}]),
-        wire("latch_caut2", "latch", "caut2", [{x: 920, y: 150}, {x: 970, y: 150}]),
-        wire("latch_caut3", "latch", "caut3", [{x: 920, y: 220}, {x: 970, y: 220}], "blocked"),
-        wire("latch_cancel", "latch", "cancel", [{x: 920, y: 294}, {x: 970, y: 294}], "idle"),
-        wire("probe_latch", "run_probe", "latch", [{x: 802, y: 126}, {x: 802, y: 238}]),
-        wire("source_prio", "source_badge", "prio", [{x: 916, y: 348}, {x: 488, y: 348}, {x: 488, y: 286}], "idle"),
-        wire("coverage_caut3", "coverage", "caut3", [{x: 1028, y: 350}, {x: 1028, y: 246}], "idle"),
-        wire("inhib_run_probe", "inhib", "run_probe", [{x: 696, y: 250}, {x: 746, y: 104}]),
-      ],
+      rows,
+      nodes,
+      wires,
       junctions: [
-        junction("j_ra", "ra", 214, 69),
-        junction("j_latch", "latch", 920, 262),
-        junction("j_sw", "sw1", 238, 135),
+        {id: "junction_reverser_logic2", x: 226, y: 188, source: "reverser_inhibited", state: "idle"},
+        {id: "junction_reverser_logic3", x: 226, y: 304, source: "reverser_inhibited", state: "idle"},
+        {id: "junction_logic3_pls", x: 465, y: 279, source: "logic3", state: "idle"},
+        {id: "junction_logic3_pdu", x: 465, y: 296, source: "logic3", state: "idle"},
       ],
       badges: [
-        {id: "stage", label: "模板已生成", x: 368, y: 18, width: 86, height: 24},
-        {id: "run-ready", label: "可运行沙盒", x: 468, y: 18, width: 92, height: 24},
-        {id: "coverage", label: "节点 20/20 · 连线 23/23", x: 910, y: 382, width: 172, height: 28},
+        {id: "stage", label: "DOCX L1-L4", x: 678, y: 18, width: 96, height: 24},
+        {id: "boundary", label: "truth unchanged", x: 784, y: 18, width: 116, height: 24},
       ],
     };
   }
 
   function buildDocxTemplateCandidate() {
     const now = new Date().toISOString();
+    const circuitView = buildDocxTemplateCircuitView();
+    const drawingNodes = circuitView.nodes.map((node) => ({
+      id: node.id,
+      label: node.label,
+      node_kind: node.node_kind,
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+      description_zh: node.description_zh,
+      source_anchors: node.source_anchors,
+    }));
+    const drawingEdges = circuitView.wires.map((wire) => ({
+      id: wire.id,
+      source: wire.source,
+      target: wire.target,
+      label: wire.label,
+      route: wire.route,
+      source_anchors: wire.source_anchors,
+    }));
     return {
       kind: "ai-fantui-logic-link-drawing",
       status: "draft_ready",
@@ -2256,35 +2408,22 @@
       source_requirements_sha256: "local-docx-l1-l4-template",
       generated_at: now,
       llm: {provider: "local", model: "docx-l1-l4-template"},
-      canvas: {width: 980, height: 520},
-      circuit_view: buildDocxTemplateCircuitView(),
+      canvas: circuitView.canvas,
+      circuit_view: circuitView,
       run_profile: {
         frame_time: "00:03.24",
         verdict_zh: "运行正常",
         node_coverage: "20/20",
         wire_coverage: "23/23",
       },
-      nodes: [
-        {id: "ra", label: "RA 高度", node_kind: "input", x: 64, y: 76, width: 140, height: 78, description_zh: "RA < 6 ft 允许进入反推链路。", source_anchors: [{id: "L1", kind: "正文条件"}]},
-        {id: "sw1", label: "SW1", node_kind: "input", x: 64, y: 176, width: 140, height: 78, description_zh: "SW1 有效。", source_anchors: [{id: "L2", kind: "正文条件"}]},
-        {id: "sw2", label: "SW2", node_kind: "input", x: 64, y: 276, width: 140, height: 78, description_zh: "SW2 有效。", source_anchors: [{id: "L2", kind: "正文条件"}]},
-        {id: "logic_and", label: "与门 AND1", node_kind: "logic", x: 348, y: 176, width: 150, height: 82, description_zh: "RA、SW1、SW2 和 EEC 共同成立。", source_anchors: [{id: "L3", kind: "逻辑条件"}]},
-        {id: "latch", label: "反推允许 LATCH", node_kind: "logic", x: 596, y: 176, width: 168, height: 82, description_zh: "候选锁存输出。", source_anchors: [{id: "L4", kind: "输出条件"}]},
-        {id: "caut", label: "L1/L2 告警", node_kind: "output", x: 836, y: 176, width: 136, height: 82, description_zh: "输出告警候选。", source_anchors: [{id: "L4", kind: "输出条件"}]},
-      ],
-      edges: [
-        {"source": "ra", "target": "logic_and", "label": "RA -> AND1", "route": [{x: 204, y: 115}, {x: 276, y: 115}, {x: 276, y: 208}, {x: 348, y: 208}]},
-        {"source": "sw1", "target": "logic_and", "label": "SW1 -> AND1", "route": [{x: 204, y: 215}, {x: 348, y: 215}]},
-        {"source": "sw2", "target": "logic_and", "label": "SW2 -> AND1", "route": [{x: 204, y: 315}, {x: 276, y: 315}, {x: 276, y: 230}, {x: 348, y: 230}]},
-        {"source": "logic_and", "target": "latch", "label": "AND1 -> LATCH", "route": [{x: 498, y: 217}, {x: 596, y: 217}]},
-        {"source": "latch", "target": "caut", "label": "LATCH -> CAUT", "route": [{x: 764, y: 217}, {x: 836, y: 217}]},
-      ],
+      nodes: drawingNodes,
+      edges: drawingEdges,
       parameter_panels: [
-        {id: "ra_threshold", node_id: "ra", label: "RA 门限", min: 0, max: 20, default: 6, unit: "ft", x: 232, y: 48, width: 140, height: 72},
-        {id: "vdt_deploy", node_id: "latch", label: "VDT 部署", min: 0, max: 100, default: 90, unit: "%", x: 560, y: 300, width: 150, height: 72},
+        {id: "ra_threshold", node_id: "radio_altitude_ft", label: "RA 门限", min: 0, max: 20, default: 6, unit: "ft", x: 188, y: 108, width: 140, height: 72},
+        {id: "vdt_deploy", node_id: "vdt90", label: "VDT 部署", min: 0, max: 100, default: 90, unit: "%", x: 674, y: 78, width: 150, height: 72},
       ],
       drawing_notes: [
-        "DOCX L1-L4 模板仅创建 sandbox candidate。",
+        "DOCX L1-L4 模板使用 TLS/ETRAC/PLS/PDU/VDT90/THR_LOCK 候选链路。",
         "truth_effect:none；controller_truth_modified:false。",
       ],
     };
@@ -2989,6 +3128,12 @@
   function circuitNodeSubtitle(node) {
     const id = node.id || "";
     if (id === "ra") return "235 ft";
+    if (id === "radio_altitude_ft") return "RA<6ft";
+    if (id === "aircraft_on_ground") return "TRUE";
+    if (id === "engine_running") return "TRUE";
+    if (id === "n1k") return "OK";
+    if (id === "eec_enable") return "TRUE";
+    if (id === "reverser_inhibited") return "FALSE";
     if (id === "sw1") return "ON";
     if (id === "sw2") return "OFF";
     if (id === "vdt") return "132 kt";
@@ -3009,6 +3154,13 @@
     if (id === "logic2") return "SW2 · 在地 · EEC";
     if (id === "logic3") return ["TLS/N1K/TRA", "门限成立"];
     if (id === "logic4") return "L3 · VDT90";
+    if (id === "tls115") return "115VAC";
+    if (id === "tls_unlocked") return "反馈";
+    if (id === "vdt90") return ">=90%";
+    if (id === "etrac_540v") return "540VDC";
+    if (id === "eec_deploy") return "deploy";
+    if (id === "pls_power") return "power";
+    if (id === "pdu_motor") return "motor";
     if (id === "thr_lock") return "L4 成立";
     return "";
   }

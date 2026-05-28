@@ -6331,6 +6331,22 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert "function requestedDocxTemplate" in script
     assert "function renderRequestedDocxTemplate" in script
     assert 'params.get("template") === "docx-l1-l4"' in script
+    docx_template_block = script.split("function buildDocxTemplateCircuitView()", 1)[1].split(
+        "function requestedDocxTemplate",
+        1,
+    )[0]
+    for label in [
+        "TLS 115VAC cmd",
+        "TLS_Unlocked LS",
+        "ETRAC 540VDC cmd",
+        "PLS power",
+        "PDU motor cmd",
+        "VDT90 (>=90% deploy)",
+        "THR_LOCK release",
+    ]:
+        assert label in docx_template_block
+    for legacy_label in ["LATCH -> CAUT", '"caut"', '"caut1"', '"caut2"', '"caut3"']:
+        assert legacy_label not in docx_template_block
     assert ".logic-reconstruction-mode-panel" in stylesheet
 
 
@@ -7016,6 +7032,8 @@ def test_logic_builder_exposes_five_entry_mode_dock_command_palette_and_bottom_d
         "syncDrawerToCircuitInputs",
         "handleRunAction",
         "hydrateDrawerFromHash",
+        "selected_final_docx_l1_l4_circuit_v1",
+        "wire_logic4_thr_lock",
     ]:
         assert token in script
 
