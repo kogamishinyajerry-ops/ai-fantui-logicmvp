@@ -62,7 +62,14 @@
   const provenanceStepCount = $("demo-reconstruction-provenance-step-count");
   const provenanceSourceList = $("demo-reconstruction-provenance-source-list");
   const provenanceStepList = $("demo-reconstruction-provenance-step-list");
+  const reviewPacketReadiness = $("demo-reconstruction-review-packet-readiness");
+  const reviewPacketSource = $("demo-reconstruction-review-packet-source");
+  const reviewPacketContract = $("demo-reconstruction-review-packet-contract");
+  const reviewPacketStep = $("demo-reconstruction-review-packet-step");
+  const reviewPacketObject = $("demo-reconstruction-review-packet-object");
+  const reviewPacketGates = $("demo-reconstruction-review-packet-gates");
   const consoleFrame = $("demo-reconstruction-console-frame");
+  let latestDocxPayload = null;
   let sourceEntries = [];
   let traceSteps = [];
   let currentTraceStep = null;
@@ -263,6 +270,7 @@
     setText(reviewObject, objectText);
     setText(reviewSync, details.syncText || (embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "等待同步"));
     updateReviewLink();
+    updateReviewPacketFromState();
   }
 
   function readReviewHashState() {
@@ -483,6 +491,86 @@
     );
   }
 
+  function renderReviewPacketGates(gates) {
+    if (!reviewPacketGates) return;
+    reviewPacketGates.innerHTML = "";
+    gates.forEach((gate) => {
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-review-packet-gate";
+      li.dataset.reviewPacketGate = gate.id;
+      li.dataset.packetGateStatus = gate.pass ? "pass" : "wait";
+      const title = document.createElement("strong");
+      title.textContent = gate.label;
+      const detail = document.createElement("span");
+      detail.textContent = gate.detail;
+      li.append(title, detail);
+      reviewPacketGates.appendChild(li);
+    });
+  }
+
+  function updateReviewPacketFromState() {
+    if (!reviewPacketReadiness) return;
+    const payload = latestDocxPayload || {};
+    const source = payload.source || {};
+    const contract = payload.circuit_contract || {};
+    const coverage = payload.coverage || {};
+    const expectedNodes = contract.node_count || EXPECTED_NODE_COUNT;
+    const expectedWires = contract.wire_count || EXPECTED_WIRE_COUNT;
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    const sourceCount = sourceEntries.length || coverage.source_entry_count || 0;
+    const stepCount = traceSteps.length || coverage.sequence_step_count || 0;
+    const focusedObject = currentCircuitFocus.kind && currentCircuitFocus.id
+      ? reviewObjectLabel(currentCircuitFocus.kind, currentCircuitFocus.id)
+      : "等待聚焦";
+    const selectedStep = currentTraceStep && currentTraceStep.anchor
+      ? `${currentTraceStep.anchor} · ${currentTraceStep.title || "工作过程片段"}`
+      : "等待选择";
+
+    setText(reviewPacketSource, `${source.path || "原始 DOCX"} -> /demo-reconstruction`);
+    setText(
+      reviewPacketContract,
+      `${coverage.covered_node_count || finalContract.node_ids.length}/${expectedNodes} 节点 · ${coverage.covered_wire_count || finalContract.wire_ids.length}/${expectedWires} 连线`,
+    );
+    setText(reviewPacketStep, selectedStep);
+    setText(reviewPacketObject, focusedObject);
+
+    const gates = [
+      {
+        id: "docx-map",
+        label: "DOCX 映射",
+        pass: sourceCount >= 10 && stepCount === 5,
+        detail: `${sourceCount} 条源记录 · ${stepCount}/5 步`,
+      },
+      {
+        id: "complete-circuit",
+        label: "完整电路",
+        pass: (coverage.covered_node_count || 0) === expectedNodes && (coverage.covered_wire_count || 0) === expectedWires,
+        detail: `${coverage.covered_node_count || 0}/${expectedNodes} 节点 · ${coverage.covered_wire_count || 0}/${expectedWires} 连线`,
+      },
+      {
+        id: "cumulative-build",
+        label: "逐句累计",
+        pass: finalContract.node_ids.length === EXPECTED_NODE_COUNT && finalContract.wire_ids.length === EXPECTED_WIRE_COUNT,
+        detail: `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+      },
+      {
+        id: "object-review",
+        label: "对象反查",
+        pass: Boolean(currentCircuitFocus.kind && currentCircuitFocus.id),
+        detail: focusedObject,
+      },
+      {
+        id: "read-only-boundary",
+        label: "只读边界",
+        pass: payload.boundary ? payload.boundary.controller_truth_modified === false : true,
+        detail: "控制逻辑未改动",
+      },
+    ];
+    const passed = gates.filter((gate) => gate.pass).length;
+    setText(reviewPacketReadiness, `${passed}/${gates.length} gate`);
+    renderReviewPacketGates(gates);
+  }
+
   function objectProvenanceRecords(kind, id) {
     if (!kind || !id) return {sourceMatches: [], stepMatches: []};
     const key = kind === "wire" ? "wire_ids" : "node_ids";
@@ -550,6 +638,7 @@
       id,
       "title",
     );
+    updateReviewPacketFromState();
   }
 
   function writeReviewHashState() {
@@ -989,6 +1078,7 @@
   }
 
   function renderDocxSentenceCircuitMap(payload) {
+    latestDocxPayload = payload || {};
     const source = payload && payload.source ? payload.source : {};
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
     const coverage = payload && payload.coverage ? payload.coverage : {};
@@ -1013,6 +1103,7 @@
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
     applyReviewHashState();
+    updateReviewPacketFromState();
   }
 
   function renderCircuit(circuit, sourceLabel) {
@@ -1041,6 +1132,7 @@
     updateNodeMetadataFromNodes(nodes);
     updateWireEndpointMapFromWires(wires);
     refreshEmbeddedReviewFromCircuit();
+    updateReviewPacketFromState();
   }
 
   async function loadReplayCircuit() {

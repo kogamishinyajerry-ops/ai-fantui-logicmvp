@@ -180,6 +180,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-ladder"' in html
     assert 'id="demo-reconstruction-ladder-summary"' in html
     assert 'id="demo-reconstruction-ladder-list"' in html
+    assert 'id="demo-reconstruction-review-packet"' in html
+    assert 'id="demo-reconstruction-review-packet-readiness"' in html
+    assert 'id="demo-reconstruction-review-packet-gates"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -189,6 +192,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "逐句构建轨道" in html
     assert "对象反查证据板" in html
     assert "电路完成阶梯" in html
+    assert "审阅交付包" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
@@ -226,6 +230,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "updateNodeMetadataFromNodes" in script
     assert "nodeKindMap" in script
     assert '"P035-S03": ["EEC", "PLS", "PDU"]' not in script
+    assert "updateReviewPacketFromState" in script
+    assert "renderReviewPacketGates" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -247,6 +253,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-provenance-list" in stylesheet
     assert ".demo-reconstruction-circuit-ladder" in stylesheet
     assert ".demo-reconstruction-ladder-item" in stylesheet
+    assert ".demo-reconstruction-review-packet" in stylesheet
+    assert ".demo-reconstruction-review-packet-gates" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -336,6 +344,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["step_playback"].endswith(".png")
     assert payload["screenshots"]["object_provenance"].endswith(".png")
     assert payload["screenshots"]["completion_ladder"].endswith(".png")
+    assert payload["screenshots"]["review_packet"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -426,6 +435,15 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "THR_LOCK" in payload["completion_ladder_review"]["s05Text"]
     assert "20/20" in payload["completion_ladder_review"]["s05Text"]
     assert "23/23" in payload["completion_ladder_review"]["s05Text"]
+    assert payload["review_packet_review"]["visible"] is True
+    assert payload["review_packet_review"]["gateCount"] == 5
+    assert payload["review_packet_review"]["passGateCount"] >= 4
+    assert payload["review_packet_after_wire_focus"]["passGateCount"] == 5
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in payload["review_packet_review"]["sourceText"]
+    assert "20/20" in payload["review_packet_review"]["contractText"]
+    assert "23/23" in payload["review_packet_review"]["contractText"]
+    assert "P035-S05" in payload["review_packet_review"]["stepText"]
+    assert "wire_logic4_thr_lock" in payload["review_packet_after_wire_focus"]["objectText"]
     assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
     assert payload["review_deep_link"]["linkHref"].endswith(
         "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -470,6 +488,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "step_playback_cumulative_circuit": "pass",
         "object_provenance_traceability": "pass",
         "completion_ladder_readback": "pass",
+        "review_packet_readiness": "pass",
         "review_hash_link": "pass",
         "review_hash_restore": "pass",
         "source_chip_focus": "pass",
