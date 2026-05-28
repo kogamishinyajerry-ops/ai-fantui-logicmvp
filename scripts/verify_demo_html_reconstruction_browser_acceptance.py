@@ -540,6 +540,35 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S02"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        return selected && selected.textContent.trim() === "P035-S02";
+                    }""",
+                    timeout=5000,
+                )
+                trace_switch_focus_reset_review = page.evaluate(
+                    """() => {
+                        const visibleCoverageButtons = Array.from(
+                            document.querySelectorAll("[data-circuit-coverage-kind]")
+                        ).filter((button) => !button.hidden);
+                        return {
+                            selectedAnchor: document
+                                .querySelector("#demo-reconstruction-selected-anchor")
+                                ?.textContent?.trim() || "",
+                            coverageTabStopIds: visibleCoverageButtons
+                                .filter((button) => button.getAttribute("tabindex") === "0")
+                                .map((button) => button.getAttribute("data-circuit-coverage-id")),
+                            pressedCoverageIds: visibleCoverageButtons
+                                .filter((button) => button.getAttribute("aria-pressed") === "true")
+                                .map((button) => button.getAttribute("data-circuit-coverage-id")),
+                            reviewObjectText: document
+                                .querySelector("#demo-reconstruction-review-object")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 page.locator(
                     '.demo-reconstruction-sequence-step[data-trace-anchor="P035-S05"] [data-source-focus-kind="node"][data-source-focus-id="logic4"]'
                 ).click()
@@ -770,6 +799,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and keyboard_review["reviewSyncText"]
         )
         else "fail",
+        "trace_switch_clears_object_focus": "pass"
+        if (
+            trace_switch_focus_reset_review["selectedAnchor"] == "P035-S02"
+            and trace_switch_focus_reset_review["coverageTabStopIds"] == ["logic4"]
+            and trace_switch_focus_reset_review["pressedCoverageIds"] == []
+            and "整句链路" in trace_switch_focus_reset_review["reviewObjectText"]
+        )
+        else "fail",
         "source_chip_focus": "pass"
         if (
             source_chip_focus_review["sourceNodeFocusChipCount"] >= 20
@@ -831,6 +868,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "coverage_matrix_review": coverage_matrix_review,
         "coverage_filter_review": coverage_filter_review,
         "keyboard_review": keyboard_review,
+        "trace_switch_focus_reset_review": trace_switch_focus_reset_review,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,

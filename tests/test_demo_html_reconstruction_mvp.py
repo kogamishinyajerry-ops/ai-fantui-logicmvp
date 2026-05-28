@@ -190,6 +190,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "setTraceCardTabStops" in script
     assert "handleTraceCardKeydown" in script
     assert "handleCoverageKeyboardNavigation" in script
+    assert "clearCircuitObjectFocus" in script
     assert "updateKeyboardReviewStatus" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
@@ -347,6 +348,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["keyboard_review"]["statusText"]
     assert "P035-S05" in payload["keyboard_review"]["reviewAnchorText"]
     assert "wire_logic4_thr_lock" in payload["keyboard_review"]["reviewObjectText"]
+    assert payload["trace_switch_focus_reset_review"]["selectedAnchor"] == "P035-S02"
+    assert payload["trace_switch_focus_reset_review"]["coverageTabStopIds"] == ["logic4"]
+    assert payload["trace_switch_focus_reset_review"]["pressedCoverageIds"] == []
+    assert "整句链路" in payload["trace_switch_focus_reset_review"]["reviewObjectText"]
     assert payload["source_chip_focus_review"]["sourceNodeFocusChipCount"] >= 20
     assert payload["source_chip_focus_review"]["sourceWireFocusChipCount"] >= 23
     assert payload["source_chip_focus_review"]["focusedNodeCount"] == 0
@@ -376,6 +381,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "keyboard_trace_navigation": "pass",
         "coverage_keyboard_navigation": "pass",
         "review_cursor_status": "pass",
+        "trace_switch_clears_object_focus": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",

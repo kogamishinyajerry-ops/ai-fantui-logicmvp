@@ -304,6 +304,17 @@
       });
   }
 
+  function clearCircuitObjectFocus() {
+    currentCircuitFocus = {kind: "", id: ""};
+    setCoverageButtonTabStops("", "");
+    document
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
+      .forEach((button) => {
+        button.setAttribute("aria-pressed", "false");
+        button.dataset.reviewObjectSelected = "false";
+      });
+  }
+
   function handleCoverageKeyboardNavigation(event) {
     const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"];
     if (!keys.includes(event.key)) return;
@@ -467,6 +478,7 @@
 
   function setSelectedTrace(step) {
     if (!step || typeof step !== "object") return;
+    clearCircuitObjectFocus();
     currentTraceStep = step;
     selectedTraceIndex = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
     document.querySelectorAll("[data-trace-card]").forEach((card) => {
