@@ -127,6 +127,29 @@ def _base_ref_candidates(base_ref: str) -> list[str]:
     return [f"origin/{base_ref}", base_ref]
 
 
+def _fetch_base_ref(base_ref: str) -> bool:
+    remote_ref = base_ref.removeprefix("origin/")
+    if not remote_ref or remote_ref.startswith("-") or any(char.isspace() for char in remote_ref):
+        return False
+    result = subprocess.run(
+        ["git", "fetch", "--quiet", "origin", f"{remote_ref}:refs/remotes/origin/{remote_ref}"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    return result.returncode == 0
+
+
+def _restricted_paths_from_base_ref(base_ref: str) -> list[str] | None:
+    for candidate in _base_ref_candidates(base_ref):
+        returncode, paths = _git_diff_names([f"{candidate}...HEAD"])
+        if returncode == 0:
+            return paths
+    return None
+
+
 def _dedupe_paths(paths: list[str]) -> list[str]:
     unique: list[str] = []
     seen: set[str] = set()
@@ -141,13 +164,12 @@ def _restricted_diff() -> list[str]:
     restricted: list[str] = []
     base_ref = _pr_base_ref()
     if base_ref:
-        for candidate in _base_ref_candidates(base_ref):
-            returncode, paths = _git_diff_names([f"{candidate}...HEAD"])
-            if returncode == 0:
-                restricted.extend(paths)
-                break
-        else:
+        base_paths = _restricted_paths_from_base_ref(base_ref)
+        if base_paths is None and _fetch_base_ref(base_ref):
+            base_paths = _restricted_paths_from_base_ref(base_ref)
+        if base_paths is None:
             return ["<git base diff failed>"]
+        restricted.extend(base_paths)
 
     for diff_args in ([], ["--cached"]):
         returncode, paths = _git_diff_names(diff_args)

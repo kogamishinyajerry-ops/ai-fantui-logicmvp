@@ -397,6 +397,44 @@ def test_phase1_demo_mvp_review_package_boundary_checks_pr_base(
     )
 
 
+def test_phase1_demo_mvp_review_package_fetches_missing_pr_base(
+    monkeypatch,
+) -> None:
+    runner = _load_phase1_review_runner_module()
+    restricted_path = "src/well_harness/static/requirements_intake/index.html"
+    calls: list[list[str]] = []
+    origin_diff_attempts = 0
+
+    def fake_run(args, **kwargs):
+        nonlocal origin_diff_attempts
+        calls.append(args)
+        if args[:3] == ["git", "diff", "--name-only"]:
+            if "origin/codex/multi-agent-active-route-wiring...HEAD" in args:
+                origin_diff_attempts += 1
+                if origin_diff_attempts == 1:
+                    return subprocess.CompletedProcess(args, 128, "", "fatal: bad revision")
+                return subprocess.CompletedProcess(args, 0, restricted_path + "\n", "")
+            if any(str(arg).endswith("...HEAD") for arg in args):
+                return subprocess.CompletedProcess(args, 128, "", "fatal: bad revision")
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if args[:4] == ["git", "fetch", "--quiet", "origin"]:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setenv("GITHUB_BASE_REF", "codex/multi-agent-active-route-wiring")
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    assert runner._restricted_diff() == [restricted_path]
+    assert [
+        "git",
+        "fetch",
+        "--quiet",
+        "origin",
+        "codex/multi-agent-active-route-wiring:refs/remotes/origin/codex/multi-agent-active-route-wiring",
+    ] in calls
+    assert origin_diff_attempts == 2
+
+
 def test_phase1_demo_mvp_review_package_verifier_accepts_generated_package(
     tmp_path: Path,
 ) -> None:
