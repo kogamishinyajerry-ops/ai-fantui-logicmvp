@@ -79,4 +79,4 @@ make multi-agent-packaging-consolidation
 make verify-multi-agent-packaging-consolidation
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `candidate-review-runtime-export`, `ultrawork-monitor`, `m22-operator-cockpit`, and `repo-github-local-artifacts` without desktop or mobile layout overflow.
+Browser gate: `make verify-multi-agent-packaging-consolidation` opens the generated HTML, captures desktop/mobile screenshots, and verifies it shows `Multi-Agent Packaging Consolidation`, `multi-agent-cursor-baseline-v0-2`, `candidate-review-runtime-export`, `ultrawork-monitor`, `m22-operator-cockpit`, `git add -f --`, and `repo-github-local-artifacts` without desktop or mobile layout overflow. Default pytest keeps this browser step opt-in with `--skip-browser`.
