@@ -359,6 +359,10 @@ h2 {
   list-style: none;
 }
 .docx-circuit-source-index-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 6px;
   min-width: 0;
 }
 .docx-circuit-source-index-button {
@@ -393,6 +397,31 @@ h2 {
   color: var(--docx-muted);
   font-size: 11px;
   line-height: 1.35;
+}
+.docx-circuit-source-link-button {
+  min-width: 44px;
+  border: 1px solid var(--docx-border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--docx-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 8px;
+}
+.docx-circuit-source-link-button:hover,
+.docx-circuit-source-link-button:focus-visible {
+  border-color: rgba(30, 103, 255, 0.55);
+  color: var(--docx-accent);
+  outline: none;
+}
+.docx-circuit-source-link-button[data-copy-state="success"] {
+  border-color: rgba(45, 157, 92, 0.65);
+  color: #1b7a44;
+}
+.docx-circuit-source-link-button[data-copy-state="failed"] {
+  border-color: rgba(201, 78, 78, 0.65);
+  color: #a43f3f;
 }
 .docx-circuit-source-card {
   display: grid;

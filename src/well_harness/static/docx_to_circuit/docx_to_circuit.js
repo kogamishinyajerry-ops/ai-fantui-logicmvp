@@ -239,22 +239,35 @@
     if (step && sequenceSteps().some((item) => item.anchor === step)) currentAnchor = step;
     const element = parseHashElement(params.get("el"));
     if (element) selectedElement = element;
+    const source = params.get("source");
+    activeSourceEntryAnchor = source && sourceEntries().some((item) => item.anchor === source) ? source : "";
     const query = params.get("q");
     if (sourceIndexSearch && query !== null) sourceIndexSearch.value = query;
     const level = params.get("level");
     if (sourceIndexLevel && validSourceIndexLevel(level)) sourceIndexLevel.value = level;
   }
 
+  function reviewHashForState(state) {
+    const params = new URLSearchParams();
+    const element = state && state.element ? state.element : selectedElement;
+    params.set("step", state && state.stepAnchor ? state.stepAnchor : currentAnchor);
+    params.set("el", `${element.kind}:${element.id}`);
+    if (state && state.sourceEntryAnchor) params.set("source", state.sourceEntryAnchor);
+    if (state && state.query) params.set("q", state.query);
+    const level = state && state.level ? state.level : "all";
+    if (level !== "all") params.set("level", level);
+    return `#${params.toString()}`;
+  }
+
   function writeReviewHash() {
     if (!currentPayload) return;
-    const params = new URLSearchParams();
-    params.set("step", currentAnchor);
-    params.set("el", `${selectedElement.kind}:${selectedElement.id}`);
-    const query = sourceIndexRawQuery();
-    if (query) params.set("q", query);
-    const level = sourceIndexLevelValue();
-    if (level !== "all") params.set("level", level);
-    const nextHash = `#${params.toString()}`;
+    const nextHash = reviewHashForState({
+      stepAnchor: currentAnchor,
+      element: selectedElement,
+      sourceEntryAnchor: activeSourceEntryAnchor,
+      query: sourceIndexRawQuery(),
+      level: sourceIndexLevelValue(),
+    });
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
     }
@@ -263,6 +276,19 @@
   function currentReviewUrl() {
     writeReviewHash();
     return window.location.href;
+  }
+
+  function sourceEntryReviewUrl(entry) {
+    const step = stepForSourceEntry(entry);
+    const element = primaryElementForSourceEntry(entry, step);
+    const hash = reviewHashForState({
+      stepAnchor: step ? step.anchor : currentAnchor,
+      element,
+      sourceEntryAnchor: entry && entry.anchor,
+      query: sourceIndexRawQuery(),
+      level: sourceIndexLevelValue(),
+    });
+    return `${window.location.origin}${window.location.pathname}${window.location.search}${hash}`;
   }
 
   function makeSvgElement(name, attributes) {
@@ -706,9 +732,9 @@
     if (!entry) return;
     const step = stepForSourceEntry(entry);
     if (step) activateStep(step.anchor, {sourceEntryAnchor: anchor});
+    setSourceIndexState(anchor);
     const target = primaryElementForSourceEntry(entry, step);
     selectCircuitElement(target.kind, target.id);
-    setSourceIndexState(anchor);
   }
 
   function activateRelativeStep(delta) {
@@ -802,6 +828,20 @@
       setText(copyStatus, "链接已复制");
     } catch (error) {
       copyReviewLinkButton.dataset.copyState = "failed";
+      setText(copyStatus, "复制失败");
+    }
+  }
+
+  async function copySourceEntryLink(entry, button) {
+    if (!entry || !button) return;
+    button.dataset.copyState = "pending";
+    setText(copyStatus, "复制中");
+    try {
+      await copyText(sourceEntryReviewUrl(entry));
+      button.dataset.copyState = "success";
+      setText(copyStatus, `${entry.anchor || "源文"} 链接已复制`);
+    } catch (error) {
+      button.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");
     }
   }
@@ -910,7 +950,19 @@
       button.appendChild(label);
       button.appendChild(summary);
       button.addEventListener("click", () => activateSourceEntry(entry.anchor));
+      const copyButton = document.createElement("button");
+      copyButton.type = "button";
+      copyButton.className = "docx-circuit-source-link-button";
+      copyButton.dataset.sourceEntryLinkAnchor = entry.anchor || "";
+      copyButton.textContent = "复制";
+      copyButton.title = "复制链接";
+      copyButton.setAttribute("aria-label", `复制 ${entry.anchor || "源文"} 链接`);
+      copyButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        copySourceEntryLink(entry, copyButton);
+      });
       item.appendChild(button);
+      item.appendChild(copyButton);
       sourceIndexList.appendChild(item);
     });
     setSourceIndexState(activeSourceEntryAnchor);
@@ -920,8 +972,9 @@
     if (!currentPayload) return;
     applyReviewHashState();
     renderSourceIndex(sourceEntries());
-    activateStep(currentAnchor);
+    activateStep(currentAnchor, activeSourceEntryAnchor ? {sourceEntryAnchor: activeSourceEntryAnchor} : undefined);
     selectCircuitElement(selectedElement.kind, selectedElement.id);
+    if (activeSourceEntryAnchor) setSourceIndexState(activeSourceEntryAnchor);
   }
 
   function renderPayload(payload) {
@@ -930,6 +983,7 @@
     const contract = payload && payload.circuit_contract ? payload.circuit_contract : {};
     currentPayload = payload;
     applyReviewHashState();
+    const restoredSourceEntryAnchor = activeSourceEntryAnchor;
     setText(sourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
     setText(
       sourceCount,
@@ -943,8 +997,9 @@
     renderSubcircuit();
     renderContractGrid(nodeGrid, contractIds(payload, "node_ids", Object.keys(NODE_LABELS).sort()), "node");
     renderContractGrid(wireGrid, contractIds(payload, "wire_ids", []), "wire");
-    activateStep(currentAnchor);
+    activateStep(currentAnchor, restoredSourceEntryAnchor ? {sourceEntryAnchor: restoredSourceEntryAnchor} : undefined);
     selectCircuitElement(selectedElement.kind, selectedElement.id);
+    if (restoredSourceEntryAnchor) setSourceIndexState(restoredSourceEntryAnchor);
   }
 
   async function boot() {
@@ -959,7 +1014,9 @@
 
   if (demoFrame) {
     demoFrame.addEventListener("load", () => {
-      if (currentPayload) activateStep(currentAnchor);
+      if (!currentPayload) return;
+      activateStep(currentAnchor, activeSourceEntryAnchor ? {sourceEntryAnchor: activeSourceEntryAnchor} : undefined);
+      if (activeSourceEntryAnchor) setSourceIndexState(activeSourceEntryAnchor);
     });
   }
   if (prevStepButton) prevStepButton.addEventListener("click", () => activateRelativeStep(-1));

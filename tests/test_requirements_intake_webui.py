@@ -6339,6 +6339,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     script = script_path.read_text(encoding="utf-8")
     stylesheet = stylesheet_path.read_text(encoding="utf-8")
     server_source = (REPO_ROOT / "src" / "well_harness" / "demo_server.py").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    review_link_gate = (REPO_ROOT / "scripts" / "verify_docx_to_circuit_review_links.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "/docx-to-circuit" in server_source
     assert 'data-ux-page-role="docx-to-circuit-main-entry"' in html
@@ -6401,6 +6405,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function parseHashElement" in script
     assert "function currentReviewUrl" in script
     assert "function copyReviewLink" in script
+    assert "function sourceEntryReviewUrl" in script
+    assert "function copySourceEntryLink" in script
+    assert 'params.set("source"' in script
+    assert "sourceEntryLinkAnchor" in script
     assert "hashchange" in script
     assert "URLSearchParams" in script
     assert "history.replaceState" in script
@@ -6423,6 +6431,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert ".docx-circuit-source-index-panel" in stylesheet
     assert ".docx-circuit-source-index-controls" in stylesheet
     assert ".docx-circuit-source-index-button" in stylesheet
+    assert ".docx-circuit-source-link-button" in stylesheet
+    assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
+    assert '"source_entry_link"' in review_link_gate
+    assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
     assert ".docx-circuit-filter-toggle" in stylesheet
     assert ".docx-circuit-copy-status" in stylesheet
     assert "#docx-circuit-svg" in stylesheet

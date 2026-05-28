@@ -22,6 +22,7 @@ build/
 *.log
 
 artifacts/workbench-bundles/
+artifacts/docx-to-circuit-review-links/
 onboarding验证/
 
 # Goal canvas panel process screenshots; keep the curated evidence images tracked explicitly.
