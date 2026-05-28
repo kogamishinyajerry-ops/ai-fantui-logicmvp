@@ -31,6 +31,11 @@ Verifier:
 make verify-multi-agent-pr-preflight
 ```
 
+The verifier opens the generated HTML in desktop and mobile browser viewports,
+captures screenshots, and fails on missing required labels or horizontal page
+overflow. Unit tests can keep the browser path disabled with
+`--skip-browser`; the Makefile gate keeps the browser check enabled.
+
 ## Package Order
 
 1. `multi-agent-cursor-baseline-v0-2`
@@ -80,4 +85,4 @@ make multi-agent-pr-preflight
 make verify-multi-agent-pr-preflight
 ```
 
-Browser gate: open the generated HTML and verify it shows `Multi-Agent PR Preflight`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m23-packaging-consolidation`, `repo-github-local-artifacts`, and `git add -f --` without desktop or mobile layout overflow.
+Browser gate: open the generated HTML and verify it shows `Multi-Agent PR Preflight`, `multi-agent-cursor-baseline-v0-2`, `ultrawork-monitor`, `m23-packaging-consolidation`, `repo-github-local-artifacts`, and `git add -f --` with desktop/mobile screenshots and no horizontal layout overflow.

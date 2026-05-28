@@ -273,13 +273,16 @@ def render_multi_agent_pr_preflight_html(payload: dict[str, Any]) -> str:
         for package in payload["pathspec_packages"]
     )
     validation_items = "\n".join(
-        "<li>"
+        "<li class=\"validation-command\">"
         f"<code>{_escape(item['command_id'])}</code>"
         f"<pre>{_escape(item['command'])}</pre>"
         "</li>"
         for item in payload["validation_plan"]
     )
-    stage_commands = "\n".join(f"<pre>{_escape(command)}</pre>" for command in payload["stage_commands"])
+    stage_commands = "\n".join(
+        f"<pre class=\"stage-command\">{_escape(command)}</pre>"
+        for command in payload["stage_commands"]
+    )
     gate_markers = "\n".join(
         f"<li><code>{_escape(marker)}</code></li>"
         for marker in payload["browser_geometry_gate"]["required_markers"]
