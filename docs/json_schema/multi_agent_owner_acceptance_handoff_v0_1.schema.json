@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_owner_acceptance_handoff_v0_1.schema.json",
+  "title": "Multi-Agent Owner Acceptance Handoff v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "handoff_id",
+    "status",
+    "generated_at",
+    "milestone",
+    "agent_team",
+    "inputs",
+    "summary",
+    "gates",
+    "owner_acceptance_checklist",
+    "decision_boundaries",
+    "pathspec_package",
+    "blockers",
+    "risk_notes",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_owner_acceptance_handoff_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-owner-acceptance-handoff"
+    },
+    "handoff_id": {
+      "const": "multi-agent-owner-acceptance-handoff-v0.1"
+    },
+    "status": {
+      "enum": [
+        "ready_for_owner_acceptance",
+        "ready_for_owner_acceptance_with_warnings",
+        "blocked"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "claim"],
+      "properties": {
+        "id": {
+          "const": "M32"
+        },
+        "name": {
+          "const": "Owner Acceptance Handoff"
+        },
+        "claim": {
+          "const": "read_only_owner_acceptance_handoff_from_m31"
+        }
+      }
+    },
+    "agent_team": {
+      "$ref": "#/$defs/agent_team"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_decision_input_id",
+        "release_decision_status",
+        "release_decision_pr_url",
+        "release_decision_head_ref_oid",
+        "handoff_pr_number",
+        "handoff_pr_url",
+        "handoff_head_ref_oid",
+        "handoff_merge_state"
+      ],
+      "properties": {
+        "release_decision_input_id": {
+          "type": "string"
+        },
+        "release_decision_status": {
+          "type": "string"
+        },
+        "release_decision_pr_url": {
+          "type": "string"
+        },
+        "release_decision_head_ref_oid": {
+          "type": "string"
+        },
+        "handoff_pr_number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "handoff_pr_url": {
+          "type": "string"
+        },
+        "handoff_head_ref_oid": {
+          "type": "string"
+        },
+        "handoff_merge_state": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recommended_owner_action",
+        "release_remote_checks_state",
+        "handoff_remote_checks_state",
+        "current_unresolved_thread_count",
+        "current_actionable_thread_count",
+        "outdated_unresolved_thread_count",
+        "review_thread_fetch_error_count",
+        "release_decision_binding_match",
+        "control_plane",
+        "handoff_mode"
+      ],
+      "properties": {
+        "recommended_owner_action": {
+          "type": "string"
+        },
+        "release_remote_checks_state": {
+          "type": "string"
+        },
+        "handoff_remote_checks_state": {
+          "type": "string"
+        },
+        "current_unresolved_thread_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current_actionable_thread_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outdated_unresolved_thread_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_thread_fetch_error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "release_decision_binding_match": {
+          "type": "boolean"
+        },
+        "control_plane": {
+          "const": "repo_github_local_artifacts_only"
+        },
+        "handoff_mode": {
+          "const": "read_only_owner_acceptance_handoff"
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_decision_input",
+        "release_decision_binding",
+        "release_decision_blockers",
+        "review_thread_fetch",
+        "current_actionable_reviews",
+        "outdated_review_threads",
+        "pr_mergeability",
+        "remote_checks",
+        "control_plane_boundary",
+        "owner_authority_boundary",
+        "pathspec_boundary"
+      ],
+      "properties": {
+        "release_decision_input": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "release_decision_binding": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "release_decision_blockers": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "review_thread_fetch": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "current_actionable_reviews": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "outdated_review_threads": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "pr_mergeability": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "remote_checks": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "control_plane_boundary": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "owner_authority_boundary": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "pathspec_boundary": {
+          "$ref": "#/$defs/gate_status"
+        }
+      }
+    },
+    "owner_acceptance_checklist": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "$ref": "#/$defs/checklist_item"
+      }
+    },
+    "decision_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_merge",
+        "self_approval",
+        "resolve_review_threads",
+        "owner_final_decision",
+        "notion_control_plane_changes",
+        "artifact_cleanup"
+      ],
+      "properties": {
+        "auto_merge": {
+          "const": "forbidden"
+        },
+        "self_approval": {
+          "const": "forbidden"
+        },
+        "resolve_review_threads": {
+          "const": "forbidden"
+        },
+        "owner_final_decision": {
+          "const": "external_manual_only"
+        },
+        "notion_control_plane_changes": {
+          "const": "out_of_scope"
+        },
+        "artifact_cleanup": {
+          "const": "out_of_scope"
+        }
+      }
+    },
+    "pathspec_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathspecs", "excluded_paths", "stage_command"],
+      "properties": {
+        "pathspecs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "excluded_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "stage_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "risk_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handoff_json", "handoff_markdown", "handoff_html"],
+      "properties": {
+        "handoff_json": {
+          "type": "string"
+        },
+        "handoff_markdown": {
+          "type": "string"
+        },
+        "handoff_html": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "agent_team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "team_size", "active_agents", "retired_role_policy"],
+      "properties": {
+        "mode": {
+          "const": "five_agent_context_cap"
+        },
+        "team_size": {
+          "const": 5
+        },
+        "active_agents": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/agent_team_member"
+          }
+        },
+        "retired_role_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "agent_team_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "name", "scope"],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "enum": [
+            "ChiefEngineerOrchestrator",
+            "LogicIRRepairAgent",
+            "EvidenceValidationAgent",
+            "SafetyRequirementsReviewer",
+            "PackagingPRReadinessAgent"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "gate_status": {
+      "enum": ["pass", "warning", "fail"]
+    },
+    "checklist_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_id", "status", "owner_action", "evidence"],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["required", "satisfied", "optional"]
+        },
+        "owner_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker_id", "status", "message"],
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["external_blocker", "local_blocker"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
