@@ -28,6 +28,40 @@ M25_PATHSPECS = [
     "src/well_harness/multi_agent_validation_evidence.py",
     "tests/test_multi_agent_validation_evidence.py",
 ]
+CLASSIFIED_CHANGED_PATHS = [
+    "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md",
+    "docs/json_schema/agent_*.schema.json",
+    "docs/json_schema/approved_*.schema.json",
+    "docs/json_schema/multi_agent_m*.schema.json",
+    "docs/json_schema/multi_agent_queue_cursor_state_v0_1.schema.json",
+    "docs/json_schema/multi_agent_queue_run_ledger_v0_1.schema.json",
+    "pyproject.toml",
+    "scripts/run_approved_*.py",
+    "scripts/run_evidence_*.py",
+    "scripts/run_first_candidate_repair_slice.py",
+    "scripts/run_missing_test_result_candidate_repair_slice.py",
+    "scripts/run_multi_agent_m*.py",
+    "scripts/run_multi_agent_queue_cursor_state.py",
+    "scripts/run_multi_agent_queue_run_ledger.py",
+    "scripts/run_safety_*_candidate_repair_slice.py",
+    "scripts/verify_approved_*.py",
+    "scripts/verify_multi_agent_construction_readiness.py",
+    "scripts/verify_multi_agent_m*.py",
+    "scripts/verify_multi_agent_queue_cursor_state.py",
+    "scripts/verify_multi_agent_queue_run_ledger.py",
+    "src/well_harness/agent_*.py",
+    "tests/fixtures/agent_*.json",
+    "tests/fixtures/approved_*.json",
+    "tests/fixtures/multi_agent_m*.json",
+    "tests/fixtures/multi_agent_queue_*_v0_1.json",
+    "tests/test_agent_*.py",
+    "tests/test_approved_*.py",
+    "tests/test_multi_agent_construction_readiness.py",
+    "tests/test_multi_agent_deliverable_plan.py",
+    "tests/test_multi_agent_m*.py",
+    "tests/test_multi_agent_queue_cursor_state.py",
+    "tests/test_multi_agent_queue_run_ledger.py",
+]
 
 CommandRunner = Callable[[str, Path], dict[str, Any]]
 
@@ -213,6 +247,7 @@ def build_multi_agent_validation_evidence(
         "validation_results": validation_results,
         "stage_commands": stage_commands,
         "excluded_paths": preflight_payload["excluded_paths"],
+        "classified_changed_pathspecs": CLASSIFIED_CHANGED_PATHS,
         "blockers": preflight_payload["blockers"],
         "pr_evidence_note": pr_evidence_note,
         "artifact_paths": {
@@ -243,6 +278,7 @@ def render_multi_agent_validation_evidence_markdown(payload: dict[str, Any]) -> 
     )
     stages = "\n\n".join(f"```sh\n{command}\n```" for command in payload["stage_commands"])
     excluded = "\n".join(f"- `{path}`" for path in payload["excluded_paths"])
+    classified = "\n".join(f"- `{path}`" for path in payload["classified_changed_pathspecs"])
     return (
         "# Multi-Agent Validation Evidence\n\n"
         f"Status: `{payload['status']}`\n\n"
@@ -256,7 +292,9 @@ def render_multi_agent_validation_evidence_markdown(payload: dict[str, Any]) -> 
         "## Excluded Paths\n\n"
         f"{excluded}\n\n"
         "## Control-Plane Boundary\n\n"
-        "- Repo, GitHub, and local artifacts are the active control surfaces.\n"
+        "- Repo, GitHub, and local artifacts are the active control surfaces.\n\n"
+        "## Classified Changed Pathspecs\n\n"
+        f"{classified}\n\n"
     )
 
 
@@ -281,6 +319,10 @@ def render_multi_agent_validation_evidence_html(payload: dict[str, Any]) -> str:
         for result in payload["validation_results"]
     )
     stage_commands = "\n".join(f"<pre>{_escape(command)}</pre>" for command in payload["stage_commands"])
+    classified = "\n".join(
+        f"<li><code>{_escape(path)}</code></li>"
+        for path in payload["classified_changed_pathspecs"]
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -377,6 +419,10 @@ def render_multi_agent_validation_evidence_html(payload: dict[str, Any]) -> str:
     <section>
       <h2>Control-Plane Boundary</h2>
       <p><code>repo-github-local-artifacts</code> is the active control boundary for this validation evidence.</p>
+    </section>
+    <section>
+      <h2>Classified Changed Pathspecs</h2>
+      <ul>{classified}</ul>
     </section>
   </main>
 </body>

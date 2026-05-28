@@ -87,6 +87,8 @@ def test_multi_agent_validation_evidence_schema_validates_payload() -> None:
     assert any("git add -f --" in command for command in payload["stage_commands"])
     assert any("multi-agent-validation-evidence.md" in command for command in payload["stage_commands"])
     assert "Repo, GitHub, and local artifacts" in payload["pr_evidence_note"]
+    assert "src/well_harness/agent_*.py" in payload["classified_changed_pathspecs"]
+    assert "docs/json_schema/approved_*.schema.json" in payload["classified_changed_pathspecs"]
     assert "21 validation commands passed" in payload["pr_evidence_note"]
     assert payload["blockers"] == []
 
@@ -104,6 +106,8 @@ def test_multi_agent_validation_evidence_html_exposes_results_and_blocker() -> N
     assert "m24-pr-preflight-03" in html
     assert "m25-validation-evidence" in html
     assert "repo-github-local-artifacts" in html
+    assert "Classified Changed Pathspecs" in html
+    assert "src/well_harness/agent_*.py" in html
     assert "21 validation commands passed" in html
 
 

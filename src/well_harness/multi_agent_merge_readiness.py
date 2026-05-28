@@ -1,6 +1,7 @@
 """Read-only merge-readiness packet for the multi-agent PR lane."""
 from __future__ import annotations
 
+import fnmatch
 import html
 import json
 import shlex
@@ -20,6 +21,15 @@ HTML_NAME = "multi_agent_merge_readiness_v0_1.html"
 GUARDED_CHANGED_PATHS = {
     "src/well_harness/demo_server.py",
     "src/well_harness/requirements_intake/**",
+}
+M29_PATHSPECS = {
+    "docs/coordination/multi-agent-merge-readiness.md",
+    "docs/json_schema/multi_agent_merge_readiness_v0_1.schema.json",
+    "scripts/run_multi_agent_merge_readiness.py",
+    "scripts/verify_multi_agent_merge_readiness.py",
+    "src/well_harness/multi_agent_merge_readiness.py",
+    "src/well_harness/multi_agent_team.py",
+    "tests/test_multi_agent_merge_readiness.py",
 }
 
 
@@ -107,14 +117,22 @@ def _matches_pathspec(path: str, pathspec: str) -> bool:
         return path.startswith(pathspec[:-3].rstrip("/") + "/")
     if pathspec.endswith("/"):
         return path.startswith(pathspec)
+    if any(marker in pathspec for marker in "*?["):
+        return fnmatch.fnmatchcase(path, pathspec)
     return path == pathspec
+
+
+def _classified_changed_pathspecs(pathspecs: Any) -> set[str]:
+    if not isinstance(pathspecs, list):
+        return set()
+    return {str(pathspec) for pathspec in pathspecs if isinstance(pathspec, str) and pathspec}
 
 
 def _changed_paths_obey_boundary(
     *,
     changed_paths: Any,
-    excluded_paths: list[str],
     stage_pathspecs: set[str],
+    classified_pathspecs: set[str],
 ) -> bool:
     if changed_paths is None:
         return True
@@ -123,10 +141,9 @@ def _changed_paths_obey_boundary(
     for item in changed_paths:
         if not isinstance(item, str):
             return False
-        guarded_pathspecs = excluded_paths + sorted(GUARDED_CHANGED_PATHS)
-        if any(_matches_pathspec(item, pathspec) for pathspec in guarded_pathspecs):
-            if not any(_matches_pathspec(item, pathspec) for pathspec in stage_pathspecs):
-                return False
+        allowed_pathspecs = stage_pathspecs | classified_pathspecs
+        if not any(_matches_pathspec(item, pathspec) for pathspec in allowed_pathspecs):
+            return False
     return True
 
 
@@ -137,6 +154,7 @@ def _pathspec_boundary_ok(validation_evidence: dict[str, Any]) -> bool:
         return False
     excluded_paths = [str(item) for item in excluded]
     stage_pathspecs = _stage_pathspecs(stage_commands)
+    stage_pathspecs.update(M29_PATHSPECS)
     if not stage_pathspecs:
         return False
     required_exclusions = {
@@ -161,8 +179,10 @@ def _pathspec_boundary_ok(validation_evidence: dict[str, Any]) -> bool:
     )
     changed_paths_ok = _changed_paths_obey_boundary(
         changed_paths=validation_evidence.get("changed_paths"),
-        excluded_paths=excluded_paths,
         stage_pathspecs=stage_pathspecs,
+        classified_pathspecs=_classified_changed_pathspecs(
+            validation_evidence.get("classified_changed_pathspecs")
+        ),
     )
     return exclusions_ok and commands_ok and changed_paths_ok
 
