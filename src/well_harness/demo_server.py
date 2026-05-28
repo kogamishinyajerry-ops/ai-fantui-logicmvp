@@ -5783,11 +5783,21 @@ def build_requirements_streamed_authoring_proposal_response(
             "field": "decision_history",
             "message": "decision_history must be a list when present.",
         }, 400
+    natural_language_prompt = request_payload.get("natural_language_prompt", "")
+    if natural_language_prompt is None:
+        natural_language_prompt = ""
+    if not isinstance(natural_language_prompt, str):
+        return None, {
+            "error": "invalid_natural_language_prompt",
+            "field": "natural_language_prompt",
+            "message": "natural_language_prompt must be a string when present.",
+        }, 400
     try:
         payload = build_streamed_logic_authoring_session(
             requirements_payload,
             drawing_payload,
             decision_history=decision_history,
+            natural_language_prompt=natural_language_prompt,
         )
     except RequirementsIntakeError as exc:
         return None, exc.to_payload(), exc.status_code

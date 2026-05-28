@@ -1992,6 +1992,140 @@ def _streamed_candidate_objects(
     return node_candidates + candidates
 
 
+_STREAMED_PROMPT_STOPWORDS = {
+    "adjust",
+    "change",
+    "edit",
+    "node",
+    "please",
+    "priority",
+    "update",
+    "wire",
+    "修改",
+    "调整",
+    "节点",
+    "连线",
+    "优先",
+    "处理",
+}
+
+
+def _streamed_prompt_terms(prompt: str) -> tuple[str, set[str]]:
+    prompt_text = _str(prompt).strip().lower()
+    if not prompt_text:
+        return "", set()
+    terms = {
+        match.group(0).lower()
+        for match in re.finditer(
+            r"[A-Za-z][A-Za-z0-9_.<>-]*|\d+(?:\.\d+)?|[\u4e00-\u9fff]+",
+            prompt_text,
+        )
+    }
+    return prompt_text, {
+        item for item in terms if item and item not in _STREAMED_PROMPT_STOPWORDS
+    }
+
+
+def _streamed_prompt_contains_value(
+    prompt_text: str,
+    prompt_terms: set[str],
+    value: Any,
+) -> bool:
+    normalized = _str(value).strip().lower()
+    if not normalized:
+        return False
+    if re.fullmatch(r"[a-z0-9_.<>-]+", normalized):
+        return normalized in prompt_terms
+    return normalized in prompt_text
+
+
+def _streamed_candidate_prompt_values(candidate: dict[str, Any]) -> list[str]:
+    values = [
+        _str(candidate.get("target_type")),
+        _str(candidate.get("target_id")),
+        _str(candidate.get("display_label")),
+        _str(candidate.get("source_id")),
+        _str(candidate.get("target_node_id")),
+        _str(candidate.get("source_excerpt")),
+        _str(candidate.get("interpreted_logic")),
+    ]
+    for anchor in candidate.get("source_anchors", []):
+        if not isinstance(anchor, dict):
+            continue
+        values.extend(
+            [
+                _str(anchor.get("id")),
+                _str(anchor.get("quote_zh")),
+                _str(anchor.get("quote")),
+            ]
+        )
+    return [item for item in values if item]
+
+
+def _streamed_candidate_prompt_score(
+    candidate: dict[str, Any],
+    *,
+    prompt_text: str,
+    prompt_terms: set[str],
+) -> int:
+    if not prompt_text:
+        return 0
+    score = 0
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("target_id")):
+        score += 100
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("display_label")):
+        score += 80
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("source_id")):
+        score += 25
+    if _streamed_prompt_contains_value(prompt_text, prompt_terms, candidate.get("target_node_id")):
+        score += 25
+    target_type = _str(candidate.get("target_type")).lower()
+    if target_type == "node" and "节点" in prompt_text:
+        score += 5
+    if target_type == "wire" and ("连线" in prompt_text or "wire" in prompt_terms):
+        score += 5
+    candidate_text = " ".join(_streamed_candidate_prompt_values(candidate)).lower()
+    candidate_terms = {
+        match.group(0).lower()
+        for match in re.finditer(
+            r"[A-Za-z][A-Za-z0-9_.<>-]*|\d+(?:\.\d+)?|[\u4e00-\u9fff]+",
+            candidate_text,
+        )
+    }
+    score += len((candidate_terms - _STREAMED_PROMPT_STOPWORDS) & prompt_terms)
+    return score
+
+
+def _order_streamed_candidates_for_prompt(
+    candidates: list[dict[str, Any]],
+    natural_language_prompt: str,
+) -> list[dict[str, Any]]:
+    prompt_text, prompt_terms = _streamed_prompt_terms(natural_language_prompt)
+    if not prompt_text:
+        return candidates
+    scored = [
+        (
+            _streamed_candidate_prompt_score(
+                candidate,
+                prompt_text=prompt_text,
+                prompt_terms=prompt_terms,
+            ),
+            index,
+            candidate,
+        )
+        for index, candidate in enumerate(candidates)
+    ]
+    if not any(score > 0 for score, _index, _candidate in scored):
+        return candidates
+    return [
+        candidate
+        for _score, _index, candidate in sorted(
+            scored,
+            key=lambda item: (-item[0], item[1]),
+        )
+    ]
+
+
 def _streamed_proposal_from_candidate(
     candidate: dict[str, Any],
     *,
@@ -2296,6 +2430,7 @@ def build_streamed_logic_authoring_session(
     drawing_payload: dict[str, Any],
     *,
     decision_history: list[dict[str, Any]] | None = None,
+    natural_language_prompt: str = "",
 ) -> dict[str, Any]:
     _validate_requirements_payload(requirements_payload)
     _validate_drawing_payload(drawing_payload)
@@ -2310,7 +2445,10 @@ def build_streamed_logic_authoring_session(
     accepted_edit_ids = [item["proposal_id"] for item in history if item["decision"] == "confirm" and item["proposal_id"]]
     rejected_items = [item for item in history if item["decision"] == "request_revision" and item["target_key"]]
     rejected_edit_ids = [item["proposal_id"] for item in rejected_items if item["proposal_id"]]
-    candidates = _streamed_candidate_objects(requirements_payload, drawing_payload)
+    candidates = _order_streamed_candidates_for_prompt(
+        _streamed_candidate_objects(requirements_payload, drawing_payload),
+        natural_language_prompt,
+    )
     candidates_by_key = {
         _streamed_target_key(_str(item.get("target_type")), _str(item.get("target_id"))): item
         for item in candidates

@@ -1543,6 +1543,24 @@ def test_streamed_logic_authoring_session_proposes_one_atomic_edit_with_source_c
     }
 
 
+def test_streamed_logic_authoring_session_uses_natural_language_prompt_to_choose_candidate():
+    baseline = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+    )
+    prompted = build_streamed_logic_authoring_session(
+        _ready_requirements_payload(),
+        _ready_drawing_payload(),
+        natural_language_prompt="请优先调整 L1 节点",
+    )
+
+    assert baseline["active_proposal"]["target_id"] == "RA"
+    assert prompted["active_proposal"]["target_type"] == "node"
+    assert prompted["active_proposal"]["target_id"] == "L1"
+    assert prompted["candidate_queue"]["ordered_target_keys"][0] == "node:L1"
+    assert prompted["candidate_queue"]["active_target_key"] == "node:L1"
+
+
 def test_streamed_logic_authoring_session_advances_after_confirm_and_revises_after_feedback():
     first = build_streamed_logic_authoring_session(
         _ready_requirements_payload(),
@@ -3028,6 +3046,52 @@ def test_demo_server_streamed_logic_authoring_endpoint_returns_candidate_proposa
     assert payload["status"] == "awaiting_user_confirmation"
     assert payload["active_proposal"]["requires_user_confirmation"] is True
     assert payload["m21_mode"] == "engineer_in_the_loop_streamed_authoring"
+
+
+def test_demo_server_streamed_logic_authoring_endpoint_uses_natural_language_prompt():
+    server, thread = _start_server()
+    try:
+        status, payload = _post(
+            server,
+            "/api/requirements-intake/streamed-authoring/proposal",
+            {
+                "requirements_payload": _ready_requirements_payload(),
+                "drawing_payload": _ready_drawing_payload(),
+                "decision_history": [],
+                "natural_language_prompt": "请优先调整 L1 节点",
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert status == 200
+    assert payload["active_proposal"]["target_type"] == "node"
+    assert payload["active_proposal"]["target_id"] == "L1"
+    assert payload["candidate_queue"]["active_target_key"] == "node:L1"
+
+
+def test_demo_server_streamed_logic_authoring_endpoint_rejects_invalid_natural_language_prompt():
+    server, thread = _start_server()
+    try:
+        status, payload = _post(
+            server,
+            "/api/requirements-intake/streamed-authoring/proposal",
+            {
+                "requirements_payload": _ready_requirements_payload(),
+                "drawing_payload": _ready_drawing_payload(),
+                "natural_language_prompt": {"text": "L1"},
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert status == 400
+    assert payload["error"] == "invalid_natural_language_prompt"
+    assert payload["field"] == "natural_language_prompt"
 
 
 def test_demo_server_streamed_logic_authoring_endpoint_returns_replay_after_confirm():
