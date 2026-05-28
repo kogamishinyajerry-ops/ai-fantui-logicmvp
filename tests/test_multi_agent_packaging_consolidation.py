@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 from well_harness.multi_agent_packaging_consolidation import (
     SCHEMA_ID,
@@ -128,6 +129,7 @@ def test_multi_agent_packaging_consolidation_runner_and_checker_round_trip(
             payload["artifact_paths"]["package_json"],
             "--format",
             "json",
+            "--skip-browser",
         ],
         cwd=PROJECT_ROOT,
         env=_script_env(),
@@ -138,14 +140,70 @@ def test_multi_agent_packaging_consolidation_runner_and_checker_round_trip(
     )
     assert verify_result.returncode == 0, verify_result.stderr
     verify_payload = json.loads(verify_result.stdout)
-    assert verify_payload == {
-        "html_exists": True,
-        "markdown_exists": True,
-        "mismatches": [],
-        "package_path": payload["artifact_paths"]["package_json"],
-        "schema_valid": True,
-        "status": "pass",
-    }
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["package_path"] == payload["artifact_paths"]["package_json"]
+    assert verify_payload["schema_valid"] is True
+    assert verify_payload["html_exists"] is True
+    assert verify_payload["markdown_exists"] is True
+    assert verify_payload["browser_valid"] is False
+    assert verify_payload["browser"]["status"] == "skipped"
+    assert verify_payload["mismatches"] == []
+
+
+@pytest.mark.e2e
+def test_multi_agent_packaging_consolidation_browser_gate_captures_geometry(
+    tmp_path: Path,
+) -> None:
+    run_result = subprocess.run(
+        [
+            sys.executable,
+            str(RUN_SCRIPT),
+            "--artifact-dir",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert run_result.returncode == 0, run_result.stderr
+    payload = json.loads(run_result.stdout)
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            payload["artifact_paths"]["package_json"],
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert verify_result.returncode == 0, verify_result.stderr
+    verify_payload = json.loads(verify_result.stdout)
+    assert verify_payload["status"] == "pass"
+    assert verify_payload["browser_valid"] is True
+    browser = verify_payload["browser"]
+    assert browser["status"] == "pass"
+    assert Path(browser["screenshots"]["desktop"]).exists()
+    assert Path(browser["screenshots"]["mobile"]).exists()
+    assert browser["states"]["desktop"]["noHorizontalOverflow"] is True
+    assert browser["states"]["mobile"]["noHorizontalOverflow"] is True
+    assert browser["states"]["desktop"]["requiredTextPresent"] is True
+    assert browser["states"]["mobile"]["requiredTextPresent"] is True
+    assert browser["states"]["desktop"]["packageCardCount"] == len(EXPECTED_ORDER)
+    assert browser["states"]["mobile"]["packageCardCount"] == len(EXPECTED_ORDER)
 
 
 def test_multi_agent_packaging_consolidation_is_wired_into_docs_and_makefile() -> None:
@@ -158,6 +216,9 @@ def test_multi_agent_packaging_consolidation_is_wired_into_docs_and_makefile() -
     assert "verify-multi-agent-packaging-consolidation" in makefile
     assert "scripts/run_multi_agent_packaging_consolidation.py --format json" in makefile
     assert "scripts/verify_multi_agent_packaging_consolidation.py --format json" in makefile
+    assert "--skip-browser" in (PROJECT_ROOT / "tests" / "test_multi_agent_packaging_consolidation.py").read_text(
+        encoding="utf-8"
+    )
 
     for marker in EXPECTED_ORDER:
         assert marker in doc
@@ -166,6 +227,7 @@ def test_multi_agent_packaging_consolidation_is_wired_into_docs_and_makefile() -
     assert "src/well_harness/demo_server.py" in doc
     assert "artifacts/**" in doc
     assert "Repo/GitHub/local artifacts" in doc
+    assert "desktop/mobile screenshots" in doc
 
     assert "M23" in mvp_doc
     assert "make multi-agent-packaging-consolidation" in mvp_doc

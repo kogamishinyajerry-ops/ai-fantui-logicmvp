@@ -22,6 +22,19 @@ EXPECTED_ORDER = [
     "m22-operator-cockpit",
     "m23-packaging-consolidation",
 ]
+RESPONSIVE_VIEWPORTS = [
+    {"name": "desktop", "width": 1366, "height": 768},
+    {"name": "mobile", "width": 390, "height": 844},
+]
+REQUIRED_TEXT = [
+    "Multi-Agent Packaging Consolidation",
+    "multi-agent-cursor-baseline-v0-2",
+    "candidate-review-runtime-export",
+    "ultrawork-monitor",
+    "m22-operator-cockpit",
+    "repo-github-local-artifacts",
+    "git add -f --",
+]
 ALLOWED_RUNTIME_PATHSPECS = {
     "candidate-review-runtime-export": {"src/well_harness/demo_server.py"},
 }
@@ -32,6 +45,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--artifact-dir", type=Path, default=DEFAULT_ARTIFACT_DIR)
     parser.add_argument("--package", dest="package_path", type=Path, default=None)
     parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--skip-browser", action="store_true")
     return parser.parse_args()
 
 
@@ -52,7 +66,91 @@ def _artifact_exists(path_value: Any) -> bool:
     return path.exists() and path.stat().st_size > 0
 
 
-def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, Any]:
+def _browser_state(html_path: Path, screenshot_dir: Path) -> dict[str, Any]:
+    def fail(message: str) -> dict[str, Any]:
+        return {
+            "status": "fail",
+            "mismatches": [message],
+            "screenshots": {},
+            "states": {},
+        }
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        return fail(f"playwright is not available: {exc}")
+
+    mismatches: list[str] = []
+    screenshots: dict[str, str] = {}
+    states: dict[str, dict[str, Any]] = {}
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            try:
+                for viewport in RESPONSIVE_VIEWPORTS:
+                    page = browser.new_page(
+                        viewport={"width": viewport["width"], "height": viewport["height"]},
+                    )
+                    try:
+                        page.goto(html_path.resolve().as_uri(), wait_until="load")
+                        page.wait_for_selector("h1", timeout=7000)
+                        state = page.evaluate(
+                            """(requiredText) => {
+                                const bodyText = document.body?.innerText || "";
+                                return {
+                                    title: document.title,
+                                    h1: document.querySelector("h1")?.textContent || "",
+                                    pageWidth: document.documentElement.scrollWidth,
+                                    viewportWidth: window.innerWidth,
+                                    noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
+                                    requiredTextPresent: requiredText.every((item) => bodyText.includes(item)),
+                                    missingText: requiredText.filter((item) => !bodyText.includes(item)),
+                                    packageCardCount: document.querySelectorAll(".package").length,
+                                    stageCommandCount: document.querySelectorAll("pre").length,
+                                    sectionCount: document.querySelectorAll("section").length,
+                                };
+                            }""",
+                            REQUIRED_TEXT,
+                        )
+                        screenshot_path = screenshot_dir / f"multi-agent-packaging-consolidation-{viewport['name']}.png"
+                        page.screenshot(path=str(screenshot_path), full_page=True)
+                    except Exception as exc:
+                        mismatches.append(f"{viewport['name']} browser verification failed: {exc}")
+                        continue
+                    finally:
+                        page.close()
+                    screenshots[viewport["name"]] = str(screenshot_path)
+                    states[viewport["name"]] = state
+                    if not state.get("noHorizontalOverflow"):
+                        mismatches.append(f"{viewport['name']} viewport has horizontal page overflow")
+                    if not state.get("requiredTextPresent"):
+                        missing = ", ".join(state.get("missingText", []))
+                        mismatches.append(f"{viewport['name']} viewport is missing required text: {missing}")
+                    if state.get("packageCardCount") != len(EXPECTED_ORDER):
+                        mismatches.append(f"{viewport['name']} viewport must expose all packaging cards")
+                    if int(state.get("stageCommandCount", 0)) < len(EXPECTED_ORDER):
+                        mismatches.append(f"{viewport['name']} viewport must expose stage commands")
+                    if int(state.get("sectionCount", 0)) < 4:
+                        mismatches.append(f"{viewport['name']} viewport must expose the packaging sections")
+            finally:
+                browser.close()
+    except Exception as exc:
+        return fail(f"browser verification failed: {exc}")
+
+    return {
+        "status": "pass" if not mismatches else "fail",
+        "mismatches": mismatches,
+        "screenshots": screenshots,
+        "states": states,
+    }
+
+
+def verify_multi_agent_packaging_consolidation(
+    package_path: Path,
+    *,
+    run_browser: bool = True,
+) -> dict[str, Any]:
     mismatches: list[str] = []
     try:
         payload = _load_json(package_path)
@@ -153,12 +251,35 @@ def verify_multi_agent_packaging_consolidation(package_path: Path) -> dict[str, 
             if marker not in html:
                 mismatches.append(f"package HTML missing marker: {marker}")
 
+    browser = {
+        "status": "skipped",
+        "mismatches": [],
+        "screenshots": {},
+        "states": {},
+    }
+    if run_browser:
+        if html_exists:
+            browser = _browser_state(
+                Path(str(artifact_paths["package_html"])),
+                package_path.parent / "screenshots",
+            )
+            mismatches.extend([f"browser: {item}" for item in browser["mismatches"]])
+        else:
+            browser = {
+                "status": "fail",
+                "mismatches": ["package_html artifact is unavailable"],
+                "screenshots": {},
+                "states": {},
+            }
+
     return {
         "status": "pass" if not mismatches else "fail",
         "package_path": str(package_path),
         "schema_valid": not errors,
         "html_exists": html_exists,
         "markdown_exists": markdown_exists,
+        "browser_valid": browser["status"] == "pass",
+        "browser": browser,
         "mismatches": mismatches,
     }
 
@@ -167,6 +288,7 @@ def main() -> int:
     args = _parse_args()
     result = verify_multi_agent_packaging_consolidation(
         _package_path(artifact_dir=args.artifact_dir, package_path=args.package_path),
+        run_browser=not args.skip_browser,
     )
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
