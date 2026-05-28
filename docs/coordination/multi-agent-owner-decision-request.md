@@ -42,3 +42,16 @@ development, or provide a separate explicit acceptance decision when authorized.
 M33 is not a final decision gate. It only prepares the request surface and a
 copyable input template. A real decision must come from a separate explicit
 project-owner input, and Notion/external planning surfaces stay out of scope.
+
+## Browser Gate
+
+The verifier opens the generated owner-decision request HTML in desktop/mobile
+browser viewports, captures screenshots, and fails on missing request/template
+labels or page-level horizontal overflow. Unit tests can disable this browser
+path with `--skip-browser`; the Makefile gate keeps it enabled.
+
+The generated HTML must show `Multi-Agent Owner Decision Request`,
+`Decision Input Template`, `five_agent_context_cap`,
+`PackagingPRReadinessAgent`, `repo_github_local_artifacts_only`, and
+`external_manual_input_only` with desktop/mobile screenshots and no horizontal
+layout overflow.
