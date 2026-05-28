@@ -195,7 +195,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "renderTraceBoard" in script
     assert "setSelectedTrace" in script
-    assert "TRACE_WIRE_ENDPOINTS" in script
+    assert "TRACE_WIRE_ENDPOINTS" not in script
+    assert "updateWireEndpointMapFromWires" in script
+    assert "wireEndpointsForId" in script
     assert "applyEmbeddedTraceHighlight" in script
     assert "applyEmbeddedTraceFocus" in script
     assert "renderCoverageMatrix" in script
