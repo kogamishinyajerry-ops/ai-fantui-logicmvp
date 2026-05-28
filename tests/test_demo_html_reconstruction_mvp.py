@@ -9,6 +9,10 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+from well_harness.thrust_reverser_docx_sentence_map import (
+    build_thrust_reverser_docx_sentence_circuit_map,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = (
@@ -149,15 +153,22 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-console-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
+    assert 'id="demo-reconstruction-docx-circuit-map"' in html
+    assert 'data-source-docx-circuit-map="true"' in html
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
+    assert "原始 DOCX 逐句到完整电路" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
     assert "demo-reconstruction-compare-grid" not in html
     assert "DeepSeek live replay" not in script
     assert "读取 golden demo 控制台" in script
+    assert "DOCX_SENTENCE_CIRCUIT_ENDPOINT" in script
+    assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
+    assert ".demo-reconstruction-source-map" in stylesheet
 
 
 def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> None:
@@ -185,6 +196,32 @@ def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> No
     assert "核对输出" in html
     assert ".demo-reconstruction-operator-guide" in stylesheet
     assert ".demo-reconstruction-guide-step" in stylesheet
+
+
+def test_demo_reconstruction_docx_sentence_map_covers_complete_demo_circuit() -> None:
+    payload = build_thrust_reverser_docx_sentence_circuit_map()
+    entries = {entry["anchor"]: entry for entry in payload["source_entries"]}
+    sequence_steps = {step["anchor"]: step for step in payload["sequence_steps"]}
+
+    assert payload["kind"] == "ai-fantui-thrust-reverser-docx-sentence-circuit-map"
+    assert payload["source"]["path"] == "uploads/20260409-thrust-reverser-control-logic.docx"
+    assert payload["source"]["paragraph_count"] == 45
+    assert payload["source"]["table_count"] == 2
+    assert payload["source"]["table_row_count"] == 17
+    assert payload["circuit_contract"]["source"] == "src/well_harness/static/demo.html#fan-chain-svg"
+    assert payload["circuit_contract"]["node_count"] == 20
+    assert payload["circuit_contract"]["wire_count"] == 23
+    assert payload["coverage"]["covered_node_count"] == 20
+    assert payload["coverage"]["covered_wire_count"] == 23
+    assert payload["coverage"]["complete_demo_contract"] is True
+    assert entries["P035"]["role"] == "动作顺序"
+    assert "油门台内微动开关1" in entries["P035"]["text"]
+    assert "工作逻辑1" in entries["P036"]["text"]
+    assert "油门杆解析角度≤-11.74°" in entries["P041"]["text"]
+    assert "故障注入目前暂时不考虑" in entries["P045"]["text"]
+    assert "wire_logic4_thr_lock" in sequence_steps["P035-S05"]["wire_ids"]
+    assert "wire_vdt90_logic4" in sequence_steps["P035-S05"]["wire_ids"]
+    assert "thr_lock" in sequence_steps["P035-S05"]["node_ids"]
 
 
 @pytest.mark.e2e

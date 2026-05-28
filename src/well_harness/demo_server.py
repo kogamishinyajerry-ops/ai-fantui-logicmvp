@@ -73,6 +73,9 @@ from well_harness.requirements_intake import (
     update_logic_drawing,
 )
 from well_harness.requirements_intake.logic_builder import _build_l1_l4_circuit_view
+from well_harness.thrust_reverser_docx_sentence_map import (
+    build_thrust_reverser_docx_sentence_circuit_map,
+)
 STATIC_DIR = Path(__file__).with_name("static")
 REFERENCE_PACKET_DIR = Path(__file__).with_name("reference_packets")
 REFERENCE_PACKET_PATH = REFERENCE_PACKET_DIR / "custom_reverse_control_v1.json"
@@ -101,6 +104,7 @@ WORKBENCH_BUNDLE_PATH = "/api/workbench/bundle"
 WORKBENCH_REPAIR_PATH = "/api/workbench/repair"
 WORKBENCH_ARCHIVE_RESTORE_PATH = "/api/workbench/archive-restore"
 WORKBENCH_RECENT_ARCHIVES_PATH = "/api/workbench/recent-archives"
+DEMO_RECONSTRUCTION_DOCX_CIRCUIT_MAP_PATH = "/api/demo-reconstruction/docx-sentence-circuit-map"
 # E11-06 (2026-04-26): state-of-the-world status bar endpoint.
 WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world"
 # P44-01 (2026-04-26): control-logic circuit fragment endpoint.
@@ -615,6 +619,26 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     500,
                     {
                         "error": "deepseek_live_demo_replay_invalid",
+                        "detail": str(exc),
+                    },
+                )
+            return
+        if parsed.path == DEMO_RECONSTRUCTION_DOCX_CIRCUIT_MAP_PATH:
+            try:
+                self._send_json(200, build_thrust_reverser_docx_sentence_circuit_map())
+            except FileNotFoundError as exc:
+                self._send_json(
+                    404,
+                    {
+                        "error": "thrust_reverser_docx_source_missing",
+                        "detail": str(exc),
+                    },
+                )
+            except ValueError as exc:
+                self._send_json(
+                    500,
+                    {
+                        "error": "thrust_reverser_docx_sentence_map_invalid",
                         "detail": str(exc),
                     },
                 )
