@@ -38,6 +38,7 @@ jobs:
     permissions:
       contents: read
     env:
+      AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF: main
       PYTHONPATH: src
     steps:
       - name: Check out repository
