@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p3">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p3" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p4">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p4" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -157,6 +157,29 @@
         <div>
           <span>审阅链接</span>
           <a id="demo-reconstruction-review-link" class="demo-reconstruction-review-link" href="/demo-reconstruction">当前审阅链接</a>
+        </div>
+      </div>
+      <div id="demo-reconstruction-object-provenance" class="demo-reconstruction-object-provenance" data-object-provenance="docx-to-circuit" aria-label="电路对象到 DOCX 来源反查">
+        <div class="demo-reconstruction-provenance-head">
+          <div>
+            <h3>对象反查证据板</h3>
+            <p>聚焦节点或连线后，查看支撑该对象的源 DOCX 段落和 P035 拆解步骤。</p>
+          </div>
+          <div class="demo-reconstruction-provenance-summary">
+            <span id="demo-reconstruction-provenance-object">等待对象</span>
+            <strong id="demo-reconstruction-provenance-source-count">0 条 DOCX</strong>
+            <strong id="demo-reconstruction-provenance-step-count">0 步</strong>
+          </div>
+        </div>
+        <div class="demo-reconstruction-provenance-grid">
+          <section aria-label="支撑该对象的源 DOCX 条目">
+            <strong>源 DOCX</strong>
+            <ol id="demo-reconstruction-provenance-source-list" class="demo-reconstruction-provenance-list"></ol>
+          </section>
+          <section aria-label="支撑该对象的 P035 拆解步骤">
+            <strong>P035 步骤</strong>
+            <ol id="demo-reconstruction-provenance-step-list" class="demo-reconstruction-provenance-list"></ol>
+          </section>
         </div>
       </div>
       <div class="demo-reconstruction-coverage-grid">

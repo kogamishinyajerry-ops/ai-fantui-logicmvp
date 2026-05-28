@@ -126,6 +126,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
     step_playback_path = artifact_dir / f"demo-reconstruction-step-playback-{stamp}.png"
+    object_provenance_path = artifact_dir / f"demo-reconstruction-object-provenance-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -321,6 +322,57 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                                 ?.textContent?.trim() || "",
                         };
                     }"""
+                )
+                page.locator(
+                    '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="logic4"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const object = document.querySelector("#demo-reconstruction-provenance-object");
+                        const sources = document.querySelectorAll(
+                            "#demo-reconstruction-provenance-source-list .demo-reconstruction-provenance-item"
+                        );
+                        const steps = document.querySelectorAll(
+                            "#demo-reconstruction-provenance-step-list .demo-reconstruction-provenance-item"
+                        );
+                        return object
+                            && object.textContent.includes("logic4")
+                            && sources.length >= 2
+                            && steps.length >= 1;
+                    }""",
+                    timeout=5000,
+                )
+                page.locator("#demo-reconstruction-object-provenance").screenshot(
+                    path=str(object_provenance_path)
+                )
+                object_provenance_review = page.evaluate(
+                    """() => ({
+                        objectText: document
+                            .querySelector("#demo-reconstruction-provenance-object")
+                            ?.textContent?.trim() || "",
+                        sourceCount: document.querySelectorAll(
+                            "#demo-reconstruction-provenance-source-list .demo-reconstruction-provenance-item"
+                        ).length,
+                        stepCount: document.querySelectorAll(
+                            "#demo-reconstruction-provenance-step-list .demo-reconstruction-provenance-item"
+                        ).length,
+                        sourceCountText: document
+                            .querySelector("#demo-reconstruction-provenance-source-count")
+                            ?.textContent?.trim() || "",
+                        stepCountText: document
+                            .querySelector("#demo-reconstruction-provenance-step-count")
+                            ?.textContent?.trim() || "",
+                        sourceItems: Array.from(
+                            document.querySelectorAll(
+                                "#demo-reconstruction-provenance-source-list .demo-reconstruction-provenance-item"
+                            )
+                        ).map((item) => item.textContent.trim()),
+                        stepItems: Array.from(
+                            document.querySelectorAll(
+                                "#demo-reconstruction-provenance-step-list .demo-reconstruction-provenance-item"
+                            )
+                        ).map((item) => item.textContent.trim()),
+                    })"""
                 )
                 page.locator(
                     '[data-circuit-coverage-kind="node"][data-circuit-coverage-id="thr_lock"]'
@@ -840,6 +892,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 keyboard_review_path,
                 review_deep_link_path,
                 step_playback_path,
+                object_provenance_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -952,6 +1005,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "累计构建" in step_playback_review["reviewObjectText"]
         )
         else "fail",
+        "object_provenance_traceability": "pass"
+        if (
+            "logic4" in object_provenance_review["objectText"]
+            and object_provenance_review["sourceCount"] >= 2
+            and object_provenance_review["stepCount"] >= 1
+            and any("logic4" in item for item in object_provenance_review["sourceItems"])
+            and any("P035-S05" in item for item in object_provenance_review["stepItems"])
+        )
+        else "fail",
         "review_hash_link": "pass"
         if (
             review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -1018,6 +1080,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "keyboard_review": str(keyboard_review_path),
             "review_deep_link": str(review_deep_link_path),
             "step_playback": str(step_playback_path),
+            "object_provenance": str(object_provenance_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -1037,6 +1100,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "keyboard_review": keyboard_review,
         "trace_switch_focus_reset_review": trace_switch_focus_reset_review,
         "step_playback_review": step_playback_review,
+        "object_provenance_review": object_provenance_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
@@ -1111,6 +1175,7 @@ def main(argv: list[str] | None = None) -> int:
                 "coverage_matrix_focus": "fail",
                 "coverage_matrix_filter": "fail",
                 "step_playback_cumulative_circuit": "fail",
+                "object_provenance_traceability": "fail",
                 "source_chip_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",

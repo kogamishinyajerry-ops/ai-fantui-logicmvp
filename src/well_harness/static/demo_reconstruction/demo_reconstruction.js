@@ -80,7 +80,13 @@
   const playbackActiveStep = $("demo-reconstruction-playback-active-step");
   const playbackNodeCount = $("demo-reconstruction-playback-node-count");
   const playbackWireCount = $("demo-reconstruction-playback-wire-count");
+  const provenanceObject = $("demo-reconstruction-provenance-object");
+  const provenanceSourceCount = $("demo-reconstruction-provenance-source-count");
+  const provenanceStepCount = $("demo-reconstruction-provenance-step-count");
+  const provenanceSourceList = $("demo-reconstruction-provenance-source-list");
+  const provenanceStepList = $("demo-reconstruction-provenance-step-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
+  let sourceEntries = [];
   let traceSteps = [];
   let currentTraceStep = null;
   let selectedTraceIndex = -1;
@@ -396,6 +402,70 @@
     if (stepPlayback) stepPlayback.dataset.stepPlaybackReady = steps.length ? "true" : "false";
   }
 
+  function objectProvenanceRecords(kind, id) {
+    if (!kind || !id) return {sourceMatches: [], stepMatches: []};
+    const key = kind === "wire" ? "wire_ids" : "node_ids";
+    const sourceMatches = sourceEntries.filter((entry) => Array.isArray(entry[key]) && entry[key].includes(id));
+    const stepMatches = traceSteps.filter((step) => Array.isArray(step[key]) && step[key].includes(id));
+    return {sourceMatches, stepMatches};
+  }
+
+  function renderProvenanceList(list, records, emptyText, kind, id, labelKey) {
+    if (!list) return;
+    list.innerHTML = "";
+    if (!records.length) {
+      const empty = document.createElement("li");
+      empty.className = "demo-reconstruction-provenance-item";
+      empty.textContent = emptyText;
+      list.appendChild(empty);
+      return;
+    }
+    records.forEach((record) => {
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-provenance-item";
+      const anchor = document.createElement("strong");
+      anchor.textContent = record.anchor || "source";
+      const meta = document.createElement("span");
+      meta.textContent = `${record[labelKey] || "来源"} · ${kind}:${id}`;
+      const text = document.createElement("p");
+      text.textContent = record.text || record.source_text || "";
+      li.append(anchor, meta, text);
+      list.appendChild(li);
+    });
+  }
+
+  function renderObjectProvenance(kind, id) {
+    if (!provenanceObject) return;
+    if (!kind || !id) {
+      setText(provenanceObject, "等待对象");
+      setText(provenanceSourceCount, "0 条 DOCX");
+      setText(provenanceStepCount, "0 步");
+      renderProvenanceList(provenanceSourceList, [], "聚焦节点或连线后显示源 DOCX。", "", "", "role");
+      renderProvenanceList(provenanceStepList, [], "聚焦节点或连线后显示 P035 步骤。", "", "", "title");
+      return;
+    }
+    const {sourceMatches, stepMatches} = objectProvenanceRecords(kind, id);
+    setText(provenanceObject, reviewObjectLabel(kind, id));
+    setText(provenanceSourceCount, `${sourceMatches.length} 条 DOCX`);
+    setText(provenanceStepCount, `${stepMatches.length} 步`);
+    renderProvenanceList(
+      provenanceSourceList,
+      sourceMatches,
+      "该对象暂无直接 DOCX 段落命中。",
+      kind,
+      id,
+      "role",
+    );
+    renderProvenanceList(
+      provenanceStepList,
+      stepMatches,
+      "该对象暂无 P035 拆解步骤命中。",
+      kind,
+      id,
+      "title",
+    );
+  }
+
   function writeReviewHashState() {
     if (applyingReviewHashState) {
       updateReviewLink();
@@ -517,6 +587,7 @@
   function clearCircuitObjectFocus() {
     currentCircuitFocus = {kind: "", id: ""};
     setCoverageButtonTabStops("", "");
+    renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
       .forEach((button) => {
@@ -635,6 +706,7 @@
       objectId: id,
       syncText: embeddedHighlightStatus ? embeddedHighlightStatus.textContent : "",
     });
+    renderObjectProvenance(kind, id);
     writeReviewHashState();
     return { matchCount, ready: true };
   }
@@ -760,14 +832,15 @@
 
   function renderSourceEntries(entries) {
     if (!sourceEntryList) return;
+    sourceEntries = Array.isArray(entries) ? entries : [];
     sourceEntryList.innerHTML = "";
-    if (!Array.isArray(entries) || entries.length === 0) {
+    if (!sourceEntries.length) {
       const li = document.createElement("li");
       li.textContent = "DOCX 逐句映射暂无数据";
       sourceEntryList.appendChild(li);
       return;
     }
-    entries.forEach((entry) => {
+    sourceEntries.forEach((entry) => {
       const li = document.createElement("li");
       li.className = "demo-reconstruction-source-entry";
       li.dataset.sourceAnchor = entry.anchor || "";
