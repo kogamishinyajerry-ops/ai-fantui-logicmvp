@@ -6356,6 +6356,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-step-position"' in html
     assert 'id="docx-circuit-element-evidence-only"' in html
     assert 'id="docx-circuit-copy-trace-packet"' in html
+    assert 'id="docx-circuit-copy-review-link"' in html
     assert 'id="docx-circuit-copy-status"' in html
     assert 'data-docx-circuit-source-index="true"' in html
     assert 'id="docx-circuit-source-index-count"' in html
@@ -6398,6 +6399,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function applyReviewHashState" in script
     assert "function writeReviewHash" in script
     assert "function parseHashElement" in script
+    assert "function currentReviewUrl" in script
+    assert "function copyReviewLink" in script
     assert "hashchange" in script
     assert "URLSearchParams" in script
     assert "history.replaceState" in script

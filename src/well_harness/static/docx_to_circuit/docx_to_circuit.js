@@ -116,6 +116,7 @@
   const stepPosition = $("docx-circuit-step-position");
   const evidenceOnlyToggle = $("docx-circuit-element-evidence-only");
   const copyTracePacketButton = $("docx-circuit-copy-trace-packet");
+  const copyReviewLinkButton = $("docx-circuit-copy-review-link");
   const copyStatus = $("docx-circuit-copy-status");
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
@@ -257,6 +258,11 @@
     if (window.location.hash !== nextHash) {
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
     }
+  }
+
+  function currentReviewUrl() {
+    writeReviewHash();
+    return window.location.href;
   }
 
   function makeSvgElement(name, attributes) {
@@ -779,9 +785,23 @@
     try {
       await copyText(JSON.stringify(currentTracePacket(), null, 2));
       copyTracePacketButton.dataset.copyState = "success";
-      setText(copyStatus, "已复制");
+      setText(copyStatus, "审阅包已复制");
     } catch (error) {
       copyTracePacketButton.dataset.copyState = "failed";
+      setText(copyStatus, "复制失败");
+    }
+  }
+
+  async function copyReviewLink() {
+    if (!copyReviewLinkButton) return;
+    copyReviewLinkButton.dataset.copyState = "pending";
+    setText(copyStatus, "复制中");
+    try {
+      await copyText(currentReviewUrl());
+      copyReviewLinkButton.dataset.copyState = "success";
+      setText(copyStatus, "链接已复制");
+    } catch (error) {
+      copyReviewLinkButton.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");
     }
   }
@@ -948,6 +968,7 @@
     evidenceOnlyToggle.addEventListener("change", () => renderTracePanel(selectedElement.kind, selectedElement.id));
   }
   if (copyTracePacketButton) copyTracePacketButton.addEventListener("click", copyTracePacket);
+  if (copyReviewLinkButton) copyReviewLinkButton.addEventListener("click", copyReviewLink);
   if (sourceIndexSearch) {
     sourceIndexSearch.addEventListener("input", () => {
       renderSourceIndex(sourceEntries());
