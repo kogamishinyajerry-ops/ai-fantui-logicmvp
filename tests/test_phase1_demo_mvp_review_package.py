@@ -658,6 +658,12 @@ def test_phase1_demo_mvp_gate_is_the_ci_entrypoint_after_standalone_demo_preflig
     assert workflow.index("github.event.before") < workflow.index(
         "Run Phase 1 demo MVP gate"
     )
+    validation_job = workflow.split("validation:", 1)[1].split(
+        "      - name: Set up Python",
+        1,
+    )[0]
+    assert "actions/checkout@v5" in validation_job
+    assert "fetch-depth: 0" in validation_job
     assert "Install Playwright Chromium" in workflow
     assert "python3 -m playwright install --with-deps chromium" in workflow
     assert "Verify demo.html reconstruction MVP" in workflow
