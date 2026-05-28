@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -40,17 +41,71 @@ def _utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
-def _restricted_diff() -> list[str]:
+def _git_lines(args: list[str]) -> list[str] | None:
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--", *RESTRICTED_PATHS],
+        ["git", *args],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
         check=False,
     )
     if result.returncode != 0:
-        return ["<git diff failed>"]
+        return None
     return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def _restricted_diff_for(diff_args: list[str], label: str) -> list[str]:
+    lines = _git_lines(["diff", "--name-only", *diff_args, "--", *RESTRICTED_PATHS])
+    if lines is None:
+        return [f"<git diff failed: {label}>"]
+    return [f"{label}:{line}" for line in lines]
+
+
+def _review_base_commit() -> str | None:
+    base_refs = [
+        value
+        for value in (
+            os.environ.get("DOCX_TO_CIRCUIT_REVIEW_BASE_REF"),
+            os.environ.get("GITHUB_BASE_REF"),
+            "origin/codex/docx-sentence-circuit-demo",
+            "codex/docx-sentence-circuit-demo",
+            "origin/main",
+            "main",
+        )
+        if value
+    ]
+    expanded_refs: list[str] = []
+    for ref in base_refs:
+        expanded_refs.append(ref)
+        if not ref.startswith("origin/"):
+            expanded_refs.append(f"origin/{ref}")
+    for ref in dict.fromkeys(expanded_refs):
+        resolved = _git_lines(["rev-parse", "--verify", "--quiet", ref])
+        if resolved is None or not resolved:
+            continue
+        merge_base = _git_lines(["merge-base", "HEAD", ref])
+        if merge_base:
+            return merge_base[0]
+    return None
+
+
+def _restricted_diff() -> list[str]:
+    restricted: list[str] = []
+    base_commit = _review_base_commit()
+    if base_commit:
+        restricted.extend(_restricted_diff_for([f"{base_commit}...HEAD"], "committed"))
+    else:
+        restricted.append("<git merge-base failed>")
+    restricted.extend(_restricted_diff_for(["--cached"], "staged"))
+    restricted.extend(_restricted_diff_for([], "unstaged"))
+    return sorted(dict.fromkeys(restricted))
+
+
+def _restricted_path(value: str) -> str:
+    label, separator, path = value.partition(":")
+    if separator and label in {"committed", "staged", "unstaged"}:
+        return path
+    return value
 
 
 def _start_server() -> tuple[ThreadingHTTPServer, threading.Thread, str]:
@@ -605,7 +660,8 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 [
                     path
                     for path in restricted
-                    if path in RESTRICTED_PATHS[:3] or path.startswith("src/well_harness/adapters")
+                    if _restricted_path(path) in RESTRICTED_PATHS[:3]
+                    or _restricted_path(path).startswith("src/well_harness/adapters")
                 ]
             ),
             "truth_effect": "none",

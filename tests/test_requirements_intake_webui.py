@@ -6472,6 +6472,13 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert '"requirements_official_docx_link"' in review_link_gate
     assert '"logic_template_query_link"' in review_link_gate
     assert '"workbench_anchor_preserves_review_state"' in review_link_gate
+    assert "DOCX_TO_CIRCUIT_REVIEW_BASE_REF" in review_link_gate
+    assert "origin/codex/docx-sentence-circuit-demo" in review_link_gate
+    assert '"merge-base"' in review_link_gate
+    assert '"--cached"' in review_link_gate
+    assert '"committed"' in review_link_gate
+    assert '"staged"' in review_link_gate
+    assert '"unstaged"' in review_link_gate
     assert "markdown_with_json" in review_link_gate
     assert "preview_matches_clipboard" in review_link_gate
     assert "workbenchThreeColumn" in review_link_gate
