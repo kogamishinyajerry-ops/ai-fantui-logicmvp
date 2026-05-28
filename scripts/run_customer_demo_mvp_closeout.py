@@ -75,17 +75,87 @@ def _command_pass(command: dict[str, Any]) -> bool:
     return command["returncode"] == 0 and command["payload"].get("status") == "pass"
 
 
-def _restricted_diff() -> list[str]:
+def _git_diff_names(diff_args: list[str]) -> tuple[int, list[str]]:
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--", *RESTRICTED_PATHS],
+        ["git", "diff", "--name-only", *diff_args, "--", *RESTRICTED_PATHS],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
         check=False,
     )
+    paths = [line for line in result.stdout.splitlines() if line.strip()]
+    return result.returncode, paths
+
+
+def _current_pr_base_ref() -> str | None:
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "view", "--json", "baseRefName"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
     if result.returncode != 0:
-        return ["<git diff failed>"]
-    return [line for line in result.stdout.splitlines() if line.strip()]
+        return None
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    base_ref = payload.get("baseRefName")
+    return base_ref if isinstance(base_ref, str) and base_ref else None
+
+
+def _pr_base_ref() -> str | None:
+    for key in (
+        "AI_FANTUI_CUSTOMER_DEMO_MVP_BASE_REF",
+        "AI_FANTUI_PHASE1_DEMO_MVP_BASE_REF",
+        "GITHUB_BASE_REF",
+    ):
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value
+    return _current_pr_base_ref()
+
+
+def _base_ref_candidates(base_ref: str) -> list[str]:
+    if base_ref.startswith("origin/"):
+        return [base_ref]
+    return [f"origin/{base_ref}", base_ref]
+
+
+def _dedupe_paths(paths: list[str]) -> list[str]:
+    unique: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        if path not in seen:
+            unique.append(path)
+            seen.add(path)
+    return unique
+
+
+def _restricted_diff() -> list[str]:
+    restricted: list[str] = []
+    base_ref = _pr_base_ref()
+    if base_ref:
+        for candidate in _base_ref_candidates(base_ref):
+            returncode, paths = _git_diff_names([f"{candidate}...HEAD"])
+            if returncode == 0:
+                restricted.extend(paths)
+                break
+        else:
+            return ["<git base diff failed>"]
+
+    for diff_args in ([], ["--cached"]):
+        returncode, paths = _git_diff_names(diff_args)
+        if returncode != 0:
+            return ["<git diff failed>"]
+        restricted.extend(paths)
+
+    return _dedupe_paths(restricted)
 
 
 def _closeout_doc_check() -> dict[str, Any]:

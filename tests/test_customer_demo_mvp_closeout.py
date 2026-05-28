@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -13,11 +14,44 @@ DOC_PATH = PROJECT_ROOT / "docs" / "coordination" / "customer-demo-mvp-closeout.
 MAKEFILE_PATH = PROJECT_ROOT / "Makefile"
 
 
+def _load_closeout_runner_module():
+    spec = importlib.util.spec_from_file_location(
+        "customer_demo_mvp_closeout_runner",
+        RUN_SCRIPT_PATH,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _script_env() -> dict[str, str]:
     env = dict(os.environ)
     env["PYTHONPATH"] = f"{PROJECT_ROOT / 'src'}:{PROJECT_ROOT}"
     env["AI_FANTUI_QUEUE_PREFLIGHT_MODE"] = "fixture"
     return env
+
+
+def test_customer_demo_mvp_closeout_boundary_checks_pr_base(monkeypatch) -> None:
+    runner = _load_closeout_runner_module()
+    restricted_path = "src/well_harness/static/requirements_intake/index.html"
+    calls: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        calls.append(args)
+        if "origin/codex/multi-agent-active-route-wiring...HEAD" in args:
+            return subprocess.CompletedProcess(args, 0, restricted_path + "\n", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setenv("GITHUB_BASE_REF", "codex/multi-agent-active-route-wiring")
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    assert runner._restricted_diff() == [restricted_path]
+    assert any(
+        "origin/codex/multi-agent-active-route-wiring...HEAD" in args
+        for args in calls
+    )
 
 
 def test_customer_demo_mvp_closeout_combines_visibility_and_demo_gates(
