@@ -86,6 +86,8 @@ def test_multi_agent_validation_evidence_schema_validates_payload() -> None:
     assert payload["validation_results"][-1]["command_id"] == "m24-pr-preflight-03"
     assert any("git add -f --" in command for command in payload["stage_commands"])
     assert any("multi-agent-validation-evidence.md" in command for command in payload["stage_commands"])
+    assert "src/well_harness/agent_*.py" in payload["classified_changed_pathspecs"]
+    assert "docs/json_schema/approved_*.schema.json" in payload["classified_changed_pathspecs"]
     assert "notion-control-plane-404" in payload["pr_evidence_note"]
     assert "21 validation commands passed" in payload["pr_evidence_note"]
     assert payload["blockers"][0]["status"] == "external_blocker"
@@ -103,6 +105,8 @@ def test_multi_agent_validation_evidence_html_exposes_results_and_blocker() -> N
     assert "multi-agent-cursor-baseline-v0-2-01" in html
     assert "m24-pr-preflight-03" in html
     assert "m25-validation-evidence" in html
+    assert "Classified Changed Pathspecs" in html
+    assert "src/well_harness/agent_*.py" in html
     assert "notion-control-plane-404" in html
     assert "21 validation commands passed" in html
 

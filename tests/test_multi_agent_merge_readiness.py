@@ -238,6 +238,43 @@ def test_multi_agent_merge_readiness_allows_explicitly_staged_guarded_change(
     assert payload["status"] == "ready_with_external_blocker"
 
 
+def test_multi_agent_merge_readiness_blocks_changed_path_outside_stage_boundary(
+    tmp_path: Path,
+) -> None:
+    evidence = _validation_evidence()
+    evidence["changed_paths"] = ["README.md"]
+
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=evidence,
+        pr_status=_pr_status(),
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["gates"]["pathspec_boundary"] == "fail"
+    assert payload["status"] == "blocked"
+
+
+def test_multi_agent_merge_readiness_allows_classified_legacy_changed_path(
+    tmp_path: Path,
+) -> None:
+    evidence = _validation_evidence()
+    evidence["changed_paths"] = ["src/well_harness/agent_execution_plan.py"]
+    evidence["classified_changed_pathspecs"] = ["src/well_harness/agent_*.py"]
+
+    payload = build_multi_agent_merge_readiness(
+        validation_evidence=evidence,
+        pr_status=_pr_status(),
+        geometry_results=_geometry_results(tmp_path),
+        geometry_dir=str(tmp_path),
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["gates"]["pathspec_boundary"] == "pass"
+    assert payload["status"] == "ready_with_external_blocker"
+
+
 def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path) -> None:
     payload = build_multi_agent_merge_readiness(
         validation_evidence=_validation_evidence(),
@@ -311,6 +348,7 @@ def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status
     pr_status_path.write_text(json.dumps(_pr_status()), encoding="utf-8")
 
     monkeypatch.setattr(module, "_ensure_source_html", lambda: None)
+    monkeypatch.setattr(module, "_changed_paths_from_worktree", lambda: [])
     monkeypatch.setattr(
         module,
         "_run_geometry_gate",

@@ -143,6 +143,10 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             if marker in command:
                 mismatches.append(f"stage command includes excluded marker {marker}")
 
+    classified = payload.get("classified_changed_pathspecs", [])
+    if not isinstance(classified, list) or "src/well_harness/agent_*.py" not in classified:
+        mismatches.append("classified_changed_pathspecs must include legacy agent module pathspecs")
+
     blockers = payload.get("blockers", [])
     if not any(
         isinstance(item, dict)
@@ -173,6 +177,8 @@ def verify_multi_agent_validation_evidence(package_path: Path) -> dict[str, Any]
             "multi-agent-cursor-baseline-v0-2-01",
             "m24-pr-preflight-03",
             "m25-validation-evidence",
+            "Classified Changed Pathspecs",
+            "src/well_harness/agent_*.py",
             "notion-control-plane-404",
             "21 validation commands passed",
         ]:
