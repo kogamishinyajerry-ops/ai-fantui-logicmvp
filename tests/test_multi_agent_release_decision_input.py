@@ -157,6 +157,7 @@ def test_release_decision_input_schema_validates_ready_with_remote_check_warning
     assert payload["status"] == "ready_for_owner_decision_with_warnings"
     assert payload["summary"]["recommended_owner_action"] == "owner_acceptance_or_wait_for_remote_checks"
     assert payload["summary"]["actionable_thread_count"] == 0
+    assert payload["gates"]["review_closure_blockers"] == "pass"
     assert payload["gates"]["latest_head_review"] == "pass"
     assert payload["gates"]["remote_checks"] == "warning"
     assert payload["decision_boundaries"]["auto_merge"] == "forbidden"
@@ -185,6 +186,42 @@ def test_release_decision_input_ready_without_warning_when_remote_checks_pass() 
     assert options["wait_for_remote_checks"]["enabled"] is False
 
 
+def test_release_decision_input_verifier_accepts_green_check_recommendation(tmp_path: Path) -> None:
+    payload = build_multi_agent_release_decision_input(
+        review_closure=_review_closure(
+            remote_checks=[{"name": "validation", "conclusion": "SUCCESS"}],
+        ),
+        generated_at="2026-05-28T09:40:00Z",
+    )
+    written = write_multi_agent_release_decision_input_artifacts(
+        payload,
+        artifact_dir=tmp_path / "decision",
+    )
+
+    html = Path(written["artifact_paths"]["decision_input_html"]).read_text(encoding="utf-8")
+    assert "owner_acceptance_when_authorized" in html
+
+    verify_result = subprocess.run(
+        [
+            sys.executable,
+            str(VERIFY_SCRIPT),
+            "--package",
+            written["artifact_paths"]["decision_input_json"],
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+    assert verify_result.returncode == 0, verify_result.stderr
+    assert json.loads(verify_result.stdout)["status"] == "pass"
+
+
 def test_release_decision_input_blocks_actionable_reviews() -> None:
     payload = build_multi_agent_release_decision_input(
         review_closure=_review_closure(actionable=True),
@@ -198,6 +235,34 @@ def test_release_decision_input_blocks_actionable_reviews() -> None:
     options = {item["option_id"]: item for item in payload["decision_options"]}
     assert options["owner_acceptance"]["enabled"] is False
     assert options["fix_actionable_reviews"]["enabled"] is True
+
+
+def test_release_decision_input_propagates_review_closure_blockers() -> None:
+    review_closure = _review_closure(
+        remote_checks=[{"name": "validation", "conclusion": "SUCCESS"}],
+    )
+    review_closure["blockers"] = [
+        {
+            "blocker_id": "remote-policy-blocker",
+            "status": "external_blocker",
+            "message": "Owner approval is still pending.",
+        }
+    ]
+
+    payload = build_multi_agent_release_decision_input(
+        review_closure=review_closure,
+        generated_at="2026-05-28T09:40:00Z",
+    )
+
+    jsonschema.Draft202012Validator(_schema()).validate(payload)
+    assert payload["status"] == "blocked"
+    assert payload["gates"]["review_closure_blockers"] == "fail"
+    assert payload["summary"]["recommended_owner_action"] == "resolve_review_closure_blockers"
+    assert payload["blockers"] == review_closure["blockers"]
+    options = {item["option_id"]: item for item in payload["decision_options"]}
+    assert options["owner_acceptance"]["enabled"] is False
+    assert options["fix_actionable_reviews"]["enabled"] is True
+    assert "1 review closure blocker" in options["fix_actionable_reviews"]["rationale"]
 
 
 def test_release_decision_input_html_exposes_owner_decision_surface() -> None:

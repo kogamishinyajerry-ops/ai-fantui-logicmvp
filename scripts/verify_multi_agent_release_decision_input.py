@@ -93,6 +93,7 @@ def verify_multi_agent_release_decision_input(package_path: Path) -> dict[str, A
     else:
         for required in [
             "review_closure",
+            "review_closure_blockers",
             "latest_head_review",
             "actionable_reviews",
             "mergeability",
@@ -163,14 +164,16 @@ def verify_multi_agent_release_decision_input(package_path: Path) -> dict[str, A
         mismatches.append("decision_input_markdown artifact must exist and be non-empty")
     if html_exists:
         html = Path(str(artifact_paths["decision_input_html"])).read_text(encoding="utf-8")
-        for marker in [
+        html_markers = [
             "Multi-Agent Release Decision Input",
             "Recommended owner action",
             "Decision Options",
             "disabled",
             "repo_github_local_artifacts_only",
-            "owner_acceptance_or_wait_for_remote_checks",
-        ]:
+        ]
+        if isinstance(summary, dict) and isinstance(summary.get("recommended_owner_action"), str):
+            html_markers.append(summary["recommended_owner_action"])
+        for marker in html_markers:
             if marker not in html:
                 mismatches.append(f"decision input HTML missing marker: {marker}")
 

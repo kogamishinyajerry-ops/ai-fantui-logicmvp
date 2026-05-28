@@ -142,7 +142,8 @@
           "enum": [
             "owner_acceptance_when_authorized",
             "owner_acceptance_or_wait_for_remote_checks",
-            "fix_current_actionable_reviews"
+            "fix_current_actionable_reviews",
+            "resolve_review_closure_blockers"
           ]
         }
       }
@@ -152,6 +153,7 @@
       "additionalProperties": false,
       "required": [
         "review_closure",
+        "review_closure_blockers",
         "latest_head_review",
         "actionable_reviews",
         "mergeability",
@@ -162,6 +164,9 @@
       ],
       "properties": {
         "review_closure": {
+          "$ref": "#/$defs/gate_status"
+        },
+        "review_closure_blockers": {
           "$ref": "#/$defs/gate_status"
         },
         "latest_head_review": {

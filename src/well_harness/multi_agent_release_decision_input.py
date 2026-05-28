@@ -44,6 +44,7 @@ def _remote_warning(remote_checks_state: str, remote_gate: str) -> bool:
 def _decision_status(gates: dict[str, str]) -> str:
     hard_fail_keys = [
         "review_closure",
+        "review_closure_blockers",
         "latest_head_review",
         "actionable_reviews",
         "mergeability",
@@ -57,7 +58,13 @@ def _decision_status(gates: dict[str, str]) -> str:
     return "ready_for_owner_decision"
 
 
-def _decision_options(*, status: str, remote_warning: bool, actionable_count: int) -> list[dict[str, Any]]:
+def _decision_options(
+    *,
+    status: str,
+    remote_warning: bool,
+    actionable_count: int,
+    blocker_count: int,
+) -> list[dict[str, Any]]:
     ready = status != "blocked"
     return [
         {
@@ -93,6 +100,8 @@ def _decision_options(*, status: str, remote_warning: bool, actionable_count: in
             "rationale": (
                 f"{actionable_count} actionable review thread(s) require local fixes."
                 if actionable_count > 0
+                else f"{blocker_count} review closure blocker(s) require resolution."
+                if blocker_count > 0
                 else "No actionable review thread is currently open."
             ),
         },
@@ -105,6 +114,41 @@ def _decision_options(*, status: str, remote_warning: bool, actionable_count: in
             "rationale": "This packet is an input to release decision-making and never performs merges.",
         },
     ]
+
+
+def _closure_blockers(review_closure: dict[str, Any]) -> list[dict[str, str]]:
+    raw_blockers = review_closure.get("blockers", [])
+    if not raw_blockers:
+        return []
+    if not isinstance(raw_blockers, list):
+        return [
+            {
+                "blocker_id": "m30-closure-blockers-invalid",
+                "status": "local_blocker",
+                "message": "M30 closure blockers are not represented as a list.",
+            }
+        ]
+
+    blockers: list[dict[str, str]] = []
+    for index, item in enumerate(raw_blockers, start=1):
+        if isinstance(item, dict):
+            status = str(item.get("status", "local_blocker"))
+            blockers.append(
+                {
+                    "blocker_id": str(item.get("blocker_id") or f"m30-closure-blocker-{index}"),
+                    "status": status if status in {"external_blocker", "local_blocker"} else "local_blocker",
+                    "message": str(item.get("message") or "M30 closure recorded an active blocker."),
+                }
+            )
+        else:
+            blockers.append(
+                {
+                    "blocker_id": f"m30-closure-blocker-{index}",
+                    "status": "local_blocker",
+                    "message": str(item),
+                }
+            )
+    return blockers
 
 
 def build_multi_agent_release_decision_input(
@@ -137,9 +181,11 @@ def build_multi_agent_release_decision_input(
         str(closure_inputs.get("merge_state", "")) in {"CLEAN", "MERGEABLE"}
         and closure_gates.get("pr_mergeability") == "pass"
     )
-    no_blockers = not review_closure.get("blockers")
+    blockers = _closure_blockers(review_closure)
+    no_blockers = not blockers
     gates = {
         "review_closure": _gate(closure_status in {"ready_for_owner_acceptance", "ready_with_warnings"}),
+        "review_closure_blockers": _gate(no_blockers),
         "latest_head_review": _gate(latest_clean),
         "actionable_reviews": _gate(no_actionable),
         "mergeability": _gate(mergeable),
@@ -155,7 +201,9 @@ def build_multi_agent_release_decision_input(
     }
     status = _decision_status(gates)
     recommended_owner_action = (
-        "fix_current_actionable_reviews"
+        "resolve_review_closure_blockers"
+        if status == "blocked" and blockers
+        else "fix_current_actionable_reviews"
         if status == "blocked"
         else "owner_acceptance_or_wait_for_remote_checks"
         if remote_is_warning
@@ -207,6 +255,7 @@ def build_multi_agent_release_decision_input(
             status=status,
             remote_warning=remote_is_warning,
             actionable_count=actionable_count,
+            blocker_count=len(blockers),
         ),
         "decision_boundaries": {
             "auto_merge": "forbidden",
@@ -227,7 +276,7 @@ def build_multi_agent_release_decision_input(
             ],
             "stage_command": "git add -- " + " ".join(M31_PATHSPECS),
         },
-        "blockers": [],
+        "blockers": blockers,
         "risk_notes": [
             "This packet is release decision input only; it does not grant merge authority.",
             "Remote checks can remain a warning when GitHub reports no checks for the branch.",
