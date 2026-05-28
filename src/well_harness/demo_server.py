@@ -673,6 +673,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_static("demo_reconstruction/index.html")
             return
 
+        if parsed.path in ("/docx-to-circuit", "/docx-to-circuit/", "/docx_to_circuit.html"):
+            self._serve_static("docx_to_circuit/index.html")
+            return
+
         if parsed.path in ("/workbench/start", "/workbench/start.html"):
             self._serve_static("workbench_start.html")
             return

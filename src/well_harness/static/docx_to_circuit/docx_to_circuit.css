@@ -1,0 +1,279 @@
+:root {
+  --docx-bg: #f6f8fc;
+  --docx-panel: #ffffff;
+  --docx-panel-2: #f2f5fa;
+  --docx-border: #d8e0ec;
+  --docx-text: #13223a;
+  --docx-muted: #66738d;
+  --docx-accent: #1e67ff;
+  --docx-ok: #0f9f6e;
+  --docx-shadow: 0 14px 30px rgba(25, 41, 78, 0.07);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--docx-bg);
+  color: var(--docx-text);
+  font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+body.unified-nav-enabled { padding-top: 48px; }
+
+.docx-circuit-shell {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 24px 28px 40px;
+}
+.docx-circuit-hero,
+.docx-circuit-flow,
+.docx-circuit-sequence-panel,
+.docx-circuit-demo-panel,
+.docx-circuit-boundary {
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: var(--docx-panel);
+  box-shadow: var(--docx-shadow);
+}
+.docx-circuit-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+}
+.docx-circuit-kicker {
+  margin: 0 0 6px;
+  color: var(--docx-accent);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+h1, h2, p { margin-top: 0; }
+h1 {
+  margin-bottom: 8px;
+  color: var(--docx-text);
+  font-size: 28px;
+  line-height: 1.12;
+}
+h2 {
+  margin-bottom: 0;
+  color: var(--docx-text);
+  font-size: 18px;
+}
+.docx-circuit-hero p {
+  margin-bottom: 0;
+  color: var(--docx-muted);
+  font-size: 13px;
+  line-height: 1.58;
+}
+.docx-circuit-hero strong {
+  color: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.docx-circuit-hero-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+.docx-circuit-hero-actions a,
+.docx-circuit-workflow a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid var(--docx-border);
+  border-radius: 6px;
+  color: var(--docx-accent);
+  padding: 8px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.docx-circuit-hero-actions a:hover,
+.docx-circuit-workflow a:hover {
+  border-color: rgba(30, 103, 255, 0.5);
+  background: #eff6ff;
+}
+.docx-circuit-primary-link {
+  border-color: rgba(15, 159, 110, 0.6) !important;
+  background: #ecfdf3;
+  color: #047857 !important;
+  font-weight: 700;
+}
+.docx-circuit-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.docx-circuit-metrics div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: var(--docx-panel);
+  padding: 12px;
+  box-shadow: var(--docx-shadow);
+}
+.docx-circuit-metrics span {
+  color: var(--docx-muted);
+  font-size: 12px;
+}
+.docx-circuit-metrics strong {
+  color: var(--docx-ok);
+  font-family: "Courier New", monospace;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.docx-circuit-flow {
+  margin-top: 14px;
+  padding: 16px;
+}
+.docx-circuit-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.docx-circuit-workflow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.docx-circuit-workflow li {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: var(--docx-panel-2);
+  padding: 12px;
+}
+.docx-circuit-workflow span {
+  color: var(--docx-accent);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.docx-circuit-workflow strong {
+  color: var(--docx-text);
+  font-size: 14px;
+}
+.docx-circuit-workflow p {
+  margin: 0;
+  color: var(--docx-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.docx-circuit-stage {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.42fr) minmax(680px, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-top: 14px;
+}
+.docx-circuit-sequence-panel,
+.docx-circuit-demo-panel {
+  min-width: 0;
+  padding: 14px;
+}
+.docx-circuit-sequence-list {
+  display: grid;
+  gap: 8px;
+  max-height: 710px;
+  margin: 0;
+  overflow: auto;
+  padding-left: 20px;
+}
+.docx-circuit-sequence-list li {
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 10px;
+}
+.docx-circuit-sequence-list strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.docx-circuit-sequence-list p {
+  margin: 0;
+  color: var(--docx-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.docx-circuit-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+.docx-circuit-chip {
+  border: 1px solid var(--docx-border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #344054;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 2px 7px;
+}
+.docx-circuit-chip[data-kind="wire"] {
+  background: #ecfdf3;
+  color: #047857;
+}
+#docx-circuit-demo-frame {
+  display: block;
+  width: 100%;
+  height: min(760px, calc(100vh - 190px));
+  min-height: 620px;
+  border: 1px solid var(--docx-border);
+  border-radius: 6px;
+  background: #ffffff;
+}
+.docx-circuit-boundary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 14px;
+}
+.docx-circuit-boundary span {
+  border: 1px solid rgba(30, 103, 255, 0.2);
+  border-radius: 999px;
+  color: var(--docx-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 5px 8px;
+}
+
+@media (max-width: 1100px) {
+  .docx-circuit-hero,
+  .docx-circuit-stage,
+  .docx-circuit-workflow {
+    grid-template-columns: 1fr;
+  }
+  .docx-circuit-hero-actions {
+    justify-items: stretch;
+  }
+  .docx-circuit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .docx-circuit-shell {
+    padding: 16px 12px 28px;
+  }
+  .docx-circuit-metrics {
+    grid-template-columns: 1fr;
+  }
+  h1 {
+    font-size: 24px;
+  }
+}

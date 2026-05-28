@@ -5851,6 +5851,8 @@ def test_requirements_intake_engineer_ui_does_not_expose_backend_payloads():
 def test_landing_page_links_requirements_intake_tool():
     html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
 
+    assert "/docx-to-circuit" in html
+    assert "原始 DOCX 到完整电路" in html
     assert "/requirements-intake" in html
     assert "需求理解工作台" in html
     assert "/fault-injection-prepare" in html
@@ -5958,6 +5960,24 @@ def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
     assert "make demo-html-reconstruction-mvp" in html
     assert "make demo-html-reconstruction-browser-acceptance" in html
     assert html.index('id="home-first-phase-mvp"') < html.index('id="home-default-mode-grid"')
+
+
+def test_landing_page_promotes_docx_to_circuit_as_primary_main_entry():
+    html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="home-docx-to-circuit-mainline"' in html
+    assert 'data-primary-docx-entry="original-docx-to-complete-circuit"' in html
+    assert 'id="home-docx-to-circuit-entry"' in html
+    assert 'href="/docx-to-circuit"' in html
+    assert 'data-home-priority="source-to-circuit"' in html
+    assert 'id="home-primary-next"' in html
+    primary_next = html.split('id="home-primary-next"', 1)[1].split(">", 1)[0]
+    assert 'href="/docx-to-circuit"' in primary_next
+    assert 'data-primary-entry="docx-source-to-circuit"' in primary_next
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert "L1-L4 逻辑复刻" in html
+    assert "demo.html 完整电路" in html
+    assert html.index('id="home-docx-to-circuit-mainline"') < html.index('id="home-first-phase-mvp"')
 
 
 def test_deepseek_subproject_primary_nav_does_not_promote_canvas_workbench():
@@ -6293,8 +6313,10 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert 'id="logic-reconstruction-mode-panel"' in html
     assert 'id="logic-reconstruction-mode"' in html
     assert 'id="logic-reconstruction-fidelity"' in html
+    assert 'id="logic-docx-circuit-bridge"' in html
     assert 'id="logic-demo-bridge"' in html
     assert '接入同一组杆位快照后会同步点亮电路图。' in html
+    assert 'href="/docx-to-circuit"' in html
     assert '打开对齐视图' in html
     assert '查看 demo.html 高保真复刻' not in html
     bridge_html = html.split('id="logic-demo-bridge"', 1)[1].split(">", 1)[0]
@@ -6307,6 +6329,49 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
     assert "当前模式：概念图，尚未对齐演示舱电路" in script
     assert "当前模式：demo.html 高保真复刻" not in script
     assert ".logic-reconstruction-mode-panel" in stylesheet
+
+
+def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
+    html_path = STATIC_ROOT / "docx_to_circuit" / "index.html"
+    script_path = STATIC_ROOT / "docx_to_circuit" / "docx_to_circuit.js"
+    stylesheet_path = STATIC_ROOT / "docx_to_circuit" / "docx_to_circuit.css"
+    html = html_path.read_text(encoding="utf-8")
+    script = script_path.read_text(encoding="utf-8")
+    stylesheet = stylesheet_path.read_text(encoding="utf-8")
+    server_source = (REPO_ROOT / "src" / "well_harness" / "demo_server.py").read_text(encoding="utf-8")
+
+    assert "/docx-to-circuit" in server_source
+    assert 'data-ux-page-role="docx-to-circuit-main-entry"' in html
+    assert 'data-docx-circuit-main-entry="true"' in html
+    assert "原始 DOCX 到完整电路" in html
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert 'href="/requirements-intake?source=official-docx"' in html
+    assert 'href="/logic-builder?template=docx-l1-l4"' in html
+    assert 'href="/demo-reconstruction"' in html
+    assert 'id="docx-circuit-demo-frame"' in html
+    assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
+    assert "truth_effect:none" in html
+    assert "controller_truth_modified:false" in html
+    assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
+    assert "docx-circuit-sequence-list" in script
+    assert ".docx-circuit-stage" in stylesheet
+    assert "#docx-circuit-demo-frame" in stylesheet
+
+    server, thread = _start_server()
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+        conn.request("GET", "/docx-to-circuit")
+        response = conn.getresponse()
+        body = response.read().decode("utf-8")
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert response.status == 200
+    assert "docx-circuit-demo-frame" in body
+    assert "原始 DOCX 到完整电路" in body
 
 
 def test_demo_reconstruction_page_is_productized_main_mvp_console():
