@@ -97,6 +97,38 @@ def test_review_packet_export_regression_command_reports_fixture_drift(tmp_path:
     assert "reviewer_status" in payload["mismatches"]
 
 
+def test_demo_server_import_does_not_eagerly_load_review_packet_export() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import importlib.abc
+import sys
+
+class BlockAgentReviewPacket(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "well_harness.agent_review_packet":
+            raise ModuleNotFoundError("blocked eager review-packet import")
+        return None
+
+sys.meta_path.insert(0, BlockAgentReviewPacket())
+from well_harness import demo_server
+assert demo_server.CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE == "/logic-builder/candidate-review-packet.json"
+assert "well_harness.agent_review_packet" not in sys.modules
+""",
+        ],
+        cwd=PROJECT_ROOT,
+        env=_script_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_make_test_gate_runs_review_packet_export_regression_command() -> None:
     makefile = MAKEFILE_PATH.read_text(encoding="utf-8")
 

@@ -20,11 +20,6 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
-from well_harness.agent_review_packet import (
-    CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE,
-    CandidateReviewPacketError,
-    load_candidate_review_packet_export,
-)
 from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
@@ -99,6 +94,7 @@ CONTENT_TYPES = {
     ".ico": "image/x-icon",
     ".png": "image/png",
 }
+CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE = "/logic-builder/candidate-review-packet.json"
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 SYSTEM_SNAPSHOT_POST_PATH = "/api/system-snapshot"
 TRA_L4_LOCK_DEG = -14.0
@@ -627,8 +623,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == CANDIDATE_REVIEW_PACKET_EXPORT_ROUTE:
             try:
+                from well_harness.agent_review_packet import load_candidate_review_packet_export
+
                 self._send_json(200, load_candidate_review_packet_export())
-            except (FileNotFoundError, OSError, json.JSONDecodeError, CandidateReviewPacketError) as exc:
+            except (FileNotFoundError, OSError, ImportError, json.JSONDecodeError, ValueError) as exc:
                 self._send_json(
                     500,
                     {
