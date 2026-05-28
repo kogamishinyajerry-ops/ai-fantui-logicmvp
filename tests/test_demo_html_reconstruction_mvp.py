@@ -157,6 +157,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-docx-trace-board"' in html
     assert 'id="demo-reconstruction-trace-card-list"' in html
     assert 'id="demo-reconstruction-selected-trace"' in html
+    assert 'id="demo-reconstruction-embedded-highlight-status"' in html
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
@@ -171,11 +172,15 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "renderTraceBoard" in script
     assert "setSelectedTrace" in script
+    assert "TRACE_WIRE_ENDPOINTS" in script
+    assert "applyEmbeddedTraceHighlight" in script
+    assert "data-docx-trace-selected" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
     assert ".demo-reconstruction-trace-board" in stylesheet
     assert ".demo-reconstruction-trace-card" in stylesheet
+    assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
 
 
 def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> None:
@@ -283,6 +288,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "selectedLastPressed": True,
         "pressedTraceCount": 1,
     }
+    assert payload["embedded_trace_highlight_review"]["selectedNodeCount"] == 4
+    assert payload["embedded_trace_highlight_review"]["selectedWireCount"] == 3
+    assert payload["embedded_trace_highlight_review"]["stylePresent"] is True
+    assert "P035-S05" in payload["embedded_trace_highlight_review"]["statusText"]
     assert payload["responsive_geometry"]["desktop"]["noHorizontalOverflow"] is True
     assert payload["responsive_geometry"]["mobile"]["noHorizontalOverflow"] is True
     assert payload["embedded_palette"]["html_class"] is True
@@ -300,6 +309,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "first_screen_operator_guide": "pass",
         "docx_sentence_circuit_map": "pass",
         "trace_selection_interaction": "pass",
+        "embedded_trace_highlight": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
         "node_wire_pixels": "pass",

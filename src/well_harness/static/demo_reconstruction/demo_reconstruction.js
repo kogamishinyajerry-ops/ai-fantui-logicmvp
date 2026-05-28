@@ -8,6 +8,32 @@
   const EXPECTED_WIRE_COUNT = 23;
   const PRESETS = ["默认前向", "着陆展开", "最大反推", "收起回杆", "抑制阻塞"];
   const STATUS_OUTPUTS = ["SW1", "SW2", "TLS", "VDT90", "L1-L4", "THR_LOCK"];
+  const TRACE_WIRE_ENDPOINTS = {
+    wire_ra_logic1: ["radio_altitude_ft", "logic1"],
+    wire_sw1_logic1: ["sw1", "logic1"],
+    wire_inh_logic1: ["reverser_inhibited", "logic1"],
+    wire_logic1_tls115: ["logic1", "tls115"],
+    wire_tls115_tls_unlocked: ["tls115", "tls_unlocked"],
+    wire_ground_logic2: ["aircraft_on_ground", "logic2"],
+    wire_sw2_logic2: ["sw2", "logic2"],
+    wire_engine_logic2: ["engine_running", "logic2"],
+    wire_eec_logic2: ["eec_enable", "logic2"],
+    wire_inh_logic2: ["reverser_inhibited", "logic2"],
+    wire_logic2_etrac: ["logic2", "etrac_540v"],
+    wire_tls_unlocked_logic3: ["tls_unlocked", "logic3"],
+    wire_n1k_logic3: ["n1k", "logic3"],
+    wire_engine_logic3: ["engine_running", "logic3"],
+    wire_ground_logic3: ["aircraft_on_ground", "logic3"],
+    wire_inh_logic3: ["reverser_inhibited", "logic3"],
+    wire_logic3_eec: ["logic3", "eec_deploy"],
+    wire_logic3_pls: ["logic3", "pls_power"],
+    wire_logic3_pdu: ["logic3", "pdu_motor"],
+    wire_pdu_vdt90: ["pdu_motor", "vdt90"],
+    wire_vdt90_logic4: ["vdt90", "logic4"],
+    wire_logic3_logic4: ["logic3", "logic4"],
+    wire_logic4_thr_lock: ["logic4", "thr_lock"],
+  };
+  const TRACE_HIGHLIGHT_STYLE_ID = "demo-reconstruction-trace-highlight-style";
 
   const $ = (id) => document.getElementById(id);
   const sourceState = $("demo-reconstruction-source-state");
@@ -39,6 +65,9 @@
   const selectedNodes = $("demo-reconstruction-selected-nodes");
   const selectedWires = $("demo-reconstruction-selected-wires");
   const selectedFolded = $("demo-reconstruction-selected-folded");
+  const embeddedHighlightStatus = $("demo-reconstruction-embedded-highlight-status");
+  const consoleFrame = $("demo-reconstruction-console-frame");
+  let currentTraceStep = null;
 
   function readJson(value) {
     try {
@@ -120,8 +149,76 @@
     });
   }
 
+  function ensureEmbeddedTraceStyle(frameDocument) {
+    if (!frameDocument || frameDocument.getElementById(TRACE_HIGHLIGHT_STYLE_ID)) return;
+    const style = frameDocument.createElement("style");
+    style.id = TRACE_HIGHLIGHT_STYLE_ID;
+    style.textContent = `
+      #fan-chain-svg [data-docx-trace-selected="true"] rect {
+        stroke: #2563eb;
+        stroke-width: 3;
+      }
+      #fan-chain-svg [data-docx-trace-selected="true"] text,
+      #fan-chain-svg [data-docx-trace-selected="true"] .logic-id,
+      #fan-chain-svg [data-docx-trace-selected="true"] .gate-label {
+        fill: #1d4ed8;
+        font-weight: 700;
+      }
+      #fan-chain-svg .chain-wire[data-docx-trace-selected="true"] {
+        stroke: #2563eb;
+        stroke-width: 4;
+        opacity: 1;
+      }
+    `;
+    frameDocument.head.appendChild(style);
+  }
+
+  function embeddedWireSelector(wireId) {
+    const endpoints = TRACE_WIRE_ENDPOINTS[wireId];
+    if (!endpoints) return "";
+    return `#fan-chain-svg .chain-wire[data-src="${endpoints[0]}"][data-dst="${endpoints[1]}"]`;
+  }
+
+  function applyEmbeddedTraceHighlight(step) {
+    if (!consoleFrame || !step) return { nodeCount: 0, wireCount: 0, ready: false };
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument || !frameDocument.querySelector("#fan-chain-svg")) {
+      setText(embeddedHighlightStatus, "等待电路图同步");
+      return { nodeCount: 0, wireCount: 0, ready: false };
+    }
+    ensureEmbeddedTraceStyle(frameDocument);
+    frameDocument
+      .querySelectorAll("#fan-chain-svg [data-docx-trace-selected]")
+      .forEach((element) => element.removeAttribute("data-docx-trace-selected"));
+
+    let nodeCount = 0;
+    let wireCount = 0;
+    (step.node_ids || []).forEach((nodeId) => {
+      frameDocument
+        .querySelectorAll(`#fan-chain-svg [data-node="${nodeId}"]`)
+        .forEach((element) => {
+          element.setAttribute("data-docx-trace-selected", "true");
+          nodeCount += 1;
+        });
+    });
+    (step.wire_ids || []).forEach((wireId) => {
+      const selector = embeddedWireSelector(wireId);
+      if (!selector) return;
+      frameDocument.querySelectorAll(selector).forEach((element) => {
+        element.setAttribute("data-docx-trace-selected", "true");
+        wireCount += 1;
+      });
+    });
+    setText(
+      embeddedHighlightStatus,
+      `电路图已同步：${step.anchor || "当前句子"} · ${nodeCount}/${(step.node_ids || []).length} 节点 · ${wireCount}/${(step.wire_ids || []).length} 连线`,
+    );
+    return { nodeCount, wireCount, ready: true };
+  }
+
   function setSelectedTrace(step) {
     if (!step || typeof step !== "object") return;
+    currentTraceStep = step;
     document.querySelectorAll("[data-trace-card]").forEach((card) => {
       card.setAttribute("aria-pressed", card.dataset.traceAnchor === step.anchor ? "true" : "false");
     });
@@ -131,6 +228,7 @@
     renderInlineChips(selectedNodes, step.node_ids, "demo-reconstruction-node-chip", "无节点");
     renderInlineChips(selectedWires, step.wire_ids, "demo-reconstruction-wire-chip", "无连线");
     renderInlineChips(selectedFolded, step.folded_predicates, "demo-reconstruction-folded-chip", "无折叠谓词");
+    applyEmbeddedTraceHighlight(step);
   }
 
   function renderTraceBoard(payload) {
@@ -308,6 +406,12 @@
     const response = await fetch(DOCX_SENTENCE_CIRCUIT_ENDPOINT, {headers: {"Accept": "application/json"}});
     if (!response.ok) return null;
     return response.json();
+  }
+
+  if (consoleFrame) {
+    consoleFrame.addEventListener("load", () => {
+      if (currentTraceStep) applyEmbeddedTraceHighlight(currentTraceStep);
+    });
   }
 
   async function boot() {
