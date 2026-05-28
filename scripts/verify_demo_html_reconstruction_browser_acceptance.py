@@ -125,6 +125,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
+    step_playback_path = artifact_dir / f"demo-reconstruction-step-playback-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -182,6 +183,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             sourceEntryCount: document.querySelectorAll(".demo-reconstruction-source-entry").length,
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
+                            playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
                             selectedNodeChipCount: document.querySelectorAll("#demo-reconstruction-selected-nodes .demo-reconstruction-chip").length,
                             selectedWireChipCount: document.querySelectorAll("#demo-reconstruction-selected-wires .demo-reconstruction-chip").length,
@@ -644,6 +646,58 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-playback-step="P035-S04"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const activeStep = document.querySelector("#demo-reconstruction-playback-active-step");
+                        return selected
+                            && selected.textContent.trim() === "P035-S04"
+                            && activeStep
+                            && activeStep.textContent.includes("P035-S04")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length === 18
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 20;
+                    }""",
+                    timeout=5000,
+                )
+                page.locator("#demo-reconstruction-step-playback").screenshot(
+                    path=str(step_playback_path)
+                )
+                step_playback_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            selectedAnchor: document
+                                .querySelector("#demo-reconstruction-selected-anchor")
+                                ?.textContent?.trim() || "",
+                            activeStep: document
+                                .querySelector("#demo-reconstruction-playback-active-step")
+                                ?.textContent?.trim() || "",
+                            activeButtonCount: document.querySelectorAll(
+                                "[data-playback-step][aria-pressed='true']"
+                            ).length,
+                            nodeCountText: document
+                                .querySelector("#demo-reconstruction-playback-node-count")
+                                ?.textContent?.trim() || "",
+                            wireCountText: document
+                                .querySelector("#demo-reconstruction-playback-wire-count")
+                                ?.textContent?.trim() || "",
+                            highlightedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            reviewObjectText: document
+                                .querySelector("#demo-reconstruction-review-object")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 page.locator(
                     '.demo-reconstruction-sequence-step[data-trace-anchor="P035-S05"] [data-source-focus-kind="node"][data-source-focus-id="logic4"]'
                 ).click()
@@ -714,6 +768,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             pageWidth: document.documentElement.scrollWidth,
                             noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
+                            playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
                             sourceMapVisible: !!document.querySelector("#demo-reconstruction-docx-circuit-map"),
                         })"""
                     )
@@ -784,6 +839,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 chain_svg_path,
                 keyboard_review_path,
                 review_deep_link_path,
+                step_playback_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -799,6 +855,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             source_map_review["sourceEntryCount"] >= 10
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
+            and source_map_review["playbackStepCount"] == 5
             and source_map_review["coverageNodeButtonCount"] == 20
             and source_map_review["coverageWireButtonCount"] == 23
             and source_map_review["selectedNodeChipCount"] > 0
@@ -883,6 +940,18 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "整句链路" in trace_switch_focus_reset_review["reviewObjectText"]
         )
         else "fail",
+        "step_playback_cumulative_circuit": "pass"
+        if (
+            step_playback_review["selectedAnchor"] == "P035-S04"
+            and "P035-S04" in step_playback_review["activeStep"]
+            and step_playback_review["activeButtonCount"] == 1
+            and step_playback_review["highlightedNodeCount"] == 18
+            and step_playback_review["highlightedWireCount"] == 20
+            and "18/20" in step_playback_review["nodeCountText"]
+            and "20/23" in step_playback_review["wireCountText"]
+            and "累计构建" in step_playback_review["reviewObjectText"]
+        )
+        else "fail",
         "review_hash_link": "pass"
         if (
             review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -916,6 +985,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             desktop_geometry["noHorizontalOverflow"]
             and mobile_geometry["noHorizontalOverflow"]
             and mobile_geometry["traceCardCount"] == 5
+            and mobile_geometry["playbackStepCount"] == 5
         )
         else "fail",
         "embedded_codex_light_palette": "pass"
@@ -947,6 +1017,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
             "review_deep_link": str(review_deep_link_path),
+            "step_playback": str(step_playback_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -965,6 +1036,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "coverage_filter_review": coverage_filter_review,
         "keyboard_review": keyboard_review,
         "trace_switch_focus_reset_review": trace_switch_focus_reset_review,
+        "step_playback_review": step_playback_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
@@ -1038,6 +1110,7 @@ def main(argv: list[str] | None = None) -> int:
                 "embedded_trace_chip_focus": "fail",
                 "coverage_matrix_focus": "fail",
                 "coverage_matrix_filter": "fail",
+                "step_playback_cumulative_circuit": "fail",
                 "source_chip_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",

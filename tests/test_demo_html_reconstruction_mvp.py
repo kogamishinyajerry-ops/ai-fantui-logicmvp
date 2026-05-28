@@ -166,12 +166,18 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-object"' in html
     assert 'id="demo-reconstruction-review-sync"' in html
     assert 'id="demo-reconstruction-review-link"' in html
+    assert 'id="demo-reconstruction-step-playback"' in html
+    assert 'id="demo-reconstruction-playback-step-list"' in html
+    assert 'id="demo-reconstruction-playback-active-step"' in html
+    assert 'id="demo-reconstruction-playback-node-count"' in html
+    assert 'id="demo-reconstruction-playback-wire-count"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
     assert "原始 DOCX 逐句到完整电路" in html
+    assert "逐句构建轨道" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
     assert "demo-reconstruction-comparison-table" not in html
@@ -197,6 +203,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "writeReviewHashState" in script
     assert "applyReviewHashState" in script
     assert "updateReviewLink" in script
+    assert "renderStepPlaybackRail" in script
+    assert "applyStepPlayback" in script
+    assert "cumulativeTraceContract" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -211,6 +220,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-keyboard-review" in stylesheet
     assert ".demo-reconstruction-keyboard-review strong" in stylesheet
     assert ".demo-reconstruction-review-link" in stylesheet
+    assert ".demo-reconstruction-step-playback" in stylesheet
+    assert ".demo-reconstruction-playback-steps" in stylesheet
+    assert ".demo-reconstruction-playback-button" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -297,6 +309,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["chain_svg"].endswith(".png")
     assert payload["screenshots"]["keyboard_review"].endswith(".png")
     assert payload["screenshots"]["review_deep_link"].endswith(".png")
+    assert payload["screenshots"]["step_playback"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -312,6 +325,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["sequenceStepCount"] == 5
     assert payload["source_map_review"]["traceCardCount"] == 5
+    assert payload["source_map_review"]["playbackStepCount"] == 5
     assert payload["source_map_review"]["coverageNodeButtonCount"] == 20
     assert payload["source_map_review"]["coverageWireButtonCount"] == 23
     assert payload["source_map_review"]["selectedNodeChipCount"] > 0
@@ -359,6 +373,14 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["trace_switch_focus_reset_review"]["coverageTabStopIds"] == ["logic4"]
     assert payload["trace_switch_focus_reset_review"]["pressedCoverageIds"] == []
     assert "整句链路" in payload["trace_switch_focus_reset_review"]["reviewObjectText"]
+    assert payload["step_playback_review"]["selectedAnchor"] == "P035-S04"
+    assert payload["step_playback_review"]["activeStep"] == "P035-S04"
+    assert payload["step_playback_review"]["activeButtonCount"] == 1
+    assert payload["step_playback_review"]["highlightedNodeCount"] == 18
+    assert payload["step_playback_review"]["highlightedWireCount"] == 20
+    assert "18/20" in payload["step_playback_review"]["nodeCountText"]
+    assert "20/23" in payload["step_playback_review"]["wireCountText"]
+    assert "累计构建" in payload["step_playback_review"]["reviewObjectText"]
     assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
     assert payload["review_deep_link"]["linkHref"].endswith(
         "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
@@ -400,6 +422,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "coverage_keyboard_navigation": "pass",
         "review_cursor_status": "pass",
         "trace_switch_clears_object_focus": "pass",
+        "step_playback_cumulative_circuit": "pass",
         "review_hash_link": "pass",
         "review_hash_restore": "pass",
         "source_chip_focus": "pass",

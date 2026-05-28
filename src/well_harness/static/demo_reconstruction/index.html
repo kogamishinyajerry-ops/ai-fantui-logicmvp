@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p2">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p2" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p3">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p3" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -111,6 +111,22 @@
             等待电路图同步
           </div>
         </aside>
+      </div>
+    </div>
+    <div id="demo-reconstruction-step-playback" class="demo-reconstruction-step-playback" data-step-playback="docx-cumulative-circuit" aria-label="DOCX 逐句累计构建电路轨道">
+      <div class="demo-reconstruction-playback-head">
+        <div>
+          <h3>逐句构建轨道</h3>
+          <p>按工作过程顺序累计节点和连线，查看原始 DOCX 如何一步步形成 demo.html 级完整电路。</p>
+        </div>
+        <div class="demo-reconstruction-playback-summary" aria-label="累计构建状态">
+          <span id="demo-reconstruction-playback-active-step">等待步骤</span>
+          <strong id="demo-reconstruction-playback-node-count">0/20 节点</strong>
+          <strong id="demo-reconstruction-playback-wire-count">0/23 连线</strong>
+        </div>
+      </div>
+      <div id="demo-reconstruction-playback-step-list" class="demo-reconstruction-playback-steps" aria-label="逐句累计构建步骤">
+        <button type="button" class="demo-reconstruction-playback-button" data-playback-step="loading">正在读取构建轨道</button>
       </div>
     </div>
     <div id="demo-reconstruction-coverage-matrix" class="demo-reconstruction-coverage-matrix" aria-label="完整 demo 电路对象覆盖矩阵">
