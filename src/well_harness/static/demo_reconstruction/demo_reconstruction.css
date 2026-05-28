@@ -37,6 +37,7 @@ body.unified-nav-enabled { padding-top: 48px; }
   --demo-ok: #0f9f6e;
 }
 .demo-reconstruction-hero,
+.demo-reconstruction-review-index,
 .demo-reconstruction-source-map,
 .demo-reconstruction-console-panel,
 .demo-reconstruction-evidence-rail {
@@ -80,6 +81,86 @@ h2 { margin-bottom: 0; font-size: 18px; }
   color: var(--demo-muted);
   font-family: "Courier New", monospace;
   font-size: 12px;
+}
+.demo-reconstruction-review-index {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px;
+}
+.demo-reconstruction-review-index-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.demo-reconstruction-review-index-head h2 {
+  color: #111827;
+  font-size: 17px;
+}
+.demo-reconstruction-review-index-head > strong {
+  min-width: 160px;
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f9fafb;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 6px 9px;
+  text-align: right;
+}
+.demo-reconstruction-review-index-readback {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) minmax(0, 0.8fr);
+  gap: 8px;
+}
+.demo-reconstruction-review-index-readback div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-review-index-readback span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-review-index-readback strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-index-list {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+.demo-reconstruction-review-index-list button {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.25;
+  padding: 8px;
+}
+.demo-reconstruction-review-index-list button:hover,
+.demo-reconstruction-review-index-list button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-review-index-list button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+  color: #0f766e;
+  font-weight: 700;
 }
 .demo-reconstruction-source-map {
   margin-top: 16px;
@@ -1366,6 +1447,8 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
 
 @media (max-width: 980px) {
   .demo-reconstruction-hero,
+  .demo-reconstruction-review-index-head,
+  .demo-reconstruction-review-index-readback,
   .demo-reconstruction-source-head,
   .demo-reconstruction-source-layout,
   .demo-reconstruction-trace-head,
@@ -1386,6 +1469,13 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   }
   .demo-reconstruction-hero {
     display: grid;
+  }
+  .demo-reconstruction-review-index-head {
+    display: grid;
+  }
+  .demo-reconstruction-review-index-head > strong {
+    min-width: 0;
+    text-align: left;
   }
   .demo-reconstruction-verdict {
     text-align: left;
@@ -1450,6 +1540,9 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-trace-card-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-review-index-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
   .demo-reconstruction-playback-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1480,6 +1573,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   }
   .demo-reconstruction-source-metrics,
   .demo-reconstruction-metrics,
+  .demo-reconstruction-review-index-readback,
   .demo-reconstruction-keyboard-review,
   .demo-reconstruction-playback-summary,
   .demo-reconstruction-provenance-summary,
@@ -1493,6 +1587,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
     grid-template-columns: 1fr;
   }
   .demo-reconstruction-trace-card-list,
+  .demo-reconstruction-review-index-list,
   .demo-reconstruction-playback-steps,
   .demo-reconstruction-ladder-list,
   .demo-reconstruction-custody-list {

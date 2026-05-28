@@ -21,6 +21,11 @@
   const wireCell = $("demo-reconstruction-wire-cell");
   const presetCell = $("demo-reconstruction-preset-cell");
   const statusCell = $("demo-reconstruction-status-cell");
+  const reviewIndexReadiness = $("demo-reconstruction-review-index-readiness");
+  const reviewIndexStep = $("demo-reconstruction-review-index-step");
+  const reviewIndexObject = $("demo-reconstruction-review-index-object");
+  const reviewIndexOutput = $("demo-reconstruction-review-index-output");
+  const reviewIndexList = $("demo-reconstruction-review-index-list");
   const nodeList = $("demo-reconstruction-node-list");
   const wireList = $("demo-reconstruction-wire-list");
   const docxSourcePath = $("demo-reconstruction-docx-source-path");
@@ -146,6 +151,50 @@
 
   function passFail(actual, expected, unit) {
     return actual === expected ? "通过" : `需复核：${actual}/${expected} ${unit}`;
+  }
+
+  function updateReviewIndexStatus() {
+    if (!reviewIndexReadiness) return;
+    const selectedStep = currentTraceStep && currentTraceStep.anchor
+      ? `${currentTraceStep.anchor} · ${currentTraceStep.title || "工作过程片段"}`
+      : "等待选择";
+    const focusedObject = currentCircuitFocus.kind && currentCircuitFocus.id
+      ? reviewObjectLabel(currentCircuitFocus.kind, currentCircuitFocus.id)
+      : "等待聚焦";
+    const status = outputMirrorStatus && outputMirrorStatus.textContent
+      ? outputMirrorStatus.textContent.trim()
+      : "";
+    const thr = outputMirrorThrOutput && outputMirrorThrOutput.textContent
+      ? outputMirrorThrOutput.textContent.trim()
+      : "";
+    const outputText = [status, thr].filter((value) => value && !value.startsWith("等待") && value !== "--").join(" · ");
+    setText(reviewIndexReadiness, reviewPacketReadiness && reviewPacketReadiness.textContent
+      ? reviewPacketReadiness.textContent.trim()
+      : "等待交付读回");
+    setText(reviewIndexStep, selectedStep);
+    setText(reviewIndexObject, focusedObject);
+    setText(reviewIndexOutput, outputText || "等待输出");
+  }
+
+  function setReviewIndexTarget(targetId) {
+    if (!reviewIndexList) return;
+    reviewIndexList.querySelectorAll("[data-review-index-target]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexTarget === targetId ? "true" : "false");
+    });
+  }
+
+  function installReviewIndexNavigation() {
+    if (!reviewIndexList) return;
+    reviewIndexList.querySelectorAll("[data-review-index-target]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const targetId = button.dataset.reviewIndexTarget || "";
+        const target = targetId ? document.getElementById(targetId) : null;
+        setReviewIndexTarget(targetId);
+        if (target && typeof target.scrollIntoView === "function") {
+          target.scrollIntoView({behavior: "smooth", block: "start"});
+        }
+      });
+    });
   }
 
   function appendChipGroup(container, label, values, className, highlightKind) {
@@ -767,6 +816,7 @@
       setText(outputMirrorStatus, "等待同步");
       updateCustodyOutputReadback();
       updateScenarioLedgerFromFrame();
+      updateReviewIndexStatus();
       return;
     }
     setText(outputMirrorStatus, frameText(frameDocument, "#fan-status-badge", "IDLE"));
@@ -779,6 +829,7 @@
     setText(outputMirrorThrOutput, frameText(frameDocument, "#fan-out-thr-value", "--"));
     updateCustodyOutputReadback();
     updateScenarioLedgerFromFrame();
+    updateReviewIndexStatus();
   }
 
   function installOutputMirrorObserver() {
@@ -859,6 +910,7 @@
     const passed = gates.filter((gate) => gate.pass).length;
     setText(reviewPacketReadiness, `${passed}/${gates.length} gate`);
     renderReviewPacketGates(gates);
+    updateReviewIndexStatus();
   }
 
   function objectProvenanceRecords(kind, id) {
@@ -1540,6 +1592,7 @@
     renderSequenceSteps(payload && payload.sequence_steps);
     applyReviewHashState();
     updateReviewPacketFromState();
+    updateReviewIndexStatus();
   }
 
   function renderCircuit(circuit, sourceLabel) {
@@ -1569,6 +1622,7 @@
     updateWireEndpointMapFromWires(wires);
     refreshEmbeddedReviewFromCircuit();
     updateReviewPacketFromState();
+    updateReviewIndexStatus();
   }
 
   async function loadReplayCircuit() {
@@ -1599,6 +1653,8 @@
       installOutputMirrorObserver();
     }
   }
+  installReviewIndexNavigation();
+  updateReviewIndexStatus();
   if (coverageSearch) {
     coverageSearch.addEventListener("input", () => {
       updateCoverageFilter();

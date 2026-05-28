@@ -153,6 +153,12 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-console-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
+    assert 'id="demo-reconstruction-review-index"' in html
+    assert 'id="demo-reconstruction-review-index-readiness"' in html
+    assert 'id="demo-reconstruction-review-index-step"' in html
+    assert 'id="demo-reconstruction-review-index-object"' in html
+    assert 'id="demo-reconstruction-review-index-output"' in html
+    assert 'id="demo-reconstruction-review-index-list"' in html
     assert 'id="demo-reconstruction-docx-circuit-map"' in html
     assert 'id="demo-reconstruction-docx-trace-board"' in html
     assert 'id="demo-reconstruction-trace-card-list"' in html
@@ -204,6 +210,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
+    assert "审阅路径索引" in html
     assert "原始 DOCX 逐句到完整电路" in html
     assert "逐句构建轨道" in html
     assert "对象反查证据板" in html
@@ -240,6 +247,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "writeReviewHashState" in script
     assert "applyReviewHashState" in script
     assert "updateReviewLink" in script
+    assert "updateReviewIndexStatus" in script
+    assert "installReviewIndexNavigation" in script
+    assert "setReviewIndexTarget" in script
     assert "renderStepPlaybackRail" in script
     assert "applyStepPlayback" in script
     assert "cumulativeTraceContract" in script
@@ -268,6 +278,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "sourceFocusKind" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
+    assert ".demo-reconstruction-review-index" in stylesheet
+    assert ".demo-reconstruction-review-index-list" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
     assert ".demo-reconstruction-trace-board" in stylesheet
     assert ".demo-reconstruction-trace-card" in stylesheet
@@ -378,6 +390,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["route"] == "/demo-reconstruction"
     assert payload["screenshots"]["first_screen"].endswith(".png")
     assert payload["screenshots"]["mobile_first_screen"].endswith(".png")
+    assert payload["screenshots"]["review_index"].endswith(".png")
     assert payload["screenshots"]["chain_svg"].endswith(".png")
     assert payload["screenshots"]["keyboard_review"].endswith(".png")
     assert payload["screenshots"]["review_deep_link"].endswith(".png")
@@ -394,6 +407,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["pixel_visibility"]["chain_svg"]["node_count"] == 20
     assert payload["pixel_visibility"]["chain_svg"]["wire_count"] == 23
     assert payload["first_screen_review"] == {
+        "review_index_visible": True,
         "source_map_visible": True,
         "trace_board_visible": True,
         "operator_guide_visible": True,
@@ -403,6 +417,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "evidence_rail_visible": True,
     }
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
+    assert payload["source_map_review"]["reviewIndexButtonCount"] == 7
     assert payload["source_map_review"]["sequenceStepCount"] == 5
     assert payload["source_map_review"]["traceCardCount"] == 5
     assert payload["source_map_review"]["playbackStepCount"] == 5
@@ -414,6 +429,18 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["selectedWireChipCount"] > 0
     assert payload["source_map_review"]["nodeCoverage"] == "20/20"
     assert payload["source_map_review"]["wireCoverage"] == "23/23"
+    assert payload["review_index_review"]["visible"] is True
+    assert payload["review_index_review"]["buttonCount"] == 7
+    assert payload["review_index_review"]["activeTargets"] == [
+        "demo-reconstruction-docx-circuit-map"
+    ]
+    assert "P035-S01" in payload["review_index_review"]["stepText"]
+    assert payload["review_index_navigation"]["activeTargets"] == [
+        "demo-reconstruction-scenario-ledger"
+    ]
+    assert payload["review_index_navigation"]["scrollY"] > 0
+    assert "P035-S05" in payload["review_index_after_trace"]["stepText"]
+    assert "等待聚焦" in payload["review_index_after_trace"]["objectText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -566,6 +593,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "screenshots": "pass",
         "first_screen_operator_guide": "pass",
         "docx_sentence_circuit_map": "pass",
+        "review_index_navigation": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",
