@@ -431,6 +431,53 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator(
+                    '.demo-reconstruction-sequence-step[data-trace-anchor="P035-S05"] [data-source-focus-kind="node"][data-source-focus-id="logic4"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        if (!doc) return false;
+                        const nodes = doc.querySelectorAll(
+                            "#fan-chain-svg [data-docx-trace-selected='true'][data-node]"
+                        );
+                        const wires = doc.querySelectorAll(
+                            "#fan-chain-svg .chain-wire[data-docx-trace-selected='true']"
+                        );
+                        const status = document
+                            .querySelector("#demo-reconstruction-embedded-highlight-status")
+                            ?.textContent || "";
+                        return nodes.length === 1 && wires.length === 0 && status.includes("logic4");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator(
+                    '.demo-reconstruction-sequence-step[data-trace-anchor="P035-S05"] [data-source-focus-kind="wire"][data-source-focus-id="wire_logic4_thr_lock"]'
+                ).click()
+                source_chip_focus_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            sourceNodeFocusChipCount: document.querySelectorAll(
+                                ".demo-reconstruction-source-entry [data-source-focus-kind='node'], .demo-reconstruction-sequence-step [data-source-focus-kind='node']"
+                            ).length,
+                            sourceWireFocusChipCount: document.querySelectorAll(
+                                ".demo-reconstruction-source-entry [data-source-focus-kind='wire'], .demo-reconstruction-sequence-step [data-source-focus-kind='wire']"
+                            ).length,
+                            focusedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            focusedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                            statusText: document
+                                .querySelector("#demo-reconstruction-embedded-highlight-status")
+                                ?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
                 desktop_geometry = page.evaluate(
                     """() => ({
                         viewportWidth: window.innerWidth,
@@ -590,6 +637,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in coverage_filter_review["focusStatusText"]
         )
         else "fail",
+        "source_chip_focus": "pass"
+        if (
+            source_chip_focus_review["sourceNodeFocusChipCount"] >= 20
+            and source_chip_focus_review["sourceWireFocusChipCount"] >= 23
+            and source_chip_focus_review["focusedNodeCount"] == 0
+            and source_chip_focus_review["focusedWireCount"] == 1
+            and "wire_logic4_thr_lock" in source_chip_focus_review["statusText"]
+        )
+        else "fail",
         "responsive_geometry": "pass"
         if (
             desktop_geometry["noHorizontalOverflow"]
@@ -640,6 +696,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,
         "coverage_matrix_review": coverage_matrix_review,
         "coverage_filter_review": coverage_filter_review,
+        "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
             "desktop": desktop_geometry,
             "mobile": mobile_geometry,
@@ -711,6 +768,7 @@ def main(argv: list[str] | None = None) -> int:
                 "embedded_trace_chip_focus": "fail",
                 "coverage_matrix_focus": "fail",
                 "coverage_matrix_filter": "fail",
+                "source_chip_focus": "fail",
                 "responsive_geometry": "fail",
                 "embedded_codex_light_palette": "fail",
                 "node_wire_pixels": "fail",

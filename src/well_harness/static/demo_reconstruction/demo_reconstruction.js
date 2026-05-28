@@ -119,7 +119,7 @@
     return actual === expected ? "通过" : `需复核：${actual}/${expected} ${unit}`;
   }
 
-  function appendChipGroup(container, label, values, className) {
+  function appendChipGroup(container, label, values, className, highlightKind) {
     if (!container || !Array.isArray(values) || values.length === 0) return;
     const group = document.createElement("div");
     group.className = "demo-reconstruction-chip-group";
@@ -128,9 +128,18 @@
     caption.textContent = label;
     group.appendChild(caption);
     values.forEach((value) => {
-      const chip = document.createElement("span");
+      const chip = document.createElement(highlightKind ? "button" : "span");
       chip.className = `demo-reconstruction-chip ${className}`;
       chip.textContent = value;
+      if (highlightKind) {
+        chip.type = "button";
+        chip.dataset.sourceFocusKind = highlightKind;
+        chip.dataset.sourceFocusId = value;
+        chip.addEventListener("click", (event) => {
+          event.stopPropagation();
+          applyEmbeddedTraceFocus(highlightKind, value);
+        });
+      }
       group.appendChild(chip);
     });
     container.appendChild(group);
@@ -396,8 +405,8 @@
 
       const chips = document.createElement("div");
       chips.className = "demo-reconstruction-entry-chips";
-      appendChipGroup(chips, "节点", entry.node_ids, "demo-reconstruction-node-chip");
-      appendChipGroup(chips, "连线", entry.wire_ids, "demo-reconstruction-wire-chip");
+      appendChipGroup(chips, "节点", entry.node_ids, "demo-reconstruction-node-chip", "node");
+      appendChipGroup(chips, "连线", entry.wire_ids, "demo-reconstruction-wire-chip", "wire");
 
       li.appendChild(topLine);
       li.appendChild(text);
@@ -427,8 +436,8 @@
 
       const chips = document.createElement("div");
       chips.className = "demo-reconstruction-entry-chips";
-      appendChipGroup(chips, "节点", step.node_ids, "demo-reconstruction-node-chip");
-      appendChipGroup(chips, "连线", step.wire_ids, "demo-reconstruction-wire-chip");
+      appendChipGroup(chips, "节点", step.node_ids, "demo-reconstruction-node-chip", "node");
+      appendChipGroup(chips, "连线", step.wire_ids, "demo-reconstruction-wire-chip", "wire");
       appendChipGroup(chips, "折叠谓词", step.folded_predicates, "demo-reconstruction-folded-chip");
 
       li.appendChild(title);
