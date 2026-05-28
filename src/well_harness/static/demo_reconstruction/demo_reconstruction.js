@@ -71,6 +71,8 @@
   let activePlaybackIndex = -1;
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
+  let nodeLabelMap = new Map();
+  let nodeKindMap = new Map();
 
   function readJson(value) {
     try {
@@ -200,11 +202,32 @@
     });
   }
 
+  function updateNodeMetadataFromNodes(nodes) {
+    nodeLabelMap = new Map();
+    nodeKindMap = new Map();
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach((node) => {
+      if (!node || !node.id) return;
+      nodeLabelMap.set(node.id, itemLabel(node, node.id));
+      if (node.node_kind) nodeKindMap.set(node.id, node.node_kind);
+    });
+  }
+
+  function ladderMilestoneLabel(nodeId) {
+    return nodeLabelMap.get(nodeId) || nodeId;
+  }
+
+  function isLadderMilestoneNode(nodeId) {
+    const kind = nodeKindMap.get(nodeId);
+    return kind ? kind !== "input" : true;
+  }
+
   function wireEndpointsForId(wireId) {
     return wireEndpointMap.get(wireId) || [];
   }
 
   function refreshEmbeddedReviewFromCircuit() {
+    if (traceSteps.length) renderCircuitCompletionLadder(traceSteps);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
       renderObjectProvenance(currentCircuitFocus.kind, currentCircuitFocus.id);
       applyEmbeddedTraceFocus(currentCircuitFocus.kind, currentCircuitFocus.id);
@@ -405,15 +428,8 @@
   }
 
   function ladderMilestonesForStep(step) {
-    const anchor = step && step.anchor ? step.anchor : "";
-    const milestones = {
-      "P035-S01": ["TLS 115VAC", "TLS 解锁"],
-      "P035-S02": ["ETRAC 540VDC"],
-      "P035-S03": ["EEC", "PLS", "PDU"],
-      "P035-S04": ["VDT90"],
-      "P035-S05": ["L4", "THR_LOCK"],
-    };
-    return milestones[anchor] || [];
+    const nodeIds = Array.isArray(step && step.node_ids) ? step.node_ids : [];
+    return nodeIds.filter(isLadderMilestoneNode).map(ladderMilestoneLabel);
   }
 
   function renderCircuitCompletionLadder(steps) {
@@ -1022,6 +1038,7 @@
     setText(statusCell, `${STATUS_OUTPUTS.length} 类状态输出：${STATUS_OUTPUTS.join(" / ")}`);
     renderList(nodeList, nodes, (item, index) => `${String(index).padStart(2, "0")} · ${itemLabel(item, `node_${index}`)}`);
     renderList(wireList, wires, wireLabel);
+    updateNodeMetadataFromNodes(nodes);
     updateWireEndpointMapFromWires(wires);
     refreshEmbeddedReviewFromCircuit();
   }

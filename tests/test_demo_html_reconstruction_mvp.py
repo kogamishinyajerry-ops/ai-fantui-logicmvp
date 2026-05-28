@@ -223,6 +223,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "objectProvenanceRecords" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
+    assert "updateNodeMetadataFromNodes" in script
+    assert "nodeKindMap" in script
+    assert '"P035-S03": ["EEC", "PLS", "PDU"]' not in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
