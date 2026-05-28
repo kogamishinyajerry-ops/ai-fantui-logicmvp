@@ -79,6 +79,8 @@ def _page_state(page: Any) -> dict[str, Any]:
             })(),
             sourceFocusButtonDisabled: document.querySelector("#docx-circuit-show-source-entry")?.disabled || false,
             focusedSourceEntryAnchor: document.activeElement?.dataset.sourceEntryAnchor || null,
+            reviewPacketPreviewOpen: document.querySelector("#docx-circuit-review-packet-preview")?.open || false,
+            reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
             selectedElementId: document.querySelector("#docx-circuit-trace-panel")?.dataset.selectedElementId || null,
             selectedElementType: document.querySelector("#docx-circuit-trace-panel")?.dataset.selectedElementType || null,
             searchValue: document.querySelector("#docx-circuit-source-index-search")?.value || null,
@@ -118,6 +120,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     artifact_dir.mkdir(parents=True, exist_ok=True)
     stamp = _utc_stamp()
     current_review_path = artifact_dir / f"docx-to-circuit-current-review-link-{stamp}.png"
+    review_packet_preview_path = artifact_dir / f"docx-to-circuit-review-packet-preview-{stamp}.png"
     source_entry_path = artifact_dir / f"docx-to-circuit-source-entry-link-{stamp}.png"
     restricted = _restricted_diff()
     console_errors: list[str] = []
@@ -142,6 +145,21 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.goto(current_link, wait_until="networkidle")
                 page.wait_for_selector("#docx-circuit-copy-review-link", timeout=7000)
+                page.locator("#docx-circuit-review-packet-preview summary").click()
+                page.wait_for_function(
+                    """() => {
+                        const preview = document.querySelector("#docx-circuit-review-packet-preview");
+                        const text = document.querySelector("#docx-circuit-review-packet-preview-text");
+                        return preview?.open && text?.textContent.includes("## DOCX Circuit Review Packet");
+                    }""",
+                    timeout=7000,
+                )
+                preview_review_packet = page.locator("#docx-circuit-review-packet-preview-text").evaluate(
+                    "element => element.textContent"
+                )
+                page.locator("#docx-circuit-review-packet-preview").screenshot(
+                    path=str(review_packet_preview_path)
+                )
                 page.locator("#docx-circuit-copy-trace-packet").click()
                 page.wait_for_function(
                     """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("审阅包 Markdown 已复制")""",
@@ -224,7 +242,10 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         )
         else "fail",
         "review_packet_markdown_json": "pass"
-        if _review_packet_markdown_valid(copied_review_packet)
+        if (
+            preview_review_packet == copied_review_packet
+            and _review_packet_markdown_valid(copied_review_packet)
+        )
         else "fail",
         "source_entry_link": "pass"
         if (
@@ -244,7 +265,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "screenshots": "pass"
         if all(
             path.exists() and path.stat().st_size > 0
-            for path in (current_review_path, source_entry_path)
+            for path in (current_review_path, review_packet_preview_path, source_entry_path)
         )
         else "fail",
         "boundary": "pass" if not restricted else "fail",
@@ -265,6 +286,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
             "format": "markdown_with_json",
             "line_count": len(copied_review_packet.splitlines()),
             "contains_json_fence": "```json" in copied_review_packet,
+            "preview_matches_clipboard": preview_review_packet == copied_review_packet,
         },
         "states": {
             "current_review": current_state,
@@ -273,6 +295,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         },
         "screenshots": {
             "current_review": str(current_review_path),
+            "review_packet_preview": str(review_packet_preview_path),
             "source_entry": str(source_entry_path),
         },
         "console_errors": console_errors,

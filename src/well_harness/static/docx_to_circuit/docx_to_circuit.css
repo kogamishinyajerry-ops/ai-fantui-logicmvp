@@ -488,6 +488,33 @@ h2 {
 .docx-circuit-source-focus button {
   white-space: nowrap;
 }
+.docx-circuit-review-packet-preview {
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.docx-circuit-review-packet-preview summary {
+  cursor: pointer;
+  color: var(--docx-text);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 9px 10px;
+}
+.docx-circuit-review-packet-preview[open] summary {
+  border-bottom: 1px solid var(--docx-border);
+}
+.docx-circuit-review-packet-preview pre {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  background: #f8fafc;
+  color: var(--docx-text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 10px;
+  white-space: pre-wrap;
+}
 .docx-circuit-tool-button {
   min-height: 32px;
   border: 1px solid var(--docx-border);

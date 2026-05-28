@@ -121,6 +121,8 @@
   const sourceFocus = $("docx-circuit-source-focus");
   const activeSourceEntry = $("docx-circuit-active-source-entry");
   const showSourceEntryButton = $("docx-circuit-show-source-entry");
+  const reviewPacketPreview = $("docx-circuit-review-packet-preview");
+  const reviewPacketPreviewText = $("docx-circuit-review-packet-preview-text");
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
@@ -477,6 +479,7 @@
     if (traceEvidenceList.children.length === 0) {
       appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前选择没有命中可展示证据。", "empty");
     }
+    renderTracePacketPreview();
   }
 
   function selectCircuitElement(kind, id) {
@@ -864,6 +867,16 @@
     ].join("\n");
   }
 
+  function currentTraceMarkdown() {
+    return tracePacketMarkdown(currentTracePacket());
+  }
+
+  function renderTracePacketPreview() {
+    if (!reviewPacketPreview || !reviewPacketPreviewText || !currentPayload) return;
+    reviewPacketPreview.dataset.packetFormat = "markdown_with_json";
+    setText(reviewPacketPreviewText, currentTraceMarkdown());
+  }
+
   async function copyText(value) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(value);
@@ -886,7 +899,9 @@
     copyTracePacketButton.dataset.copyState = "pending";
     setText(copyStatus, "复制中");
     try {
-      await copyText(tracePacketMarkdown(currentTracePacket()));
+      const packet = currentTraceMarkdown();
+      renderTracePacketPreview();
+      await copyText(packet);
       copyTracePacketButton.dataset.copyState = "success";
       setText(copyStatus, "审阅包 Markdown 已复制");
     } catch (error) {
