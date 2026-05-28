@@ -305,6 +305,7 @@ def test_multi_agent_merge_readiness_runner_uses_supplied_evidence_and_pr_status
     pr_status_path.write_text(json.dumps(_pr_status()), encoding="utf-8")
 
     monkeypatch.setattr(module, "_ensure_source_html", lambda: None)
+    monkeypatch.setattr(module, "_changed_paths_from_worktree", lambda: [])
     monkeypatch.setattr(
         module,
         "_run_geometry_gate",

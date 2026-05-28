@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
@@ -78,6 +79,18 @@ GATE_SUMMARY_SCHEMA_ID = (
     "https://well-harness.local/json_schema/"
     "phase1_demo_mvp_gate_summary_v0_1.schema.json"
 )
+
+
+def _load_phase1_review_runner_module():
+    spec = importlib.util.spec_from_file_location(
+        "phase1_demo_mvp_review_package_runner",
+        RUNNER_SCRIPT_PATH,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _script_env() -> dict[str, str]:
@@ -359,6 +372,29 @@ def test_phase1_demo_mvp_review_package_runner_generates_json_and_markdown(
     assert "demo.html 复刻 MVP 控制台" in report_path.read_text(encoding="utf-8")
     assert "embedded_codex_light_palette" in report_path.read_text(encoding="utf-8")
     assert "非认证声明" in report_path.read_text(encoding="utf-8")
+
+
+def test_phase1_demo_mvp_review_package_boundary_checks_pr_base(
+    monkeypatch,
+) -> None:
+    runner = _load_phase1_review_runner_module()
+    restricted_path = "src/well_harness/static/requirements_intake/index.html"
+    calls: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        calls.append(args)
+        if "origin/codex/multi-agent-active-route-wiring...HEAD" in args:
+            return subprocess.CompletedProcess(args, 0, restricted_path + "\n", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setenv("GITHUB_BASE_REF", "codex/multi-agent-active-route-wiring")
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    assert runner._restricted_diff() == [restricted_path]
+    assert any(
+        "origin/codex/multi-agent-active-route-wiring...HEAD" in args
+        for args in calls
+    )
 
 
 def test_phase1_demo_mvp_review_package_verifier_accepts_generated_package(
