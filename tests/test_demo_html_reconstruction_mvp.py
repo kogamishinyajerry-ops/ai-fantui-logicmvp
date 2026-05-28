@@ -159,6 +159,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-selected-trace"' in html
     assert 'id="demo-reconstruction-embedded-highlight-status"' in html
     assert 'id="demo-reconstruction-coverage-matrix"' in html
+    assert 'id="demo-reconstruction-coverage-search"' in html
+    assert 'id="demo-reconstruction-coverage-filter-status"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -179,6 +181,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyEmbeddedTraceHighlight" in script
     assert "applyEmbeddedTraceFocus" in script
     assert "renderCoverageMatrix" in script
+    assert "updateCoverageFilter" in script
     assert "circuitCoverageKind" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
@@ -189,6 +192,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-trace-card" in stylesheet
     assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
     assert ".demo-reconstruction-coverage-matrix" in stylesheet
+    assert ".demo-reconstruction-coverage-tools" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -315,6 +319,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["coverage_matrix_review"]["focusedNodeCount"] == 0
     assert payload["coverage_matrix_review"]["focusedWireCount"] == 1
     assert "wire_logic4_thr_lock" in payload["coverage_matrix_review"]["statusText"]
+    assert payload["coverage_filter_review"]["query"] == "logic4"
+    assert payload["coverage_filter_review"]["visibleNodeCount"] == 1
+    assert payload["coverage_filter_review"]["visibleWireCount"] == 3
+    assert "4/43" in payload["coverage_filter_review"]["statusText"]
+    assert payload["coverage_filter_review"]["focusedWireCount"] == 1
+    assert "wire_logic4_thr_lock" in payload["coverage_filter_review"]["focusStatusText"]
     assert payload["responsive_geometry"]["desktop"]["noHorizontalOverflow"] is True
     assert payload["responsive_geometry"]["mobile"]["noHorizontalOverflow"] is True
     assert payload["embedded_palette"]["html_class"] is True
@@ -335,6 +345,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",
         "coverage_matrix_focus": "pass",
+        "coverage_matrix_filter": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
         "node_wire_pixels": "pass",
