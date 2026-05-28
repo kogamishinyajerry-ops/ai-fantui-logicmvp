@@ -345,14 +345,21 @@ def render_multi_agent_review_closure_html(payload: dict[str, Any]) -> str:
     """Render a responsive HTML review-closure packet."""
     summary = payload["summary"]
     gate_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"gate-row\">"
         f"<td>{_escape(name.replace('_', ' '))}</td>"
         f"<td><span class=\"badge badge-{_escape(status)}\">{_escape(status)}</span></td>"
         "</tr>"
         for name, status in payload["gates"].items()
     )
+    team_rows = "\n".join(
+        "<tr class=\"agent-row\">"
+        f"<td>{_escape(item['name'])}</td>"
+        f"<td>{_escape(item['scope'])}</td>"
+        "</tr>"
+        for item in payload["agent_team"]["active_agents"]
+    )
     thread_rows = "\n".join(
-        "<tr>"
+        "<tr class=\"thread-row\">"
         f"<td>{_escape(item['path'])}:{_escape(item['line'])}</td>"
         f"<td>{_escape(item['classification'])}</td>"
         f"<td>{_escape(item['actionable'])}</td>"
@@ -362,7 +369,7 @@ def render_multi_agent_review_closure_html(payload: dict[str, Any]) -> str:
         for item in payload["review_threads"]
     )
     pathspec_items = "\n".join(
-        f"<li><code>{_escape(item)}</code></li>"
+        f"<li class=\"pathspec-item\"><code>{_escape(item)}</code></li>"
         for item in payload["pathspec_package"]["pathspecs"]
     )
     risks = "\n".join(f"<li>{_escape(item)}</li>" for item in payload["risk_notes"])
@@ -415,7 +422,7 @@ def render_multi_agent_review_closure_html(payload: dict[str, Any]) -> str:
       padding: 16px;
     }}
     .metric span {{ display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }}
-    .metric strong {{ display: block; font-size: 22px; line-height: 1.2; overflow-wrap: anywhere; }}
+    .metric strong {{ display: block; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }}
     .table-scroll {{ overflow-x: auto; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
     th, td {{ border-bottom: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }}
@@ -458,6 +465,16 @@ def render_multi_agent_review_closure_html(payload: dict[str, Any]) -> str:
         <table>
           <thead><tr><th>Gate</th><th>Status</th></tr></thead>
           <tbody>{gate_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>Active Agent Team</h2>
+      <p>Mode <code>{_escape(payload['agent_team']['mode'])}</code>, team size <code>{_escape(payload['agent_team']['team_size'])}</code>. {_escape(payload['agent_team']['retired_role_policy'])}</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Agent</th><th>Scope</th></tr></thead>
+          <tbody>{team_rows}</tbody>
         </table>
       </div>
     </section>
