@@ -161,6 +161,8 @@
   const reviewIndexBuildList = $("demo-reconstruction-review-index-build-list");
   const reviewIndexEquationSummary = $("demo-reconstruction-review-index-equation-summary");
   const reviewIndexEquationList = $("demo-reconstruction-review-index-equation-list");
+  const reviewIndexClosureSummary = $("demo-reconstruction-review-index-closure-summary");
+  const reviewIndexClosureList = $("demo-reconstruction-review-index-closure-list");
   const reviewIndexOutputSummary = $("demo-reconstruction-review-index-output-summary");
   const reviewIndexOutputList = $("demo-reconstruction-review-index-output-list");
   const reviewIndexScenarioSummary = $("demo-reconstruction-review-index-scenario-summary");
@@ -708,6 +710,105 @@
     setText(reviewIndexEquationSummary, `${readyCount}/${LOGIC_EQUATION_RECORDS.length} 方程 · L1-L4 到 THR_LOCK`);
     const activeEquation = LOGIC_EQUATION_RECORDS.find((record) => record.focusId === currentCircuitFocus.id);
     setReviewIndexEquationState(activeEquation ? activeEquation.id : "");
+  }
+
+  function reviewIndexClosureRecords() {
+    return [
+      {
+        id: "l1-tls",
+        anchor: "P035-S01",
+        title: "L1 -> TLS",
+        detail: "RA / SW1 / 抑制位进入 TLS 115VAC",
+        focusKind: "wire",
+        focusId: "wire_logic1_tls115",
+      },
+      {
+        id: "l2-etrac",
+        anchor: "P035-S02",
+        title: "L2 -> ETRAC",
+        detail: "SW2 / 地面 / 发动机运行进入 540VDC",
+        focusKind: "wire",
+        focusId: "wire_logic2_etrac",
+      },
+      {
+        id: "l3-pdu",
+        anchor: "P035-S03",
+        title: "L3 -> PDU",
+        detail: "TLS / TRA / N1K 形成展开指令",
+        focusKind: "wire",
+        focusId: "wire_logic3_pdu",
+      },
+      {
+        id: "vdt90-feedback",
+        anchor: "P035-S04",
+        title: "PDU -> VDT90",
+        detail: "电机带动滑动罩到 90% 反馈",
+        focusKind: "wire",
+        focusId: "wire_pdu_vdt90",
+      },
+      {
+        id: "l4-thr-lock",
+        anchor: "P035-S05",
+        title: "L4 -> THR_LOCK",
+        detail: "VDT90 与 L3 闭合，反推锁释放",
+        focusKind: "wire",
+        focusId: "wire_logic4_thr_lock",
+      },
+    ];
+  }
+
+  function setReviewIndexClosureState(recordId) {
+    if (!reviewIndexClosureList) return;
+    reviewIndexClosureList.querySelectorAll("[data-review-index-closure]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexClosure === recordId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexClosure(recordId) {
+    const record = reviewIndexClosureRecords().find((item) => item.id === recordId);
+    const step = record ? traceStepByAnchor(record.anchor) : null;
+    if (!record || !step) return;
+    setProofPathLaneMode("object", {writeHash: false});
+    setSelectedTrace(step, {writeHash: false});
+    applyEmbeddedTraceFocus(record.focusKind, record.focusId);
+    setReviewIndexTarget("demo-reconstruction-proof-path");
+    setReviewIndexClosureState(record.id);
+    const target = $("demo-reconstruction-proof-path");
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexClosureRail() {
+    if (!reviewIndexClosureList) return;
+    reviewIndexClosureList.innerHTML = "";
+    const records = reviewIndexClosureRecords();
+    records.forEach((record, index) => {
+      const step = traceStepByAnchor(record.anchor);
+      const contract = step ? cumulativeTraceContract(traceSteps.indexOf(step)) : {node_ids: [], wire_ids: []};
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexClosure = record.id;
+      button.setAttribute("aria-pressed", currentCircuitFocus.id === record.focusId ? "true" : "false");
+
+      const title = document.createElement("strong");
+      title.textContent = `${String(index + 1).padStart(2, "0")} · ${record.title}`;
+      const metric = document.createElement("span");
+      metric.textContent = `${record.anchor} · ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      const detail = document.createElement("small");
+      detail.textContent = `${record.detail} · ${record.focusId}`;
+
+      button.append(title, metric, detail);
+      button.addEventListener("click", () => applyReviewIndexClosure(record.id));
+      reviewIndexClosureList.appendChild(button);
+    });
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    setText(
+      reviewIndexClosureSummary,
+      `${records.length}/5 闭环 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    const activeRecord = records.find((record) => record.focusId === currentCircuitFocus.id);
+    setReviewIndexClosureState(activeRecord ? activeRecord.id : "");
   }
 
   function setReviewIndexOutputState(targetId) {
@@ -3886,6 +3987,7 @@
     renderReviewPacketDashboard(gates, reviewContext);
     updateReviewVerdictBoard(gates, reviewContext);
     renderReviewIndexEvidenceRail();
+    renderReviewIndexClosureRail();
     updateReviewIndexStatus();
   }
 
@@ -4294,6 +4396,8 @@
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
     setReviewIndexEquationState(equation ? equation.id : "");
+    const closureRecord = reviewIndexClosureRecords().find((record) => record.focusKind === kind && record.focusId === id);
+    setReviewIndexClosureState(closureRecord ? closureRecord.id : "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
       .forEach((button) => {
@@ -4328,6 +4432,7 @@
     setOutputMaturityCellState("", "");
     setLogicEquationRowState("");
     setReviewIndexEquationState("");
+    setReviewIndexClosureState("");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
