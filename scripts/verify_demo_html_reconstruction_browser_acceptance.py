@@ -171,6 +171,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         return document.querySelectorAll("[data-trace-card]").length >= 5
                             && document.querySelectorAll(".demo-reconstruction-source-entry").length >= 10
+                            && document.querySelectorAll("[data-requirement-ledger-row]").length >= 60
                             && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
                             && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
@@ -191,6 +192,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "source_map_visible": page.locator(
                         "#demo-reconstruction-docx-circuit-map"
+                    ).is_visible(timeout=5000),
+                    "requirement_ledger_visible": page.locator(
+                        "#demo-reconstruction-requirement-ledger"
                     ).is_visible(timeout=5000),
                     "trace_board_visible": page.locator(
                         "#demo-reconstruction-docx-trace-board"
@@ -216,6 +220,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
                         return {
                             sourceEntryCount: document.querySelectorAll(".demo-reconstruction-source-entry").length,
+                            requirementLedgerRowCount: document.querySelectorAll("[data-requirement-ledger-row]").length,
+                            requirementLedgerMappedCount: document.querySelectorAll("[data-requirement-ledger-row][data-requirement-ledger-status='mapped']").length,
+                            requirementLedgerContextCount: document.querySelectorAll("[data-requirement-ledger-row][data-requirement-ledger-status='context']").length,
+                            requirementLedgerP035Count: document.querySelectorAll("[data-requirement-ledger-row][data-requirement-ledger-status='p035']").length,
+                            requirementLedgerSummary: text("#demo-reconstruction-requirement-ledger-summary"),
+                            requirementLedgerStatus: text("#demo-reconstruction-requirement-ledger-status"),
                             reviewIndexButtonCount: document.querySelectorAll("[data-review-index-target]").length,
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
@@ -235,6 +245,80 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             traceContract: text("#demo-reconstruction-trace-contract"),
                         };
                     }"""
+                )
+                page.locator('[data-requirement-ledger-filter="context"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const rows = document.querySelectorAll("[data-requirement-ledger-row]");
+                        const filter = document.querySelector('[data-requirement-ledger-filter="context"]');
+                        const status = document.querySelector("#demo-reconstruction-requirement-ledger-status")?.textContent || "";
+                        return rows.length === 18
+                            && filter
+                            && filter.getAttribute("aria-pressed") === "true"
+                            && status.includes("18/67");
+                    }""",
+                    timeout=5000,
+                )
+                requirement_ledger_context_review = page.evaluate(
+                    """() => ({
+                        visibleRows: document.querySelectorAll("[data-requirement-ledger-row]").length,
+                        selectedFilters: Array.from(
+                            document.querySelectorAll("[data-requirement-ledger-filter][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-requirement-ledger-filter")),
+                        statusText: document.querySelector("#demo-reconstruction-requirement-ledger-status")?.textContent?.trim() || "",
+                    })"""
+                )
+                page.locator('[data-requirement-ledger-filter="all"]').click()
+                page.locator("#demo-reconstruction-requirement-ledger-search").fill("logic4")
+                page.wait_for_function(
+                    """() => {
+                        const rows = Array.from(document.querySelectorAll("[data-requirement-ledger-row]"));
+                        const target = document.querySelector('[data-requirement-ledger-row="step:P035-S05"]');
+                        const status = document.querySelector("#demo-reconstruction-requirement-ledger-status")?.textContent || "";
+                        return rows.length >= 3 && target && status.includes("/");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator('[data-requirement-ledger-row="step:P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const row = document.querySelector('[data-requirement-ledger-row="step:P035-S05"]');
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && selected.includes("P035-S05")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true']").length >= 4;
+                    }""",
+                    timeout=5000,
+                )
+                requirement_ledger_action_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            query: document.querySelector("#demo-reconstruction-requirement-ledger-search")?.value || "",
+                            visibleRows: document.querySelectorAll("[data-requirement-ledger-row]").length,
+                            selectedRows: Array.from(
+                                document.querySelectorAll("[data-requirement-ledger-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-requirement-ledger-row")),
+                            selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                            highlightedCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true']").length
+                                : 0,
+                            statusText: document.querySelector("#demo-reconstruction-requirement-ledger-status")?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S01"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        return selected && selected.textContent.trim() === "P035-S01";
+                    }""",
+                    timeout=5000,
                 )
                 page.locator("#demo-reconstruction-review-index").screenshot(
                     path=str(review_index_path)
@@ -1656,7 +1740,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
-            and source_map_review["reviewIndexButtonCount"] == 9
+            and source_map_review["reviewIndexButtonCount"] == 10
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
@@ -1672,10 +1756,29 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["wireCoverage"] == "23/23"
         )
         else "fail",
+        "requirement_coverage_ledger": "pass"
+        if (
+            source_map_review["requirementLedgerRowCount"] == 67
+            and source_map_review["requirementLedgerMappedCount"] == 44
+            and source_map_review["requirementLedgerContextCount"] == 18
+            and source_map_review["requirementLedgerP035Count"] == 5
+            and "67 条" in source_map_review["requirementLedgerSummary"]
+            and "44 已映射" in source_map_review["requirementLedgerSummary"]
+            and source_map_review["requirementLedgerStatus"] == "67/67 条"
+            and requirement_ledger_context_review["selectedFilters"] == ["context"]
+            and requirement_ledger_context_review["visibleRows"] == 18
+            and "18/67" in requirement_ledger_context_review["statusText"]
+            and requirement_ledger_action_review["query"] == "logic4"
+            and requirement_ledger_action_review["visibleRows"] >= 3
+            and requirement_ledger_action_review["selectedRows"] == ["step:P035-S05"]
+            and requirement_ledger_action_review["selectedAnchor"] == "P035-S05"
+            and requirement_ledger_action_review["highlightedCount"] >= 4
+        )
+        else "fail",
         "review_index_navigation": "pass"
         if (
             review_index_review["visible"]
-            and review_index_review["buttonCount"] == 9
+            and review_index_review["buttonCount"] == 10
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and "P035-S01" in review_index_review["stepText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
@@ -2073,6 +2176,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "embedded_palette": embedded_palette,
         "first_screen_review": first_screen_review,
         "source_map_review": source_map_review,
+        "requirement_ledger_context_review": requirement_ledger_context_review,
+        "requirement_ledger_action_review": requirement_ledger_action_review,
         "review_index_review": review_index_review,
         "review_index_navigation": review_index_navigation,
         "review_index_after_trace": review_index_after_trace,

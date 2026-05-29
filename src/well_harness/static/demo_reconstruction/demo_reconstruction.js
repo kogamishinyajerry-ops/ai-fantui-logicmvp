@@ -44,6 +44,11 @@
   const docxSequenceCount = $("demo-reconstruction-docx-sequence-count");
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
+  const requirementLedgerSummary = $("demo-reconstruction-requirement-ledger-summary");
+  const requirementLedgerSearch = $("demo-reconstruction-requirement-ledger-search");
+  const requirementLedgerFilters = $("demo-reconstruction-requirement-ledger-filters");
+  const requirementLedgerStatus = $("demo-reconstruction-requirement-ledger-status");
+  const requirementLedgerList = $("demo-reconstruction-requirement-ledger-list");
   const traceContract = $("demo-reconstruction-trace-contract");
   const traceCardList = $("demo-reconstruction-trace-card-list");
   const selectedAnchor = $("demo-reconstruction-selected-anchor");
@@ -122,6 +127,8 @@
   let currentTraceStep = null;
   let selectedTraceIndex = -1;
   let currentCircuitFocus = {kind: "", id: ""};
+  let requirementLedgerFilter = "all";
+  let requirementLedgerSelectedKey = "";
   let activePlaybackIndex = -1;
   let topologyStepFilterAnchor = "all";
   let outputPathTargetId = "thr_lock";
@@ -654,6 +661,11 @@
       `${wireId} · ${source} -> ${target} · 首次 ${step ? step.anchor : "待匹配"} · DOCX ${anchors.join(" / ") || "待匹配"}`,
     );
     setTopologyRowState(wireId);
+  }
+
+  function resetTopologyReadback() {
+    setText(topologyReadback, `${topologyWireIds().length}/${EXPECTED_WIRE_COUNT} 条 demo.html 连线可聚焦`);
+    setTopologyRowState("");
   }
 
   function renderTopologyMatrix() {
@@ -1852,7 +1864,7 @@
   function clearCircuitObjectFocus() {
     currentCircuitFocus = {kind: "", id: ""};
     setCoverageButtonTabStops("", "");
-    updateTopologyReadback("");
+    resetTopologyReadback();
     setOutputPathWireState("");
     setOutputMaturityCellState("", "");
     renderObjectProvenance("", "");
@@ -2060,6 +2072,175 @@
     if (options.writeHash !== false) writeReviewHashState();
   }
 
+  function requirementLedgerItems() {
+    const sourceRows = sourceEntries.map((entry) => {
+      const nodeIds = Array.isArray(entry.node_ids) ? entry.node_ids : [];
+      const wireIds = Array.isArray(entry.wire_ids) ? entry.wire_ids : [];
+      const mapped = nodeIds.length > 0 || wireIds.length > 0;
+      return {
+        key: `source:${entry.anchor || ""}`,
+        kind: "source",
+        status: mapped ? "mapped" : "context",
+        statusLabel: mapped ? "已映射" : "上下文",
+        anchor: entry.anchor || "source",
+        role: entry.role || "源文档条目",
+        title: entry.role || "源文档条目",
+        text: entry.text || "",
+        nodeIds,
+        wireIds,
+      };
+    });
+    const stepRows = traceSteps.map((step) => ({
+      key: `step:${step.anchor || ""}`,
+      kind: "step",
+      status: "p035",
+      statusLabel: "P035 步骤",
+      anchor: step.anchor || "P035",
+      role: "工作过程拆解",
+      title: step.title || "工作过程片段",
+      text: step.source_text || "",
+      nodeIds: Array.isArray(step.node_ids) ? step.node_ids : [],
+      wireIds: Array.isArray(step.wire_ids) ? step.wire_ids : [],
+    }));
+    return [...sourceRows, ...stepRows];
+  }
+
+  function requirementLedgerSearchText(item) {
+    return [
+      item.anchor,
+      item.role,
+      item.title,
+      item.text,
+      ...(item.nodeIds || []),
+      ...(item.wireIds || []),
+    ].join(" ").toLowerCase();
+  }
+
+  function setRequirementLedgerRowState() {
+    document.querySelectorAll("[data-requirement-ledger-row]").forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.requirementLedgerRow === requirementLedgerSelectedKey ? "true" : "false",
+      );
+    });
+  }
+
+  function activateRequirementLedgerItem(item) {
+    requirementLedgerSelectedKey = item.key;
+    if (item.kind === "step") {
+      const step = traceSteps.find((candidate) => candidate && candidate.anchor === item.anchor);
+      if (step) setSelectedTrace(step);
+    } else if (item.wireIds && item.wireIds.length) {
+      applyEmbeddedTraceFocus("wire", item.wireIds[0]);
+    } else if (item.nodeIds && item.nodeIds.length) {
+      applyEmbeddedTraceFocus("node", item.nodeIds[0]);
+    } else if (item.anchor === "P035" && traceSteps.length) {
+      setSelectedTrace(traceSteps[0]);
+    }
+    setRequirementLedgerRowState();
+  }
+
+  function renderRequirementLedgerFilters(items) {
+    if (!requirementLedgerFilters) return;
+    const counts = items.reduce(
+      (acc, item) => {
+        acc.all += 1;
+        acc[item.status] = (acc[item.status] || 0) + 1;
+        return acc;
+      },
+      {all: 0, mapped: 0, context: 0, p035: 0},
+    );
+    const filters = [
+      {id: "all", label: `全部 ${counts.all}`},
+      {id: "mapped", label: `已映射 ${counts.mapped}`},
+      {id: "context", label: `上下文 ${counts.context}`},
+      {id: "p035", label: `P035 ${counts.p035}`},
+    ];
+    requirementLedgerFilters.innerHTML = "";
+    filters.forEach((filter) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.requirementLedgerFilter = filter.id;
+      button.setAttribute("aria-pressed", requirementLedgerFilter === filter.id ? "true" : "false");
+      button.textContent = filter.label;
+      button.addEventListener("click", () => {
+        requirementLedgerFilter = filter.id;
+        renderRequirementLedger();
+      });
+      requirementLedgerFilters.appendChild(button);
+    });
+  }
+
+  function renderRequirementLedgerRows() {
+    if (!requirementLedgerList) return;
+    const items = requirementLedgerItems();
+    const query = (requirementLedgerSearch && requirementLedgerSearch.value ? requirementLedgerSearch.value : "")
+      .trim()
+      .toLowerCase();
+    const visibleItems = items.filter((item) => {
+      const matchesFilter = requirementLedgerFilter === "all" || item.status === requirementLedgerFilter;
+      return matchesFilter && (!query || requirementLedgerSearchText(item).includes(query));
+    });
+    requirementLedgerList.innerHTML = "";
+    if (!visibleItems.length) {
+      const li = document.createElement("li");
+      li.textContent = "没有匹配的需求覆盖记录";
+      requirementLedgerList.appendChild(li);
+      setText(requirementLedgerStatus, `0/${items.length} 条`);
+      return;
+    }
+    visibleItems.forEach((item) => {
+      const li = document.createElement("li");
+      li.dataset.requirementLedgerItem = item.key;
+      li.dataset.requirementLedgerStatus = item.status;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-requirement-ledger-row";
+      button.dataset.requirementLedgerRow = item.key;
+      button.dataset.requirementLedgerKind = item.kind;
+      button.dataset.requirementLedgerAnchor = item.anchor;
+      button.dataset.requirementLedgerStatus = item.status;
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => activateRequirementLedgerItem(item));
+
+      const topLine = document.createElement("span");
+      topLine.className = "demo-reconstruction-requirement-ledger-topline";
+      const anchor = document.createElement("strong");
+      anchor.textContent = item.anchor;
+      const role = document.createElement("span");
+      role.textContent = item.role;
+      topLine.append(anchor, role);
+
+      const text = document.createElement("span");
+      text.className = "demo-reconstruction-requirement-ledger-text";
+      text.textContent = item.kind === "step" ? item.title : item.text;
+
+      const meta = document.createElement("small");
+      meta.textContent = `${item.statusLabel} · ${item.nodeIds.length} 节点 · ${item.wireIds.length} 连线`;
+
+      button.append(topLine, text, meta);
+      li.appendChild(button);
+      requirementLedgerList.appendChild(li);
+    });
+    setText(requirementLedgerStatus, `${visibleItems.length}/${items.length} 条`);
+    setRequirementLedgerRowState();
+  }
+
+  function renderRequirementLedger() {
+    if (!requirementLedgerList) return;
+    const items = requirementLedgerItems();
+    const mappedCount = items.filter((item) => item.status === "mapped").length;
+    const contextCount = items.filter((item) => item.status === "context").length;
+    const stepCount = items.filter((item) => item.status === "p035").length;
+    setText(
+      requirementLedgerSummary,
+      `${items.length} 条 · ${mappedCount} 已映射 · ${contextCount} 上下文 · ${stepCount} P035`,
+    );
+    renderRequirementLedgerFilters(items);
+    renderRequirementLedgerRows();
+  }
+
   function renderTraceBoard(payload) {
     if (!traceCardList) return;
     const steps = Array.isArray(payload && payload.sequence_steps) ? payload.sequence_steps : [];
@@ -2211,6 +2392,7 @@
     renderCoverageMatrix(payload);
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
+    renderRequirementLedger();
     renderTopologyMatrix();
     applyReviewHashState();
     updateReviewPacketFromState();
@@ -2284,6 +2466,9 @@
       writeReviewHashState();
     });
   }
+  if (requirementLedgerSearch) {
+    requirementLedgerSearch.addEventListener("input", renderRequirementLedgerRows);
+  }
   if (topologySearch) {
     topologySearch.addEventListener("input", () => {
       updateTopologyFilter();
@@ -2299,10 +2484,12 @@
           renderDocxSentenceCircuitMap(payload);
         } else {
           renderSourceEntries([{anchor: "DOCX", role: "接口不可用", text: "未能读取原始 DOCX 映射接口", node_ids: [], wire_ids: []}]);
+          renderRequirementLedger();
         }
       })
       .catch(() => {
         renderSourceEntries([{anchor: "DOCX", role: "接口异常", text: "原始 DOCX 映射接口返回异常，完整 demo 电路仍可查看。", node_ids: [], wire_ids: []}]);
+        renderRequirementLedger();
       });
 
     const stored = circuitViewFromDrawing(readJson(window.localStorage.getItem(DRAWING_KEY)));
