@@ -238,6 +238,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     }""",
                     timeout=7000,
                 )
+                page.wait_for_function(
+                    """() => {
+                        const pressed = Array.from(
+                            document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-compact-runway-preset"));
+                        return pressed.length === 1
+                            && pressed[0] === "max-reverse"
+                            && document.querySelector("#demo-reconstruction-compact-runway-status")?.textContent?.trim() === "最大反推"
+                            && document.querySelector("#demo-reconstruction-compact-runway-state")?.textContent?.trim() === "可用"
+                            && document.querySelector("#demo-reconstruction-compact-runway-lock")?.textContent?.trim() === "释放";
+                    }""",
+                    timeout=7000,
+                )
                 page.screenshot(path=str(first_screen_path), full_page=True)
                 first_screen_review = {
                     "visible_text": page.evaluate(
@@ -331,6 +344,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             visible: !!document.querySelector("#demo-reconstruction-compact-runway")?.offsetParent,
                             buttonCount: document.querySelectorAll("[data-compact-runway-preset]").length,
                             controlCount: document.querySelectorAll(".demo-reconstruction-compact-runway-control").length,
+                            pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
                             statusText: text("#demo-reconstruction-compact-runway-status"),
                             stateText: text("#demo-reconstruction-compact-runway-state"),
                             lockText: text("#demo-reconstruction-compact-runway-lock"),
@@ -3907,6 +3921,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             compact_runway_initial_review["visible"]
             and compact_runway_initial_review["buttonCount"] == 2
             and compact_runway_initial_review["controlCount"] == 3
+            and compact_runway_initial_review["pressed"] == ["max-reverse"]
+            and compact_runway_initial_review["statusText"] == "最大反推"
+            and compact_runway_initial_review["stateText"] == "可用"
+            and compact_runway_initial_review["lockText"] == "释放"
+            and "释放" in compact_runway_initial_review["summaryText"]
             and compact_runway_max_review["pressed"] == ["max-reverse"]
             and compact_runway_max_review["statusText"] == "最大反推"
             and compact_runway_max_review["stateText"] == "可用"

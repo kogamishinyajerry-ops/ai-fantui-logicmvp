@@ -568,6 +568,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "data-proof-transcript-row" in script
     assert "applyScenarioPreset" in script
     assert "installCompactRunwayActions" in script
+    assert "hydrateCompactRunwayDefaultState" in script
+    assert 'summary !== "等待摘要"' in script
+    assert 'summary.startsWith("等待拉杆快照")' in script
+    assert 'if (compactRunwayMode !== "operator")' in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
     assert 'params.get("complete") === "1"' in script
@@ -862,6 +866,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_initial_review"]["visible"] is True
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
     assert payload["compact_runway_initial_review"]["controlCount"] == 3
+    assert payload["compact_runway_initial_review"]["pressed"] == ["max-reverse"]
+    assert payload["compact_runway_initial_review"]["statusText"] == "最大反推"
+    assert payload["compact_runway_initial_review"]["stateText"] == "可用"
+    assert payload["compact_runway_initial_review"]["lockText"] == "释放"
+    assert "释放" in payload["compact_runway_initial_review"]["summaryText"]
     assert payload["compact_runway_max_review"]["pressed"] == ["max-reverse"]
     assert payload["compact_runway_max_review"]["statusText"] == "最大反推"
     assert payload["compact_runway_max_review"]["stateText"] == "可用"
