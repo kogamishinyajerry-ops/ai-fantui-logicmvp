@@ -675,7 +675,7 @@
     if (!circuitSnapshotDetails) return;
     circuitSnapshotDetails.hidden = !active;
     circuitSnapshotDetails.dataset.circuitSnapshotDetails = active ? "visible" : "hidden";
-    if (!active) circuitSnapshotDetails.open = false;
+    circuitSnapshotDetails.open = !!active;
   }
 
   function applyReviewIndexCompleteState() {
