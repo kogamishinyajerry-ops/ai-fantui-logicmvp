@@ -846,10 +846,11 @@ def test_deepseek_low_cognitive_load_guardrails_hold_in_browser(demo_server: str
             assert mispromoted_tools == []
 
         page.goto(f"{demo_server}/demo-reconstruction", wait_until="networkidle")
-        expect(page.locator("body")).to_have_attribute("data-ux-page-role", "comparison")
+        expect(page.locator("body")).to_have_attribute("data-ux-page-role", "demo-mvp-console")
         expect(page.locator('[data-primary-next-action="true"]')).to_have_count(0)
-        expect(page.locator("#demo-reconstruction-original-frame")).to_be_visible()
-        expect(page.locator("#demo-reconstruction-current-panel")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-circuit-snapshot")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-compact-runway")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-detail-drawer")).to_be_hidden()
     finally:
         page.close()
 
@@ -3379,24 +3380,23 @@ def test_demo_reconstruction_comparison_page_shows_original_and_current_replica(
         page.wait_for_url("**/demo-reconstruction")
         page.wait_for_load_state("networkidle")
 
-        expect(page.locator("#demo-reconstruction-original-frame")).to_be_visible()
-        expect(page.locator("#demo-reconstruction-current-panel")).to_be_visible()
-        expect(page.locator("#demo-reconstruction-mode")).to_have_text("当前模式：demo.html 高保真复刻")
-        expect(page.locator("#demo-reconstruction-fidelity")).to_have_text("复刻度：20/20 节点 · 23/23 连线")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("节点")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("连线")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("预设场景")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("状态输出")
+        expect(page.locator("#demo-reconstruction-circuit-snapshot")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-compact-runway")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-detail-drawer")).to_be_hidden()
+        expect(page.locator("#demo-reconstruction-mode")).to_have_text("当前演示：需求到可运行完整电路")
+        expect(page.locator("#demo-reconstruction-fidelity")).to_have_text("演示就绪 · 可运行电路")
+        expect(page.locator("#demo-reconstruction-circuit-snapshot-status")).to_have_text("完整电路可运行")
+        expect(page.locator("#demo-reconstruction-compact-runway-status")).to_have_text("最大反推")
         expect(page.locator("#demo-reconstruction-preset-list")).to_contain_text("着陆展开")
-        expect(page.locator("#demo-reconstruction-status-list")).to_contain_text("THR_LOCK")
+        expect(page.locator("#demo-reconstruction-status-list")).to_contain_text("反推锁输出")
         expect(page.locator("#demo-reconstruction-node-list li")).to_have_count(20)
         expect(page.locator("#demo-reconstruction-wire-list li")).to_have_count(23)
 
-        original_box = page.locator("#demo-reconstruction-original-frame").bounding_box()
-        current_box = page.locator("#demo-reconstruction-current-panel").bounding_box()
-        assert original_box is not None and current_box is not None
-        assert original_box["width"] > 360
-        assert current_box["width"] > 360
+        snapshot_box = page.locator("#demo-reconstruction-circuit-snapshot").bounding_box()
+        runway_box = page.locator("#demo-reconstruction-compact-runway").bounding_box()
+        assert snapshot_box is not None and runway_box is not None
+        assert snapshot_box["width"] > 360
+        assert runway_box["width"] > 360
     finally:
         page.close()
 

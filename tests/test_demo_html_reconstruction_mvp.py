@@ -336,6 +336,14 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-output-mirror"' in html
     assert 'id="demo-reconstruction-output-mirror-status"' in html
     assert 'id="demo-reconstruction-output-mirror-thr-output"' in html
+    assert "反推锁状态" in html
+    assert "解锁电源" in html
+    assert "作动器供电" in html
+    assert "展开指令" in html
+    assert "反推锁输出" in html
+    assert "核对解锁电源、作动器供电、展开指令与反推锁。" in html
+    assert "微动开关 1" in html
+    assert "反推链路分段" in html
     assert 'id="demo-reconstruction-control-strip"' in html
     assert 'id="demo-reconstruction-control-strip-status"' in html
     assert 'id="demo-reconstruction-control-strip-step"' in html

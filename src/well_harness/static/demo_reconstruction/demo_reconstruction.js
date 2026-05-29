@@ -7,7 +7,7 @@
   const EXPECTED_NODE_COUNT = 20;
   const EXPECTED_WIRE_COUNT = 23;
   const PRESETS = ["默认前向", "着陆展开", "最大反推", "收起回杆", "抑制阻塞"];
-  const STATUS_OUTPUTS = ["SW1", "SW2", "TLS", "VDT90", "L1-L4", "THR_LOCK"];
+  const STATUS_OUTPUTS = ["微动开关 1", "微动开关 2", "解锁电源", "展开到位反馈", "反推链路分段", "反推锁输出"];
   const SCENARIO_COMPARATOR_IDS = ["max-reverse", "inhibit-block"];
   const OUTPUT_PATH_TARGETS = [
     {id: "tls115", label: "TLS 115VAC"},
@@ -3081,7 +3081,7 @@
         readbackParts.join(" · "),
       );
     } else {
-      setText(scenarioComparatorReadback, "运行最大反推和抑制阻塞，核对 THR_LOCK 输出差异");
+      setText(scenarioComparatorReadback, "运行最大反推和抑制阻塞，核对反推锁输出差异");
     }
     renderReviewIndexScenarioRail();
   }
@@ -4970,7 +4970,7 @@
     }
     setText(outputMirrorStatus, frameText(frameDocument, "#fan-status-badge", "IDLE"));
     setText(outputMirrorLogic, frameText(frameDocument, "#fan-hud-logic", "等待 HUD"));
-    setText(outputMirrorThr, frameText(frameDocument, "#fan-hud-thr-lock", "等待 THR_LOCK"));
+    setText(outputMirrorThr, frameText(frameDocument, "#fan-hud-thr-lock", "等待反推锁"));
     setText(outputMirrorSummary, frameText(frameDocument, "#fan-status-summary", "等待摘要"));
     setText(outputMirrorTls, frameText(frameDocument, "#fan-out-tls115-value", "--"));
     setText(outputMirrorEtrac, frameText(frameDocument, "#fan-out-etrac-value", "--"));
