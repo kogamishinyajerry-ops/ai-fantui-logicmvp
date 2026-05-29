@@ -263,6 +263,14 @@
   const proofPathStatus = $("demo-reconstruction-proof-path-status");
   const proofPathList = $("demo-reconstruction-proof-path-list");
   const proofPathReadback = $("demo-reconstruction-proof-path-readback");
+  const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
+  const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
+  const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
+  const proofPathObjectInspectorStepCount = $("demo-reconstruction-proof-path-object-inspector-step-count");
+  const proofPathObjectInspectorEdgeCount = $("demo-reconstruction-proof-path-object-inspector-edge-count");
+  const proofPathObjectInspectorCoverage = $("demo-reconstruction-proof-path-object-inspector-coverage");
+  const proofPathObjectInspectorSummary = $("demo-reconstruction-proof-path-object-inspector-summary");
+  const proofPathObjectInspectorNeighbors = $("demo-reconstruction-proof-path-object-inspector-neighbors");
   const scenarioComparatorStatus = $("demo-reconstruction-scenario-comparator-status");
   const scenarioComparatorReadback = $("demo-reconstruction-scenario-comparator-readback");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
@@ -2623,6 +2631,74 @@
     return {incoming: [], outgoing: [], adjacent: []};
   }
 
+  function renderProofPathInspectorNeighbors(records) {
+    if (!proofPathObjectInspectorNeighbors) return;
+    proofPathObjectInspectorNeighbors.innerHTML = "";
+    if (!records.length) {
+      const empty = document.createElement("li");
+      empty.textContent = "暂无上下游对象";
+      proofPathObjectInspectorNeighbors.appendChild(empty);
+      return;
+    }
+    records.slice(0, 4).forEach((record) => {
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.proofPathInspectorFocusKind = record.kind;
+      button.dataset.proofPathInspectorFocusId = record.id;
+      const label = document.createElement("strong");
+      label.textContent = record.label || reviewObjectLabel(record.kind, record.id);
+      const meta = document.createElement("span");
+      meta.textContent = record.meta || record.id;
+      button.append(label, meta);
+      button.addEventListener("click", () => applyProofPathInspectorJump(record.kind, record.id));
+      li.appendChild(button);
+      proofPathObjectInspectorNeighbors.appendChild(li);
+    });
+  }
+
+  function applyProofPathInspectorJump(kind, id) {
+    if (!kind || !id) return;
+    applyEmbeddedTraceFocus(kind, id);
+    if (currentTraceStep) updateProofPathStatus(currentTraceStep, {kind, id});
+  }
+
+  function renderProofPathObjectInspector(kind, id) {
+    if (!proofPathObjectInspector) return;
+    if (!kind || !id) {
+      setText(proofPathObjectInspectorObject, "等待对象");
+      setText(proofPathObjectInspectorSourceCount, "0 条 DOCX");
+      setText(proofPathObjectInspectorStepCount, "0 步");
+      setText(proofPathObjectInspectorEdgeCount, "0 上游 · 0 下游");
+      setText(proofPathObjectInspectorCoverage, "等待覆盖");
+      setText(proofPathObjectInspectorSummary, "选择证明路径对象后显示来源、步骤和上下游。");
+      renderProofPathInspectorNeighbors([]);
+      return;
+    }
+    const {sourceMatches, stepMatches} = objectProvenanceRecords(kind, id);
+    const records = signalNeighborhoodRecords(kind, id);
+    const neighborRecords = [...records.incoming, ...records.outgoing, ...records.adjacent];
+    const firstStep = stepMatches[0] || currentTraceStep || {};
+    const firstSource = sourceMatches[0] || {};
+    const coverageText = kind === "wire"
+      ? `1/${EXPECTED_WIRE_COUNT} 连线`
+      : `1/${EXPECTED_NODE_COUNT} 节点`;
+    const sourceAnchor = firstSource.anchor ? ` · ${firstSource.anchor}` : "";
+    setText(proofPathObjectInspectorObject, reviewObjectLabel(kind, id));
+    setText(proofPathObjectInspectorSourceCount, `${sourceMatches.length} 条 DOCX`);
+    setText(proofPathObjectInspectorStepCount, `${stepMatches.length} 步`);
+    setText(
+      proofPathObjectInspectorEdgeCount,
+      `${records.incoming.length} 上游 · ${records.outgoing.length} 下游 · ${records.adjacent.length} 相邻`,
+    );
+    setText(proofPathObjectInspectorCoverage, coverageText);
+    setText(
+      proofPathObjectInspectorSummary,
+      `${firstStep.anchor || "P035"} · ${firstStep.title || "对象链路"}${sourceAnchor}`,
+    );
+    renderProofPathInspectorNeighbors(neighborRecords);
+  }
+
   function renderNeighborhoodList(list, records, emptyText) {
     if (!list) return;
     list.innerHTML = "";
@@ -2703,6 +2779,7 @@
       setText(provenanceStepCount, "0 步");
       renderProvenanceList(provenanceSourceList, [], "聚焦节点或连线后显示源 DOCX。", "", "", "role");
       renderProvenanceList(provenanceStepList, [], "聚焦节点或连线后显示 P035 步骤。", "", "", "title");
+      renderProofPathObjectInspector("", "");
       renderSignalNeighborhood("", "");
       return;
     }
@@ -2727,6 +2804,7 @@
       "title",
     );
     updateReviewPacketFromState();
+    renderProofPathObjectInspector(kind, id);
     renderSignalNeighborhood(kind, id);
   }
 
@@ -2850,10 +2928,10 @@
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind]")
       .forEach((button) => {
-        const chipKind = button.dataset.traceFocusKind || button.dataset.sourceFocusKind || "";
-        const chipId = button.dataset.traceFocusId || button.dataset.sourceFocusId || "";
+        const chipKind = button.dataset.traceFocusKind || button.dataset.sourceFocusKind || button.dataset.proofPathFocusKind || "";
+        const chipId = button.dataset.traceFocusId || button.dataset.sourceFocusId || button.dataset.proofPathFocusId || "";
         const isCurrent = chipKind === kind && chipId === id;
         button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
         button.dataset.reviewObjectSelected = isCurrent ? "true" : "false";
@@ -2870,7 +2948,7 @@
     setLogicEquationRowState("");
     renderObjectProvenance("", "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind]")
       .forEach((button) => {
         button.setAttribute("aria-pressed", "false");
         button.dataset.reviewObjectSelected = "false";

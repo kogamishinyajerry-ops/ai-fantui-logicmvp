@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p26">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p26" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p27">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p27" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -508,6 +508,22 @@
           <button type="button" data-proof-path-step="empty">等待逐句证明路径</button>
         </div>
         <p id="demo-reconstruction-proof-path-readback">等待完整电路证明</p>
+        <div id="demo-reconstruction-proof-path-object-inspector" class="demo-reconstruction-proof-path-object-inspector" data-proof-path-object-inspector="first-screen" aria-label="证明路径对象审阅">
+          <div class="demo-reconstruction-proof-path-object-inspector-head">
+            <span>对象审阅</span>
+            <strong id="demo-reconstruction-proof-path-object-inspector-object">等待对象</strong>
+          </div>
+          <div class="demo-reconstruction-proof-path-object-inspector-metrics">
+            <div><span>来源</span><strong id="demo-reconstruction-proof-path-object-inspector-source-count">0 条 DOCX</strong></div>
+            <div><span>P035</span><strong id="demo-reconstruction-proof-path-object-inspector-step-count">0 步</strong></div>
+            <div><span>邻接</span><strong id="demo-reconstruction-proof-path-object-inspector-edge-count">0 上游 · 0 下游</strong></div>
+            <div><span>覆盖</span><strong id="demo-reconstruction-proof-path-object-inspector-coverage">等待覆盖</strong></div>
+          </div>
+          <p id="demo-reconstruction-proof-path-object-inspector-summary">选择证明路径对象后显示来源、步骤和上下游。</p>
+          <ol id="demo-reconstruction-proof-path-object-inspector-neighbors" class="demo-reconstruction-proof-path-object-inspector-neighbors">
+            <li>等待对象邻接</li>
+          </ol>
+        </div>
       </section>
       <section id="demo-reconstruction-scenario-comparator" class="demo-reconstruction-scenario-comparator" data-scenario-comparator="first-screen" aria-label="demo.html 场景对照板">
         <div class="demo-reconstruction-scenario-comparator-head">

@@ -214,6 +214,12 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-neighborhood-incoming"' in html
     assert 'id="demo-reconstruction-neighborhood-outgoing"' in html
     assert 'id="demo-reconstruction-neighborhood-adjacent"' in html
+    assert 'id="demo-reconstruction-proof-path-object-inspector"' in html
+    assert 'id="demo-reconstruction-proof-path-object-inspector-object"' in html
+    assert 'id="demo-reconstruction-proof-path-object-inspector-source-count"' in html
+    assert 'id="demo-reconstruction-proof-path-object-inspector-step-count"' in html
+    assert 'id="demo-reconstruction-proof-path-object-inspector-edge-count"' in html
+    assert 'id="demo-reconstruction-proof-path-object-inspector-neighbors"' in html
     assert 'id="demo-reconstruction-circuit-ladder"' in html
     assert 'id="demo-reconstruction-ladder-summary"' in html
     assert 'id="demo-reconstruction-ladder-list"' in html
@@ -404,6 +410,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyProofPathObjectJump" in script
     assert "proofPathFocusRecords" in script
     assert "proofPathFocusTarget" in script
+    assert "renderProofPathObjectInspector" in script
+    assert "renderProofPathInspectorNeighbors" in script
+    assert "applyProofPathInspectorJump" in script
+    assert "proofPathInspectorFocusId" in script
     assert "等待源文证据" in script
     assert "本句" in script
     assert "installScenarioComparatorActions" in script
@@ -474,6 +484,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-proof-path" in stylesheet
     assert ".demo-reconstruction-proof-path-list" in stylesheet
     assert ".demo-reconstruction-proof-path-focus-list" in stylesheet
+    assert ".demo-reconstruction-proof-path-object-inspector" in stylesheet
+    assert ".demo-reconstruction-proof-path-object-inspector-metrics" in stylesheet
+    assert ".demo-reconstruction-proof-path-object-inspector-neighbors" in stylesheet
     assert ".demo-reconstruction-proof-path-step em" in stylesheet
     assert ".demo-reconstruction-scenario-comparator" in stylesheet
     assert ".demo-reconstruction-scenario-comparator-list" in stylesheet
@@ -1032,10 +1045,21 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["proof_path_final_review"]["selectedAnchor"] == "P035-S05"
     assert "wire_logic4_thr_lock" in payload["proof_path_final_review"]["reviewObjectText"]
     assert "聚焦连线" in payload["proof_path_final_review"]["reviewSyncText"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_object_inspector_final_review"]["objectText"]
+    assert "连线" in payload["proof_path_object_inspector_final_review"]["coverageText"]
+    assert payload["proof_path_object_inspector_final_review"]["neighborCount"] >= 2
+    assert "THR_LOCK" in payload["proof_path_object_inspector_final_review"]["neighborText"]
+    assert "logic4" in payload["proof_path_object_inspector_neighbor_review"]["reviewObjectText"]
+    assert "logic4" in payload["proof_path_object_inspector_neighbor_review"]["readbackText"]
+    assert "logic4" in payload["proof_path_object_inspector_neighbor_review"]["inspectorObjectText"]
     assert payload["proof_path_chip_review"]["selectedAnchor"] == "P035-S01"
     assert "tls_unlocked" in payload["proof_path_chip_review"]["reviewObjectText"]
     assert "聚焦节点" in payload["proof_path_chip_review"]["reviewSyncText"]
     assert "tls_unlocked" in payload["proof_path_chip_review"]["readbackText"]
+    assert "tls_unlocked" in payload["proof_path_object_inspector_chip_review"]["objectText"]
+    assert "节点" in payload["proof_path_object_inspector_chip_review"]["coverageText"]
+    assert payload["proof_path_object_inspector_chip_review"]["neighborCount"] >= 2
+    assert "L3" in payload["proof_path_object_inspector_chip_review"]["neighborText"]
     assert payload["scenario_comparator_review"]["buttonCount"] == 2
     assert "最大反推" in payload["scenario_comparator_review"]["maxText"]
     assert "抑制阻塞" in payload["scenario_comparator_review"]["inhibitText"]
