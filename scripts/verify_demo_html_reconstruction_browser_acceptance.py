@@ -136,6 +136,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     review_packet_path = artifact_dir / f"demo-reconstruction-review-packet-{stamp}.png"
     custody_matrix_path = artifact_dir / f"demo-reconstruction-custody-matrix-{stamp}.png"
     scenario_ledger_path = artifact_dir / f"demo-reconstruction-scenario-ledger-{stamp}.png"
+    scenario_truth_path = artifact_dir / f"demo-reconstruction-scenario-truth-table-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -211,6 +212,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "scenario_ledger_visible": page.locator(
                         "#demo-reconstruction-scenario-ledger"
+                    ).is_visible(timeout=5000),
+                    "scenario_truth_table_visible": page.locator(
+                        "#demo-reconstruction-scenario-truth-table"
                     ).is_visible(timeout=5000),
                     "console_frame_visible": page.locator(
                         "#demo-reconstruction-console-frame"
@@ -1731,17 +1735,28 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-scenario-ledger").screenshot(
                     path=str(scenario_ledger_path)
                 )
+                page.locator("#demo-reconstruction-scenario-truth-table").screenshot(
+                    path=str(scenario_truth_path)
+                )
                 scenario_ledger_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
                         return {
                             rowCount: document.querySelectorAll("[data-scenario-ledger-row]").length,
                             statusText: text("#demo-reconstruction-scenario-ledger-status"),
+                            truthRowCount: document.querySelectorAll("[data-scenario-truth-row]").length,
+                            truthCapturedCount: document.querySelectorAll("[data-scenario-truth-row][data-scenario-truth-captured='true']").length,
+                            truthStatusText: text("#demo-reconstruction-scenario-truth-status"),
                             activeRows: Array.from(
                                 document.querySelectorAll("[data-scenario-ledger-row][aria-pressed='true']")
                             ).map((row) => row.getAttribute("data-scenario-ledger-row")),
+                            truthActiveRows: Array.from(
+                                document.querySelectorAll("[data-scenario-truth-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-scenario-truth-row")),
                             maxReverseText: text('[data-scenario-ledger-row="max-reverse"]'),
                             inhibitText: text('[data-scenario-ledger-row="inhibit-block"]'),
+                            truthMaxReverseText: text('[data-scenario-truth-row="max-reverse"]'),
+                            truthInhibitText: text('[data-scenario-truth-row="inhibit-block"]'),
                         };
                     }"""
                 )
@@ -1767,8 +1782,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         activeRows: Array.from(
                             document.querySelectorAll("[data-scenario-ledger-row][aria-pressed='true']")
                         ).map((row) => row.getAttribute("data-scenario-ledger-row")),
+                        truthActiveRows: Array.from(
+                            document.querySelectorAll("[data-scenario-truth-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-scenario-truth-row")),
                         maxReverseText: document
                             .querySelector('[data-scenario-ledger-row="max-reverse"]')
+                            ?.textContent?.trim() || "",
+                        truthMaxReverseText: document
+                            .querySelector('[data-scenario-truth-row="max-reverse"]')
                             ?.textContent?.trim() || "",
                     })"""
                 )
@@ -1808,6 +1829,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 review_packet_path,
                 custody_matrix_path,
                 scenario_ledger_path,
+                scenario_truth_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -2237,15 +2259,26 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             scenario_ledger_review["rowCount"] == 5
             and "2/5" in scenario_ledger_review["statusText"]
+            and scenario_ledger_review["truthRowCount"] == 5
+            and scenario_ledger_review["truthCapturedCount"] == 2
+            and "2/5" in scenario_ledger_review["truthStatusText"]
             and scenario_ledger_review["activeRows"] == ["inhibit-block"]
+            and scenario_ledger_review["truthActiveRows"] == ["inhibit-block"]
             and "DEPLOYED" in scenario_ledger_review["maxReverseText"]
             and "THR:ON" in scenario_ledger_review["maxReverseText"]
             and "FAULT" in scenario_ledger_review["inhibitText"]
             and "THR:BLOCKED" in scenario_ledger_review["inhibitText"]
+            and "L4:ON" in scenario_ledger_review["truthMaxReverseText"]
+            and "THR:ON" in scenario_ledger_review["truthMaxReverseText"]
+            and "FAULT" in scenario_ledger_review["truthInhibitText"]
+            and "THR:BLOCKED" in scenario_ledger_review["truthInhibitText"]
             and scenario_ledger_outer_control["status"] == "DEPLOYED"
             and scenario_ledger_outer_control["output"] == "ON"
             and scenario_ledger_outer_control["activeRows"] == ["max-reverse"]
+            and scenario_ledger_outer_control["truthActiveRows"] == ["max-reverse"]
             and "DEPLOYED" in scenario_ledger_outer_control["maxReverseText"]
+            and "L4:ON" in scenario_ledger_outer_control["truthMaxReverseText"]
+            and "THR:ON" in scenario_ledger_outer_control["truthMaxReverseText"]
         )
         else "fail",
         "boundary": "pass" if not restricted else "fail",
@@ -2275,6 +2308,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "review_packet": str(review_packet_path),
             "custody_matrix": str(custody_matrix_path),
             "scenario_ledger": str(scenario_ledger_path),
+            "scenario_truth_table": str(scenario_truth_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),

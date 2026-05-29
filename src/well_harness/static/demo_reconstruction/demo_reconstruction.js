@@ -171,6 +171,8 @@
   const outputMirrorThrOutput = $("demo-reconstruction-output-mirror-thr-output");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
   const scenarioLedgerList = $("demo-reconstruction-scenario-ledger-list");
+  const scenarioTruthStatus = $("demo-reconstruction-scenario-truth-status");
+  const scenarioTruthBody = $("demo-reconstruction-scenario-truth-body");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let latestDocxPayload = null;
   let sourceEntries = [];
@@ -1594,6 +1596,7 @@
       empty.textContent = "等待 demo 预设同步";
       scenarioLedgerList.appendChild(empty);
       setText(scenarioLedgerStatus, "等待预设");
+      renderScenarioTruthTable("");
       return;
     }
     let captured = 0;
@@ -1634,6 +1637,69 @@
       scenarioLedgerList.appendChild(button);
     });
     setText(scenarioLedgerStatus, `${captured}/${records.length} 已记录`);
+    renderScenarioTruthTable(activeId);
+  }
+
+  function scenarioTruthTokens(record) {
+    if (!record.captured) return ["L1:--", "L2:--", "L3:--", "L4:--"];
+    const parts = String(record.logic || "")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts.length ? parts : ["L1:--", "L2:--", "L3:--", "L4:--"];
+  }
+
+  function renderScenarioTruthTable(activeId) {
+    if (!scenarioTruthBody) return;
+    scenarioTruthBody.innerHTML = "";
+    const records = Array.from(scenarioLedgerRecords.values());
+    if (!records.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "demo-reconstruction-scenario-truth-row";
+      empty.dataset.scenarioTruthRow = "empty";
+      empty.textContent = "等待 demo 预设同步";
+      scenarioTruthBody.appendChild(empty);
+      setText(scenarioTruthStatus, "等待逻辑");
+      return;
+    }
+
+    let captured = 0;
+    records.forEach((record) => {
+      if (record.captured) captured += 1;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-scenario-truth-row";
+      button.dataset.scenarioTruthRow = record.id;
+      button.dataset.scenarioTruthCaptured = record.captured ? "true" : "false";
+      button.setAttribute("aria-pressed", record.id === activeId ? "true" : "false");
+      button.addEventListener("click", () => applyScenarioPreset(record.id));
+
+      const head = document.createElement("div");
+      head.className = "demo-reconstruction-scenario-truth-row-head";
+      const label = document.createElement("strong");
+      label.textContent = record.label || record.id;
+      const status = document.createElement("span");
+      status.textContent = record.captured ? `${record.status} · THR ${record.thr}` : "未记录";
+      head.append(label, status);
+
+      const logic = document.createElement("div");
+      logic.className = "demo-reconstruction-scenario-truth-logic";
+      scenarioTruthTokens(record).forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        logic.appendChild(chip);
+      });
+
+      const outputs = document.createElement("p");
+      outputs.textContent = record.captured
+        ? `TLS:${record.tls} · ETRAC:${record.etrac} · EEC:${record.eec} · THR:${record.thr}`
+        : "点击场景后记录输出";
+
+      button.append(head, logic, outputs);
+      scenarioTruthBody.appendChild(button);
+    });
+    setText(scenarioTruthStatus, `${captured}/${records.length} 已记录`);
   }
 
   function updateScenarioLedgerFromFrame() {

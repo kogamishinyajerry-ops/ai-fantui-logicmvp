@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p16">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p16" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p17">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p17" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -482,6 +482,15 @@
         </div>
         <div id="demo-reconstruction-scenario-ledger-list" class="demo-reconstruction-scenario-ledger-list">
           <button type="button" class="demo-reconstruction-scenario-row" data-scenario-ledger-row="loading">正在读取预设</button>
+        </div>
+      </section>
+      <section id="demo-reconstruction-scenario-truth-table" class="demo-reconstruction-scenario-truth-table" data-scenario-truth-table="demo-html-logic" aria-label="demo.html 场景逻辑真值表">
+        <div class="demo-reconstruction-scenario-truth-head">
+          <h3>逻辑真值表</h3>
+          <strong id="demo-reconstruction-scenario-truth-status">等待逻辑</strong>
+        </div>
+        <div id="demo-reconstruction-scenario-truth-body" class="demo-reconstruction-scenario-truth-body">
+          <button type="button" class="demo-reconstruction-scenario-truth-row" data-scenario-truth-row="loading">正在读取场景逻辑</button>
         </div>
       </section>
       <section id="demo-reconstruction-operator-guide" class="demo-reconstruction-operator-guide" data-demo-mvp-guide="first-screen" aria-label="首屏验收路径">

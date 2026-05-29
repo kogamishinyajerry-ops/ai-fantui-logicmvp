@@ -235,6 +235,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-scenario-ledger"' in html
     assert 'id="demo-reconstruction-scenario-ledger-status"' in html
     assert 'id="demo-reconstruction-scenario-ledger-list"' in html
+    assert 'id="demo-reconstruction-scenario-truth-table"' in html
+    assert 'id="demo-reconstruction-scenario-truth-status"' in html
+    assert 'id="demo-reconstruction-scenario-truth-body"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -336,6 +339,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "updateCustodyOutputReadback" in script
     assert "updateScenarioLedgerFromFrame" in script
     assert "renderScenarioLedger" in script
+    assert "renderScenarioTruthTable" in script
+    assert "scenarioTruthTokens" in script
     assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
@@ -392,6 +397,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-output-mirror-values" in stylesheet
     assert ".demo-reconstruction-scenario-ledger" in stylesheet
     assert ".demo-reconstruction-scenario-row" in stylesheet
+    assert ".demo-reconstruction-scenario-truth-table" in stylesheet
+    assert ".demo-reconstruction-scenario-truth-row" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -489,6 +496,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["review_packet"].endswith(".png")
     assert payload["screenshots"]["custody_matrix"].endswith(".png")
     assert payload["screenshots"]["scenario_ledger"].endswith(".png")
+    assert payload["screenshots"]["scenario_truth_table"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -505,6 +513,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "operator_guide_visible": True,
         "output_mirror_visible": True,
         "scenario_ledger_visible": True,
+        "scenario_truth_table_visible": True,
         "console_frame_visible": True,
         "evidence_rail_visible": True,
     }
@@ -797,14 +806,25 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "BLOCKED" in payload["output_mirror"]["inhibit-block"]["thr"]
     assert payload["scenario_ledger_review"]["rowCount"] == 5
     assert "2/5" in payload["scenario_ledger_review"]["statusText"]
+    assert payload["scenario_ledger_review"]["truthRowCount"] == 5
+    assert payload["scenario_ledger_review"]["truthCapturedCount"] == 2
+    assert "2/5" in payload["scenario_ledger_review"]["truthStatusText"]
     assert payload["scenario_ledger_review"]["activeRows"] == ["inhibit-block"]
+    assert payload["scenario_ledger_review"]["truthActiveRows"] == ["inhibit-block"]
     assert "DEPLOYED" in payload["scenario_ledger_review"]["maxReverseText"]
     assert "THR:ON" in payload["scenario_ledger_review"]["maxReverseText"]
     assert "FAULT" in payload["scenario_ledger_review"]["inhibitText"]
     assert "THR:BLOCKED" in payload["scenario_ledger_review"]["inhibitText"]
+    assert "L4:ON" in payload["scenario_ledger_review"]["truthMaxReverseText"]
+    assert "THR:ON" in payload["scenario_ledger_review"]["truthMaxReverseText"]
+    assert "FAULT" in payload["scenario_ledger_review"]["truthInhibitText"]
+    assert "THR:BLOCKED" in payload["scenario_ledger_review"]["truthInhibitText"]
     assert payload["scenario_ledger_outer_control"]["status"] == "DEPLOYED"
     assert payload["scenario_ledger_outer_control"]["output"] == "ON"
     assert payload["scenario_ledger_outer_control"]["activeRows"] == ["max-reverse"]
+    assert payload["scenario_ledger_outer_control"]["truthActiveRows"] == ["max-reverse"]
+    assert "L4:ON" in payload["scenario_ledger_outer_control"]["truthMaxReverseText"]
+    assert "THR:ON" in payload["scenario_ledger_outer_control"]["truthMaxReverseText"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
