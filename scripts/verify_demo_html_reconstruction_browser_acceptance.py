@@ -4192,6 +4192,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "62 条源记录" not in first_screen_review["visible_text"]
             and "查看链路" not in first_screen_review["visible_text"]
             and "查看验收详情" not in first_screen_review["visible_text"]
+            and "source" not in first_screen_review["visible_text"]
+            and "ON / BLOCK" not in first_screen_review["visible_text"]
         )
         else "fail",
         "review_drawer_deep_link": "pass"

@@ -4356,7 +4356,7 @@
         id: "docx-source",
         order: "00",
         anchor: "P035-S01",
-        label: "DOCX 原句",
+        label: "需求原句",
         detail: `${sourceEntries.length} 条源记录进入 P035 工作过程`,
         output: "逐句生成起点",
         focusKind: "",
@@ -4393,7 +4393,7 @@
 
   function circuitSnapshotPreviewLabel(record) {
     if (!record) return "链路";
-    if (record.id === "docx-source") return "DOCX";
+    if (record.id === "docx-source") return "需求";
     if (record.id === "runway-l1-unlock") return "L1";
     if (record.id === "runway-l2-power") return "L2";
     if (record.id === "runway-l3-deploy") return "L3";
@@ -4424,7 +4424,7 @@
 
   function circuitSnapshotMiniLabel(record) {
     if (!record) return "电路";
-    if (record.id === "docx-source") return "DOCX";
+    if (record.id === "docx-source") return "需求";
     if (record.id === "runway-l1-unlock") return "L1";
     if (record.id === "runway-l2-power") return "L2";
     if (record.id === "runway-l3-deploy") return "L3";
@@ -4436,8 +4436,8 @@
 
   function circuitSnapshotMiniStatus(record) {
     if (!record) return "";
-    if (record.id === "docx-source") return "source";
-    if (record.id === "demo-output") return "ON / BLOCK";
+    if (record.id === "docx-source") return "已接入";
+    if (record.id === "demo-output") return "可读";
     return record.output || record.anchor || "";
   }
 
