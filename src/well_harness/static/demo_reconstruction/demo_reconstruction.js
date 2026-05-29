@@ -1976,6 +1976,9 @@
 
   function reviewHashForState() {
     const params = new URLSearchParams();
+    if (detailDrawer && !detailDrawer.hidden && detailDrawer.dataset.reviewDetailDrawer !== "hidden") {
+      params.set("review", "1");
+    }
     if (currentTraceStep && currentTraceStep.anchor) params.set("step", currentTraceStep.anchor);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
       params.set("focus", `${currentCircuitFocus.kind}:${currentCircuitFocus.id}`);

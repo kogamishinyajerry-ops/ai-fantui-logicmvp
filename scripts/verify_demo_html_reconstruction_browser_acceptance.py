@@ -730,6 +730,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             completeActionText: text("#demo-reconstruction-review-index-complete-action"),
                             completeBannerInitiallyHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                             completeBannerInitialText: text("#demo-reconstruction-complete-mode-banner"),
+                            reviewLinkHref: document.querySelector("#demo-reconstruction-review-link")?.getAttribute("href") || "",
                             completeModeLinkHref: document.querySelector("#demo-reconstruction-complete-mode-link")?.getAttribute("href") || "",
                             completeModeLinkText: text("#demo-reconstruction-complete-mode-link"),
                             stepText: text("#demo-reconstruction-review-index-step"),
@@ -4306,6 +4307,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_review["completeActionText"] == "完整交付态"
             and review_index_review["completeBannerInitiallyHidden"] is True
             and "完整交付态已启用" in review_index_review["completeBannerInitialText"]
+            and "review=1" in review_index_review["reviewLinkHref"]
             and review_index_review["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
             and review_index_review["completeModeLinkText"] == "固定链接"
             and review_index_review["activeHandoff"] == []

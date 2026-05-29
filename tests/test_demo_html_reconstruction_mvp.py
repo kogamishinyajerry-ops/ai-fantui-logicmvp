@@ -606,6 +606,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'if (compactRunwayMode !== "operator")' in script
     assert "setReviewDetailDrawerVisible" in script
     assert 'params.get("review") === "1"' in script
+    assert 'params.set("review", "1")' in script
     assert "setReviewDetailDrawerVisible(false)" in script
     assert "setReviewDetailDrawerVisible(true)" in script
     assert "installOutputMirrorObserver" in script
@@ -1085,6 +1086,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["completeActionText"] == "完整交付态"
     assert payload["review_index_review"]["completeBannerInitiallyHidden"] is True
     assert "完整交付态已启用" in payload["review_index_review"]["completeBannerInitialText"]
+    assert "review=1" in payload["review_index_review"]["reviewLinkHref"]
     assert payload["review_index_review"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
     assert payload["review_index_review"]["completeModeLinkText"] == "固定链接"
     assert "6/6 模块" in payload["review_index_review"]["tourSummaryText"]
