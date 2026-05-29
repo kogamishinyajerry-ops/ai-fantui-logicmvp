@@ -342,12 +342,16 @@ h2 { margin-bottom: 0; font-size: 18px; }
   text-align: right;
 }
 .demo-reconstruction-compact-runway-actions,
+.demo-reconstruction-compact-runway-path,
 .demo-reconstruction-compact-runway-controls,
 .demo-reconstruction-compact-runway-readout,
 .demo-reconstruction-compact-runway-outputs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+.demo-reconstruction-compact-runway-path {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .demo-reconstruction-compact-runway-controls {
   grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(136px, 0.7fr) minmax(116px, auto);
@@ -374,6 +378,40 @@ h2 { margin-bottom: 0; font-size: 18px; }
   border-color: #2563eb;
   background: #eff6ff;
   color: #1d4ed8;
+}
+.demo-reconstruction-compact-runway-path div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-compact-runway-path span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-compact-runway-path strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-compact-runway-path div[data-state="pass"] {
+  border-color: #9ae6b4;
+  background: #ecfdf3;
+}
+.demo-reconstruction-compact-runway-path div[data-state="pass"] strong {
+  color: #047857;
+}
+.demo-reconstruction-compact-runway-path div[data-state="block"] {
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+.demo-reconstruction-compact-runway-path div[data-state="block"] strong {
+  color: #b42318;
 }
 .demo-reconstruction-compact-runway-actions button:focus-visible {
   outline: 2px solid #2563eb;
@@ -5612,6 +5650,9 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .demo-reconstruction-circuit-snapshot-mini {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .demo-reconstruction-compact-runway-path {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .demo-reconstruction-trace-card-list,

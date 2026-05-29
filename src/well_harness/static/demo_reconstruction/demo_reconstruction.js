@@ -200,6 +200,7 @@
   const compactRunwayState = $("demo-reconstruction-compact-runway-state");
   const compactRunwayLock = $("demo-reconstruction-compact-runway-lock");
   const compactRunwaySummary = $("demo-reconstruction-compact-runway-summary");
+  const compactRunwayPathSteps = Array.from(document.querySelectorAll("[data-compact-runway-path-step]"));
   const compactRunwayButtons = Array.from(document.querySelectorAll("[data-compact-runway-preset]"));
   const compactRunwayTra = $("demo-reconstruction-compact-runway-tra");
   const compactRunwayTraValue = $("demo-reconstruction-compact-runway-tra-value");
@@ -2781,6 +2782,44 @@
     return "idle";
   }
 
+  function compactPathStateLabel(frameDocument, snapshot) {
+    const tra = frameNumber(frameDocument, "#fan-tra-lever", Number(compactRunwayTra?.value) || 0);
+    const vdt = frameNumber(frameDocument, "#fan-vdt", Number(compactRunwayVdt?.value) || 0);
+    const inhibited = frameChecked(frameDocument, "#fan-reverser-inhibited", !!compactRunwayInhibit?.checked);
+    const lock = snapshot ? compactLockLabel(snapshot.thr) : "等待输出";
+    const leverReady = tra < 0;
+    const deployReady = vdt >= 90;
+    return {
+      lever: {
+        state: leverReady ? "pass" : "wait",
+        label: leverReady ? compactAngleLabel(tra) : "待进入",
+      },
+      deploy: {
+        state: deployReady ? "pass" : "wait",
+        label: deployReady ? `${Math.round(vdt)}%` : "未到90%",
+      },
+      safety: {
+        state: inhibited ? "block" : "pass",
+        label: inhibited ? "抑制" : "允许",
+      },
+      lock: {
+        state: lock === "阻塞" ? "block" : (lock === "释放" ? "pass" : "wait"),
+        label: lock,
+      },
+    };
+  }
+
+  function setCompactRunwayPathState(frameDocument, snapshot) {
+    const states = compactPathStateLabel(frameDocument, snapshot);
+    compactRunwayPathSteps.forEach((step) => {
+      const key = step.dataset.compactRunwayPathStep || "";
+      const state = states[key] || {state: "wait", label: "等待"};
+      step.dataset.state = state.state;
+      const label = step.querySelector("strong");
+      if (label) setText(label, state.label);
+    });
+  }
+
   function updateCompactRunwayOutputs(snapshot) {
     const values = {
       tls: snapshot && snapshot.tls ? snapshot.tls : "--",
@@ -2854,6 +2893,7 @@
     const snapshot = scenarioOutputSnapshot(frameDocument);
     syncCompactOperatorInputsFromFrame(frameDocument);
     updateCompactRunwayOutputs(snapshot);
+    setCompactRunwayPathState(frameDocument, snapshot);
     if (active) compactRunwayMode = active.id;
     if (!active && compactRunwayMode === "operator") {
       setCompactRunwayButtonState("");
