@@ -134,6 +134,60 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-review-index-tour-rail {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+.demo-reconstruction-review-index-tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.demo-reconstruction-review-index-tour-head strong {
+  color: #111827;
+  font-size: 13px;
+}
+.demo-reconstruction-review-index-tour-head span {
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-index-tour-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+.demo-reconstruction-review-index-tour-list button {
+  min-width: 0;
+  min-height: 54px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #344054;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.25;
+  padding: 8px;
+  text-align: left;
+}
+.demo-reconstruction-review-index-tour-list button:hover,
+.demo-reconstruction-review-index-tour-list button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-review-index-tour-list button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+  color: #0f766e;
+  font-weight: 700;
+}
 .demo-reconstruction-review-index-evidence-rail {
   display: grid;
   gap: 8px;
@@ -4746,6 +4800,9 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-logic-equation-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-review-index-tour-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .demo-reconstruction-review-index-evidence-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4834,6 +4891,7 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   }
   .demo-reconstruction-trace-card-list,
   .demo-reconstruction-logic-equation-list,
+  .demo-reconstruction-review-index-tour-list,
   .demo-reconstruction-review-index-evidence-list,
   .demo-reconstruction-review-index-build-list,
   .demo-reconstruction-review-index-equation-list,

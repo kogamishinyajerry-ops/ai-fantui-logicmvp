@@ -159,6 +159,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-object"' in html
     assert 'id="demo-reconstruction-review-index-output"' in html
     assert 'id="demo-reconstruction-review-index-proof-path"' in html
+    assert 'id="demo-reconstruction-review-index-tour-rail"' in html
+    assert 'id="demo-reconstruction-review-index-tour-summary"' in html
+    assert 'id="demo-reconstruction-review-index-tour-list"' in html
     assert 'id="demo-reconstruction-review-index-evidence-rail"' in html
     assert 'id="demo-reconstruction-review-index-evidence-summary"' in html
     assert 'id="demo-reconstruction-review-index-evidence-list"' in html
@@ -524,6 +527,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-review-index" in stylesheet
+    assert ".demo-reconstruction-review-index-tour-rail" in stylesheet
+    assert ".demo-reconstruction-review-index-tour-list" in stylesheet
     assert ".demo-reconstruction-review-index-evidence-rail" in stylesheet
     assert ".demo-reconstruction-review-index-evidence-list" in stylesheet
     assert ".demo-reconstruction-review-index-build-ladder" in stylesheet
@@ -815,6 +820,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["wireCoverage"] == "23/23"
     assert payload["review_index_review"]["visible"] is True
     assert payload["review_index_review"]["buttonCount"] == 13
+    assert payload["review_index_review"]["tourCount"] == 6
     assert payload["review_index_review"]["evidenceCount"] == 4
     assert payload["review_index_review"]["buildStepCount"] == 5
     assert payload["review_index_review"]["equationCount"] == 4
@@ -843,6 +849,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
+    assert "6/6 模块" in payload["review_index_review"]["tourSummaryText"]
     assert "4/4 证据" in payload["review_index_review"]["evidenceSummaryText"]
     assert "67 条" in payload["review_index_review"]["evidenceSourceText"]
     assert "20/20 节点" in payload["review_index_review"]["evidenceCoverageText"]
@@ -895,6 +902,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     ]
     assert payload["review_index_evidence_rail_action"]["scrollY"] > 0
     assert "20/20 节点" in payload["review_index_evidence_rail_action"]["evidenceSummaryText"]
+    assert payload["review_index_tour_rail_action"]["activeTour"] == ["closure"]
+    assert payload["review_index_tour_rail_action"]["scrollY"] > 0
     assert payload["review_index_equation_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_equation_rail_action"]["activeEquations"] == ["logic4"]
     assert payload["review_index_equation_rail_action"]["activeTargets"] == [
@@ -1453,6 +1462,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_scenario_rail": "pass",
         "review_index_output_rail": "pass",
         "review_index_build_ladder": "pass",
+        "review_index_tour_rail": "pass",
         "review_index_evidence_rail": "pass",
         "review_index_equation_rail": "pass",
         "review_index_closure_rail": "pass",
