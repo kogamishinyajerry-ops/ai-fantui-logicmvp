@@ -160,6 +160,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-output"' in html
     assert 'id="demo-reconstruction-review-index-list"' in html
     assert 'id="demo-reconstruction-docx-circuit-map"' in html
+    assert 'id="demo-reconstruction-requirement-ledger"' in html
+    assert 'id="demo-reconstruction-requirement-ledger-search"' in html
+    assert 'id="demo-reconstruction-requirement-ledger-filters"' in html
+    assert 'id="demo-reconstruction-requirement-ledger-list"' in html
     assert 'id="demo-reconstruction-docx-trace-board"' in html
     assert 'id="demo-reconstruction-trace-card-list"' in html
     assert 'id="demo-reconstruction-selected-trace"' in html
@@ -231,6 +235,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "demo.html 复刻 MVP 控制台" in html
     assert "审阅路径索引" in html
     assert "原始 DOCX 逐句到完整电路" in html
+    assert "需求覆盖账本" in html
     assert "逐句构建轨道" in html
     assert "逐句装配总览" in html
     assert "对象反查证据板" in html
@@ -258,6 +263,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyEmbeddedTraceFocus" in script
     assert "renderCoverageMatrix" in script
     assert "updateCoverageFilter" in script
+    assert "renderRequirementLedger" in script
+    assert "requirementLedgerItems" in script
+    assert "activateRequirementLedgerItem" in script
     assert "circuitCoverageKind" in script
     assert "setTraceCardTabStops" in script
     assert "handleTraceCardKeydown" in script
@@ -285,6 +293,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderTopologyMatrix" in script
     assert "topologyWireIds" in script
     assert "updateTopologyReadback" in script
+    assert "resetTopologyReadback" in script
     assert "renderTopologyStepFilter" in script
     assert "updateTopologyFilter" in script
     assert 'params.get("topology")' in script
@@ -322,6 +331,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-review-index" in stylesheet
     assert ".demo-reconstruction-review-index-list" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
+    assert ".demo-reconstruction-requirement-ledger" in stylesheet
+    assert ".demo-reconstruction-requirement-ledger-row" in stylesheet
     assert ".demo-reconstruction-trace-board" in stylesheet
     assert ".demo-reconstruction-trace-card" in stylesheet
     assert ".demo-reconstruction-embedded-highlight-status" in stylesheet
@@ -466,6 +477,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "assembly_map_visible": True,
         "topology_matrix_visible": True,
         "source_map_visible": True,
+        "requirement_ledger_visible": True,
         "trace_board_visible": True,
         "operator_guide_visible": True,
         "output_mirror_visible": True,
@@ -474,7 +486,22 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "evidence_rail_visible": True,
     }
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
-    assert payload["source_map_review"]["reviewIndexButtonCount"] == 9
+    assert payload["source_map_review"]["reviewIndexButtonCount"] == 10
+    assert payload["source_map_review"]["requirementLedgerRowCount"] == 67
+    assert payload["source_map_review"]["requirementLedgerMappedCount"] == 44
+    assert payload["source_map_review"]["requirementLedgerContextCount"] == 18
+    assert payload["source_map_review"]["requirementLedgerP035Count"] == 5
+    assert "67 条" in payload["source_map_review"]["requirementLedgerSummary"]
+    assert "44 已映射" in payload["source_map_review"]["requirementLedgerSummary"]
+    assert payload["source_map_review"]["requirementLedgerStatus"] == "67/67 条"
+    assert payload["requirement_ledger_context_review"]["selectedFilters"] == ["context"]
+    assert payload["requirement_ledger_context_review"]["visibleRows"] == 18
+    assert "18/67" in payload["requirement_ledger_context_review"]["statusText"]
+    assert payload["requirement_ledger_action_review"]["query"] == "logic4"
+    assert payload["requirement_ledger_action_review"]["visibleRows"] >= 3
+    assert payload["requirement_ledger_action_review"]["selectedRows"] == ["step:P035-S05"]
+    assert payload["requirement_ledger_action_review"]["selectedAnchor"] == "P035-S05"
+    assert payload["requirement_ledger_action_review"]["highlightedCount"] >= 4
     assert payload["source_map_review"]["sequenceStepCount"] == 5
     assert payload["source_map_review"]["traceCardCount"] == 5
     assert payload["source_map_review"]["playbackStepCount"] == 5
@@ -489,7 +516,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["nodeCoverage"] == "20/20"
     assert payload["source_map_review"]["wireCoverage"] == "23/23"
     assert payload["review_index_review"]["visible"] is True
-    assert payload["review_index_review"]["buttonCount"] == 9
+    assert payload["review_index_review"]["buttonCount"] == 10
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
@@ -735,6 +762,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "screenshots": "pass",
         "first_screen_operator_guide": "pass",
         "docx_sentence_circuit_map": "pass",
+        "requirement_coverage_ledger": "pass",
         "review_index_navigation": "pass",
         "assembly_map_readback": "pass",
         "topology_matrix_readback": "pass",

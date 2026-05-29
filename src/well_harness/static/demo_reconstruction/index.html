@@ -75,6 +75,7 @@
     </div>
     <div id="demo-reconstruction-review-index-list" class="demo-reconstruction-review-index-list" aria-label="跳转到审阅区域">
       <button type="button" data-review-index-target="demo-reconstruction-docx-circuit-map" aria-pressed="true">DOCX 总览</button>
+      <button type="button" data-review-index-target="demo-reconstruction-requirement-ledger" aria-pressed="false">覆盖账本</button>
       <button type="button" data-review-index-target="demo-reconstruction-docx-trace-board" aria-pressed="false">逐句链路</button>
       <button type="button" data-review-index-target="demo-reconstruction-step-playback" aria-pressed="false">累计构建</button>
       <button type="button" data-review-index-target="demo-reconstruction-assembly-map" aria-pressed="false">装配总览</button>
@@ -102,6 +103,23 @@
       <div><span>完整电路</span><strong id="demo-reconstruction-docx-circuit-contract">20/20 节点 · 23/23 连线</strong></div>
       <div><span>节点映射</span><strong id="demo-reconstruction-docx-node-coverage">20/20</strong></div>
       <div><span>连线映射</span><strong id="demo-reconstruction-docx-wire-coverage">23/23</strong></div>
+    </div>
+    <div id="demo-reconstruction-requirement-ledger" class="demo-reconstruction-requirement-ledger" data-requirement-ledger="docx-coverage" aria-label="DOCX 需求覆盖账本">
+      <div class="demo-reconstruction-requirement-ledger-head">
+        <div>
+          <h3>需求覆盖账本</h3>
+          <p>把原始段落、表格行和 P035 拆解步骤汇总成可点击账本，直接核对哪些需求句段进入了 demo.html 电路。</p>
+        </div>
+        <strong id="demo-reconstruction-requirement-ledger-summary">等待覆盖账本</strong>
+      </div>
+      <div class="demo-reconstruction-requirement-ledger-tools" aria-label="需求覆盖账本筛选">
+        <input id="demo-reconstruction-requirement-ledger-search" type="search" autocomplete="off" placeholder="筛选 P035 / logic4 / THR_LOCK / 未被抑制">
+        <div id="demo-reconstruction-requirement-ledger-filters" class="demo-reconstruction-requirement-ledger-filters" aria-label="覆盖账本类型筛选"></div>
+        <strong id="demo-reconstruction-requirement-ledger-status">等待筛选</strong>
+      </div>
+      <ol id="demo-reconstruction-requirement-ledger-list" class="demo-reconstruction-requirement-ledger-list">
+        <li>正在读取需求覆盖账本</li>
+      </ol>
     </div>
     <div id="demo-reconstruction-docx-trace-board" class="demo-reconstruction-trace-board" data-docx-trace-board="true" aria-label="DOCX 原句到 L1-L4 电路链路板">
       <div class="demo-reconstruction-trace-head">
