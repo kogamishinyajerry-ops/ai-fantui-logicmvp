@@ -1897,6 +1897,7 @@
     const focus = params.get("focus") || "";
     const focusParts = focus.split(":");
     return {
+      complete: params.get("complete") === "1",
       step: params.get("step") || "",
       focusKind: focusParts.length === 2 ? focusParts[0] : "",
       focusId: focusParts.length === 2 ? focusParts[1] : "",
@@ -4512,13 +4513,18 @@
 
   function applyReviewHashState() {
     const state = readReviewHashState();
-    if (!state.step && !state.focusId && !state.query && !state.topologyStep && !state.topologyQuery && !state.lane) {
+    if (!state.complete && !state.step && !state.focusId && !state.query && !state.topologyStep && !state.topologyQuery && !state.lane) {
       setProofPathLaneMode("blueprint", {writeHash: false});
       updateReviewLink();
       return false;
     }
     applyingReviewHashState = true;
     try {
+      if (state.complete) {
+        applyReviewIndexCompleteState();
+        updateReviewLink();
+        return true;
+      }
       setProofPathLaneMode(state.lane || "blueprint", {writeHash: false});
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;

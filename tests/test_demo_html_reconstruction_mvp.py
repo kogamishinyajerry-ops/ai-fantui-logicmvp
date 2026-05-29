@@ -528,6 +528,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
+    assert 'params.get("complete") === "1"' in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -932,6 +933,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "THR ON" in payload["review_index_complete_action"]["outputText"]
     assert "对象" in payload["review_index_complete_action"]["proofPathText"]
     assert payload["review_index_complete_action"]["scrollY"] > 0
+    assert payload["review_index_complete_link"]["hash"] == "#complete=1"
+    assert payload["review_index_complete_link"]["selectedAnchor"] == "P035-S05"
+    assert payload["review_index_complete_link"]["activeScenarios"] == ["max-reverse"]
+    assert payload["review_index_complete_link"]["activeTargets"] == [
+        "demo-reconstruction-proof-path"
+    ]
+    assert payload["review_index_complete_link"]["activeGate"] == ["object-review"]
+    assert "5/5 gate" in payload["review_index_complete_link"]["readinessText"]
+    assert "wire_logic4_thr_lock" in payload["review_index_complete_link"]["objectText"]
+    assert "THR ON" in payload["review_index_complete_link"]["outputText"]
+    assert "对象" in payload["review_index_complete_link"]["proofPathText"]
     assert payload["review_index_gate_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_gate_rail_action"]["activeGate"] == ["object-review"]
     assert payload["review_index_gate_rail_action"]["activeTargets"] == [
@@ -1517,6 +1529,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_output_rail": "pass",
         "review_index_build_ladder": "pass",
         "review_index_complete_action": "pass",
+        "review_index_complete_link": "pass",
         "review_index_gate_rail": "pass",
         "review_index_handoff_rail": "pass",
         "review_index_tour_rail": "pass",
