@@ -170,6 +170,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-review"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-preview"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-preview-readback"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-mini"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-details"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-chain"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
@@ -433,6 +434,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "data-circuit-snapshot-preview-step" in script
     assert "renderCircuitSnapshotPreview" in script
     assert "circuitSnapshotPreviewLabel" in script
+    assert "data-circuit-snapshot-mini-step" in script
+    assert "renderCircuitSnapshotMini" in script
+    assert "circuitSnapshotMiniLabel" in script
     assert "TRACE_WIRE_ENDPOINTS" not in script
     assert "updateWireEndpointMapFromWires" in script
     assert "wireEndpointsForId" in script
@@ -602,6 +606,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-circuit-snapshot-metrics" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-preview" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-preview-readback" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-mini" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-mini-connector" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-details" in stylesheet
     assert ".demo-reconstruction-compact-runway" in stylesheet
     assert ".demo-reconstruction-compact-runway-controls" in stylesheet
@@ -862,6 +868,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "circuit_snapshot_preview_visible": True,
         "circuit_snapshot_preview_count": 7,
         "circuit_snapshot_preview_readback": payload["first_screen_review"]["circuit_snapshot_preview_readback"],
+        "circuit_snapshot_mini_visible": True,
+        "circuit_snapshot_mini_count": 7,
         "compact_runway_visible": True,
         "assembly_map_visible": False,
         "topology_matrix_visible": False,
@@ -956,6 +964,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["circuitSnapshotPreviewCount"] == 7
     assert payload["source_map_review"]["circuitSnapshotPreviewActive"] == ["runway-l1-unlock"]
     assert "低空解锁" in payload["source_map_review"]["circuitSnapshotPreviewReadback"]
+    assert payload["source_map_review"]["circuitSnapshotMiniCount"] == 7
+    assert payload["source_map_review"]["circuitSnapshotMiniActive"] == ["runway-l1-unlock"]
+    assert "THR" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "P035-S05" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert "THR_LOCK" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert payload["source_map_review"]["circuitSnapshotChainCount"] == 7
@@ -971,6 +982,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "反推锁释放" in payload["circuit_snapshot_preview_action"]["readbackText"]
     assert "wire_logic4_thr_lock" in payload["circuit_snapshot_preview_action"]["objectText"]
     assert "focus=wire%3Awire_logic4_thr_lock" in payload["circuit_snapshot_preview_action"]["hash"]
+    assert payload["circuit_snapshot_mini_action"]["activeMini"] == ["demo-output"]
+    assert payload["circuit_snapshot_mini_action"]["activePreview"] == ["demo-output"]
+    assert payload["circuit_snapshot_mini_action"]["activeChain"] == ["demo-output"]
+    assert payload["circuit_snapshot_mini_action"]["selectedAnchor"] == "P035-S05"
+    assert "demo 输出" in payload["circuit_snapshot_mini_action"]["readbackText"]
+    assert "wire_logic4_thr_lock" in payload["circuit_snapshot_mini_action"]["objectText"]
+    assert "focus=wire%3Awire_logic4_thr_lock" in payload["circuit_snapshot_mini_action"]["hash"]
     assert payload["requirement_ledger_context_review"]["selectedFilters"] == ["context"]
     assert payload["requirement_ledger_context_review"]["visibleRows"] == 18
     assert "18/67" in payload["requirement_ledger_context_review"]["statusText"]
