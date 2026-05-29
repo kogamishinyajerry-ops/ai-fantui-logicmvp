@@ -154,6 +154,7 @@
   const reviewIndexStep = $("demo-reconstruction-review-index-step");
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
+  const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
   const reviewIndexList = $("demo-reconstruction-review-index-list");
   const nodeList = $("demo-reconstruction-node-list");
   const wireList = $("demo-reconstruction-wire-list");
@@ -447,6 +448,7 @@
     setText(reviewIndexStep, selectedStep);
     setText(reviewIndexObject, focusedObject);
     setText(reviewIndexOutput, outputText || "等待输出");
+    setText(reviewIndexProofPath, `${proofPathLaneModeLabel(proofPathLaneMode)} · ${reviewHashForState() ? "链接已同步" : "默认视图"}`);
   }
 
   function setReviewIndexTarget(targetId) {
@@ -1253,6 +1255,7 @@
     setText(proofPathReviewStep, stepText);
     setText(proofPathReviewObject, objectText);
     setText(proofPathReviewLinkState, hash ? "链接已同步" : "默认视图");
+    setText(reviewIndexProofPath, `${proofPathLaneModeLabel(proofPathLaneMode)} · ${hash ? "链接已同步" : "默认视图"}`);
   }
 
   function cumulativeTraceContract(index) {
