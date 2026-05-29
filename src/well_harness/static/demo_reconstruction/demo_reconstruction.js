@@ -157,6 +157,8 @@
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
   const reviewIndexHandoffSummary = $("demo-reconstruction-review-index-handoff-summary");
   const reviewIndexHandoffList = $("demo-reconstruction-review-index-handoff-list");
+  const reviewIndexGateSummary = $("demo-reconstruction-review-index-gate-summary");
+  const reviewIndexGateList = $("demo-reconstruction-review-index-gate-list");
   const reviewIndexTourSummary = $("demo-reconstruction-review-index-tour-summary");
   const reviewIndexTourList = $("demo-reconstruction-review-index-tour-list");
   const reviewIndexEvidenceSummary = $("demo-reconstruction-review-index-evidence-summary");
@@ -586,6 +588,72 @@
       reviewIndexHandoffSummary,
       `${records.length}/6 交付 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
     );
+  }
+
+  function setReviewIndexGateState(gateId) {
+    if (!reviewIndexGateList) return;
+    reviewIndexGateList.querySelectorAll("[data-review-index-gate]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexGate === gateId ? "true" : "false");
+    });
+  }
+
+  function scrollToReviewIndexTarget(targetId) {
+    const target = targetId ? document.getElementById(targetId) : null;
+    setReviewIndexTarget(targetId);
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function applyReviewIndexGate(gateId) {
+    if (gateId === "docx-map") {
+      scrollToReviewIndexTarget("demo-reconstruction-docx-circuit-map");
+    } else if (gateId === "complete-circuit") {
+      applyReviewIndexClosure("l4-thr-lock");
+    } else if (gateId === "cumulative-build") {
+      applyReviewIndexBuildStep("P035-S05");
+    } else if (gateId === "object-review") {
+      applyReviewIndexOutputTarget("thr_lock");
+    } else if (gateId === "read-only-boundary") {
+      scrollToReviewIndexTarget("demo-reconstruction-review-packet");
+    }
+    setReviewIndexGateState(gateId);
+  }
+
+  function renderReviewIndexGateRail(gates) {
+    if (!reviewIndexGateList) return;
+    const gateList = Array.isArray(gates) ? gates : [];
+    reviewIndexGateList.innerHTML = "";
+    if (!gateList.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexGate = "empty";
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = "等待 gate";
+      reviewIndexGateList.appendChild(button);
+      setText(reviewIndexGateSummary, "等待 gate");
+      return;
+    }
+    gateList.forEach((gate) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexGate = gate.id;
+      button.dataset.reviewIndexGateStatus = gate.pass ? "pass" : "wait";
+      button.setAttribute("aria-pressed", "false");
+
+      const title = document.createElement("strong");
+      title.textContent = gate.label;
+      const status = document.createElement("span");
+      status.textContent = gate.pass ? "通过" : "待补齐";
+      const detail = document.createElement("small");
+      detail.textContent = gate.detail;
+
+      button.append(title, status, detail);
+      button.addEventListener("click", () => applyReviewIndexGate(gate.id));
+      reviewIndexGateList.appendChild(button);
+    });
+    const passed = gateList.filter((gate) => gate.pass).length;
+    setText(reviewIndexGateSummary, `${passed}/${gateList.length} gate · ${gateList.length - passed} 待补齐`);
   }
 
   function reviewIndexTourRecords() {
@@ -4132,6 +4200,7 @@
     renderReviewPacketDashboard(gates, reviewContext);
     updateReviewVerdictBoard(gates, reviewContext);
     renderReviewIndexHandoffRail();
+    renderReviewIndexGateRail(gates);
     renderReviewIndexTourRail();
     renderReviewIndexEvidenceRail();
     renderReviewIndexClosureRail();
