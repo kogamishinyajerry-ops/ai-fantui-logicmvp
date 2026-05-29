@@ -98,7 +98,14 @@ h2 { margin-bottom: 0; font-size: 18px; }
   color: #111827;
   font-size: 17px;
 }
-.demo-reconstruction-review-index-head > strong {
+.demo-reconstruction-review-index-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 260px;
+}
+.demo-reconstruction-review-index-actions > strong {
   min-width: 160px;
   border: 1px solid #d8dee8;
   border-radius: 999px;
@@ -108,6 +115,24 @@ h2 { margin-bottom: 0; font-size: 18px; }
   font-size: 12px;
   padding: 6px 9px;
   text-align: right;
+}
+.demo-reconstruction-review-index-actions > button {
+  min-height: 31px;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  background: #ecfdf3;
+  color: #0f766e;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+.demo-reconstruction-review-index-actions > button:hover,
+.demo-reconstruction-review-index-actions > button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
 }
 .demo-reconstruction-review-index-readback {
   display: grid;
@@ -4867,6 +4892,10 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
     min-width: 0;
     text-align: left;
   }
+  .demo-reconstruction-review-index-actions {
+    justify-content: start;
+    min-width: 0;
+  }
   .demo-reconstruction-provenance-head {
     display: grid;
   }
@@ -4965,6 +4994,10 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   }
   .demo-reconstruction-review-index-list {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .demo-reconstruction-review-index-actions {
+    align-items: stretch;
+    display: grid;
   }
   .demo-reconstruction-playback-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -202,6 +202,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelector("[data-proof-path-blueprint-chain='complete']")
                             && document.querySelector("[data-proof-path-review-strip='first-screen']")
                             && document.querySelector("[data-proof-path-object-inspector]")
+                            && document.querySelector("#demo-reconstruction-review-index-complete-action")
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-review-index-handoff]").length === 6
                             && document.querySelectorAll("[data-review-index-gate]").length === 5
@@ -424,6 +425,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             visible: !!document.querySelector("#demo-reconstruction-review-index"),
                             buttonCount: document.querySelectorAll("[data-review-index-target]").length,
                             readinessText: text("#demo-reconstruction-review-index-readiness"),
+                            completeActionText: text("#demo-reconstruction-review-index-complete-action"),
                             stepText: text("#demo-reconstruction-review-index-step"),
                             objectText: text("#demo-reconstruction-review-index-object"),
                             outputText: text("#demo-reconstruction-review-index-output"),
@@ -491,6 +493,46 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             ).map((button) => button.getAttribute("data-review-index-target")),
                         };
                     }"""
+                )
+                page.locator("#demo-reconstruction-review-index-complete-action").click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const proofTarget = document.querySelector('[data-review-index-target="demo-reconstruction-proof-path"][aria-pressed="true"]');
+                        const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        const outputText = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
+                        const readiness = document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent || "";
+                        const activeScenario = document.querySelector('[data-review-index-scenario="max-reverse"][aria-pressed="true"]');
+                        return selected
+                            && selected.textContent.trim() === "P035-S05"
+                            && proofTarget
+                            && activeScenario
+                            && objectText.includes("wire_logic4_thr_lock")
+                            && outputText.includes("THR ON")
+                            && readiness.includes("5/5 gate")
+                            && window.scrollY > 0;
+                    }""",
+                    timeout=5000,
+                )
+                review_index_complete_action = page.evaluate(
+                    """() => ({
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        activeScenarios: Array.from(
+                            document.querySelectorAll("[data-review-index-scenario][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-scenario")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        activeGate: Array.from(
+                            document.querySelectorAll("[data-review-index-gate][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-gate")),
+                        readinessText: document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent?.trim() || "",
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
+                        proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                        hash: window.location.hash,
+                        scrollY: window.scrollY,
+                    })"""
                 )
                 page.locator('[data-review-index-gate="object-review"]').click()
                 page.wait_for_function(
@@ -3632,6 +3674,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_review["outputTargetCount"] == 5
             and review_index_review["scenarioCount"] == 2
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
+            and review_index_review["completeActionText"] == "完整交付态"
             and review_index_review["activeHandoff"] == []
             and review_index_review["activeGate"] == []
             and review_index_review["activeTour"] == []
@@ -3674,6 +3717,20 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "P035-S05" in review_index_after_trace["stepText"]
             and "等待聚焦" in review_index_after_trace["objectText"]
             and "链接已同步" in review_index_after_trace["proofPathText"]
+        )
+        else "fail",
+        "review_index_complete_action": "pass"
+        if (
+            review_index_complete_action["selectedAnchor"] == "P035-S05"
+            and review_index_complete_action["activeScenarios"] == ["max-reverse"]
+            and review_index_complete_action["activeTargets"] == ["demo-reconstruction-proof-path"]
+            and review_index_complete_action["activeGate"] == ["object-review"]
+            and "5/5 gate" in review_index_complete_action["readinessText"]
+            and "wire_logic4_thr_lock" in review_index_complete_action["objectText"]
+            and "THR ON" in review_index_complete_action["outputText"]
+            and "对象" in review_index_complete_action["proofPathText"]
+            and "wire_logic4_thr_lock" in review_index_complete_action["hash"]
+            and review_index_complete_action["scrollY"] > 0
         )
         else "fail",
         "review_index_gate_rail": "pass"
@@ -4552,6 +4609,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_review": review_index_review,
         "review_index_navigation": review_index_navigation,
         "review_index_proof_path_navigation": review_index_proof_path_navigation,
+        "review_index_complete_action": review_index_complete_action,
         "review_index_gate_rail_action": review_index_gate_rail_action,
         "review_index_handoff_rail_action": review_index_handoff_rail_action,
         "review_index_tour_rail_action": review_index_tour_rail_action,
@@ -4712,6 +4770,7 @@ def main(argv: list[str] | None = None) -> int:
                 "requirement_coverage_ledger": "fail",
                 "review_index_navigation": "fail",
                 "review_index_proof_path_context": "fail",
+                "review_index_complete_action": "fail",
                 "review_index_gate_rail": "fail",
                 "review_index_handoff_rail": "fail",
                 "review_index_tour_rail": "fail",
