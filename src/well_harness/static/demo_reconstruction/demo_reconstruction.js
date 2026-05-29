@@ -2138,9 +2138,11 @@
       anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
       const title = document.createElement("span");
       title.textContent = step.title || "工作过程片段";
+      const source = document.createElement("em");
+      source.textContent = step.source_text || "等待源文证据";
       const meta = document.createElement("small");
-      meta.textContent = `${outputLabel} · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
-      button.append(anchor, title, meta);
+      meta.textContent = `${outputLabel} · 本句 ${(step.node_ids || []).length} 节点 / ${(step.wire_ids || []).length} 连线 · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      button.append(anchor, title, source, meta);
       button.addEventListener("click", () => applyProofPathStep(step.anchor || ""));
       proofPathList.appendChild(button);
     });
