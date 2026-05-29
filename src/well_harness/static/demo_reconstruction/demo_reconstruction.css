@@ -248,7 +248,8 @@ h2 { margin-bottom: 0; font-size: 18px; }
 }
 .demo-reconstruction-compact-runway-actions,
 .demo-reconstruction-compact-runway-controls,
-.demo-reconstruction-compact-runway-readout {
+.demo-reconstruction-compact-runway-readout,
+.demo-reconstruction-compact-runway-outputs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -259,6 +260,9 @@ h2 { margin-bottom: 0; font-size: 18px; }
 }
 .demo-reconstruction-compact-runway-readout {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.demo-reconstruction-compact-runway-outputs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .demo-reconstruction-compact-runway-actions button,
 .demo-reconstruction-compact-runway-apply {
@@ -323,7 +327,8 @@ h2 { margin-bottom: 0; font-size: 18px; }
   border-color: #2563eb;
   outline: none;
 }
-.demo-reconstruction-compact-runway-readout div {
+.demo-reconstruction-compact-runway-readout div,
+.demo-reconstruction-compact-runway-outputs div {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -332,16 +337,27 @@ h2 { margin-bottom: 0; font-size: 18px; }
   background: #f9fafb;
   padding: 9px;
 }
-.demo-reconstruction-compact-runway-readout span {
+.demo-reconstruction-compact-runway-readout span,
+.demo-reconstruction-compact-runway-outputs span {
   color: #667085;
   font-size: 11px;
 }
-.demo-reconstruction-compact-runway-readout strong {
+.demo-reconstruction-compact-runway-readout strong,
+.demo-reconstruction-compact-runway-outputs strong {
   color: #111827;
   font-family: "Courier New", monospace;
   font-size: 12px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+.demo-reconstruction-compact-runway-outputs div[data-state="on"] strong {
+  color: #047857;
+}
+.demo-reconstruction-compact-runway-outputs div[data-state="blocked"] strong {
+  color: #b42318;
+}
+.demo-reconstruction-compact-runway-outputs div[data-state="off"] strong {
+  color: #475467;
 }
 .demo-reconstruction-circuit-snapshot-chain {
   display: grid;
@@ -5423,7 +5439,8 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-review-packet-gates {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .demo-reconstruction-output-mirror-values {
+  .demo-reconstruction-output-mirror-values,
+  .demo-reconstruction-compact-runway-outputs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .demo-reconstruction-source-metrics {
@@ -5446,6 +5463,7 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-compact-runway-actions,
   .demo-reconstruction-compact-runway-controls,
   .demo-reconstruction-compact-runway-readout,
+  .demo-reconstruction-compact-runway-outputs,
   .demo-reconstruction-metrics,
   .demo-reconstruction-review-verdict-grid,
   .demo-reconstruction-control-strip-grid,

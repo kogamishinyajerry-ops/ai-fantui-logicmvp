@@ -340,15 +340,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 compact_runway_initial_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const outputs = () => ({
+                            tls: text("#demo-reconstruction-compact-runway-output-tls"),
+                            etrac: text("#demo-reconstruction-compact-runway-output-etrac"),
+                            eec: text("#demo-reconstruction-compact-runway-output-eec"),
+                            thr: text("#demo-reconstruction-compact-runway-output-thr"),
+                        });
                         return {
                             visible: !!document.querySelector("#demo-reconstruction-compact-runway")?.offsetParent,
                             buttonCount: document.querySelectorAll("[data-compact-runway-preset]").length,
                             controlCount: document.querySelectorAll(".demo-reconstruction-compact-runway-control").length,
+                            outputCount: document.querySelectorAll(".demo-reconstruction-compact-runway-outputs strong").length,
                             pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
                             statusText: text("#demo-reconstruction-compact-runway-status"),
                             stateText: text("#demo-reconstruction-compact-runway-state"),
                             lockText: text("#demo-reconstruction-compact-runway-lock"),
                             summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                            outputValues: outputs(),
                         };
                     }"""
                 )
@@ -363,12 +371,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 compact_runway_max_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const outputs = () => ({
+                            tls: text("#demo-reconstruction-compact-runway-output-tls"),
+                            etrac: text("#demo-reconstruction-compact-runway-output-etrac"),
+                            eec: text("#demo-reconstruction-compact-runway-output-eec"),
+                            thr: text("#demo-reconstruction-compact-runway-output-thr"),
+                        });
                         return {
                             pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
                             statusText: text("#demo-reconstruction-compact-runway-status"),
                             stateText: text("#demo-reconstruction-compact-runway-state"),
                             lockText: text("#demo-reconstruction-compact-runway-lock"),
                             summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                            outputValues: outputs(),
                         };
                     }"""
                 )
@@ -383,12 +398,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 compact_runway_inhibit_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const outputs = () => ({
+                            tls: text("#demo-reconstruction-compact-runway-output-tls"),
+                            etrac: text("#demo-reconstruction-compact-runway-output-etrac"),
+                            eec: text("#demo-reconstruction-compact-runway-output-eec"),
+                            thr: text("#demo-reconstruction-compact-runway-output-thr"),
+                        });
                         return {
                             pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
                             statusText: text("#demo-reconstruction-compact-runway-status"),
                             stateText: text("#demo-reconstruction-compact-runway-state"),
                             lockText: text("#demo-reconstruction-compact-runway-lock"),
                             summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                            outputValues: outputs(),
                         };
                     }"""
                 )
@@ -2492,6 +2514,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 compact_runway_operator_input_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const outputs = () => ({
+                            tls: text("#demo-reconstruction-compact-runway-output-tls"),
+                            etrac: text("#demo-reconstruction-compact-runway-output-etrac"),
+                            eec: text("#demo-reconstruction-compact-runway-output-eec"),
+                            thr: text("#demo-reconstruction-compact-runway-output-thr"),
+                        });
                         return {
                             pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
                             activeOperatorRows: Array.from(document.querySelectorAll("[data-operator-runway-row][aria-pressed='true']")).map((button) => button.getAttribute("data-operator-runway-row")),
@@ -2508,6 +2536,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             traValue: document.querySelector("#demo-reconstruction-compact-runway-tra")?.value || "",
                             vdtValue: document.querySelector("#demo-reconstruction-compact-runway-vdt")?.value || "",
                             inhibitChecked: !!document.querySelector("#demo-reconstruction-compact-runway-inhibit")?.checked,
+                            outputValues: outputs(),
                         };
                     }"""
                 )
@@ -3921,21 +3950,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             compact_runway_initial_review["visible"]
             and compact_runway_initial_review["buttonCount"] == 2
             and compact_runway_initial_review["controlCount"] == 3
+            and compact_runway_initial_review["outputCount"] == 4
             and compact_runway_initial_review["pressed"] == ["max-reverse"]
             and compact_runway_initial_review["statusText"] == "最大反推"
             and compact_runway_initial_review["stateText"] == "可用"
             and compact_runway_initial_review["lockText"] == "释放"
             and "释放" in compact_runway_initial_review["summaryText"]
+            and compact_runway_initial_review["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
             and compact_runway_max_review["pressed"] == ["max-reverse"]
             and compact_runway_max_review["statusText"] == "最大反推"
             and compact_runway_max_review["stateText"] == "可用"
             and compact_runway_max_review["lockText"] == "释放"
             and "释放" in compact_runway_max_review["summaryText"]
+            and compact_runway_max_review["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
             and compact_runway_inhibit_review["pressed"] == ["inhibit-block"]
             and compact_runway_inhibit_review["statusText"] == "抑制阻塞"
             and compact_runway_inhibit_review["stateText"] == "阻塞"
             and compact_runway_inhibit_review["lockText"] == "阻塞"
             and "阻塞" in compact_runway_inhibit_review["summaryText"]
+            and compact_runway_inhibit_review["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
             and compact_runway_frame_sync_review["pressed"] == ["inhibit-block"]
             and compact_runway_frame_sync_review["statusText"] == "抑制阻塞"
             and compact_runway_frame_sync_review["stateText"] == "阻塞"
@@ -3951,6 +3984,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_operator_input_review["activeReviewScenarios"] == []
             and compact_runway_operator_input_review["operatorReadbackText"] == "选择一段演示路径"
             and compact_runway_operator_input_review["controlStripStatusText"] == "等待选择"
+            and compact_runway_operator_input_review["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
             and compact_runway_operator_fault_review["faultCountText"] == "0 故障"
             and compact_runway_operator_fault_review["activeFaultText"] == ""
             and compact_runway_operator_fault_review["checkedFaultCount"] == 0
