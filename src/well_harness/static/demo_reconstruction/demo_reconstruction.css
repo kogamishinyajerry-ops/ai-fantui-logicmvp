@@ -2321,6 +2321,88 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   line-height: 1.45;
   padding: 8px;
 }
+.demo-reconstruction-scenario-comparator {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+.demo-reconstruction-scenario-comparator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.demo-reconstruction-scenario-comparator-head h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+}
+.demo-reconstruction-scenario-comparator-head strong {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f9fafb;
+  color: #1f2937;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.demo-reconstruction-scenario-comparator-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.demo-reconstruction-scenario-comparator-list button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+.demo-reconstruction-scenario-comparator-list button:hover,
+.demo-reconstruction-scenario-comparator-list button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-scenario-comparator-list button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf5;
+}
+.demo-reconstruction-scenario-comparator-list strong {
+  color: #111827;
+  font-size: 12px;
+}
+.demo-reconstruction-scenario-comparator-list span {
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 700;
+}
+.demo-reconstruction-scenario-comparator-list small {
+  color: #667085;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-scenario-comparator p {
+  margin: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 8px;
+}
 .demo-reconstruction-output-mirror {
   display: grid;
   gap: 9px;
@@ -3083,6 +3165,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-metrics,
   .demo-reconstruction-control-strip-grid,
   .demo-reconstruction-sentence-runner-list,
+  .demo-reconstruction-scenario-comparator-list,
   .demo-reconstruction-review-index-readback,
   .demo-reconstruction-keyboard-review,
   .demo-reconstruction-playback-summary,

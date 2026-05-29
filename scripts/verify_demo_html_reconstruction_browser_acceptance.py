@@ -141,6 +141,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     proof_transcript_path = artifact_dir / f"demo-reconstruction-proof-transcript-{stamp}.png"
     control_strip_path = artifact_dir / f"demo-reconstruction-control-strip-{stamp}.png"
     sentence_runner_path = artifact_dir / f"demo-reconstruction-sentence-runner-{stamp}.png"
+    scenario_comparator_path = artifact_dir / f"demo-reconstruction-scenario-comparator-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -183,6 +184,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-transcript-row]").length >= 6
                             && document.querySelectorAll("[data-control-strip-action]").length === 3
                             && document.querySelectorAll("[data-sentence-runner-step]").length === 5
+                            && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
                             && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
                             && document.querySelectorAll("[data-topology-wire]").length === 23;
@@ -223,6 +225,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "sentence_runner_visible": page.locator(
                         "#demo-reconstruction-sentence-runner"
+                    ).is_visible(timeout=5000),
+                    "scenario_comparator_visible": page.locator(
+                        "#demo-reconstruction-scenario-comparator"
                     ).is_visible(timeout=5000),
                     "scenario_ledger_visible": page.locator(
                         "#demo-reconstruction-scenario-ledger"
@@ -1779,6 +1784,91 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-sentence-runner").screenshot(
                     path=str(sentence_runner_path)
                 )
+                page.locator("#demo-reconstruction-scenario-comparator").evaluate(
+                    """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
+                )
+                page.locator("#demo-reconstruction-scenario-comparator").screenshot(
+                    path=str(scenario_comparator_path)
+                )
+                scenario_comparator_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            buttonCount: document.querySelectorAll("[data-scenario-comparator-action]").length,
+                            activeActions: Array.from(
+                                document.querySelectorAll("[data-scenario-comparator-action][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-scenario-comparator-action")),
+                            statusText: text("#demo-reconstruction-scenario-comparator-status"),
+                            readbackText: text("#demo-reconstruction-scenario-comparator-readback"),
+                            maxText: text('[data-scenario-comparator-action="max-reverse"]'),
+                            inhibitText: text('[data-scenario-comparator-action="inhibit-block"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-scenario-comparator-action="max-reverse"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const button = document.querySelector('[data-scenario-comparator-action="max-reverse"]');
+                        const status = document.querySelector("#demo-reconstruction-output-mirror-status");
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        const readback = document.querySelector("#demo-reconstruction-scenario-comparator-readback");
+                        return button
+                            && button.getAttribute("aria-pressed") === "true"
+                            && status
+                            && status.textContent.trim() === "DEPLOYED"
+                            && output
+                            && output.textContent.trim() === "ON"
+                            && readback
+                            && readback.textContent.includes("最大反推");
+                    }""",
+                    timeout=5000,
+                )
+                scenario_comparator_max_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeActions: Array.from(
+                                document.querySelectorAll("[data-scenario-comparator-action][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-scenario-comparator-action")),
+                            statusText: text("#demo-reconstruction-scenario-comparator-status"),
+                            readbackText: text("#demo-reconstruction-scenario-comparator-readback"),
+                            maxText: text('[data-scenario-comparator-action="max-reverse"]'),
+                            output: text("#demo-reconstruction-output-mirror-thr-output"),
+                        };
+                    }"""
+                )
+                page.locator('[data-scenario-comparator-action="inhibit-block"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const button = document.querySelector('[data-scenario-comparator-action="inhibit-block"]');
+                        const status = document.querySelector("#demo-reconstruction-output-mirror-status");
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        const readback = document.querySelector("#demo-reconstruction-scenario-comparator-readback");
+                        return button
+                            && button.getAttribute("aria-pressed") === "true"
+                            && status
+                            && status.textContent.trim() === "FAULT"
+                            && output
+                            && output.textContent.trim() === "BLOCKED"
+                            && readback
+                            && readback.textContent.includes("抑制阻塞");
+                    }""",
+                    timeout=5000,
+                )
+                scenario_comparator_inhibit_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeActions: Array.from(
+                                document.querySelectorAll("[data-scenario-comparator-action][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-scenario-comparator-action")),
+                            statusText: text("#demo-reconstruction-scenario-comparator-status"),
+                            readbackText: text("#demo-reconstruction-scenario-comparator-readback"),
+                            inhibitText: text('[data-scenario-comparator-action="inhibit-block"]'),
+                            output: text("#demo-reconstruction-output-mirror-thr-output"),
+                        };
+                    }"""
+                )
                 scenario_ledger_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -2210,6 +2300,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 proof_transcript_path,
                 control_strip_path,
                 sentence_runner_path,
+                scenario_comparator_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -2742,6 +2833,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "P035-S05" in sentence_runner_s05_review["controlStep"]
         )
         else "fail",
+        "scenario_comparator_readback": "pass"
+        if (
+            scenario_comparator_review["buttonCount"] == 2
+            and "最大反推" in scenario_comparator_review["maxText"]
+            and "抑制阻塞" in scenario_comparator_review["inhibitText"]
+            and scenario_comparator_max_review["activeActions"] == ["max-reverse"]
+            and "/2" in scenario_comparator_max_review["statusText"]
+            and "最大反推" in scenario_comparator_max_review["readbackText"]
+            and "THR ON" in scenario_comparator_max_review["readbackText"]
+            and scenario_comparator_max_review["output"] == "ON"
+            and scenario_comparator_inhibit_review["activeActions"] == ["inhibit-block"]
+            and "2/2" in scenario_comparator_inhibit_review["statusText"]
+            and "抑制阻塞" in scenario_comparator_inhibit_review["readbackText"]
+            and "THR BLOCKED" in scenario_comparator_inhibit_review["readbackText"]
+            and scenario_comparator_inhibit_review["output"] == "BLOCKED"
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -2774,6 +2882,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "proof_transcript": str(proof_transcript_path),
             "control_strip": str(control_strip_path),
             "sentence_runner": str(sentence_runner_path),
+            "scenario_comparator": str(scenario_comparator_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -2835,6 +2944,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "sentence_runner_review": sentence_runner_review,
         "sentence_runner_s03_review": sentence_runner_s03_review,
         "sentence_runner_s05_review": sentence_runner_s05_review,
+        "scenario_comparator_review": scenario_comparator_review,
+        "scenario_comparator_max_review": scenario_comparator_max_review,
+        "scenario_comparator_inhibit_review": scenario_comparator_inhibit_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
