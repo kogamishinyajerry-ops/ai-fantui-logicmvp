@@ -204,6 +204,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelector("[data-proof-path-review-strip='first-screen']")
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelector("#demo-reconstruction-review-index-complete-action")
+                            && document.querySelectorAll("[data-circuit-snapshot-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-review-index-handoff]").length === 6
                             && document.querySelectorAll("[data-review-index-gate]").length === 5
@@ -222,6 +223,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 first_screen_review = {
                     "review_index_visible": page.locator(
                         "#demo-reconstruction-review-index"
+                    ).is_visible(timeout=5000),
+                    "circuit_snapshot_visible": page.locator(
+                        "#demo-reconstruction-circuit-snapshot"
                     ).is_visible(timeout=5000),
                     "assembly_map_visible": page.locator(
                         "#demo-reconstruction-assembly-map"
@@ -305,6 +309,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             reviewIndexClosureCount: document.querySelectorAll("[data-review-index-closure]").length,
                             reviewIndexOutputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
                             reviewIndexScenarioCount: document.querySelectorAll("[data-review-index-scenario]").length,
+                            circuitSnapshotStepCount: document.querySelectorAll("[data-circuit-snapshot-step]").length,
+                            circuitSnapshotStatus: text("#demo-reconstruction-circuit-snapshot-status"),
+                            circuitSnapshotSource: text("#demo-reconstruction-circuit-snapshot-source"),
+                            circuitSnapshotCircuit: text("#demo-reconstruction-circuit-snapshot-circuit"),
+                            circuitSnapshotOutput: text("#demo-reconstruction-circuit-snapshot-output"),
+                            circuitSnapshotReview: text("#demo-reconstruction-circuit-snapshot-review"),
+                            circuitSnapshotReadback: text("#demo-reconstruction-circuit-snapshot-readback"),
+                            circuitSnapshotFinalText: text('[data-circuit-snapshot-step="P035-S05"]'),
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
@@ -3690,6 +3702,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["reviewIndexEvidenceCount"] == 4
             and source_map_review["reviewIndexEquationCount"] == 4
             and source_map_review["reviewIndexClosureCount"] == 5
+            and source_map_review["circuitSnapshotStepCount"] == 5
+            and "5/5 句" in source_map_review["circuitSnapshotStatus"]
+            and "62 条源记录" in source_map_review["circuitSnapshotSource"]
+            and "20/20 节点" in source_map_review["circuitSnapshotCircuit"]
+            and "23/23 连线" in source_map_review["circuitSnapshotCircuit"]
+            and "完整 demo 电路闭合" in source_map_review["circuitSnapshotOutput"]
+            and "P035-S01" in source_map_review["circuitSnapshotReview"]
+            and "P035-S01" in source_map_review["circuitSnapshotReadback"]
+            and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
+            and "THR_LOCK" in source_map_review["circuitSnapshotFinalText"]
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
