@@ -534,6 +534,46 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         scrollY: window.scrollY,
                     })"""
                 )
+                page.goto(f"{base_url}/demo-reconstruction#complete=1", wait_until="networkidle")
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const proofTarget = document.querySelector('[data-review-index-target="demo-reconstruction-proof-path"][aria-pressed="true"]');
+                        const activeScenario = document.querySelector('[data-review-index-scenario="max-reverse"][aria-pressed="true"]');
+                        const activeGate = document.querySelector('[data-review-index-gate="object-review"][aria-pressed="true"]');
+                        const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        const outputText = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
+                        const readiness = document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent || "";
+                        return selected
+                            && selected.textContent.trim() === "P035-S05"
+                            && proofTarget
+                            && activeScenario
+                            && activeGate
+                            && objectText.includes("wire_logic4_thr_lock")
+                            && outputText.includes("THR ON")
+                            && readiness.includes("5/5 gate");
+                    }""",
+                    timeout=7000,
+                )
+                review_index_complete_link = page.evaluate(
+                    """() => ({
+                        hash: window.location.hash,
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        activeScenarios: Array.from(
+                            document.querySelectorAll("[data-review-index-scenario][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-scenario")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        activeGate: Array.from(
+                            document.querySelectorAll("[data-review-index-gate][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-gate")),
+                        readinessText: document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent?.trim() || "",
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
+                        proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                    })"""
+                )
                 page.locator('[data-review-index-gate="object-review"]').click()
                 page.wait_for_function(
                     """() => {
@@ -3733,6 +3773,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_complete_action["scrollY"] > 0
         )
         else "fail",
+        "review_index_complete_link": "pass"
+        if (
+            review_index_complete_link["hash"] == "#complete=1"
+            and review_index_complete_link["selectedAnchor"] == "P035-S05"
+            and review_index_complete_link["activeScenarios"] == ["max-reverse"]
+            and review_index_complete_link["activeTargets"] == ["demo-reconstruction-proof-path"]
+            and review_index_complete_link["activeGate"] == ["object-review"]
+            and "5/5 gate" in review_index_complete_link["readinessText"]
+            and "wire_logic4_thr_lock" in review_index_complete_link["objectText"]
+            and "THR ON" in review_index_complete_link["outputText"]
+            and "对象" in review_index_complete_link["proofPathText"]
+        )
+        else "fail",
         "review_index_gate_rail": "pass"
         if (
             review_index_gate_rail_action["selectedAnchor"] == "P035-S05"
@@ -4610,6 +4663,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_navigation": review_index_navigation,
         "review_index_proof_path_navigation": review_index_proof_path_navigation,
         "review_index_complete_action": review_index_complete_action,
+        "review_index_complete_link": review_index_complete_link,
         "review_index_gate_rail_action": review_index_gate_rail_action,
         "review_index_handoff_rail_action": review_index_handoff_rail_action,
         "review_index_tour_rail_action": review_index_tour_rail_action,
@@ -4771,6 +4825,7 @@ def main(argv: list[str] | None = None) -> int:
                 "review_index_navigation": "fail",
                 "review_index_proof_path_context": "fail",
                 "review_index_complete_action": "fail",
+                "review_index_complete_link": "fail",
                 "review_index_gate_rail": "fail",
                 "review_index_handoff_rail": "fail",
                 "review_index_tour_rail": "fail",
