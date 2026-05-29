@@ -232,6 +232,14 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-output-mirror"' in html
     assert 'id="demo-reconstruction-output-mirror-status"' in html
     assert 'id="demo-reconstruction-output-mirror-thr-output"' in html
+    assert 'id="demo-reconstruction-control-strip"' in html
+    assert 'id="demo-reconstruction-control-strip-status"' in html
+    assert 'id="demo-reconstruction-control-strip-step"' in html
+    assert 'id="demo-reconstruction-control-strip-object"' in html
+    assert 'id="demo-reconstruction-control-strip-output"' in html
+    assert 'id="demo-reconstruction-control-strip-path"' in html
+    assert 'data-demo-control-strip="first-screen"' in html
+    assert 'data-control-strip-action="prove-thr"' in html
     assert 'id="demo-reconstruction-scenario-ledger"' in html
     assert 'id="demo-reconstruction-scenario-ledger-status"' in html
     assert 'id="demo-reconstruction-scenario-ledger-list"' in html
@@ -359,6 +367,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "proofTranscriptSourceText" in script
     assert "record.proofText ||" in script
     assert "抑制位为真时，展开链路保持阻塞，反推锁不释放。" in script
+    assert "installControlStripActions" in script
+    assert "activateControlStripAction" in script
+    assert "updateControlStripStatus" in script
+    assert "controlStripRecordForAction" in script
     assert "data-proof-transcript-row" in script
     assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
@@ -414,6 +426,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-custody-readback" in stylesheet
     assert ".demo-reconstruction-output-mirror" in stylesheet
     assert ".demo-reconstruction-output-mirror-values" in stylesheet
+    assert ".demo-reconstruction-control-strip" in stylesheet
+    assert ".demo-reconstruction-control-strip-actions" in stylesheet
     assert ".demo-reconstruction-scenario-ledger" in stylesheet
     assert ".demo-reconstruction-scenario-row" in stylesheet
     assert ".demo-reconstruction-scenario-truth-table" in stylesheet
@@ -444,17 +458,21 @@ def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> No
     ).read_text(encoding="utf-8")
 
     assert 'id="demo-reconstruction-operator-guide"' in html
+    assert 'id="demo-reconstruction-control-strip"' in html
     assert 'id="demo-reconstruction-operator-runway"' in html
     assert 'id="demo-reconstruction-proof-transcript"' in html
     assert 'data-demo-mvp-guide="first-screen"' in html
     assert 'data-operator-runway="demo-html-walkthrough"' in html
     assert 'data-proof-transcript="demo-html-walkthrough"' in html
     assert "演示导览轨" in html
+    assert "演示控制条" in html
     assert "逐句讲解稿" in html
     assert "选择预设" in html
     assert "查看 HUD" in html
     assert "核对输出" in html
     assert ".demo-reconstruction-operator-guide" in stylesheet
+    assert ".demo-reconstruction-control-strip" in stylesheet
+    assert ".demo-reconstruction-control-strip-grid" in stylesheet
     assert ".demo-reconstruction-guide-step" in stylesheet
     assert ".demo-reconstruction-operator-runway" in stylesheet
     assert ".demo-reconstruction-operator-runway-row" in stylesheet
@@ -532,6 +550,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["scenario_truth_table"].endswith(".png")
     assert payload["screenshots"]["operator_runway"].endswith(".png")
     assert payload["screenshots"]["proof_transcript"].endswith(".png")
+    assert payload["screenshots"]["control_strip"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -547,6 +566,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "logic_equation_board_visible": True,
         "operator_guide_visible": True,
         "output_mirror_visible": True,
+        "control_strip_visible": True,
         "scenario_ledger_visible": True,
         "scenario_truth_table_visible": True,
         "operator_runway_visible": True,
@@ -894,6 +914,24 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["proof_transcript_inhibit_review"]["runwayActiveRows"] == ["runway-inhibit"]
     assert "reverser_inhibited" in payload["proof_transcript_inhibit_review"]["objectText"]
     assert payload["proof_transcript_inhibit_review"]["output"] == "BLOCKED"
+    assert payload["control_strip_review"]["actionCount"] == 3
+    assert "THR" in payload["control_strip_review"]["outputText"]
+    assert payload["control_strip_l4_review"]["activeActions"] == ["prove-thr"]
+    assert "05/06" in payload["control_strip_l4_review"]["statusText"]
+    assert "P035-S05" in payload["control_strip_l4_review"]["stepText"]
+    assert "wire_logic4_thr_lock" in payload["control_strip_l4_review"]["objectText"]
+    assert "THR ON" in payload["control_strip_l4_review"]["outputText"]
+    assert "THR_LOCK" in payload["control_strip_l4_review"]["pathText"]
+    assert payload["control_strip_l4_review"]["runwayActiveRows"] == ["runway-l4-thr-lock"]
+    assert payload["control_strip_l4_review"]["transcriptActiveRows"] == ["runway-l4-thr-lock"]
+    assert payload["control_strip_inhibit_review"]["activeActions"] == ["block-inhibit"]
+    assert "06/06" in payload["control_strip_inhibit_review"]["statusText"]
+    assert "P035-S01" in payload["control_strip_inhibit_review"]["stepText"]
+    assert "reverser_inhibited" in payload["control_strip_inhibit_review"]["objectText"]
+    assert "THR BLOCKED" in payload["control_strip_inhibit_review"]["outputText"]
+    assert "BLOCKED" in payload["control_strip_inhibit_review"]["pathText"]
+    assert payload["control_strip_inhibit_review"]["runwayActiveRows"] == ["runway-inhibit"]
+    assert payload["control_strip_inhibit_review"]["transcriptActiveRows"] == ["runway-inhibit"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
@@ -934,6 +972,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "scenario_ledger_readback": "pass",
         "operator_runway_readback": "pass",
         "proof_transcript_readback": "pass",
+        "control_strip_readback": "pass",
         "boundary": "pass",
     }
 

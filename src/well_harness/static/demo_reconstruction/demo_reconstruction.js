@@ -244,6 +244,11 @@
   const outputMirrorEtrac = $("demo-reconstruction-output-mirror-etrac");
   const outputMirrorEec = $("demo-reconstruction-output-mirror-eec");
   const outputMirrorThrOutput = $("demo-reconstruction-output-mirror-thr-output");
+  const controlStripStatus = $("demo-reconstruction-control-strip-status");
+  const controlStripStep = $("demo-reconstruction-control-strip-step");
+  const controlStripObject = $("demo-reconstruction-control-strip-object");
+  const controlStripOutput = $("demo-reconstruction-control-strip-output");
+  const controlStripPath = $("demo-reconstruction-control-strip-path");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
   const scenarioLedgerList = $("demo-reconstruction-scenario-ledger-list");
   const scenarioTruthStatus = $("demo-reconstruction-scenario-truth-status");
@@ -254,6 +259,7 @@
   const proofTranscriptSummary = $("demo-reconstruction-proof-transcript-summary");
   const proofTranscriptList = $("demo-reconstruction-proof-transcript-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
+  const controlStripButtons = Array.from(document.querySelectorAll("[data-control-strip-action]"));
   let latestDocxPayload = null;
   let sourceEntries = [];
   let traceSteps = [];
@@ -1787,6 +1793,13 @@
     return OPERATOR_RUNWAY_RECORDS.find((record) => record.id === recordId) || null;
   }
 
+  function controlStripRecordForAction(action) {
+    if (action === "prove-thr") return operatorRunwayRecordById("runway-l4-thr-lock");
+    if (action === "block-inhibit") return operatorRunwayRecordById("runway-inhibit");
+    if (action === "start-chain") return operatorRunwayRecordById("runway-l1-unlock");
+    return null;
+  }
+
   function operatorRunwayOutputSummary() {
     const status = outputMirrorStatus && outputMirrorStatus.textContent
       ? outputMirrorStatus.textContent.trim()
@@ -1795,6 +1808,55 @@
       ? outputMirrorThrOutput.textContent.trim()
       : "--";
     return `${status} · THR ${thr}`;
+  }
+
+  function controlStripOutputSummary() {
+    const status = outputMirrorStatus && outputMirrorStatus.textContent
+      ? outputMirrorStatus.textContent.trim()
+      : "等待";
+    const thr = outputMirrorThrOutput && outputMirrorThrOutput.textContent
+      ? outputMirrorThrOutput.textContent.trim()
+      : "--";
+    return `${status} · THR ${thr}`;
+  }
+
+  function setControlStripActionState(recordId) {
+    controlStripButtons.forEach((button) => {
+      const record = controlStripRecordForAction(button.dataset.controlStripAction || "");
+      const selected = Boolean(record && record.id === recordId);
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function updateControlStripStatus() {
+    const activeRecord = operatorRunwayRecordById(activeOperatorRunwayId);
+    const stepText = currentTraceStep && currentTraceStep.anchor
+      ? `${currentTraceStep.anchor} · ${currentTraceStep.title || "工作过程片段"}`
+      : "等待 P035";
+    const objectText = reviewObjectLabel(currentCircuitFocus.kind, currentCircuitFocus.id);
+    const outputText = controlStripOutputSummary();
+    const pathText = activeRecord
+      ? `${activeRecord.order} · ${activeRecord.title} · ${activeRecord.output}`
+      : "选择 L4 证明或抑制阻塞";
+
+    setText(controlStripStep, stepText);
+    setText(controlStripObject, objectText);
+    setText(controlStripOutput, outputText);
+    setText(controlStripPath, pathText);
+    setText(controlStripStatus, activeRecord ? `${activeRecord.order}/06 · ${activeRecord.presetLabel}` : "等待选择");
+    setControlStripActionState(activeRecord ? activeRecord.id : "");
+  }
+
+  function activateControlStripAction(action) {
+    const record = controlStripRecordForAction(action);
+    if (record) activateOperatorRunwayRecord(record);
+  }
+
+  function installControlStripActions() {
+    controlStripButtons.forEach((button) => {
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => activateControlStripAction(button.dataset.controlStripAction || ""));
+    });
   }
 
   function refreshOperatorRunwayReadback(record) {
@@ -1828,6 +1890,7 @@
       setText(operatorRunwayStatus, `${record.order}/${String(OPERATOR_RUNWAY_RECORDS.length).padStart(2, "0")} · ${record.presetLabel}`);
       refreshOperatorRunwayReadback(record);
     }
+    updateControlStripStatus();
   }
 
   function activateOperatorRunwayRecord(record) {
@@ -2006,6 +2069,7 @@
       updateCustodyOutputReadback();
       updateScenarioLedgerFromFrame();
       refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
+      updateControlStripStatus();
       updateReviewIndexStatus();
       return;
     }
@@ -2020,6 +2084,7 @@
     updateCustodyOutputReadback();
     updateScenarioLedgerFromFrame();
     refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
+    updateControlStripStatus();
     updateReviewIndexStatus();
   }
 
@@ -2458,6 +2523,7 @@
         button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
         button.dataset.reviewObjectSelected = isCurrent ? "true" : "false";
       });
+    updateControlStripStatus();
   }
 
   function clearCircuitObjectFocus() {
@@ -2474,6 +2540,7 @@
         button.setAttribute("aria-pressed", "false");
         button.dataset.reviewObjectSelected = "false";
       });
+    updateControlStripStatus();
   }
 
   function handleCoverageKeyboardNavigation(event) {
@@ -2669,6 +2736,7 @@
     renderInlineChips(selectedFolded, step.folded_predicates, "demo-reconstruction-folded-chip", "无折叠谓词");
     applyEmbeddedTraceHighlight(step);
     updateCustodyActiveReadback();
+    updateControlStripStatus();
     if (options.writeHash !== false) writeReviewHashState();
   }
 
@@ -3063,7 +3131,9 @@
     }
   }
   installReviewIndexNavigation();
+  installControlStripActions();
   updateReviewIndexStatus();
+  updateControlStripStatus();
   if (coverageSearch) {
     coverageSearch.addEventListener("input", () => {
       updateCoverageFilter();

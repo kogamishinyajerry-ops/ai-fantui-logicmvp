@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p19">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p19" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p20">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p20" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -458,6 +458,23 @@
         <div><span>预设场景</span><strong id="demo-reconstruction-preset-count">5/5</strong></div>
         <div><span>状态输出</span><strong id="demo-reconstruction-status-count">6/6</strong></div>
       </div>
+      <section id="demo-reconstruction-control-strip" class="demo-reconstruction-control-strip" data-demo-control-strip="first-screen" aria-label="demo.html 演示控制条">
+        <div class="demo-reconstruction-control-strip-head">
+          <h3>演示控制条</h3>
+          <strong id="demo-reconstruction-control-strip-status">等待选择</strong>
+        </div>
+        <div class="demo-reconstruction-control-strip-grid">
+          <div><span>当前步骤</span><strong id="demo-reconstruction-control-strip-step">等待 P035</strong></div>
+          <div><span>当前对象</span><strong id="demo-reconstruction-control-strip-object">等待聚焦</strong></div>
+          <div><span>THR_LOCK</span><strong id="demo-reconstruction-control-strip-output">等待输出</strong></div>
+          <div><span>证明路径</span><strong id="demo-reconstruction-control-strip-path">等待导览</strong></div>
+        </div>
+        <div class="demo-reconstruction-control-strip-actions">
+          <button type="button" data-control-strip-action="start-chain">从 L1 开始</button>
+          <button type="button" data-control-strip-action="prove-thr">L4 证明</button>
+          <button type="button" data-control-strip-action="block-inhibit">抑制阻塞</button>
+        </div>
+      </section>
       <section id="demo-reconstruction-output-mirror" class="demo-reconstruction-output-mirror" data-output-mirror="demo-html-live" aria-label="demo.html 演示输出镜像">
         <div class="demo-reconstruction-output-mirror-head">
           <h3>演示舱输出镜像</h3>

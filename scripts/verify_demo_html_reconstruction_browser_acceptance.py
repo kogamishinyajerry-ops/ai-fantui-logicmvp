@@ -139,6 +139,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     scenario_truth_path = artifact_dir / f"demo-reconstruction-scenario-truth-table-{stamp}.png"
     operator_runway_path = artifact_dir / f"demo-reconstruction-operator-runway-{stamp}.png"
     proof_transcript_path = artifact_dir / f"demo-reconstruction-proof-transcript-{stamp}.png"
+    control_strip_path = artifact_dir / f"demo-reconstruction-control-strip-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -179,6 +180,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5
                             && document.querySelectorAll("[data-operator-runway-row]").length >= 6
                             && document.querySelectorAll("[data-proof-transcript-row]").length >= 6
+                            && document.querySelectorAll("[data-control-strip-action]").length === 3
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
                             && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
                             && document.querySelectorAll("[data-topology-wire]").length === 23;
@@ -213,6 +215,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "output_mirror_visible": page.locator(
                         "#demo-reconstruction-output-mirror"
+                    ).is_visible(timeout=5000),
+                    "control_strip_visible": page.locator(
+                        "#demo-reconstruction-control-strip"
                     ).is_visible(timeout=5000),
                     "scenario_ledger_visible": page.locator(
                         "#demo-reconstruction-scenario-ledger"
@@ -1757,6 +1762,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-proof-transcript").screenshot(
                     path=str(proof_transcript_path)
                 )
+                page.locator("#demo-reconstruction-control-strip").evaluate(
+                    """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
+                )
+                page.locator("#demo-reconstruction-control-strip").screenshot(
+                    path=str(control_strip_path)
+                )
                 scenario_ledger_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -1811,6 +1822,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             .querySelector('[data-scenario-truth-row="max-reverse"]')
                             ?.textContent?.trim() || "",
                     })"""
+                )
+                control_strip_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            actionCount: document.querySelectorAll("[data-control-strip-action]").length,
+                            activeActions: Array.from(
+                                document.querySelectorAll("[data-control-strip-action][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-control-strip-action")),
+                            statusText: text("#demo-reconstruction-control-strip-status"),
+                            stepText: text("#demo-reconstruction-control-strip-step"),
+                            objectText: text("#demo-reconstruction-control-strip-object"),
+                            outputText: text("#demo-reconstruction-control-strip-output"),
+                            pathText: text("#demo-reconstruction-control-strip-path"),
+                        };
+                    }"""
                 )
                 operator_runway_review = page.evaluate(
                     """() => {
@@ -1963,6 +1990,90 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         output: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
                     })"""
                 )
+                page.locator('[data-control-strip-action="prove-thr"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const action = document.querySelector('[data-control-strip-action="prove-thr"]');
+                        const runway = document.querySelector('[data-operator-runway-row="runway-l4-thr-lock"]');
+                        const transcript = document.querySelector('[data-proof-transcript-row="runway-l4-thr-lock"]');
+                        const output = document.querySelector("#demo-reconstruction-control-strip-output");
+                        const object = document.querySelector("#demo-reconstruction-control-strip-object");
+                        return action
+                            && action.getAttribute("aria-pressed") === "true"
+                            && runway
+                            && runway.getAttribute("aria-pressed") === "true"
+                            && transcript
+                            && transcript.getAttribute("aria-pressed") === "true"
+                            && output
+                            && output.textContent.includes("THR ON")
+                            && object
+                            && object.textContent.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                control_strip_l4_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeActions: Array.from(
+                                document.querySelectorAll("[data-control-strip-action][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-control-strip-action")),
+                            statusText: text("#demo-reconstruction-control-strip-status"),
+                            stepText: text("#demo-reconstruction-control-strip-step"),
+                            objectText: text("#demo-reconstruction-control-strip-object"),
+                            outputText: text("#demo-reconstruction-control-strip-output"),
+                            pathText: text("#demo-reconstruction-control-strip-path"),
+                            runwayActiveRows: Array.from(
+                                document.querySelectorAll("[data-operator-runway-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-operator-runway-row")),
+                            transcriptActiveRows: Array.from(
+                                document.querySelectorAll("[data-proof-transcript-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-proof-transcript-row")),
+                        };
+                    }"""
+                )
+                page.locator('[data-control-strip-action="block-inhibit"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const action = document.querySelector('[data-control-strip-action="block-inhibit"]');
+                        const runway = document.querySelector('[data-operator-runway-row="runway-inhibit"]');
+                        const transcript = document.querySelector('[data-proof-transcript-row="runway-inhibit"]');
+                        const output = document.querySelector("#demo-reconstruction-control-strip-output");
+                        const object = document.querySelector("#demo-reconstruction-control-strip-object");
+                        return action
+                            && action.getAttribute("aria-pressed") === "true"
+                            && runway
+                            && runway.getAttribute("aria-pressed") === "true"
+                            && transcript
+                            && transcript.getAttribute("aria-pressed") === "true"
+                            && output
+                            && output.textContent.includes("THR BLOCKED")
+                            && object
+                            && object.textContent.includes("reverser_inhibited");
+                    }""",
+                    timeout=5000,
+                )
+                control_strip_inhibit_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeActions: Array.from(
+                                document.querySelectorAll("[data-control-strip-action][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-control-strip-action")),
+                            statusText: text("#demo-reconstruction-control-strip-status"),
+                            stepText: text("#demo-reconstruction-control-strip-step"),
+                            objectText: text("#demo-reconstruction-control-strip-object"),
+                            outputText: text("#demo-reconstruction-control-strip-output"),
+                            pathText: text("#demo-reconstruction-control-strip-path"),
+                            runwayActiveRows: Array.from(
+                                document.querySelectorAll("[data-operator-runway-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-operator-runway-row")),
+                            transcriptActiveRows: Array.from(
+                                document.querySelectorAll("[data-proof-transcript-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-proof-transcript-row")),
+                        };
+                    }"""
+                )
             finally:
                 browser.close()
     finally:
@@ -2002,6 +2113,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 scenario_truth_path,
                 operator_runway_path,
                 proof_transcript_path,
+                control_strip_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -2493,6 +2605,28 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and proof_transcript_inhibit_review["output"] == "BLOCKED"
         )
         else "fail",
+        "control_strip_readback": "pass"
+        if (
+            control_strip_review["actionCount"] == 3
+            and "THR" in control_strip_review["outputText"]
+            and control_strip_l4_review["activeActions"] == ["prove-thr"]
+            and "05/06" in control_strip_l4_review["statusText"]
+            and "P035-S05" in control_strip_l4_review["stepText"]
+            and "wire_logic4_thr_lock" in control_strip_l4_review["objectText"]
+            and "THR ON" in control_strip_l4_review["outputText"]
+            and "THR_LOCK" in control_strip_l4_review["pathText"]
+            and control_strip_l4_review["runwayActiveRows"] == ["runway-l4-thr-lock"]
+            and control_strip_l4_review["transcriptActiveRows"] == ["runway-l4-thr-lock"]
+            and control_strip_inhibit_review["activeActions"] == ["block-inhibit"]
+            and "06/06" in control_strip_inhibit_review["statusText"]
+            and "P035-S01" in control_strip_inhibit_review["stepText"]
+            and "reverser_inhibited" in control_strip_inhibit_review["objectText"]
+            and "THR BLOCKED" in control_strip_inhibit_review["outputText"]
+            and "BLOCKED" in control_strip_inhibit_review["pathText"]
+            and control_strip_inhibit_review["runwayActiveRows"] == ["runway-inhibit"]
+            and control_strip_inhibit_review["transcriptActiveRows"] == ["runway-inhibit"]
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -2523,6 +2657,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "scenario_truth_table": str(scenario_truth_path),
             "operator_runway": str(operator_runway_path),
             "proof_transcript": str(proof_transcript_path),
+            "control_strip": str(control_strip_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -2578,6 +2713,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_transcript_review": proof_transcript_review,
         "proof_transcript_l4_review": proof_transcript_l4_review,
         "proof_transcript_inhibit_review": proof_transcript_inhibit_review,
+        "control_strip_review": control_strip_review,
+        "control_strip_l4_review": control_strip_l4_review,
+        "control_strip_inhibit_review": control_strip_inhibit_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
