@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p10">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p10" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p11">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p11" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -80,6 +80,7 @@
       <button type="button" data-review-index-target="demo-reconstruction-assembly-map" aria-pressed="false">装配总览</button>
       <button type="button" data-review-index-target="demo-reconstruction-custody-matrix" aria-pressed="false">交付链路</button>
       <button type="button" data-review-index-target="demo-reconstruction-coverage-matrix" aria-pressed="false">对象覆盖</button>
+      <button type="button" data-review-index-target="demo-reconstruction-topology-matrix" aria-pressed="false">拓扑矩阵</button>
       <button type="button" data-review-index-target="demo-reconstruction-console-frame" aria-pressed="false">演示舱</button>
       <button type="button" data-review-index-target="demo-reconstruction-scenario-ledger" aria-pressed="false">场景记录</button>
     </div>
@@ -263,6 +264,19 @@
           <span>审阅链接</span>
           <a id="demo-reconstruction-review-link" class="demo-reconstruction-review-link" href="/demo-reconstruction">当前审阅链接</a>
         </div>
+      </div>
+      <div id="demo-reconstruction-topology-matrix" class="demo-reconstruction-topology-matrix" data-topology-matrix="demo-html-wire-map" aria-label="完整 demo 电路拓扑矩阵">
+        <div class="demo-reconstruction-topology-head">
+          <div>
+            <h3>完整电路拓扑矩阵</h3>
+            <p>按 demo.html 连线逐条读出上游、下游、首次装配步骤和支撑 DOCX 锚点。</p>
+          </div>
+          <strong id="demo-reconstruction-topology-summary">等待拓扑读回</strong>
+        </div>
+        <div id="demo-reconstruction-topology-readback" class="demo-reconstruction-topology-readback" aria-live="polite">等待连线聚焦</div>
+        <ol id="demo-reconstruction-topology-list" class="demo-reconstruction-topology-list">
+          <li>正在读取完整电路拓扑</li>
+        </ol>
       </div>
       <div id="demo-reconstruction-object-provenance" class="demo-reconstruction-object-provenance" data-object-provenance="docx-to-circuit" aria-label="电路对象到 DOCX 来源反查">
         <div class="demo-reconstruction-provenance-head">
