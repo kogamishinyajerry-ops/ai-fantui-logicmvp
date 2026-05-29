@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p18">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p18" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p19">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p19" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -501,6 +501,15 @@
         <p id="demo-reconstruction-operator-runway-readback">选择一段演示路径</p>
         <div id="demo-reconstruction-operator-runway-list" class="demo-reconstruction-operator-runway-list">
           <button type="button" class="demo-reconstruction-operator-runway-row" data-operator-runway-row="loading">正在读取导览路径</button>
+        </div>
+      </section>
+      <section id="demo-reconstruction-proof-transcript" class="demo-reconstruction-proof-transcript" data-proof-transcript="demo-html-walkthrough" aria-label="demo.html 逐句讲解稿">
+        <div class="demo-reconstruction-proof-transcript-head">
+          <h3>逐句讲解稿</h3>
+          <strong id="demo-reconstruction-proof-transcript-summary">等待讲解</strong>
+        </div>
+        <div id="demo-reconstruction-proof-transcript-list" class="demo-reconstruction-proof-transcript-list">
+          <button type="button" class="demo-reconstruction-proof-transcript-row" data-proof-transcript-row="loading">正在生成讲解稿</button>
         </div>
       </section>
       <section id="demo-reconstruction-operator-guide" class="demo-reconstruction-operator-guide" data-demo-mvp-guide="first-screen" aria-label="首屏验收路径">

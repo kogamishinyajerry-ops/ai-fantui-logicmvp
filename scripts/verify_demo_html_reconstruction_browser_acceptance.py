@@ -138,6 +138,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     scenario_ledger_path = artifact_dir / f"demo-reconstruction-scenario-ledger-{stamp}.png"
     scenario_truth_path = artifact_dir / f"demo-reconstruction-scenario-truth-table-{stamp}.png"
     operator_runway_path = artifact_dir / f"demo-reconstruction-operator-runway-{stamp}.png"
+    proof_transcript_path = artifact_dir / f"demo-reconstruction-proof-transcript-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -177,6 +178,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-requirement-ledger-row]").length >= 60
                             && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5
                             && document.querySelectorAll("[data-operator-runway-row]").length >= 6
+                            && document.querySelectorAll("[data-proof-transcript-row]").length >= 6
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
                             && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
                             && document.querySelectorAll("[data-topology-wire]").length === 23;
@@ -220,6 +222,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "operator_runway_visible": page.locator(
                         "#demo-reconstruction-operator-runway"
+                    ).is_visible(timeout=5000),
+                    "proof_transcript_visible": page.locator(
+                        "#demo-reconstruction-proof-transcript"
                     ).is_visible(timeout=5000),
                     "console_frame_visible": page.locator(
                         "#demo-reconstruction-console-frame"
@@ -1746,6 +1751,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-operator-runway").screenshot(
                     path=str(operator_runway_path)
                 )
+                page.locator("#demo-reconstruction-proof-transcript").evaluate(
+                    """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
+                )
+                page.locator("#demo-reconstruction-proof-transcript").screenshot(
+                    path=str(proof_transcript_path)
+                )
                 scenario_ledger_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -1880,6 +1891,78 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         output: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
                     })"""
                 )
+                proof_transcript_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            rowCount: document.querySelectorAll("[data-proof-transcript-row]").length,
+                            readyRowCount: document.querySelectorAll("[data-proof-transcript-row][data-proof-transcript-ready='true']").length,
+                            summaryText: text("#demo-reconstruction-proof-transcript-summary"),
+                            l4Text: text('[data-proof-transcript-row="runway-l4-thr-lock"]'),
+                            inhibitText: text('[data-proof-transcript-row="runway-inhibit"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-transcript-row="runway-l4-thr-lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const row = document.querySelector('[data-proof-transcript-row="runway-l4-thr-lock"]');
+                        const runway = document.querySelector('[data-operator-runway-row="runway-l4-thr-lock"]');
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && runway
+                            && runway.getAttribute("aria-pressed") === "true"
+                            && output
+                            && output.textContent.trim() === "ON"
+                            && object
+                            && object.textContent.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                proof_transcript_l4_review = page.evaluate(
+                    """() => ({
+                        activeRows: Array.from(
+                            document.querySelectorAll("[data-proof-transcript-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-proof-transcript-row")),
+                        runwayActiveRows: Array.from(
+                            document.querySelectorAll("[data-operator-runway-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-operator-runway-row")),
+                        objectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                        output: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
+                    })"""
+                )
+                page.locator('[data-proof-transcript-row="runway-inhibit"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const row = document.querySelector('[data-proof-transcript-row="runway-inhibit"]');
+                        const runway = document.querySelector('[data-operator-runway-row="runway-inhibit"]');
+                        const output = document.querySelector("#demo-reconstruction-output-mirror-thr-output");
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && runway
+                            && runway.getAttribute("aria-pressed") === "true"
+                            && output
+                            && output.textContent.trim() === "BLOCKED"
+                            && object
+                            && object.textContent.includes("reverser_inhibited");
+                    }""",
+                    timeout=5000,
+                )
+                proof_transcript_inhibit_review = page.evaluate(
+                    """() => ({
+                        activeRows: Array.from(
+                            document.querySelectorAll("[data-proof-transcript-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-proof-transcript-row")),
+                        runwayActiveRows: Array.from(
+                            document.querySelectorAll("[data-operator-runway-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-operator-runway-row")),
+                        objectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                        output: document.querySelector("#demo-reconstruction-output-mirror-thr-output")?.textContent?.trim() || "",
+                    })"""
+                )
             finally:
                 browser.close()
     finally:
@@ -1918,6 +2001,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 scenario_ledger_path,
                 scenario_truth_path,
                 operator_runway_path,
+                proof_transcript_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -2390,6 +2474,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "FAULT" in operator_runway_inhibit_review["readbackText"]
         )
         else "fail",
+        "proof_transcript_readback": "pass"
+        if (
+            proof_transcript_review["rowCount"] == 6
+            and proof_transcript_review["readyRowCount"] == 6
+            and "6/6" in proof_transcript_review["summaryText"]
+            and "THR_LOCK" in proof_transcript_review["l4Text"]
+            and "抑制" in proof_transcript_review["inhibitText"]
+            and proof_transcript_l4_review["activeRows"] == ["runway-l4-thr-lock"]
+            and proof_transcript_l4_review["runwayActiveRows"] == ["runway-l4-thr-lock"]
+            and "wire_logic4_thr_lock" in proof_transcript_l4_review["objectText"]
+            and proof_transcript_l4_review["output"] == "ON"
+            and proof_transcript_inhibit_review["activeRows"] == ["runway-inhibit"]
+            and proof_transcript_inhibit_review["runwayActiveRows"] == ["runway-inhibit"]
+            and "reverser_inhibited" in proof_transcript_inhibit_review["objectText"]
+            and proof_transcript_inhibit_review["output"] == "BLOCKED"
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -2419,6 +2520,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "scenario_ledger": str(scenario_ledger_path),
             "scenario_truth_table": str(scenario_truth_path),
             "operator_runway": str(operator_runway_path),
+            "proof_transcript": str(proof_transcript_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -2471,6 +2573,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "operator_runway_review": operator_runway_review,
         "operator_runway_l4_review": operator_runway_l4_review,
         "operator_runway_inhibit_review": operator_runway_inhibit_review,
+        "proof_transcript_review": proof_transcript_review,
+        "proof_transcript_l4_review": proof_transcript_l4_review,
+        "proof_transcript_inhibit_review": proof_transcript_inhibit_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
