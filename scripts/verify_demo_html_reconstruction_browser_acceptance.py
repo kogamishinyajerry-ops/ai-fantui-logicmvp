@@ -1891,6 +1891,33 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator(
+                    '#demo-reconstruction-proof-path-object-inspector-neighbors [data-proof-path-inspector-focus-id="logic4"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-readback");
+                        const inspector = document.querySelector("#demo-reconstruction-proof-path-object-inspector-object");
+                        return object
+                            && object.textContent.includes("logic4")
+                            && readback
+                            && readback.textContent.includes("logic4")
+                            && inspector
+                            && inspector.textContent.includes("logic4");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_object_inspector_neighbor_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            readbackText: text("#demo-reconstruction-proof-path-readback"),
+                            inspectorObjectText: text("#demo-reconstruction-proof-path-object-inspector-object"),
+                        };
+                    }"""
+                )
                 page.locator('[data-proof-path-row="P035-S01"] [data-proof-path-focus-id="tls_unlocked"]').click()
                 page.wait_for_function(
                     """() => {
@@ -3055,6 +3082,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "连线" in proof_path_object_inspector_final_review["coverageText"]
             and proof_path_object_inspector_final_review["neighborCount"] >= 2
             and "THR_LOCK" in proof_path_object_inspector_final_review["neighborText"]
+            and "logic4" in proof_path_object_inspector_neighbor_review["reviewObjectText"]
+            and "logic4" in proof_path_object_inspector_neighbor_review["readbackText"]
+            and "logic4" in proof_path_object_inspector_neighbor_review["inspectorObjectText"]
             and proof_path_chip_review["selectedAnchor"] == "P035-S01"
             and "tls_unlocked" in proof_path_chip_review["reviewObjectText"]
             and "聚焦节点" in proof_path_chip_review["reviewSyncText"]
@@ -3195,6 +3225,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_review": proof_path_review,
         "proof_path_final_review": proof_path_final_review,
         "proof_path_object_inspector_final_review": proof_path_object_inspector_final_review,
+        "proof_path_object_inspector_neighbor_review": proof_path_object_inspector_neighbor_review,
         "proof_path_chip_review": proof_path_chip_review,
         "proof_path_object_inspector_chip_review": proof_path_object_inspector_chip_review,
         "scenario_comparator_review": scenario_comparator_review,

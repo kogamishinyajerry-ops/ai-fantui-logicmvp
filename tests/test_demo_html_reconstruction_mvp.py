@@ -412,6 +412,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "proofPathFocusTarget" in script
     assert "renderProofPathObjectInspector" in script
     assert "renderProofPathInspectorNeighbors" in script
+    assert "applyProofPathInspectorJump" in script
     assert "proofPathInspectorFocusId" in script
     assert "等待源文证据" in script
     assert "本句" in script
@@ -1048,6 +1049,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "连线" in payload["proof_path_object_inspector_final_review"]["coverageText"]
     assert payload["proof_path_object_inspector_final_review"]["neighborCount"] >= 2
     assert "THR_LOCK" in payload["proof_path_object_inspector_final_review"]["neighborText"]
+    assert "logic4" in payload["proof_path_object_inspector_neighbor_review"]["reviewObjectText"]
+    assert "logic4" in payload["proof_path_object_inspector_neighbor_review"]["readbackText"]
+    assert "logic4" in payload["proof_path_object_inspector_neighbor_review"]["inspectorObjectText"]
     assert payload["proof_path_chip_review"]["selectedAnchor"] == "P035-S01"
     assert "tls_unlocked" in payload["proof_path_chip_review"]["reviewObjectText"]
     assert "聚焦节点" in payload["proof_path_chip_review"]["reviewSyncText"]

@@ -2651,10 +2651,16 @@
       const meta = document.createElement("span");
       meta.textContent = record.meta || record.id;
       button.append(label, meta);
-      button.addEventListener("click", () => applyEmbeddedTraceFocus(record.kind, record.id));
+      button.addEventListener("click", () => applyProofPathInspectorJump(record.kind, record.id));
       li.appendChild(button);
       proofPathObjectInspectorNeighbors.appendChild(li);
     });
+  }
+
+  function applyProofPathInspectorJump(kind, id) {
+    if (!kind || !id) return;
+    applyEmbeddedTraceFocus(kind, id);
+    if (currentTraceStep) updateProofPathStatus(currentTraceStep, {kind, id});
   }
 
   function renderProofPathObjectInspector(kind, id) {
