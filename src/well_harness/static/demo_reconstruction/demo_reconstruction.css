@@ -219,6 +219,81 @@ h2 { margin-bottom: 0; font-size: 18px; }
   border-bottom: 1px solid #d8dee8;
   background: #f9fafb;
 }
+.demo-reconstruction-compact-runway {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--demo-shadow);
+  padding: 16px;
+}
+.demo-reconstruction-compact-runway-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.demo-reconstruction-compact-runway-head h2 {
+  color: #111827;
+  font-size: 17px;
+}
+.demo-reconstruction-compact-runway-head > strong {
+  min-width: 140px;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-align: right;
+}
+.demo-reconstruction-compact-runway-actions,
+.demo-reconstruction-compact-runway-readout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.demo-reconstruction-compact-runway-readout {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.demo-reconstruction-compact-runway-actions button {
+  min-height: 42px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+.demo-reconstruction-compact-runway-actions button[aria-pressed="true"] {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.demo-reconstruction-compact-runway-actions button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.demo-reconstruction-compact-runway-readout div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-compact-runway-readout span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-compact-runway-readout strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .demo-reconstruction-circuit-snapshot-chain {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -5319,6 +5394,8 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   }
   .demo-reconstruction-source-metrics,
   .demo-reconstruction-circuit-snapshot-metrics,
+  .demo-reconstruction-compact-runway-actions,
+  .demo-reconstruction-compact-runway-readout,
   .demo-reconstruction-metrics,
   .demo-reconstruction-review-verdict-grid,
   .demo-reconstruction-control-strip-grid,
