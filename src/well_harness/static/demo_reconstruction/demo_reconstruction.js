@@ -193,6 +193,11 @@
   const circuitSnapshotChain = $("demo-reconstruction-circuit-snapshot-chain");
   const circuitSnapshotList = $("demo-reconstruction-circuit-snapshot-list");
   const circuitSnapshotReadback = $("demo-reconstruction-circuit-snapshot-readback");
+  const compactRunwayStatus = $("demo-reconstruction-compact-runway-status");
+  const compactRunwayState = $("demo-reconstruction-compact-runway-state");
+  const compactRunwayLock = $("demo-reconstruction-compact-runway-lock");
+  const compactRunwaySummary = $("demo-reconstruction-compact-runway-summary");
+  const compactRunwayButtons = Array.from(document.querySelectorAll("[data-compact-runway-preset]"));
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
   const requirementLedgerSummary = $("demo-reconstruction-requirement-ledger-summary");
@@ -2601,6 +2606,76 @@
     if (button && typeof button.click === "function") button.click();
   }
 
+  function compactScenarioLabel(presetId) {
+    if (presetId === "max-reverse") return "最大反推";
+    if (presetId === "inhibit-block") return "抑制阻塞";
+    return "等待运行";
+  }
+
+  function compactStatusLabel(status) {
+    if (status === "DEPLOYED") return "可用";
+    if (status === "FAULT") return "阻塞";
+    if (status === "IDLE") return "待命";
+    return status || "等待运行";
+  }
+
+  function compactLockLabel(value) {
+    if (value === "ON" || value === "RELEASED") return "释放";
+    if (value === "BLOCKED") return "阻塞";
+    if (value === "OFF") return "未释放";
+    return value || "等待输出";
+  }
+
+  function compactSummary(snapshot, presetId) {
+    if (!snapshot) return "选择演示状态";
+    if (presetId === "max-reverse") return "最大反推链路已释放";
+    if (presetId === "inhibit-block") return "抑制生效，反推锁保持阻塞";
+    return snapshot.summary || "等待输出";
+  }
+
+  function setCompactRunwayButtonState(activeId = "") {
+    compactRunwayButtons.forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.compactRunwayPreset === activeId ? "true" : "false",
+      );
+    });
+  }
+
+  function updateCompactRunwayFromFrame(frameDocument) {
+    if (!compactRunwayStatus || !compactRunwayState || !compactRunwayLock || !compactRunwaySummary) return;
+    const active = activeScenarioFromFrame(frameDocument);
+    if (!active) {
+      setCompactRunwayButtonState("");
+      setText(compactRunwayStatus, "等待运行");
+      setText(compactRunwayState, "等待运行");
+      setText(compactRunwayLock, "等待输出");
+      setText(compactRunwaySummary, "选择演示状态");
+      return;
+    }
+    const snapshot = scenarioOutputSnapshot(frameDocument);
+    setCompactRunwayButtonState(active.id);
+    setText(compactRunwayStatus, compactScenarioLabel(active.id));
+    setText(compactRunwayState, compactStatusLabel(snapshot.status));
+    setText(compactRunwayLock, compactLockLabel(snapshot.thr));
+    setText(compactRunwaySummary, compactSummary(snapshot, active.id));
+  }
+
+  function installCompactRunwayActions() {
+    compactRunwayButtons.forEach((button) => {
+      const presetId = button.dataset.compactRunwayPreset || "";
+      button.addEventListener("click", () => {
+        setCompactRunwayButtonState(presetId);
+        setText(compactRunwayStatus, compactScenarioLabel(presetId));
+        setText(compactRunwayState, "运行中");
+        setText(compactRunwayLock, "等待输出");
+        setText(compactRunwaySummary, "正在读取结果");
+        applyScenarioPreset(presetId);
+        requestAnimationFrame(updateOutputMirrorFromFrame);
+      });
+    });
+  }
+
   function scenarioComparatorLabel(presetId) {
     if (presetId === "max-reverse") return "最大反推";
     if (presetId === "inhibit-block") return "抑制阻塞";
@@ -4356,6 +4431,7 @@
     const frameDocument = consoleFrame.contentDocument;
     if (!frameDocument || !frameDocument.querySelector("#fan-status-badge")) {
       setText(outputMirrorStatus, "等待同步");
+      updateCompactRunwayFromFrame(null);
       updateCustodyOutputReadback();
       updateScenarioLedgerFromFrame();
       refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
@@ -4371,6 +4447,7 @@
     setText(outputMirrorEtrac, frameText(frameDocument, "#fan-out-etrac-value", "--"));
     setText(outputMirrorEec, frameText(frameDocument, "#fan-out-eec-value", "--"));
     setText(outputMirrorThrOutput, frameText(frameDocument, "#fan-out-thr-value", "--"));
+    updateCompactRunwayFromFrame(frameDocument);
     updateCustodyOutputReadback();
     updateScenarioLedgerFromFrame();
     refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
@@ -5565,6 +5642,7 @@
   }
   installControlStripActions();
   installScenarioComparatorActions();
+  installCompactRunwayActions();
   proofPathLaneModeButtons.forEach((button) => {
     button.addEventListener("click", () => setProofPathLaneMode(button.dataset.proofPathLaneMode || "blueprint", {writeHash: true}));
   });

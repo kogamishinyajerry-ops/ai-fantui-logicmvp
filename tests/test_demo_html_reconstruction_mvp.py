@@ -174,6 +174,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
     assert "需求到可运行完整逻辑电路" in html
     assert "查看链路" in html
+    assert 'id="demo-reconstruction-compact-runway"' in html
+    assert 'data-compact-runway-preset="max-reverse"' in html
+    assert 'data-compact-runway-preset="inhibit-block"' in html
+    assert "验证两种典型状态" in html
     assert 'id="demo-reconstruction-detail-drawer"' in html
     assert "查看验收详情" in html
     assert "等待闭环链路" in html
@@ -559,6 +563,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "SCENARIO_COMPARATOR_IDS" in script
     assert "data-proof-transcript-row" in script
     assert "applyScenarioPreset" in script
+    assert "installCompactRunwayActions" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
     assert 'params.get("complete") === "1"' in script
@@ -570,6 +575,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-circuit-snapshot" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-metrics" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-details" in stylesheet
+    assert ".demo-reconstruction-compact-runway" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-chain" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-list" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-step" in stylesheet
@@ -821,6 +827,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "snapshot_details_closed": True,
         "review_index_visible": False,
         "circuit_snapshot_visible": True,
+        "compact_runway_visible": True,
         "assembly_map_visible": False,
         "topology_matrix_visible": False,
         "source_map_visible": False,
@@ -842,6 +849,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "console_frame_visible": False,
         "evidence_rail_visible": False,
     }
+    assert payload["compact_runway_initial_review"]["visible"] is True
+    assert payload["compact_runway_initial_review"]["buttonCount"] == 2
+    assert payload["compact_runway_max_review"]["pressed"] == ["max-reverse"]
+    assert payload["compact_runway_max_review"]["statusText"] == "最大反推"
+    assert payload["compact_runway_max_review"]["stateText"] == "可用"
+    assert payload["compact_runway_max_review"]["lockText"] == "释放"
+    assert payload["compact_runway_inhibit_review"]["pressed"] == ["inhibit-block"]
+    assert payload["compact_runway_inhibit_review"]["statusText"] == "抑制阻塞"
+    assert payload["compact_runway_inhibit_review"]["stateText"] == "阻塞"
+    assert payload["compact_runway_inhibit_review"]["lockText"] == "阻塞"
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["reviewIndexButtonCount"] == 13
     assert payload["source_map_review"]["requirementLedgerRowCount"] == 67

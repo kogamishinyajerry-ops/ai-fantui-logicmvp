@@ -252,6 +252,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "circuit_snapshot_visible": page.locator(
                         "#demo-reconstruction-circuit-snapshot"
                     ).is_visible(timeout=5000),
+                    "compact_runway_visible": page.locator(
+                        "#demo-reconstruction-compact-runway"
+                    ).is_visible(timeout=5000),
                     "assembly_map_visible": page.locator(
                         "#demo-reconstruction-assembly-map"
                     ).is_visible(timeout=5000),
@@ -313,6 +316,59 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         "#demo-reconstruction-browser-evidence"
                     ).is_visible(timeout=5000),
                 }
+                compact_runway_initial_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            visible: !!document.querySelector("#demo-reconstruction-compact-runway")?.offsetParent,
+                            buttonCount: document.querySelectorAll("[data-compact-runway-preset]").length,
+                            statusText: text("#demo-reconstruction-compact-runway-status"),
+                            stateText: text("#demo-reconstruction-compact-runway-state"),
+                            lockText: text("#demo-reconstruction-compact-runway-lock"),
+                            summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                        };
+                    }"""
+                )
+                page.locator('[data-compact-runway-preset="max-reverse"]').click()
+                page.wait_for_function(
+                    """() => {
+                        return document.querySelector("#demo-reconstruction-compact-runway-status")?.textContent?.includes("最大反推")
+                            && document.querySelector("#demo-reconstruction-compact-runway-lock")?.textContent?.includes("释放");
+                    }""",
+                    timeout=5000,
+                )
+                compact_runway_max_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
+                            statusText: text("#demo-reconstruction-compact-runway-status"),
+                            stateText: text("#demo-reconstruction-compact-runway-state"),
+                            lockText: text("#demo-reconstruction-compact-runway-lock"),
+                            summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                        };
+                    }"""
+                )
+                page.locator('[data-compact-runway-preset="inhibit-block"]').click()
+                page.wait_for_function(
+                    """() => {
+                        return document.querySelector("#demo-reconstruction-compact-runway-status")?.textContent?.includes("抑制阻塞")
+                            && document.querySelector("#demo-reconstruction-compact-runway-lock")?.textContent?.includes("阻塞");
+                    }""",
+                    timeout=5000,
+                )
+                compact_runway_inhibit_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
+                            statusText: text("#demo-reconstruction-compact-runway-status"),
+                            stateText: text("#demo-reconstruction-compact-runway-state"),
+                            lockText: text("#demo-reconstruction-compact-runway-lock"),
+                            summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                        };
+                    }"""
+                )
                 open_detail_drawers(page)
                 source_map_review = page.evaluate(
                     """() => {
@@ -3733,10 +3789,27 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             first_screen_review["detail_drawer_closed"]
             and first_screen_review["snapshot_details_closed"]
             and first_screen_review["circuit_snapshot_visible"]
+            and first_screen_review["compact_runway_visible"]
             and not first_screen_review["review_index_visible"]
             and not first_screen_review["source_map_visible"]
             and not first_screen_review["console_frame_visible"]
             and not first_screen_review["evidence_rail_visible"]
+        )
+        else "fail",
+        "compact_runway": "pass"
+        if (
+            compact_runway_initial_review["visible"]
+            and compact_runway_initial_review["buttonCount"] == 2
+            and compact_runway_max_review["pressed"] == ["max-reverse"]
+            and compact_runway_max_review["statusText"] == "最大反推"
+            and compact_runway_max_review["stateText"] == "可用"
+            and compact_runway_max_review["lockText"] == "释放"
+            and "释放" in compact_runway_max_review["summaryText"]
+            and compact_runway_inhibit_review["pressed"] == ["inhibit-block"]
+            and compact_runway_inhibit_review["statusText"] == "抑制阻塞"
+            and compact_runway_inhibit_review["stateText"] == "阻塞"
+            and compact_runway_inhibit_review["lockText"] == "阻塞"
+            and "阻塞" in compact_runway_inhibit_review["summaryText"]
         )
         else "fail",
         "docx_sentence_circuit_map": "pass"
@@ -4778,6 +4851,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         },
         "embedded_palette": embedded_palette,
         "first_screen_review": first_screen_review,
+        "compact_runway_initial_review": compact_runway_initial_review,
+        "compact_runway_max_review": compact_runway_max_review,
+        "compact_runway_inhibit_review": compact_runway_inhibit_review,
         "source_map_review": source_map_review,
         "requirement_ledger_context_review": requirement_ledger_context_review,
         "requirement_ledger_action_review": requirement_ledger_action_review,
