@@ -155,6 +155,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
+    assert 'id="demo-reconstruction-review-index-complete-action"' in html
     assert 'id="demo-reconstruction-review-index-step"' in html
     assert 'id="demo-reconstruction-review-index-object"' in html
     assert 'id="demo-reconstruction-review-index-output"' in html
@@ -533,6 +534,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-review-index" in stylesheet
+    assert ".demo-reconstruction-review-index-actions" in stylesheet
     assert ".demo-reconstruction-review-index-handoff-rail" in stylesheet
     assert ".demo-reconstruction-review-index-handoff-list" in stylesheet
     assert ".demo-reconstruction-review-index-gate-rail" in stylesheet
@@ -866,6 +868,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
+    assert payload["review_index_review"]["completeActionText"] == "完整交付态"
     assert "6/6 模块" in payload["review_index_review"]["tourSummaryText"]
     assert "4/4 证据" in payload["review_index_review"]["evidenceSummaryText"]
     assert "67 条" in payload["review_index_review"]["evidenceSourceText"]
@@ -918,6 +921,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["review_index_build_ladder_action"]["objectText"]
     assert "蓝图" in payload["review_index_build_ladder_action"]["proofPathText"]
     assert "链接已同步" in payload["review_index_build_ladder_action"]["proofPathText"]
+    assert payload["review_index_complete_action"]["selectedAnchor"] == "P035-S05"
+    assert payload["review_index_complete_action"]["activeScenarios"] == ["max-reverse"]
+    assert payload["review_index_complete_action"]["activeTargets"] == [
+        "demo-reconstruction-proof-path"
+    ]
+    assert payload["review_index_complete_action"]["activeGate"] == ["object-review"]
+    assert "5/5 gate" in payload["review_index_complete_action"]["readinessText"]
+    assert "wire_logic4_thr_lock" in payload["review_index_complete_action"]["objectText"]
+    assert "THR ON" in payload["review_index_complete_action"]["outputText"]
+    assert "对象" in payload["review_index_complete_action"]["proofPathText"]
+    assert payload["review_index_complete_action"]["scrollY"] > 0
     assert payload["review_index_gate_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_gate_rail_action"]["activeGate"] == ["object-review"]
     assert payload["review_index_gate_rail_action"]["activeTargets"] == [
@@ -1502,6 +1516,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_scenario_rail": "pass",
         "review_index_output_rail": "pass",
         "review_index_build_ladder": "pass",
+        "review_index_complete_action": "pass",
         "review_index_gate_rail": "pass",
         "review_index_handoff_rail": "pass",
         "review_index_tour_rail": "pass",

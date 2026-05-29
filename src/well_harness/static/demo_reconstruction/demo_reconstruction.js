@@ -151,6 +151,7 @@
   const presetCell = $("demo-reconstruction-preset-cell");
   const statusCell = $("demo-reconstruction-status-cell");
   const reviewIndexReadiness = $("demo-reconstruction-review-index-readiness");
+  const reviewIndexCompleteAction = $("demo-reconstruction-review-index-complete-action");
   const reviewIndexStep = $("demo-reconstruction-review-index-step");
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
@@ -618,6 +619,12 @@
       scrollToReviewIndexTarget("demo-reconstruction-review-packet");
     }
     setReviewIndexGateState(gateId);
+  }
+
+  function applyReviewIndexCompleteState() {
+    applyReviewIndexScenario("max-reverse");
+    applyReviewIndexOutputTarget("thr_lock");
+    setReviewIndexGateState("object-review");
   }
 
   function renderReviewIndexGateRail(gates) {
@@ -5277,6 +5284,9 @@
     }
   }
   installReviewIndexNavigation();
+  if (reviewIndexCompleteAction) {
+    reviewIndexCompleteAction.addEventListener("click", applyReviewIndexCompleteState);
+  }
   installControlStripActions();
   installScenarioComparatorActions();
   proofPathLaneModeButtons.forEach((button) => {
