@@ -194,6 +194,7 @@
   const circuitSnapshotPreview = $("demo-reconstruction-circuit-snapshot-preview");
   const circuitSnapshotPreviewReadback = $("demo-reconstruction-circuit-snapshot-preview-readback");
   const circuitSnapshotMini = $("demo-reconstruction-circuit-snapshot-mini");
+  const circuitSnapshotDetails = $("demo-reconstruction-circuit-snapshot-details");
   const circuitSnapshotChain = $("demo-reconstruction-circuit-snapshot-chain");
   const circuitSnapshotList = $("demo-reconstruction-circuit-snapshot-list");
   const circuitSnapshotReadback = $("demo-reconstruction-circuit-snapshot-readback");
@@ -670,9 +671,17 @@
     detailDrawer.open = !!active;
   }
 
+  function setCircuitSnapshotDetailsVisible(active) {
+    if (!circuitSnapshotDetails) return;
+    circuitSnapshotDetails.hidden = !active;
+    circuitSnapshotDetails.dataset.circuitSnapshotDetails = active ? "visible" : "hidden";
+    if (!active) circuitSnapshotDetails.open = false;
+  }
+
   function applyReviewIndexCompleteState() {
     setCompleteModeBanner(true);
     setReviewDetailDrawerVisible(true);
+    setCircuitSnapshotDetailsVisible(true);
     applyReviewIndexScenario("max-reverse");
     applyReviewIndexOutputTarget("thr_lock");
     setReviewIndexGateState("object-review");
@@ -5327,6 +5336,7 @@
       setProofPathLaneMode("blueprint", {writeHash: false});
       setCompleteModeBanner(false);
       setReviewDetailDrawerVisible(false);
+      setCircuitSnapshotDetailsVisible(false);
       updateReviewLink();
       return false;
     }
@@ -5339,6 +5349,7 @@
       }
       setCompleteModeBanner(false);
       setReviewDetailDrawerVisible(state.review);
+      setCircuitSnapshotDetailsVisible(state.review);
       setProofPathLaneMode(state.lane || "blueprint", {writeHash: false});
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;

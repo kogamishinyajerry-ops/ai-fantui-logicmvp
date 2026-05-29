@@ -172,6 +172,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-preview-readback"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-mini"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-details"' in html
+    assert 'data-circuit-snapshot-details="hidden"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-details" class="demo-reconstruction-circuit-snapshot-details" data-circuit-snapshot-details="hidden" hidden' in html
     assert 'id="demo-reconstruction-circuit-snapshot-chain"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
@@ -605,6 +607,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'summary.startsWith("等待拉杆快照")' in script
     assert 'if (compactRunwayMode !== "operator")' in script
     assert "setReviewDetailDrawerVisible" in script
+    assert "setCircuitSnapshotDetailsVisible" in script
     assert 'params.get("review") === "1"' in script
     assert 'params.set("review", "1")' in script
     assert "detailDrawer.open = !!active" in script
@@ -633,6 +636,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-circuit-snapshot-chain" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-list" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-step" in stylesheet
+    assert '.demo-reconstruction-circuit-snapshot-details[data-circuit-snapshot-details="hidden"]' in stylesheet
     assert ".demo-reconstruction-detail-drawer" in stylesheet
     assert '.demo-reconstruction-detail-drawer[data-review-detail-drawer="hidden"]' in stylesheet
     assert ".demo-reconstruction-review-index" in stylesheet
@@ -881,6 +885,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "visible_text": payload["first_screen_review"]["visible_text"],
         "detail_drawer_closed": True,
         "snapshot_details_closed": True,
+        "snapshot_details_control_visible": False,
         "detail_drawer_control_visible": False,
         "review_index_visible": False,
         "circuit_snapshot_visible": True,
@@ -916,6 +921,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "20/20 节点" not in payload["first_screen_review"]["visible_text"]
     assert "23/23 连线" not in payload["first_screen_review"]["visible_text"]
     assert "62 条源记录" not in payload["first_screen_review"]["visible_text"]
+    assert "查看链路" not in payload["first_screen_review"]["visible_text"]
     assert "查看验收详情" not in payload["first_screen_review"]["visible_text"]
     assert "低空解锁" in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
     assert payload["review_drawer_deep_link"] == {

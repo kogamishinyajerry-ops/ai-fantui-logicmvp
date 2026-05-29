@@ -170,7 +170,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             """() => {
                 const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                 const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
-                if (snapshot) snapshot.open = true;
+                if (snapshot) {
+                    snapshot.hidden = false;
+                    snapshot.dataset.circuitSnapshotDetails = "visible";
+                    snapshot.open = true;
+                }
                 if (drawer) {
                     drawer.hidden = false;
                     drawer.dataset.reviewDetailDrawer = "visible";
@@ -304,6 +308,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "snapshot_details_closed": page.locator(
                         "#demo-reconstruction-circuit-snapshot-details"
                     ).evaluate("element => !element.open"),
+                    "snapshot_details_control_visible": page.locator(
+                        "#demo-reconstruction-circuit-snapshot-details"
+                    ).evaluate(
+                        """element => {
+                            const summary = element.querySelector("summary");
+                            return !element.hidden
+                                && element.dataset.circuitSnapshotDetails !== "hidden"
+                                && !!(summary && summary.offsetParent);
+                        }"""
+                    ),
                     "detail_drawer_control_visible": page.locator(
                         "#demo-reconstruction-detail-drawer"
                     ).evaluate(
@@ -4149,6 +4163,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             first_screen_review["detail_drawer_closed"]
             and first_screen_review["snapshot_details_closed"]
+            and not first_screen_review["snapshot_details_control_visible"]
             and not first_screen_review["detail_drawer_control_visible"]
             and first_screen_review["circuit_snapshot_visible"]
             and first_screen_review["circuit_snapshot_preview_visible"]
@@ -4166,6 +4181,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "20/20 节点" not in first_screen_review["visible_text"]
             and "23/23 连线" not in first_screen_review["visible_text"]
             and "62 条源记录" not in first_screen_review["visible_text"]
+            and "查看链路" not in first_screen_review["visible_text"]
             and "查看验收详情" not in first_screen_review["visible_text"]
         )
         else "fail",

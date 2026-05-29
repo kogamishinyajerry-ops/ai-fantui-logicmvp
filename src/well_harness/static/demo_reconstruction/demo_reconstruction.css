@@ -285,6 +285,9 @@ h2 { margin-bottom: 0; font-size: 18px; }
 .demo-reconstruction-circuit-snapshot-details {
   padding: 0;
 }
+.demo-reconstruction-circuit-snapshot-details[data-circuit-snapshot-details="hidden"] {
+  display: none;
+}
 .demo-reconstruction-detail-drawer {
   margin-top: 16px;
   box-shadow: var(--demo-shadow);
