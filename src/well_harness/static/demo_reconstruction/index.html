@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p21">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p21" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p22">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p22" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -484,6 +484,25 @@
           <button type="button" data-sentence-runner-step="empty">等待 P035 拆解</button>
         </div>
         <p id="demo-reconstruction-sentence-runner-readback">等待逐句生成</p>
+      </section>
+      <section id="demo-reconstruction-scenario-comparator" class="demo-reconstruction-scenario-comparator" data-scenario-comparator="first-screen" aria-label="demo.html 场景对照板">
+        <div class="demo-reconstruction-scenario-comparator-head">
+          <h3>场景对照板</h3>
+          <strong id="demo-reconstruction-scenario-comparator-status">等待对照</strong>
+        </div>
+        <div class="demo-reconstruction-scenario-comparator-list">
+          <button type="button" data-scenario-comparator-action="max-reverse">
+            <strong>最大反推</strong>
+            <span>目标 THR ON</span>
+            <small data-scenario-comparator-result="max-reverse">等待运行</small>
+          </button>
+          <button type="button" data-scenario-comparator-action="inhibit-block">
+            <strong>抑制阻塞</strong>
+            <span>目标 THR BLOCKED</span>
+            <small data-scenario-comparator-result="inhibit-block">等待运行</small>
+          </button>
+        </div>
+        <p id="demo-reconstruction-scenario-comparator-readback">等待运行关键场景</p>
       </section>
       <section id="demo-reconstruction-output-mirror" class="demo-reconstruction-output-mirror" data-output-mirror="demo-html-live" aria-label="demo.html 演示输出镜像">
         <div class="demo-reconstruction-output-mirror-head">

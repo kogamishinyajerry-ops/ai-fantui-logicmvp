@@ -245,6 +245,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-sentence-runner-list"' in html
     assert 'id="demo-reconstruction-sentence-runner-readback"' in html
     assert 'data-sentence-runner="first-screen"' in html
+    assert 'id="demo-reconstruction-scenario-comparator"' in html
+    assert 'id="demo-reconstruction-scenario-comparator-status"' in html
+    assert 'id="demo-reconstruction-scenario-comparator-readback"' in html
+    assert 'data-scenario-comparator="first-screen"' in html
+    assert 'data-scenario-comparator-action="max-reverse"' in html
     assert 'id="demo-reconstruction-scenario-ledger"' in html
     assert 'id="demo-reconstruction-scenario-ledger-status"' in html
     assert 'id="demo-reconstruction-scenario-ledger-list"' in html
@@ -380,6 +385,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applySentenceRunnerStep" in script
     assert "updateSentenceRunnerStatus" in script
     assert "sentenceRunnerOutputLabel" in script
+    assert "installScenarioComparatorActions" in script
+    assert "updateScenarioComparatorStatus" in script
+    assert "scenarioComparatorSummary" in script
+    assert "SCENARIO_COMPARATOR_IDS" in script
     assert "data-proof-transcript-row" in script
     assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
@@ -439,6 +448,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-control-strip-actions" in stylesheet
     assert ".demo-reconstruction-sentence-runner" in stylesheet
     assert ".demo-reconstruction-sentence-runner-list" in stylesheet
+    assert ".demo-reconstruction-scenario-comparator" in stylesheet
+    assert ".demo-reconstruction-scenario-comparator-list" in stylesheet
     assert ".demo-reconstruction-scenario-ledger" in stylesheet
     assert ".demo-reconstruction-scenario-row" in stylesheet
     assert ".demo-reconstruction-scenario-truth-table" in stylesheet
@@ -471,6 +482,7 @@ def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> No
     assert 'id="demo-reconstruction-operator-guide"' in html
     assert 'id="demo-reconstruction-control-strip"' in html
     assert 'id="demo-reconstruction-sentence-runner"' in html
+    assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-operator-runway"' in html
     assert 'id="demo-reconstruction-proof-transcript"' in html
     assert 'data-demo-mvp-guide="first-screen"' in html
@@ -479,6 +491,7 @@ def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> No
     assert "演示导览轨" in html
     assert "演示控制条" in html
     assert "逐句复刻条" in html
+    assert "场景对照板" in html
     assert "逐句讲解稿" in html
     assert "选择预设" in html
     assert "查看 HUD" in html
@@ -488,6 +501,8 @@ def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> No
     assert ".demo-reconstruction-control-strip-grid" in stylesheet
     assert ".demo-reconstruction-sentence-runner" in stylesheet
     assert ".demo-reconstruction-sentence-runner-list" in stylesheet
+    assert ".demo-reconstruction-scenario-comparator" in stylesheet
+    assert ".demo-reconstruction-scenario-comparator-list" in stylesheet
     assert ".demo-reconstruction-guide-step" in stylesheet
     assert ".demo-reconstruction-operator-runway" in stylesheet
     assert ".demo-reconstruction-operator-runway-row" in stylesheet
@@ -567,6 +582,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["proof_transcript"].endswith(".png")
     assert payload["screenshots"]["control_strip"].endswith(".png")
     assert payload["screenshots"]["sentence_runner"].endswith(".png")
+    assert payload["screenshots"]["scenario_comparator"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -584,6 +600,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "output_mirror_visible": True,
         "control_strip_visible": True,
         "sentence_runner_visible": True,
+        "scenario_comparator_visible": True,
         "scenario_ledger_visible": True,
         "scenario_truth_table_visible": True,
         "operator_runway_visible": True,
@@ -964,6 +981,19 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "23/23 连线" in payload["sentence_runner_s05_review"]["readbackText"]
     assert "P035-S05" in payload["sentence_runner_s05_review"]["selectedAnchor"]
     assert "P035-S05" in payload["sentence_runner_s05_review"]["controlStep"]
+    assert payload["scenario_comparator_review"]["buttonCount"] == 2
+    assert "最大反推" in payload["scenario_comparator_review"]["maxText"]
+    assert "抑制阻塞" in payload["scenario_comparator_review"]["inhibitText"]
+    assert payload["scenario_comparator_max_review"]["activeActions"] == ["max-reverse"]
+    assert "/2" in payload["scenario_comparator_max_review"]["statusText"]
+    assert "最大反推" in payload["scenario_comparator_max_review"]["readbackText"]
+    assert "THR ON" in payload["scenario_comparator_max_review"]["readbackText"]
+    assert payload["scenario_comparator_max_review"]["output"] == "ON"
+    assert payload["scenario_comparator_inhibit_review"]["activeActions"] == ["inhibit-block"]
+    assert "2/2" in payload["scenario_comparator_inhibit_review"]["statusText"]
+    assert "抑制阻塞" in payload["scenario_comparator_inhibit_review"]["readbackText"]
+    assert "THR BLOCKED" in payload["scenario_comparator_inhibit_review"]["readbackText"]
+    assert payload["scenario_comparator_inhibit_review"]["output"] == "BLOCKED"
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
@@ -1006,6 +1036,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "proof_transcript_readback": "pass",
         "control_strip_readback": "pass",
         "sentence_runner_readback": "pass",
+        "scenario_comparator_readback": "pass",
         "boundary": "pass",
     }
 

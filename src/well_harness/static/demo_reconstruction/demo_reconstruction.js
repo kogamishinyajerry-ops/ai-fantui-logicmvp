@@ -8,6 +8,7 @@
   const EXPECTED_WIRE_COUNT = 23;
   const PRESETS = ["默认前向", "着陆展开", "最大反推", "收起回杆", "抑制阻塞"];
   const STATUS_OUTPUTS = ["SW1", "SW2", "TLS", "VDT90", "L1-L4", "THR_LOCK"];
+  const SCENARIO_COMPARATOR_IDS = ["max-reverse", "inhibit-block"];
   const OUTPUT_PATH_TARGETS = [
     {id: "tls115", label: "TLS 115VAC"},
     {id: "etrac_540v", label: "ETRAC 540VDC"},
@@ -252,6 +253,8 @@
   const sentenceRunnerStatus = $("demo-reconstruction-sentence-runner-status");
   const sentenceRunnerList = $("demo-reconstruction-sentence-runner-list");
   const sentenceRunnerReadback = $("demo-reconstruction-sentence-runner-readback");
+  const scenarioComparatorStatus = $("demo-reconstruction-scenario-comparator-status");
+  const scenarioComparatorReadback = $("demo-reconstruction-scenario-comparator-readback");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
   const scenarioLedgerList = $("demo-reconstruction-scenario-ledger-list");
   const scenarioTruthStatus = $("demo-reconstruction-scenario-truth-status");
@@ -264,6 +267,7 @@
   const consoleFrame = $("demo-reconstruction-console-frame");
   const controlStripButtons = Array.from(document.querySelectorAll("[data-control-strip-action]"));
   const sentenceRunnerButtons = () => Array.from(document.querySelectorAll("[data-sentence-runner-step]"));
+  const scenarioComparatorButtons = Array.from(document.querySelectorAll("[data-scenario-comparator-action]"));
   let latestDocxPayload = null;
   let sourceEntries = [];
   let traceSteps = [];
@@ -1675,6 +1679,63 @@
     if (button && typeof button.click === "function") button.click();
   }
 
+  function scenarioComparatorLabel(presetId) {
+    if (presetId === "max-reverse") return "最大反推";
+    if (presetId === "inhibit-block") return "抑制阻塞";
+    return presetId || "场景";
+  }
+
+  function scenarioComparatorExpected(presetId) {
+    if (presetId === "max-reverse") return "目标 DEPLOYED · THR ON";
+    if (presetId === "inhibit-block") return "目标 FAULT · THR BLOCKED";
+    return "等待运行";
+  }
+
+  function scenarioComparatorSummary(presetId) {
+    const record = scenarioLedgerRecords.get(presetId);
+    if (!record || !record.captured) return scenarioComparatorExpected(presetId);
+    return `${record.status} · THR ${record.thr}`;
+  }
+
+  function updateScenarioComparatorStatus(activeId = "") {
+    if (!scenarioComparatorStatus || !scenarioComparatorReadback) return;
+    let capturedCount = 0;
+    SCENARIO_COMPARATOR_IDS.forEach((presetId) => {
+      const record = scenarioLedgerRecords.get(presetId);
+      const captured = Boolean(record && record.captured);
+      if (captured) capturedCount += 1;
+      const result = document.querySelector(`[data-scenario-comparator-result="${presetId}"]`);
+      if (result) result.textContent = scenarioComparatorSummary(presetId);
+    });
+    scenarioComparatorButtons.forEach((button) => {
+      const presetId = button.dataset.scenarioComparatorAction || "";
+      const selected = activeId === presetId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+      button.dataset.scenarioComparatorCaptured = scenarioLedgerRecords.get(presetId)?.captured ? "true" : "false";
+    });
+    setText(scenarioComparatorStatus, `${capturedCount}/${SCENARIO_COMPARATOR_IDS.length} 已运行`);
+    const activeRecord = SCENARIO_COMPARATOR_IDS.includes(activeId) ? scenarioLedgerRecords.get(activeId) : null;
+    if (activeRecord && activeRecord.captured) {
+      setText(
+        scenarioComparatorReadback,
+        `${scenarioComparatorLabel(activeId)} · ${activeRecord.status} · THR ${activeRecord.thr} · TLS ${activeRecord.tls} · ETRAC ${activeRecord.etrac} · EEC ${activeRecord.eec}`,
+      );
+    } else {
+      setText(scenarioComparatorReadback, "运行最大反推和抑制阻塞，核对 THR_LOCK 输出差异");
+    }
+  }
+
+  function installScenarioComparatorActions() {
+    scenarioComparatorButtons.forEach((button) => {
+      const presetId = button.dataset.scenarioComparatorAction || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => {
+        updateScenarioComparatorStatus(presetId);
+        applyScenarioPreset(presetId);
+      });
+    });
+  }
+
   function renderScenarioLedger(activeId) {
     if (!scenarioLedgerList) return;
     scenarioLedgerList.innerHTML = "";
@@ -1688,6 +1749,7 @@
       scenarioLedgerList.appendChild(empty);
       setText(scenarioLedgerStatus, "等待预设");
       renderScenarioTruthTable("");
+      updateScenarioComparatorStatus("");
       return;
     }
     let captured = 0;
@@ -1729,6 +1791,7 @@
     });
     setText(scenarioLedgerStatus, `${captured}/${records.length} 已记录`);
     renderScenarioTruthTable(activeId);
+    updateScenarioComparatorStatus(activeId);
   }
 
   function scenarioTruthTokens(record) {
@@ -3220,8 +3283,10 @@
   }
   installReviewIndexNavigation();
   installControlStripActions();
+  installScenarioComparatorActions();
   updateReviewIndexStatus();
   updateControlStripStatus();
+  updateScenarioComparatorStatus("");
   if (coverageSearch) {
     coverageSearch.addEventListener("input", () => {
       updateCoverageFilter();
