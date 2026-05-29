@@ -247,15 +247,21 @@ h2 { margin-bottom: 0; font-size: 18px; }
   text-align: right;
 }
 .demo-reconstruction-compact-runway-actions,
+.demo-reconstruction-compact-runway-controls,
 .demo-reconstruction-compact-runway-readout {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+.demo-reconstruction-compact-runway-controls {
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(136px, 0.7fr) minmax(116px, auto);
+  align-items: stretch;
+}
 .demo-reconstruction-compact-runway-readout {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.demo-reconstruction-compact-runway-actions button {
+.demo-reconstruction-compact-runway-actions button,
+.demo-reconstruction-compact-runway-apply {
   min-height: 42px;
   border: 1px solid #d8dee8;
   border-radius: 8px;
@@ -273,6 +279,49 @@ h2 { margin-bottom: 0; font-size: 18px; }
 .demo-reconstruction-compact-runway-actions button:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
+}
+.demo-reconstruction-compact-runway-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 9px;
+}
+.demo-reconstruction-compact-runway-control span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-compact-runway-control strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-compact-runway-control input[type="range"] {
+  width: 100%;
+  min-width: 0;
+}
+.demo-reconstruction-compact-runway-toggle {
+  align-content: center;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+}
+.demo-reconstruction-compact-runway-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.demo-reconstruction-compact-runway-toggle strong {
+  grid-column: 1 / -1;
+}
+.demo-reconstruction-compact-runway-apply {
+  width: 100%;
+}
+.demo-reconstruction-compact-runway-apply:hover,
+.demo-reconstruction-compact-runway-apply:focus-visible {
+  border-color: #2563eb;
+  outline: none;
 }
 .demo-reconstruction-compact-runway-readout div {
   display: grid;
@@ -5395,6 +5444,7 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-source-metrics,
   .demo-reconstruction-circuit-snapshot-metrics,
   .demo-reconstruction-compact-runway-actions,
+  .demo-reconstruction-compact-runway-controls,
   .demo-reconstruction-compact-runway-readout,
   .demo-reconstruction-metrics,
   .demo-reconstruction-review-verdict-grid,

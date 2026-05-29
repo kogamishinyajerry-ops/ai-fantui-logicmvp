@@ -94,13 +94,31 @@
     <div class="demo-reconstruction-compact-runway-head">
       <div>
         <p class="demo-reconstruction-kicker">快速演示</p>
-        <h2>验证两种典型状态</h2>
+        <h2>操作者快速面板</h2>
       </div>
       <strong id="demo-reconstruction-compact-runway-status">等待运行</strong>
     </div>
     <div class="demo-reconstruction-compact-runway-actions" aria-label="选择演示状态">
       <button type="button" data-compact-runway-preset="max-reverse" aria-pressed="false">最大反推</button>
       <button type="button" data-compact-runway-preset="inhibit-block" aria-pressed="false">抑制阻塞</button>
+    </div>
+    <div class="demo-reconstruction-compact-runway-controls" aria-label="操作者输入">
+      <label class="demo-reconstruction-compact-runway-control" for="demo-reconstruction-compact-runway-tra">
+        <span>拉杆</span>
+        <strong id="demo-reconstruction-compact-runway-tra-value">-32°</strong>
+        <input id="demo-reconstruction-compact-runway-tra" type="range" min="-32" max="0" step="0.5" value="-32">
+      </label>
+      <label class="demo-reconstruction-compact-runway-control" for="demo-reconstruction-compact-runway-vdt">
+        <span>展开反馈</span>
+        <strong id="demo-reconstruction-compact-runway-vdt-value">100%</strong>
+        <input id="demo-reconstruction-compact-runway-vdt" type="range" min="0" max="100" step="1" value="100">
+      </label>
+      <label class="demo-reconstruction-compact-runway-control demo-reconstruction-compact-runway-toggle" for="demo-reconstruction-compact-runway-inhibit">
+        <span>安全抑制</span>
+        <input id="demo-reconstruction-compact-runway-inhibit" type="checkbox">
+        <strong id="demo-reconstruction-compact-runway-inhibit-value">关闭</strong>
+      </label>
+      <button id="demo-reconstruction-compact-runway-apply" class="demo-reconstruction-compact-runway-apply" type="button">运行输入</button>
     </div>
     <div class="demo-reconstruction-compact-runway-readout" aria-label="演示结果">
       <div><span>运行状态</span><strong id="demo-reconstruction-compact-runway-state">等待运行</strong></div>
