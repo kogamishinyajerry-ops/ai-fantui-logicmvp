@@ -116,6 +116,7 @@
   const sourceIndexClear = $("docx-circuit-source-index-clear");
   const sourceIndexList = $("docx-circuit-source-index-list");
   const workbenchBar = $("docx-circuit-workbench-bar");
+  const sourceIndexDetails = $("docx-circuit-source-index-details");
   const compactDemandTitle = $("docx-circuit-compact-demand-title");
   const compactDemandText = $("docx-circuit-compact-demand-text");
   const compactLogicTitle = $("docx-circuit-compact-logic-title");
@@ -302,6 +303,8 @@
     if (!sectionAnchor) return;
     const target = document.getElementById(sectionAnchor);
     if (!target) return;
+    const details = target.closest("details");
+    if (details) details.open = true;
     window.requestAnimationFrame(() => target.scrollIntoView({block: "start", behavior: "auto"}));
   }
 
@@ -866,6 +869,7 @@
       button = sourceEntryButtonForAnchor(activeSourceEntryAnchor);
     }
     if (!button) return;
+    if (sourceIndexDetails) sourceIndexDetails.open = true;
     button.scrollIntoView({block: "center", inline: "nearest"});
     button.focus({preventScroll: true});
   }

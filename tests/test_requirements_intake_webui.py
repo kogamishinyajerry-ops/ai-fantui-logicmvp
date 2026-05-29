@@ -6417,6 +6417,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-show-source-entry"' in html
     assert 'id="docx-circuit-review-packet-preview"' in html
     assert 'id="docx-circuit-review-packet-preview-text"' in html
+    assert 'id="docx-circuit-sequence-details"' in html
+    assert 'id="docx-circuit-source-index-details"' in html
     assert 'data-docx-circuit-source-index="true"' in html
     assert 'id="docx-circuit-source-index-count"' in html
     assert 'id="docx-circuit-source-index-search"' in html
@@ -6477,6 +6479,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function copySourceEntryLink" in script
     assert "function renderActiveSourceEntryFocus" in script
     assert "function focusActiveSourceEntry" in script
+    assert "sourceIndexDetails" in script
     assert 'params.set("source"' in script
     assert 'params.set("section"' in script
     assert "sourceEntryLinkAnchor" in script
@@ -6508,6 +6511,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert ".docx-circuit-compact-review" in stylesheet
     assert ".docx-circuit-compact-card" in stylesheet
     assert ".docx-circuit-collapsible" in stylesheet
+    assert ".docx-circuit-collapsible .docx-circuit-source-index-panel" in stylesheet
+    assert ".docx-circuit-collapsible .docx-circuit-sequence-list" in stylesheet
     assert ".docx-circuit-review-panel" in stylesheet
     assert ".docx-circuit-review-toolbar" in stylesheet
     assert ".docx-circuit-source-index-panel" in stylesheet

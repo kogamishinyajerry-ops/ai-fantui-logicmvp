@@ -142,6 +142,8 @@ def _page_state(page: Any) -> dict[str, Any]:
             reviewPacketPreviewOpen: document.querySelector("#docx-circuit-review-packet-preview")?.open || false,
             reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
             compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
+            sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
+            sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
             traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
             contractDetailsOpen: document.querySelector("#docx-circuit-contract-details")?.open || false,
             workbenchNavCount: document.querySelectorAll("#docx-circuit-workbench-bar a").length,
@@ -203,6 +205,8 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 workbenchNavRows: navTops.size,
                 compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
                 compactReviewVisible: Boolean(compactReview && compactReview.getBoundingClientRect().height > 0),
+                sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
+                sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
                 traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
                 contractDetailsOpen: document.querySelector("#docx-circuit-contract-details")?.open || false,
                 stageColumnCount: columns.length,
@@ -241,6 +245,8 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
             state.get("workbenchNavCount") == 4,
             state.get("compactCardCount") == 3,
             state.get("compactReviewVisible") is True,
+            state.get("sequenceDetailsOpen") is False,
+            state.get("sourceIndexDetailsOpen") is True,
             state.get("traceDetailsOpen") is False,
             state.get("contractDetailsOpen") is False,
             state.get("sourceFocusVisible") is True,
@@ -646,6 +652,11 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 current_state = _page_state(current_page)
                 current_page.screenshot(path=str(current_review_path), full_page=True)
 
+                page.locator("#docx-circuit-source-index-details summary").click()
+                page.wait_for_function(
+                    """() => document.querySelector("#docx-circuit-source-index-details")?.open === true""",
+                    timeout=7000,
+                )
                 page.locator('[data-source-entry-link-anchor="P004"]').click()
                 page.wait_for_function(
                     """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("P004 链接已复制")""",
@@ -697,6 +708,8 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "sourceFocusButtonDisabled": True,
         "focusedSourceEntryAnchor": None,
         "compactCardCount": 3,
+        "sequenceDetailsOpen": False,
+        "sourceIndexDetailsOpen": False,
         "traceDetailsOpen": False,
         "contractDetailsOpen": False,
         "selectedElementId": "sw1",
@@ -722,6 +735,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     source_focus_expected = {
         **source_expected,
         "focusedSourceEntryAnchor": "P004",
+        "sourceIndexDetailsOpen": True,
     }
     current_params = _hash_params(copied_current)
     source_params = _hash_params(copied_source_entry)
