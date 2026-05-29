@@ -163,7 +163,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll(".demo-reconstruction-source-entry").length >= 10
                             && document.querySelectorAll(".demo-reconstruction-sequence-step").length >= 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
-                            && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23;
+                            && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
+                            && document.querySelectorAll("[data-topology-wire]").length === 23;
                     }""",
                     timeout=7000,
                 )

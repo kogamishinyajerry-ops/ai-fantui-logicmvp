@@ -314,7 +314,9 @@
     const contract = latestDocxPayload && latestDocxPayload.circuit_contract
       ? latestDocxPayload.circuit_contract
       : {};
-    if (Array.isArray(contract.wire_ids) && contract.wire_ids.length) return contract.wire_ids;
+    if (Array.isArray(contract.wire_ids) && contract.wire_ids.length) {
+      return contract.wire_ids.filter((wireId) => wireEndpointMap.has(wireId));
+    }
     return Array.from(wireEndpointMap.keys());
   }
 
@@ -370,7 +372,7 @@
       const empty = document.createElement("li");
       empty.textContent = "完整电路拓扑暂无数据";
       topologyList.appendChild(empty);
-      setText(topologySummary, `${wireIds.length}/23 连线 · 等待端点`);
+      setText(topologySummary, `${wireEndpointMap.size}/${EXPECTED_WIRE_COUNT} 连线 · 等待端点`);
       updateTopologyReadback("");
       return;
     }
