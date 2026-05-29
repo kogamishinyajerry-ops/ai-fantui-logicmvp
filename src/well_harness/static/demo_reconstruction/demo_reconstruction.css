@@ -207,6 +207,72 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-review-index-output-rail {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+.demo-reconstruction-review-index-output-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.demo-reconstruction-review-index-output-head strong {
+  color: #111827;
+  font-size: 13px;
+}
+.demo-reconstruction-review-index-output-head span {
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-index-output-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+.demo-reconstruction-review-index-output-list button {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  min-height: 94px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #344054;
+  cursor: pointer;
+  padding: 9px;
+  text-align: left;
+}
+.demo-reconstruction-review-index-output-list button:hover,
+.demo-reconstruction-review-index-output-list button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-review-index-output-list button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+}
+.demo-reconstruction-review-index-output-list strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.demo-reconstruction-review-index-output-list span,
+.demo-reconstruction-review-index-output-list small {
+  color: #667085;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .demo-reconstruction-review-index-list {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -4413,6 +4479,9 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-review-index-build-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-review-index-output-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .demo-reconstruction-review-index-list {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -4484,6 +4553,7 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-trace-card-list,
   .demo-reconstruction-logic-equation-list,
   .demo-reconstruction-review-index-build-list,
+  .demo-reconstruction-review-index-output-list,
   .demo-reconstruction-review-index-list,
   .demo-reconstruction-playback-steps,
   .demo-reconstruction-assembly-list,
