@@ -5969,8 +5969,11 @@ def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
     assert "打开完整交付态" in html
     assert "20/20 节点" in html
     assert "23/23 连线" in html
-    assert "make demo-html-reconstruction-mvp" in html
-    assert "make demo-html-reconstruction-browser-acceptance" in html
+    assert 'aria-label="第一阶段验收状态"' in html
+    assert "结构验收通过" in html
+    assert "浏览器验收通过" in html
+    assert "make demo-html-reconstruction-mvp" not in html
+    assert "make demo-html-reconstruction-browser-acceptance" not in html
     assert html.index('id="home-first-phase-mvp"') < html.index('id="home-default-mode-grid"')
 
 
