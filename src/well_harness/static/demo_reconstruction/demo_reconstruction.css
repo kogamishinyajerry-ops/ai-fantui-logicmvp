@@ -2510,6 +2510,11 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   color: #3730a3;
   outline: none;
 }
+.demo-reconstruction-proof-path-focus-list button[aria-pressed="true"] {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #3730a3;
+}
 .demo-reconstruction-proof-path p {
   margin: 0;
   border: 1px solid #e5e7eb;
@@ -2519,6 +2524,108 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   font-size: 12px;
   line-height: 1.45;
   padding: 8px;
+}
+.demo-reconstruction-proof-path-object-inspector {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+}
+.demo-reconstruction-proof-path-object-inspector p {
+  border: 0;
+  background: transparent;
+  color: #475467;
+  padding: 0;
+}
+.demo-reconstruction-proof-path-object-inspector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-object-inspector-head span {
+  color: #475467;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-object-inspector-head strong {
+  min-width: 0;
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.demo-reconstruction-proof-path-object-inspector-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-object-inspector-metrics div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border-top: 1px solid #eef2f7;
+  padding-top: 5px;
+}
+.demo-reconstruction-proof-path-object-inspector-metrics span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-proof-path-object-inspector-metrics strong {
+  min-width: 0;
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors li {
+  min-width: 0;
+  color: #667085;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors button {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  padding: 6px 7px;
+  text-align: left;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors button:hover,
+.demo-reconstruction-proof-path-object-inspector-neighbors button:focus-visible {
+  border-color: #4f46e5;
+  outline: none;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors strong,
+.demo-reconstruction-proof-path-object-inspector-neighbors span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.demo-reconstruction-proof-path-object-inspector-neighbors span {
+  color: #667085;
+  font-size: 11px;
 }
 .demo-reconstruction-scenario-comparator {
   display: grid;

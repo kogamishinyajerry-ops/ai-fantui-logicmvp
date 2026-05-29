@@ -188,6 +188,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-sentence-runner-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-focus-id]").length >= 5
+                            && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
                             && document.querySelectorAll("[data-review-verdict-card]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
@@ -1843,6 +1844,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         const status = document.querySelector("#demo-reconstruction-proof-path-status");
                         const readback = document.querySelector("#demo-reconstruction-proof-path-readback");
                         const object = document.querySelector("#demo-reconstruction-review-object");
+                        const inspector = document.querySelector("#demo-reconstruction-proof-path-object-inspector-object");
                         return button
                             && button.getAttribute("aria-pressed") === "true"
                             && status
@@ -1851,9 +1853,28 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && readback.textContent.includes("20/20")
                             && readback.textContent.includes("23/23")
                             && object
-                            && object.textContent.includes("wire_logic4_thr_lock");
+                            && object.textContent.includes("wire_logic4_thr_lock")
+                            && inspector
+                            && inspector.textContent.includes("wire_logic4_thr_lock");
                     }""",
                     timeout=5000,
+                )
+                proof_path_object_inspector_final_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            objectText: text("#demo-reconstruction-proof-path-object-inspector-object"),
+                            sourceCountText: text("#demo-reconstruction-proof-path-object-inspector-source-count"),
+                            stepCountText: text("#demo-reconstruction-proof-path-object-inspector-step-count"),
+                            edgeCountText: text("#demo-reconstruction-proof-path-object-inspector-edge-count"),
+                            coverageText: text("#demo-reconstruction-proof-path-object-inspector-coverage"),
+                            summaryText: text("#demo-reconstruction-proof-path-object-inspector-summary"),
+                            neighborCount: document.querySelectorAll(
+                                "#demo-reconstruction-proof-path-object-inspector-neighbors [data-proof-path-inspector-focus-id]"
+                            ).length,
+                            neighborText: text("#demo-reconstruction-proof-path-object-inspector-neighbors"),
+                        };
+                    }"""
                 )
                 proof_path_final_review = page.evaluate(
                     """() => {
@@ -1877,6 +1898,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         const object = document.querySelector("#demo-reconstruction-review-object");
                         const sync = document.querySelector("#demo-reconstruction-review-sync");
                         const readback = document.querySelector("#demo-reconstruction-proof-path-readback");
+                        const inspector = document.querySelector("#demo-reconstruction-proof-path-object-inspector-object");
                         return selected
                             && selected.textContent.trim() === "P035-S01"
                             && object
@@ -1884,9 +1906,28 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && sync
                             && sync.textContent.includes("聚焦节点")
                             && readback
-                            && readback.textContent.includes("tls_unlocked");
+                            && readback.textContent.includes("tls_unlocked")
+                            && inspector
+                            && inspector.textContent.includes("tls_unlocked");
                     }""",
                     timeout=5000,
+                )
+                proof_path_object_inspector_chip_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            objectText: text("#demo-reconstruction-proof-path-object-inspector-object"),
+                            sourceCountText: text("#demo-reconstruction-proof-path-object-inspector-source-count"),
+                            stepCountText: text("#demo-reconstruction-proof-path-object-inspector-step-count"),
+                            edgeCountText: text("#demo-reconstruction-proof-path-object-inspector-edge-count"),
+                            coverageText: text("#demo-reconstruction-proof-path-object-inspector-coverage"),
+                            summaryText: text("#demo-reconstruction-proof-path-object-inspector-summary"),
+                            neighborCount: document.querySelectorAll(
+                                "#demo-reconstruction-proof-path-object-inspector-neighbors [data-proof-path-inspector-focus-id]"
+                            ).length,
+                            neighborText: text("#demo-reconstruction-proof-path-object-inspector-neighbors"),
+                        };
+                    }"""
                 )
                 proof_path_chip_review = page.evaluate(
                     """() => {
@@ -3010,10 +3051,18 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and proof_path_final_review["selectedAnchor"] == "P035-S05"
             and "wire_logic4_thr_lock" in proof_path_final_review["reviewObjectText"]
             and "聚焦连线" in proof_path_final_review["reviewSyncText"]
+            and "wire_logic4_thr_lock" in proof_path_object_inspector_final_review["objectText"]
+            and "连线" in proof_path_object_inspector_final_review["coverageText"]
+            and proof_path_object_inspector_final_review["neighborCount"] >= 2
+            and "THR_LOCK" in proof_path_object_inspector_final_review["neighborText"]
             and proof_path_chip_review["selectedAnchor"] == "P035-S01"
             and "tls_unlocked" in proof_path_chip_review["reviewObjectText"]
             and "聚焦节点" in proof_path_chip_review["reviewSyncText"]
             and "tls_unlocked" in proof_path_chip_review["readbackText"]
+            and "tls_unlocked" in proof_path_object_inspector_chip_review["objectText"]
+            and "节点" in proof_path_object_inspector_chip_review["coverageText"]
+            and proof_path_object_inspector_chip_review["neighborCount"] >= 2
+            and "L3" in proof_path_object_inspector_chip_review["neighborText"]
         )
         else "fail",
         "scenario_comparator_readback": "pass"
@@ -3145,7 +3194,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "sentence_runner_s05_review": sentence_runner_s05_review,
         "proof_path_review": proof_path_review,
         "proof_path_final_review": proof_path_final_review,
+        "proof_path_object_inspector_final_review": proof_path_object_inspector_final_review,
         "proof_path_chip_review": proof_path_chip_review,
+        "proof_path_object_inspector_chip_review": proof_path_object_inspector_chip_review,
         "scenario_comparator_review": scenario_comparator_review,
         "scenario_comparator_max_review": scenario_comparator_max_review,
         "scenario_comparator_inhibit_review": scenario_comparator_inhibit_review,
