@@ -402,6 +402,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderProofPathTimeline" in script
     assert "applyProofPathStep" in script
     assert "proofPathFocusTarget" in script
+    assert "等待源文证据" in script
+    assert "本句" in script
     assert "installScenarioComparatorActions" in script
     assert "updateScenarioComparatorStatus" in script
     assert "scenarioComparatorSummary" in script
@@ -469,6 +471,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-sentence-runner-list" in stylesheet
     assert ".demo-reconstruction-proof-path" in stylesheet
     assert ".demo-reconstruction-proof-path-list" in stylesheet
+    assert ".demo-reconstruction-proof-path-list em" in stylesheet
     assert ".demo-reconstruction-scenario-comparator" in stylesheet
     assert ".demo-reconstruction-scenario-comparator-list" in stylesheet
     assert ".demo-reconstruction-scenario-ledger" in stylesheet
@@ -1009,7 +1012,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["proof_path_review"]["stepCount"] == 5
     assert payload["proof_path_review"]["finalCount"] == 1
     assert "P035-S01" in payload["proof_path_review"]["firstText"]
+    assert "飞机离地小于6ft" in payload["proof_path_review"]["firstText"]
+    assert "本句 6 节点 / 5 连线" in payload["proof_path_review"]["firstText"]
     assert "P035-S05" in payload["proof_path_review"]["finalText"]
+    assert "反推电子锁解锁" in payload["proof_path_review"]["finalText"]
+    assert "本句 4 节点 / 3 连线" in payload["proof_path_review"]["finalText"]
     assert "20/20 节点" in payload["proof_path_review"]["finalText"]
     assert "23/23 连线" in payload["proof_path_review"]["finalText"]
     assert payload["proof_path_final_review"]["activeSteps"] == ["P035-S05"]

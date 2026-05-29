@@ -2460,6 +2460,20 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-proof-path-list em {
+  grid-column: 1 / -1;
+  display: -webkit-box;
+  min-width: 0;
+  max-height: 48px;
+  overflow: hidden;
+  color: #475467;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
 .demo-reconstruction-proof-path-list small {
   grid-column: 1 / -1;
   color: #667085;

@@ -2941,7 +2941,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             proof_path_review["stepCount"] == 5
             and proof_path_review["finalCount"] == 1
             and "P035-S01" in proof_path_review["firstText"]
+            and "飞机离地小于6ft" in proof_path_review["firstText"]
+            and "本句 6 节点 / 5 连线" in proof_path_review["firstText"]
             and "P035-S05" in proof_path_review["finalText"]
+            and "反推电子锁解锁" in proof_path_review["finalText"]
+            and "本句 4 节点 / 3 连线" in proof_path_review["finalText"]
             and "20/20 节点" in proof_path_review["finalText"]
             and "23/23 连线" in proof_path_review["finalText"]
             and proof_path_final_review["activeSteps"] == ["P035-S05"]
