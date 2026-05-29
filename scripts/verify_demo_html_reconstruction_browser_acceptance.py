@@ -515,7 +515,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && activeScenario
                             && objectText.includes("wire_logic4_thr_lock")
                             && outputText.includes("THR ON")
-                            && readiness.includes("5/5 gate")
+                            && readiness.includes("5/5 验收")
                             && completeBanner
                             && !completeBanner.hidden
                             && completeBanner.textContent.includes("完整交付态已启用")
@@ -565,7 +565,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && activeGate
                             && objectText.includes("wire_logic4_thr_lock")
                             && outputText.includes("THR ON")
-                            && readiness.includes("5/5 gate")
+                            && readiness.includes("5/5 验收")
                             && completeBanner
                             && !completeBanner.hidden
                             && completeBanner.textContent.includes("完整交付态已启用");
@@ -612,8 +612,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && active
                             && proofTarget
                             && objectText.includes("wire_logic4_thr_lock")
-                            && summary.includes("5/5 gate")
-                            && readiness.includes("5/5 gate")
+                            && summary.includes("5/5 验收")
+                            && readiness.includes("5/5 验收")
                             && window.scrollY > 0;
                     }""",
                     timeout=5000,
@@ -3757,7 +3757,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "6/6 交付" in review_index_review["handoffSummaryText"]
             and "67 条" in review_index_review["handoffSourceText"]
             and "THR_LOCK" in review_index_review["handoffOutputText"]
-            and "gate" in review_index_review["gateSummaryText"]
+            and "验收" in review_index_review["gateSummaryText"]
             and "等待聚焦" in review_index_review["gateObjectText"]
             and "6/6 模块" in review_index_review["tourSummaryText"]
             and "4/4 证据" in review_index_review["evidenceSummaryText"]
@@ -3794,7 +3794,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_complete_action["activeScenarios"] == ["max-reverse"]
             and review_index_complete_action["activeTargets"] == ["demo-reconstruction-proof-path"]
             and review_index_complete_action["activeGate"] == ["object-review"]
-            and "5/5 gate" in review_index_complete_action["readinessText"]
+            and "5/5 验收" in review_index_complete_action["readinessText"]
             and "wire_logic4_thr_lock" in review_index_complete_action["objectText"]
             and "THR ON" in review_index_complete_action["outputText"]
             and "对象" in review_index_complete_action["proofPathText"]
@@ -3814,7 +3814,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_complete_link["activeScenarios"] == ["max-reverse"]
             and review_index_complete_link["activeTargets"] == ["demo-reconstruction-proof-path"]
             and review_index_complete_link["activeGate"] == ["object-review"]
-            and "5/5 gate" in review_index_complete_link["readinessText"]
+            and "5/5 验收" in review_index_complete_link["readinessText"]
             and "wire_logic4_thr_lock" in review_index_complete_link["objectText"]
             and "THR ON" in review_index_complete_link["outputText"]
             and "对象" in review_index_complete_link["proofPathText"]
@@ -3830,8 +3830,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             review_index_gate_rail_action["selectedAnchor"] == "P035-S05"
             and review_index_gate_rail_action["activeGate"] == ["object-review"]
             and review_index_gate_rail_action["activeTargets"] == ["demo-reconstruction-proof-path"]
-            and "5/5 gate" in review_index_gate_rail_action["gateSummaryText"]
-            and "5/5 gate" in review_index_gate_rail_action["readinessText"]
+            and "5/5 验收" in review_index_gate_rail_action["gateSummaryText"]
+            and "5/5 验收" in review_index_gate_rail_action["readinessText"]
             and "wire_logic4_thr_lock" in review_index_gate_rail_action["objectText"]
             and "对象" in review_index_gate_rail_action["proofPathText"]
             and "wire_logic4_thr_lock" in review_index_gate_rail_action["hash"]
@@ -4218,7 +4218,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_packet_after_wire_focus["passGateCount"] == 5
             and review_packet_after_wire_focus["dashboardPassMetricCount"] == 5
             and review_packet_after_wire_focus["dashboardPassChecklistCount"] == 5
-            and "5/5 gate" in review_packet_after_wire_focus["dashboardSummary"]
+            and "5/5 验收" in review_packet_after_wire_focus["dashboardSummary"]
             and "uploads/20260409-thrust-reverser-control-logic.docx" in review_packet_review["sourceText"]
             and "20/20" in review_packet_review["contractText"]
             and "23/23" in review_packet_review["contractText"]

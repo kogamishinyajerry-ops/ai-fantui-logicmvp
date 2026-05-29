@@ -643,9 +643,9 @@
       button.type = "button";
       button.dataset.reviewIndexGate = "empty";
       button.setAttribute("aria-pressed", "false");
-      button.textContent = "等待 gate";
+      button.textContent = "等待验收";
       reviewIndexGateList.appendChild(button);
-      setText(reviewIndexGateSummary, "等待 gate");
+      setText(reviewIndexGateSummary, "等待验收");
       return;
     }
     gateList.forEach((gate) => {
@@ -667,7 +667,7 @@
       reviewIndexGateList.appendChild(button);
     });
     const passed = gateList.filter((gate) => gate.pass).length;
-    setText(reviewIndexGateSummary, `${passed}/${gateList.length} gate · ${gateList.length - passed} 待补齐`);
+    setText(reviewIndexGateSummary, `${passed}/${gateList.length} 验收 · ${gateList.length - passed} 待补齐`);
   }
 
   function reviewIndexTourRecords() {
@@ -721,7 +721,7 @@
     const p035Count = ledgerItems.filter((item) => item.status === "p035").length;
     const readiness = reviewPacketReadiness && reviewPacketReadiness.textContent
       ? reviewPacketReadiness.textContent.trim()
-      : "等待 gate";
+      : "等待验收";
     return [
       {
         id: "docx-source",
@@ -2460,7 +2460,7 @@
 
     setText(
       reviewPacketDashboardSummary,
-      `${passGateCount}/${gateCount} gate · ${ledger.total} 覆盖项 · ${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`,
+      `${passGateCount}/${gateCount} 验收 · ${ledger.total} 覆盖项 · ${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`,
     );
 
     if (reviewPacketDashboardMetrics) {
@@ -2538,7 +2538,7 @@
     const outputReadyCount = finalOutputReadinessCount(context.finalContract);
     const boundaryGate = gateList.find((gate) => gate.id === "read-only-boundary");
 
-    setText(reviewVerdictStatus, `${passCount}/${gateCount} gate`);
+    setText(reviewVerdictStatus, `${passCount}/${gateCount} 验收`);
     setText(reviewVerdictSource, `${context.sourceCount} 源记录 · ${context.stepCount}/5 步`);
     setText(reviewVerdictCircuit, `${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线`);
     setText(reviewVerdictOutputs, `${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`);
@@ -2551,7 +2551,7 @@
       reviewVerdictReadback,
       passCount === gateCount
         ? `证据可审 · ${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线 · ${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`
-        : `继续补齐审阅点 · ${passCount}/${gateCount} gate`,
+        : `继续补齐审阅点 · ${passCount}/${gateCount} 验收`,
     );
   }
 
@@ -4210,7 +4210,7 @@
       focusedObject,
       hasFocusedObject: Boolean(currentCircuitFocus.kind && currentCircuitFocus.id),
     };
-    setText(reviewPacketReadiness, `${passed}/${gates.length} gate`);
+    setText(reviewPacketReadiness, `${passed}/${gates.length} 验收`);
     renderReviewPacketGates(gates);
     renderReviewPacketDashboard(gates, reviewContext);
     updateReviewVerdictBoard(gates, reviewContext);

@@ -157,7 +157,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-complete-mode-link"' in html
     assert 'href="/demo-reconstruction#complete=1"' in html
     assert "完整交付态已启用" in html
-    assert "P035-S05 · THR_LOCK · 最大反推 · 5/5 gate" in html
+    assert "P035-S05 · THR_LOCK · 最大反推 · 5/5 验收" in html
+    assert "5/5 gate" not in html
+    assert "等待 gate" not in html
     assert "固定链接" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
@@ -889,7 +891,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "6/6 交付" in payload["review_index_review"]["handoffSummaryText"]
     assert "67 条" in payload["review_index_review"]["handoffSourceText"]
     assert "THR_LOCK" in payload["review_index_review"]["handoffOutputText"]
-    assert "gate" in payload["review_index_review"]["gateSummaryText"]
+    assert "验收" in payload["review_index_review"]["gateSummaryText"]
     assert "等待聚焦" in payload["review_index_review"]["gateObjectText"]
     assert payload["review_index_navigation"]["activeTargets"] == [
         "demo-reconstruction-scenario-ledger"
@@ -938,7 +940,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "demo-reconstruction-proof-path"
     ]
     assert payload["review_index_complete_action"]["activeGate"] == ["object-review"]
-    assert "5/5 gate" in payload["review_index_complete_action"]["readinessText"]
+    assert "5/5 验收" in payload["review_index_complete_action"]["readinessText"]
     assert "wire_logic4_thr_lock" in payload["review_index_complete_action"]["objectText"]
     assert "THR ON" in payload["review_index_complete_action"]["outputText"]
     assert "对象" in payload["review_index_complete_action"]["proofPathText"]
@@ -955,7 +957,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "demo-reconstruction-proof-path"
     ]
     assert payload["review_index_complete_link"]["activeGate"] == ["object-review"]
-    assert "5/5 gate" in payload["review_index_complete_link"]["readinessText"]
+    assert "5/5 验收" in payload["review_index_complete_link"]["readinessText"]
     assert "wire_logic4_thr_lock" in payload["review_index_complete_link"]["objectText"]
     assert "THR ON" in payload["review_index_complete_link"]["outputText"]
     assert "对象" in payload["review_index_complete_link"]["proofPathText"]
@@ -969,8 +971,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_gate_rail_action"]["activeTargets"] == [
         "demo-reconstruction-proof-path"
     ]
-    assert "5/5 gate" in payload["review_index_gate_rail_action"]["gateSummaryText"]
-    assert "5/5 gate" in payload["review_index_gate_rail_action"]["readinessText"]
+    assert "5/5 验收" in payload["review_index_gate_rail_action"]["gateSummaryText"]
+    assert "5/5 验收" in payload["review_index_gate_rail_action"]["readinessText"]
     assert "wire_logic4_thr_lock" in payload["review_index_gate_rail_action"]["objectText"]
     assert "对象" in payload["review_index_gate_rail_action"]["proofPathText"]
     assert payload["review_index_gate_rail_action"]["scrollY"] > 0
@@ -1193,7 +1195,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_packet_after_wire_focus"]["passGateCount"] == 5
     assert payload["review_packet_after_wire_focus"]["dashboardPassMetricCount"] == 5
     assert payload["review_packet_after_wire_focus"]["dashboardPassChecklistCount"] == 5
-    assert "5/5 gate" in payload["review_packet_after_wire_focus"]["dashboardSummary"]
+    assert "5/5 验收" in payload["review_packet_after_wire_focus"]["dashboardSummary"]
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in payload["review_packet_review"]["sourceText"]
     assert "20/20" in payload["review_packet_review"]["contractText"]
     assert "23/23" in payload["review_packet_review"]["contractText"]
