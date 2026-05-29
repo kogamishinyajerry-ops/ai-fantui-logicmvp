@@ -357,6 +357,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "runway-inhibit" in script
     assert "renderProofTranscript" in script
     assert "proofTranscriptSourceText" in script
+    assert "record.proofText ||" in script
+    assert "抑制位为真时，展开链路保持阻塞，反推锁不释放。" in script
     assert "data-proof-transcript-row" in script
     assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
@@ -882,6 +884,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "6/6" in payload["proof_transcript_review"]["summaryText"]
     assert "THR_LOCK" in payload["proof_transcript_review"]["l4Text"]
     assert "抑制" in payload["proof_transcript_review"]["inhibitText"]
+    assert "反推锁不释放" in payload["proof_transcript_review"]["inhibitText"]
+    assert "RA/SW1/TLS" not in payload["proof_transcript_review"]["inhibitText"]
     assert payload["proof_transcript_l4_review"]["activeRows"] == ["runway-l4-thr-lock"]
     assert payload["proof_transcript_l4_review"]["runwayActiveRows"] == ["runway-l4-thr-lock"]
     assert "wire_logic4_thr_lock" in payload["proof_transcript_l4_review"]["objectText"]

@@ -132,6 +132,7 @@
       focusKind: "node",
       focusId: "reverser_inhibited",
       readback: "抑制位为真时，展开链路保持阻塞。",
+      proofText: "抑制位为真时，展开链路保持阻塞，反推锁不释放。",
       output: "THR_LOCK -> BLOCKED",
     },
   ];
@@ -1906,7 +1907,7 @@
   }
 
   function proofTranscriptSourceText(record, step) {
-    const sourceText = step && step.source_text ? step.source_text : record.readback;
+    const sourceText = record.proofText || (step && step.source_text ? step.source_text : record.readback);
     return sourceText.length > 96 ? `${sourceText.slice(0, 96)}...` : sourceText;
   }
 

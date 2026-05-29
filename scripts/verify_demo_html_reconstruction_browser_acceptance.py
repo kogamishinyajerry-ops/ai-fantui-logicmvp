@@ -2481,6 +2481,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "6/6" in proof_transcript_review["summaryText"]
             and "THR_LOCK" in proof_transcript_review["l4Text"]
             and "抑制" in proof_transcript_review["inhibitText"]
+            and "反推锁不释放" in proof_transcript_review["inhibitText"]
+            and "RA/SW1/TLS" not in proof_transcript_review["inhibitText"]
             and proof_transcript_l4_review["activeRows"] == ["runway-l4-thr-lock"]
             and proof_transcript_l4_review["runwayActiveRows"] == ["runway-l4-thr-lock"]
             and "wire_logic4_thr_lock" in proof_transcript_l4_review["objectText"]
