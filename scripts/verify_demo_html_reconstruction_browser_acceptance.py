@@ -189,6 +189,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-path-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-focus-id]").length >= 5
                             && document.querySelector("[data-proof-path-object-inspector]")
+                            && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
                             && document.querySelectorAll("[data-review-verdict-card]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
@@ -1970,6 +1971,49 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                proof_path_output_map_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            targetCount: document.querySelectorAll("[data-proof-path-output-target]").length,
+                            activeTargets: Array.from(
+                                document.querySelectorAll("[data-proof-path-output-target][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-output-target")),
+                            statusText: text("#demo-reconstruction-proof-path-output-map-status"),
+                            readbackText: text("#demo-reconstruction-proof-path-output-map-readback"),
+                            tlsText: text('[data-proof-path-output-target="tls115"]'),
+                            thrText: text('[data-proof-path-output-target="thr_lock"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-output-target="tls115"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const output = document.querySelector('[data-proof-path-output-target="tls115"]');
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-output-map-readback");
+                        return output
+                            && output.getAttribute("aria-pressed") === "true"
+                            && object
+                            && object.textContent.includes("wire_logic1_tls115")
+                            && readback
+                            && readback.textContent.includes("TLS 115VAC");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_output_map_tls_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeTargets: Array.from(
+                                document.querySelectorAll("[data-proof-path-output-target][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-output-target")),
+                            readbackText: text("#demo-reconstruction-proof-path-output-map-readback"),
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            inspectorObjectText: text("#demo-reconstruction-proof-path-object-inspector-object"),
+                        };
+                    }"""
+                )
                 page.locator("#demo-reconstruction-scenario-comparator").evaluate(
                     """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
                 )
@@ -3095,6 +3139,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "L3" in proof_path_object_inspector_chip_review["neighborText"]
         )
         else "fail",
+        "proof_path_output_map": "pass"
+        if (
+            proof_path_output_map_review["targetCount"] == 5
+            and proof_path_output_map_review["activeTargets"] == ["thr_lock"]
+            and "5/5" in proof_path_output_map_review["statusText"]
+            and "wire_logic4_thr_lock" in proof_path_output_map_review["thrText"]
+            and "wire_logic1_tls115" in proof_path_output_map_review["tlsText"]
+            and proof_path_output_map_tls_review["activeTargets"] == ["tls115"]
+            and "TLS 115VAC" in proof_path_output_map_tls_review["readbackText"]
+            and "wire_logic1_tls115" in proof_path_output_map_tls_review["reviewObjectText"]
+            and "wire_logic1_tls115" in proof_path_output_map_tls_review["inspectorObjectText"]
+        )
+        else "fail",
         "scenario_comparator_readback": "pass"
         if (
             scenario_comparator_review["buttonCount"] == 2
@@ -3228,6 +3285,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_object_inspector_neighbor_review": proof_path_object_inspector_neighbor_review,
         "proof_path_chip_review": proof_path_chip_review,
         "proof_path_object_inspector_chip_review": proof_path_object_inspector_chip_review,
+        "proof_path_output_map_review": proof_path_output_map_review,
+        "proof_path_output_map_tls_review": proof_path_output_map_tls_review,
         "scenario_comparator_review": scenario_comparator_review,
         "scenario_comparator_max_review": scenario_comparator_max_review,
         "scenario_comparator_inhibit_review": scenario_comparator_inhibit_review,
