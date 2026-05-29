@@ -4194,6 +4194,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "查看验收详情" not in first_screen_review["visible_text"]
             and "source" not in first_screen_review["visible_text"]
             and "ON / BLOCK" not in first_screen_review["visible_text"]
+            and "TLS\nON" not in first_screen_review["visible_text"]
+            and "ETRAC\nON" not in first_screen_review["visible_text"]
+            and "EEC\nON" not in first_screen_review["visible_text"]
+            and "THR\nON" not in first_screen_review["visible_text"]
             and "->" not in first_screen_review["visible_text"]
         )
         else "fail",
@@ -4233,7 +4237,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_initial_review["stateText"] == "可用"
             and compact_runway_initial_review["lockText"] == "释放"
             and "释放" in compact_runway_initial_review["summaryText"]
-            and compact_runway_initial_review["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+            and compact_runway_initial_review["outputValues"] == {"tls": "通电", "etrac": "供电", "eec": "展开", "thr": "释放"}
             and compact_path_state(compact_runway_initial_review, "lever") == "pass"
             and compact_path_state(compact_runway_initial_review, "deploy") == "pass"
             and compact_path_state(compact_runway_initial_review, "safety") == "pass"
@@ -4244,14 +4248,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_max_review["stateText"] == "可用"
             and compact_runway_max_review["lockText"] == "释放"
             and "释放" in compact_runway_max_review["summaryText"]
-            and compact_runway_max_review["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+            and compact_runway_max_review["outputValues"] == {"tls": "通电", "etrac": "供电", "eec": "展开", "thr": "释放"}
             and compact_path_state(compact_runway_max_review, "lock") == "pass"
             and compact_runway_inhibit_review["pressed"] == ["inhibit-block"]
             and compact_runway_inhibit_review["statusText"] == "抑制阻塞"
             and compact_runway_inhibit_review["stateText"] == "阻塞"
             and compact_runway_inhibit_review["lockText"] == "阻塞"
             and "阻塞" in compact_runway_inhibit_review["summaryText"]
-            and compact_runway_inhibit_review["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
+            and compact_runway_inhibit_review["outputValues"] == {"tls": "未通电", "etrac": "未供电", "eec": "未展开", "thr": "阻塞"}
             and compact_path_state(compact_runway_inhibit_review, "safety") == "block"
             and compact_path_state(compact_runway_inhibit_review, "lock") == "block"
             and "阻塞" in compact_path_text(compact_runway_inhibit_review, "lock")
@@ -4276,7 +4280,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_operator_input_review["activeReviewScenarios"] == []
             and compact_runway_operator_input_review["operatorReadbackText"] == "选择一段演示路径"
             and compact_runway_operator_input_review["controlStripStatusText"] == "等待选择"
-            and compact_runway_operator_input_review["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
+            and compact_runway_operator_input_review["outputValues"] == {"tls": "未通电", "etrac": "未供电", "eec": "未展开", "thr": "阻塞"}
             and compact_runway_operator_fault_review["faultCountText"] == "0 故障"
             and compact_runway_operator_fault_review["activeFaultText"] == ""
             and compact_runway_operator_fault_review["checkedFaultCount"] == 0

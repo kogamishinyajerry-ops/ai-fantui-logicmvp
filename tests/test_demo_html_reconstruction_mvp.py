@@ -929,6 +929,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "查看验收详情" not in payload["first_screen_review"]["visible_text"]
     assert "source" not in payload["first_screen_review"]["visible_text"]
     assert "ON / BLOCK" not in payload["first_screen_review"]["visible_text"]
+    assert "TLS\nON" not in payload["first_screen_review"]["visible_text"]
+    assert "ETRAC\nON" not in payload["first_screen_review"]["visible_text"]
+    assert "EEC\nON" not in payload["first_screen_review"]["visible_text"]
+    assert "THR\nON" not in payload["first_screen_review"]["visible_text"]
     assert "->" not in payload["first_screen_review"]["visible_text"]
     assert "低空解锁" in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
     assert payload["review_drawer_deep_link"] == {
@@ -963,7 +967,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_initial_review"]["stateText"] == "可用"
     assert payload["compact_runway_initial_review"]["lockText"] == "释放"
     assert "释放" in payload["compact_runway_initial_review"]["summaryText"]
-    assert payload["compact_runway_initial_review"]["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+    assert payload["compact_runway_initial_review"]["outputValues"] == {
+        "tls": "通电",
+        "etrac": "供电",
+        "eec": "展开",
+        "thr": "释放",
+    }
     assert payload["compact_runway_initial_review"]["pathStates"]["lever"]["state"] == "pass"
     assert payload["compact_runway_initial_review"]["pathStates"]["deploy"]["state"] == "pass"
     assert payload["compact_runway_initial_review"]["pathStates"]["safety"]["state"] == "pass"
@@ -972,7 +981,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_max_review"]["statusText"] == "最大反推"
     assert payload["compact_runway_max_review"]["stateText"] == "可用"
     assert payload["compact_runway_max_review"]["lockText"] == "释放"
-    assert payload["compact_runway_max_review"]["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+    assert payload["compact_runway_max_review"]["outputValues"] == {
+        "tls": "通电",
+        "etrac": "供电",
+        "eec": "展开",
+        "thr": "释放",
+    }
     assert payload["compact_runway_max_review"]["pathStates"]["lock"]["state"] == "pass"
     assert payload["compact_runway_output_focus_review"]["pressedOutputs"] == ["thr_lock"]
     assert "wire_logic4_thr_lock" in payload["compact_runway_output_focus_review"]["reviewObjectText"]
@@ -985,7 +999,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_inhibit_review"]["statusText"] == "抑制阻塞"
     assert payload["compact_runway_inhibit_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_inhibit_review"]["lockText"] == "阻塞"
-    assert payload["compact_runway_inhibit_review"]["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
+    assert payload["compact_runway_inhibit_review"]["outputValues"] == {
+        "tls": "未通电",
+        "etrac": "未供电",
+        "eec": "未展开",
+        "thr": "阻塞",
+    }
     assert payload["compact_runway_inhibit_review"]["pathStates"]["safety"]["state"] == "block"
     assert payload["compact_runway_inhibit_review"]["pathStates"]["lock"]["state"] == "block"
     assert payload["compact_runway_frame_sync_review"]["pressed"] == ["inhibit-block"]
@@ -1008,7 +1027,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_operator_input_review"]["activeReviewScenarios"] == []
     assert payload["compact_runway_operator_input_review"]["operatorReadbackText"] == "选择一段演示路径"
     assert payload["compact_runway_operator_input_review"]["controlStripStatusText"] == "等待选择"
-    assert payload["compact_runway_operator_input_review"]["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
+    assert payload["compact_runway_operator_input_review"]["outputValues"] == {
+        "tls": "未通电",
+        "etrac": "未供电",
+        "eec": "未展开",
+        "thr": "阻塞",
+    }
     assert payload["compact_runway_operator_fault_review"]["faultCountText"] == "0 故障"
     assert payload["compact_runway_operator_fault_review"]["activeFaultText"] == ""
     assert payload["compact_runway_operator_fault_review"]["checkedFaultCount"] == 0
