@@ -667,7 +667,7 @@
     if (!detailDrawer) return;
     detailDrawer.hidden = !active;
     detailDrawer.dataset.reviewDetailDrawer = active ? "visible" : "hidden";
-    if (!active) detailDrawer.open = false;
+    detailDrawer.open = !!active;
   }
 
   function applyReviewIndexCompleteState() {

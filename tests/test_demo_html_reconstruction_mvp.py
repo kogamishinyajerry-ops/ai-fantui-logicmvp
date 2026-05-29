@@ -607,6 +607,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "setReviewDetailDrawerVisible" in script
     assert 'params.get("review") === "1"' in script
     assert 'params.set("review", "1")' in script
+    assert "detailDrawer.open = !!active" in script
     assert "setReviewDetailDrawerVisible(false)" in script
     assert "setReviewDetailDrawerVisible(true)" in script
     assert "installOutputMirrorObserver" in script
@@ -917,6 +918,21 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "62 条源记录" not in payload["first_screen_review"]["visible_text"]
     assert "查看验收详情" not in payload["first_screen_review"]["visible_text"]
     assert "低空解锁" in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
+    assert payload["review_drawer_deep_link"] == {
+        "hash": "#review=1",
+        "drawerHidden": False,
+        "drawerOpen": True,
+        "drawerState": "visible",
+        "reviewIndexVisible": True,
+    }
+    assert (
+        payload["complete_drawer_deep_link"]["hash"] == "#complete=1"
+        or "review=1" in payload["complete_drawer_deep_link"]["hash"]
+    )
+    assert payload["complete_drawer_deep_link"]["drawerHidden"] is False
+    assert payload["complete_drawer_deep_link"]["drawerOpen"] is True
+    assert payload["complete_drawer_deep_link"]["drawerState"] == "visible"
+    assert payload["complete_drawer_deep_link"]["reviewIndexVisible"] is True
     assert payload["compact_runway_initial_review"]["visible"] is True
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
     assert payload["compact_runway_initial_review"]["controlCount"] == 3

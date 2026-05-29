@@ -187,6 +187,40 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             timeout=5000,
         )
 
+    def capture_review_drawer_deep_link(browser: Any, hash_value: str) -> dict[str, Any]:
+        review_page = browser.new_page(viewport={"width": 1366, "height": 768})
+        try:
+            review_page.on("pageerror", lambda exc: console_errors.append(str(exc)))
+            review_page.on("console", capture_console_error)
+            review_page.on("response", capture_bad_response)
+            review_page.route("**/favicon.ico", lambda route: route.fulfill(status=204, body=""))
+            review_page.goto(f"{base_url}/demo-reconstruction{hash_value}", wait_until="networkidle")
+            review_page.wait_for_function(
+                """() => {
+                    const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                    return drawer
+                        && !drawer.hidden
+                        && drawer.dataset.reviewDetailDrawer === "visible"
+                        && drawer.open
+                        && document.querySelector("#demo-reconstruction-review-index")?.offsetParent;
+                }""",
+                timeout=5000,
+            )
+            return review_page.evaluate(
+                """() => {
+                    const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                    return {
+                        hash: window.location.hash,
+                        drawerHidden: drawer?.hidden ?? true,
+                        drawerOpen: drawer?.open ?? false,
+                        drawerState: drawer?.dataset.reviewDetailDrawer || "",
+                        reviewIndexVisible: !!document.querySelector("#demo-reconstruction-review-index")?.offsetParent,
+                    };
+                }"""
+            )
+        finally:
+            review_page.close()
+
     server, thread, base_url = _start_server()
     try:
         with sync_playwright() as pw:
@@ -371,6 +405,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         "#demo-reconstruction-browser-evidence"
                     ).is_visible(timeout=5000),
                 }
+                review_drawer_deep_link = capture_review_drawer_deep_link(browser, "#review=1")
+                complete_drawer_deep_link = capture_review_drawer_deep_link(browser, "#complete=1")
                 compact_runway_initial_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -4133,6 +4169,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "查看验收详情" not in first_screen_review["visible_text"]
         )
         else "fail",
+        "review_drawer_deep_link": "pass"
+        if (
+            review_drawer_deep_link["hash"] == "#review=1"
+            and not review_drawer_deep_link["drawerHidden"]
+            and review_drawer_deep_link["drawerOpen"]
+            and review_drawer_deep_link["drawerState"] == "visible"
+            and review_drawer_deep_link["reviewIndexVisible"]
+            and (
+                complete_drawer_deep_link["hash"] == "#complete=1"
+                or "review=1" in complete_drawer_deep_link["hash"]
+            )
+            and not complete_drawer_deep_link["drawerHidden"]
+            and complete_drawer_deep_link["drawerOpen"]
+            and complete_drawer_deep_link["drawerState"] == "visible"
+            and complete_drawer_deep_link["reviewIndexVisible"]
+        )
+        else "fail",
         "compact_runway": "pass"
         if (
             compact_runway_initial_review["visible"]
@@ -5266,6 +5319,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         },
         "embedded_palette": embedded_palette,
         "first_screen_review": first_screen_review,
+        "review_drawer_deep_link": review_drawer_deep_link,
+        "complete_drawer_deep_link": complete_drawer_deep_link,
         "compact_runway_initial_review": compact_runway_initial_review,
         "compact_runway_max_review": compact_runway_max_review,
         "compact_runway_output_focus_review": compact_runway_output_focus_review,
