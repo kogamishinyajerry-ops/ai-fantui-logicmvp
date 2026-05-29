@@ -1600,8 +1600,26 @@ def test_demo_html_reconstruction_mvp_gate_is_wired_into_make_and_ci() -> None:
 
     assert "demo-html-reconstruction-mvp" in makefile
     assert "demo-html-reconstruction-browser-acceptance" in makefile
+    assert "demo-html-reconstruction-complete-link" in makefile
+    assert "/demo-reconstruction#complete=1" in makefile
     assert "scripts/verify_demo_html_reconstruction_mvp.py --format json" in makefile
     assert "scripts/verify_demo_html_reconstruction_browser_acceptance.py --format json" in makefile
     assert "test: demo-html-reconstruction-mvp" in makefile
     assert "Verify demo.html reconstruction MVP" in workflow
     assert "scripts/verify_demo_html_reconstruction_mvp.py --format json" in workflow
+
+
+def test_demo_html_reconstruction_complete_link_target_prints_local_deep_link() -> None:
+    result = subprocess.run(
+        ["make", "demo-html-reconstruction-complete-link"],
+        cwd=PROJECT_ROOT,
+        env={**os.environ, "PORT": "9123"},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+
+    assert result.returncode == 0
+    assert "make dev" in result.stdout
+    assert "http://127.0.0.1:9123/demo-reconstruction#complete=1" in result.stdout
