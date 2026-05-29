@@ -141,6 +141,9 @@ def _page_state(page: Any) -> dict[str, Any]:
             focusedSourceEntryAnchor: document.activeElement?.dataset.sourceEntryAnchor || null,
             reviewPacketPreviewOpen: document.querySelector("#docx-circuit-review-packet-preview")?.open || false,
             reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
+            compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
+            traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
+            contractDetailsOpen: document.querySelector("#docx-circuit-contract-details")?.open || false,
             workbenchNavCount: document.querySelectorAll("#docx-circuit-workbench-bar a").length,
             workbenchThreeColumn: (() => {
                 const stage = document.querySelector(".docx-circuit-stage");
@@ -182,6 +185,7 @@ def _responsive_state(page: Any) -> dict[str, Any]:
             const navTops = new Set(navLinks.map((link) => Math.round(link.getBoundingClientRect().top)));
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const previewText = document.querySelector("#docx-circuit-review-packet-preview-text");
+            const compactReview = document.querySelector("#docx-circuit-compact-review");
             const sourceFocus = document.querySelector("#docx-circuit-source-focus");
             const review = document.querySelector("#docx-circuit-review-panel");
             const demo = document.querySelector("#docx-circuit-demo-panel");
@@ -197,6 +201,10 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
                 workbenchNavCount: navLinks.length,
                 workbenchNavRows: navTops.size,
+                compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
+                compactReviewVisible: Boolean(compactReview && compactReview.getBoundingClientRect().height > 0),
+                traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
+                contractDetailsOpen: document.querySelector("#docx-circuit-contract-details")?.open || false,
                 stageColumnCount: columns.length,
                 desktopDemoInline: Boolean(
                     reviewRect && demoRect && demoRect.left > reviewRect.left && demoRect.width > 320
@@ -231,6 +239,10 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
             columns_match,
             state.get("noHorizontalOverflow") is True,
             state.get("workbenchNavCount") == 4,
+            state.get("compactCardCount") == 3,
+            state.get("compactReviewVisible") is True,
+            state.get("traceDetailsOpen") is False,
+            state.get("contractDetailsOpen") is False,
             state.get("sourceFocusVisible") is True,
             state.get("sourceLocatorFocused") is True,
             state.get("reviewPacketPreviewOpen") is True,
@@ -684,6 +696,9 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "sourceFocusVisible": False,
         "sourceFocusButtonDisabled": True,
         "focusedSourceEntryAnchor": None,
+        "compactCardCount": 3,
+        "traceDetailsOpen": False,
+        "contractDetailsOpen": False,
         "selectedElementId": "sw1",
         "selectedElementType": "node",
         "searchValue": "SW1",

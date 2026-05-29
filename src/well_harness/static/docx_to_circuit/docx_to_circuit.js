@@ -116,6 +116,12 @@
   const sourceIndexClear = $("docx-circuit-source-index-clear");
   const sourceIndexList = $("docx-circuit-source-index-list");
   const workbenchBar = $("docx-circuit-workbench-bar");
+  const compactDemandTitle = $("docx-circuit-compact-demand-title");
+  const compactDemandText = $("docx-circuit-compact-demand-text");
+  const compactLogicTitle = $("docx-circuit-compact-logic-title");
+  const compactLogicText = $("docx-circuit-compact-logic-text");
+  const compactDemoTitle = $("docx-circuit-compact-demo-title");
+  const compactDemoText = $("docx-circuit-compact-demo-text");
   const activeAnchor = $("docx-circuit-active-anchor");
   const reviewPanel = $("docx-circuit-review-panel");
   const prevStepButton = $("docx-circuit-prev-step");
@@ -224,6 +230,36 @@
     const role = String(entry && entry.role || "").trim();
     if (!role) return "需求条目";
     return role.replace(/源文档条目|源文条目/g, "需求条目");
+  }
+
+  function renderCompactDemand(step, activeIndex, steps) {
+    if (!step) return;
+    const position = Number.isFinite(activeIndex) && Array.isArray(steps)
+      ? `${activeIndex + 1}/${steps.length}`
+      : "";
+    const title = [step.anchor, step.title].filter(Boolean).join(" · ");
+    setText(compactDemandTitle, title || "等待需求句子");
+    setText(
+      compactDemandText,
+      `${position ? `${position} · ` : ""}${compactText(step.source_text || "等待读取需求句子。", 96)}`,
+    );
+  }
+
+  function renderCompactLogic(kind, id, logicLevels, folded) {
+    const levels = Array.isArray(logicLevels) && logicLevels.length > 0
+      ? logicLevels.join(" / ")
+      : "动作链路";
+    const predicate = Array.isArray(folded) && folded.length > 0
+      ? compactText(folded.join("；"), 96)
+      : "无折叠谓词";
+    setText(compactLogicTitle, elementLabel(kind, id));
+    setText(compactLogicText, `${levels} · ${TRACE_KIND_LABELS[kind] || kind} · ${predicate}`);
+  }
+
+  function renderCompactDemo(scenario, status) {
+    const label = scenario && scenario.label ? scenario.label : "等待场景";
+    setText(compactDemoTitle, label);
+    setText(compactDemoText, `20/20 节点 · 23/23 连线 · ${status || "等待同步"}`);
   }
 
   function sourceIndexQuery() {
@@ -531,6 +567,7 @@
     setText(traceType, TRACE_KIND_LABELS[kind] || kind);
     setText(traceLogicLevel, logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
     setText(traceFolded, folded.length > 0 ? folded.join("；") : "无折叠谓词");
+    renderCompactLogic(kind, id, logicLevels, folded);
 
     if (!traceEvidenceList) return;
     traceEvidenceList.innerHTML = "";
@@ -712,6 +749,7 @@
     setText(demoScenario, scenario.label);
     if (!demoFrame || !demoFrame.contentDocument) {
       setText(demoSyncStatus, "等待 iframe 加载");
+      renderCompactDemo(scenario, "等待 iframe 加载");
       return;
     }
     const doc = demoFrame.contentDocument;
@@ -721,6 +759,7 @@
     if (presetButton) {
       presetButton.click();
       setText(demoSyncStatus, `已同步 ${scenario.label}`);
+      renderCompactDemo(scenario, "已同步");
       demoFrame.dataset.activeScenario = scenario.preset;
       return;
     }
@@ -734,6 +773,7 @@
     writeInput(doc, "fan-reverser-inhibited", controls.reverserInhibited, "change");
     writeInput(doc, "fan-eec-enable", controls.eecEnable, "change");
     setText(demoSyncStatus, `已同步 ${scenario.label}`);
+    renderCompactDemo(scenario, "已同步");
     demoFrame.dataset.activeScenario = step.anchor;
   }
 
@@ -1017,6 +1057,7 @@
     setText(sourceAnchor, step.anchor);
     setText(sourceTitle, step.title || "");
     setText(sourceText, step.source_text || "");
+    renderCompactDemand(step, activeIndex, steps);
     if (reviewPanel) reviewPanel.dataset.activeAnchor = step.anchor;
     if (demoFrame) demoFrame.dataset.activeSequenceAnchor = step.anchor;
     setGridHighlights(nodeGrid, "node", cumulativeNodes, currentNodes);

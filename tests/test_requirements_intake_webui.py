@@ -6391,6 +6391,12 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-review-workbench="interactive"' in html
     assert 'id="docx-circuit-workbench-bar"' in html
     assert 'data-docx-circuit-workbench-bar="true"' in html
+    assert 'id="docx-circuit-compact-review"' in html
+    assert 'data-docx-circuit-compact="true"' in html
+    assert html.count('data-compact-review-card="') == 3
+    assert 'id="docx-circuit-compact-demand-title"' in html
+    assert 'id="docx-circuit-compact-logic-title"' in html
+    assert 'id="docx-circuit-compact-demo-title"' in html
     assert "反推需求到可运行电路" in html
     assert "已登记源文档" in html
     assert 'data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx"' in html
@@ -6418,6 +6424,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-source-index-clear"' in html
     assert 'id="docx-circuit-source-index-list"' in html
     assert 'id="docx-circuit-source-anchor"' in html
+    assert 'id="docx-circuit-trace-details"' in html
+    assert 'data-default-collapsed="true"' in html
     assert 'id="docx-circuit-trace-panel"' in html
     assert 'data-selected-element-id="wire_logic4_thr_lock"' in html
     assert 'id="docx-circuit-trace-evidence-list"' in html
@@ -6428,6 +6436,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-wire-count="23"' in html
     assert 'id="docx-circuit-node-grid"' in html
     assert 'id="docx-circuit-wire-grid"' in html
+    assert 'id="docx-circuit-contract-details"' in html
     assert 'id="docx-circuit-demo-scenario"' in html
     assert 'id="docx-circuit-demo-panel"' in html
     assert 'data-docx-circuit-demo-column="true"' in html
@@ -6443,6 +6452,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function setSvgHighlights" in script
     assert "function selectCircuitElement" in script
     assert "function renderTracePanel" in script
+    assert "function renderCompactDemand" in script
+    assert "function renderCompactLogic" in script
+    assert "function renderCompactDemo" in script
     assert "function matchingSourceEntries" in script
     assert "function activateRelativeStep" in script
     assert "function renderSourceIndex" in script
@@ -6493,6 +6505,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "wire_logic4_thr_lock" in html
     assert ".docx-circuit-stage" in stylesheet
     assert ".docx-circuit-workbench-bar" in stylesheet
+    assert ".docx-circuit-compact-review" in stylesheet
+    assert ".docx-circuit-compact-card" in stylesheet
+    assert ".docx-circuit-collapsible" in stylesheet
     assert ".docx-circuit-review-panel" in stylesheet
     assert ".docx-circuit-review-toolbar" in stylesheet
     assert ".docx-circuit-source-index-panel" in stylesheet

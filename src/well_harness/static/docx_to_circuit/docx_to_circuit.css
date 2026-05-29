@@ -157,6 +157,40 @@ h2 {
   color: var(--docx-accent);
   outline: none;
 }
+.docx-circuit-compact-review {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.docx-circuit-compact-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 118px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--docx-shadow);
+  padding: 12px;
+}
+.docx-circuit-compact-card span {
+  color: var(--docx-accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-compact-card strong {
+  color: var(--docx-text);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.docx-circuit-compact-card p {
+  margin: 0;
+  color: var(--docx-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .docx-circuit-section-head {
   display: flex;
   align-items: center;
@@ -545,6 +579,29 @@ h2 {
   padding: 10px;
   white-space: pre-wrap;
 }
+.docx-circuit-collapsible {
+  margin-top: 10px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.docx-circuit-collapsible summary {
+  cursor: pointer;
+  color: var(--docx-text);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 9px 10px;
+}
+.docx-circuit-collapsible[open] summary {
+  border-bottom: 1px solid var(--docx-border);
+}
+.docx-circuit-collapsible .docx-circuit-trace-panel,
+.docx-circuit-collapsible .docx-circuit-contract-map {
+  margin-top: 0;
+  border: 0;
+  border-radius: 0 0 8px 8px;
+  box-shadow: none;
+}
 .docx-circuit-tool-button {
   min-height: 32px;
   border: 1px solid var(--docx-border);
@@ -898,7 +955,8 @@ h2 {
 @media (max-width: 1180px) {
   .docx-circuit-hero,
   .docx-circuit-stage,
-  .docx-circuit-workflow {
+  .docx-circuit-workflow,
+  .docx-circuit-compact-review {
     grid-template-columns: 1fr;
   }
   .docx-circuit-demo-panel {

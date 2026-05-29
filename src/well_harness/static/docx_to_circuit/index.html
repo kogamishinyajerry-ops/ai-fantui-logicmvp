@@ -94,6 +94,24 @@
     <a href="#docx-circuit-review-packet-preview">交付摘要</a>
   </nav>
 
+  <section id="docx-circuit-compact-review" class="docx-circuit-compact-review" aria-label="需求逻辑电路三块核对" data-docx-circuit-compact="true">
+    <article class="docx-circuit-compact-card" data-compact-review-card="requirements">
+      <span>需求</span>
+      <strong id="docx-circuit-compact-demand-title">P035-S05 · VDT90 与 L3 展开链路进入 L4</strong>
+      <p id="docx-circuit-compact-demand-text">等待读取需求句子。</p>
+    </article>
+    <article class="docx-circuit-compact-card" data-compact-review-card="logic">
+      <span>逻辑</span>
+      <strong id="docx-circuit-compact-logic-title">wire_logic4_thr_lock</strong>
+      <p id="docx-circuit-compact-logic-text">L4 · 等待映射。</p>
+    </article>
+    <article class="docx-circuit-compact-card" data-compact-review-card="circuit">
+      <span>电路</span>
+      <strong id="docx-circuit-compact-demo-title">最大反推（展开到位）</strong>
+      <p id="docx-circuit-compact-demo-text">20/20 节点 · 23/23 连线 · 等待 iframe 加载。</p>
+    </article>
+  </section>
+
   <section class="docx-circuit-stage" aria-label="反推工作过程到电路">
     <article class="docx-circuit-sequence-panel">
       <div class="docx-circuit-section-head">
@@ -168,23 +186,26 @@
         <p id="docx-circuit-source-text">等待读取需求句子。</p>
       </section>
 
-      <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="电路元素反查" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
-        <div class="docx-circuit-trace-head">
-          <h3>元素反查</h3>
-          <span id="docx-circuit-trace-selected-id">wire_logic4_thr_lock</span>
-        </div>
-        <dl class="docx-circuit-trace-summary">
-          <div><dt>类型</dt><dd id="docx-circuit-trace-type">线束</dd></div>
-          <div><dt>逻辑层</dt><dd id="docx-circuit-trace-logic-level">L4</dd></div>
-          <div><dt>折叠谓词</dt><dd id="docx-circuit-trace-folded">等待映射</dd></div>
-        </dl>
-        <div class="docx-circuit-trace-evidence">
-          <strong>DOCX / P035 证据</strong>
-          <ul id="docx-circuit-trace-evidence-list">
-            <li>等待读取元素反查映射</li>
-          </ul>
-        </div>
-      </section>
+      <details id="docx-circuit-trace-details" class="docx-circuit-collapsible" data-default-collapsed="true">
+        <summary>证据反查</summary>
+        <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="电路元素反查" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
+          <div class="docx-circuit-trace-head">
+            <h3>元素反查</h3>
+            <span id="docx-circuit-trace-selected-id">wire_logic4_thr_lock</span>
+          </div>
+          <dl class="docx-circuit-trace-summary">
+            <div><dt>类型</dt><dd id="docx-circuit-trace-type">线束</dd></div>
+            <div><dt>逻辑层</dt><dd id="docx-circuit-trace-logic-level">L4</dd></div>
+            <div><dt>折叠谓词</dt><dd id="docx-circuit-trace-folded">等待映射</dd></div>
+          </dl>
+          <div class="docx-circuit-trace-evidence">
+            <strong>DOCX / P035 证据</strong>
+            <ul id="docx-circuit-trace-evidence-list">
+              <li>等待读取元素反查映射</li>
+            </ul>
+          </div>
+        </section>
+      </details>
 
       <section class="docx-circuit-ladder" aria-label="L1-L4 当前状态">
         <div id="docx-circuit-logic-ladder" class="docx-circuit-logic-ladder">
@@ -205,16 +226,19 @@
         </div>
       </section>
 
-      <section class="docx-circuit-contract-map" aria-label="完整电路节点和连线高亮">
-        <div>
-          <h3>20 个节点</h3>
-          <div id="docx-circuit-node-grid" class="docx-circuit-contract-grid" data-contract-count="20"></div>
-        </div>
-        <div>
-          <h3>23 条连线</h3>
-          <div id="docx-circuit-wire-grid" class="docx-circuit-contract-grid docx-circuit-wire-grid" data-contract-count="23"></div>
-        </div>
-      </section>
+      <details id="docx-circuit-contract-details" class="docx-circuit-collapsible" data-default-collapsed="true">
+        <summary>节点和连线清单</summary>
+        <section class="docx-circuit-contract-map" aria-label="完整电路节点和连线高亮">
+          <div>
+            <h3>20 个节点</h3>
+            <div id="docx-circuit-node-grid" class="docx-circuit-contract-grid" data-contract-count="20"></div>
+          </div>
+          <div>
+            <h3>23 条连线</h3>
+            <div id="docx-circuit-wire-grid" class="docx-circuit-contract-grid docx-circuit-wire-grid" data-contract-count="23"></div>
+          </div>
+        </section>
+      </details>
     </article>
 
     <article id="docx-circuit-demo-panel" class="docx-circuit-demo-panel" data-docx-circuit-demo-column="true">
