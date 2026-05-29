@@ -211,6 +211,7 @@
     eec: $("demo-reconstruction-compact-runway-output-eec"),
     thr: $("demo-reconstruction-compact-runway-output-thr"),
   };
+  const compactRunwayOutputButtons = Array.from(document.querySelectorAll("[data-compact-runway-output-target]"));
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
   const requirementLedgerSummary = $("demo-reconstruction-requirement-ledger-summary");
@@ -1415,6 +1416,19 @@
     return target ? target.label : nodeDisplayLabel(targetId);
   }
 
+  function outputPathTargetForFocus(kind, id) {
+    if (!kind || !id) return "";
+    if (kind === "node") {
+      const target = OUTPUT_PATH_TARGETS.find((item) => item.id === id);
+      return target ? target.id : "";
+    }
+    if (kind === "wire") {
+      const target = OUTPUT_PATH_TARGETS.find((item) => proofPathOutputRecord(item).terminalWire === id);
+      return target ? target.id : "";
+    }
+    return "";
+  }
+
   function upstreamPathForTarget(targetId) {
     const wireIds = topologyWireIds();
     const seenWires = new Set();
@@ -1462,6 +1476,7 @@
     if (!target) return;
     const record = proofPathOutputRecord(target);
     outputPathTargetId = targetId;
+    setCompactRunwayOutputFocusState(targetId);
     renderOutputPathLane();
     setProofPathOutputMapState(targetId);
     if (record.terminalWire) {
@@ -2780,6 +2795,27 @@
     });
   }
 
+  function setCompactRunwayOutputFocusState(targetId) {
+    compactRunwayOutputButtons.forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.compactRunwayOutputTarget === targetId ? "true" : "false",
+      );
+    });
+  }
+
+  function applyCompactRunwayOutputTarget(targetId) {
+    const target = OUTPUT_PATH_TARGETS.find((item) => item.id === targetId);
+    if (!target) return;
+    const record = proofPathOutputRecord(target);
+    if (record.terminalStep) {
+      setSelectedTrace(record.terminalStep, {writeHash: false});
+    }
+    applyProofPathOutputTarget(target.id);
+    setReviewIndexOutputState(target.id);
+    updateReviewIndexStatus();
+  }
+
   function updateCompactOperatorInputLabels() {
     if (compactRunwayTra && compactRunwayTraValue) {
       setText(compactRunwayTraValue, compactAngleLabel(compactRunwayTra.value));
@@ -2863,6 +2899,10 @@
     if (compactRunwayApply) {
       compactRunwayApply.addEventListener("click", applyCompactOperatorInputs);
     }
+    compactRunwayOutputButtons.forEach((button) => {
+      const targetId = button.dataset.compactRunwayOutputTarget || "";
+      button.addEventListener("click", () => applyCompactRunwayOutputTarget(targetId));
+    });
   }
 
   function applyCompactOperatorInputs() {
@@ -5193,6 +5233,7 @@
     setReviewIndexEquationState(equation ? equation.id : "");
     const closureRecord = reviewIndexClosureRecords().find((record) => record.focusKind === kind && record.focusId === id);
     setReviewIndexClosureState(closureRecord ? closureRecord.id : "");
+    setCompactRunwayOutputFocusState(outputPathTargetForFocus(kind, id));
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
       .forEach((button) => {
@@ -5228,6 +5269,7 @@
     setLogicEquationRowState("");
     setReviewIndexEquationState("");
     setReviewIndexClosureState("");
+    setCompactRunwayOutputFocusState("");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")

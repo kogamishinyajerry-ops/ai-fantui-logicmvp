@@ -185,6 +185,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-compact-runway-output-etrac"' in html
     assert 'id="demo-reconstruction-compact-runway-output-eec"' in html
     assert 'id="demo-reconstruction-compact-runway-output-thr"' in html
+    assert 'data-compact-runway-output-target="tls115"' in html
+    assert 'data-compact-runway-output-target="etrac_540v"' in html
+    assert 'data-compact-runway-output-target="eec_deploy"' in html
+    assert 'data-compact-runway-output-target="thr_lock"' in html
     assert "操作者快速面板" in html
     assert 'id="demo-reconstruction-detail-drawer"' in html
     assert "查看验收详情" in html
@@ -573,6 +577,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyScenarioPreset" in script
     assert "installCompactRunwayActions" in script
     assert "compactRunwayOutputs" in script
+    assert "compactRunwayOutputButtons" in script
+    assert "applyCompactRunwayOutputTarget" in script
+    assert "setCompactRunwayOutputFocusState" in script
     assert "updateCompactRunwayOutputs(snapshot)" in script
     assert "hydrateCompactRunwayDefaultState" in script
     assert 'summary !== "等待摘要"' in script
@@ -874,6 +881,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
     assert payload["compact_runway_initial_review"]["controlCount"] == 3
     assert payload["compact_runway_initial_review"]["outputCount"] == 4
+    assert payload["compact_runway_initial_review"]["outputTargets"] == ["tls115", "etrac_540v", "eec_deploy", "thr_lock"]
     assert payload["compact_runway_initial_review"]["pressed"] == ["max-reverse"]
     assert payload["compact_runway_initial_review"]["statusText"] == "最大反推"
     assert payload["compact_runway_initial_review"]["stateText"] == "可用"
@@ -885,6 +893,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_max_review"]["stateText"] == "可用"
     assert payload["compact_runway_max_review"]["lockText"] == "释放"
     assert payload["compact_runway_max_review"]["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+    assert payload["compact_runway_output_focus_review"]["pressedOutputs"] == ["thr_lock"]
+    assert "wire_logic4_thr_lock" in payload["compact_runway_output_focus_review"]["reviewObjectText"]
+    assert payload["compact_runway_output_focus_review"]["proofPathText"].startswith("蓝图")
+    assert "THR_LOCK" in payload["compact_runway_output_focus_review"]["outputMapReadback"]
+    assert "wire_logic4_thr_lock" in payload["compact_runway_output_focus_review"]["statusText"]
+    assert "step=P035-S05" in payload["compact_runway_output_focus_review"]["hash"]
+    assert "focus=wire%3Awire_logic4_thr_lock" in payload["compact_runway_output_focus_review"]["hash"]
     assert payload["compact_runway_inhibit_review"]["pressed"] == ["inhibit-block"]
     assert payload["compact_runway_inhibit_review"]["statusText"] == "抑制阻塞"
     assert payload["compact_runway_inhibit_review"]["stateText"] == "阻塞"
