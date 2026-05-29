@@ -401,6 +401,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "sentenceRunnerOutputLabel" in script
     assert "renderProofPathTimeline" in script
     assert "applyProofPathStep" in script
+    assert "applyProofPathObjectJump" in script
+    assert "proofPathFocusRecords" in script
     assert "proofPathFocusTarget" in script
     assert "等待源文证据" in script
     assert "本句" in script
@@ -471,7 +473,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-sentence-runner-list" in stylesheet
     assert ".demo-reconstruction-proof-path" in stylesheet
     assert ".demo-reconstruction-proof-path-list" in stylesheet
-    assert ".demo-reconstruction-proof-path-list em" in stylesheet
+    assert ".demo-reconstruction-proof-path-focus-list" in stylesheet
+    assert ".demo-reconstruction-proof-path-step em" in stylesheet
     assert ".demo-reconstruction-scenario-comparator" in stylesheet
     assert ".demo-reconstruction-scenario-comparator-list" in stylesheet
     assert ".demo-reconstruction-scenario-ledger" in stylesheet
@@ -1011,6 +1014,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "P035-S05" in payload["sentence_runner_s05_review"]["controlStep"]
     assert payload["proof_path_review"]["stepCount"] == 5
     assert payload["proof_path_review"]["finalCount"] == 1
+    assert payload["proof_path_review"]["focusChipCount"] >= 10
+    assert "tls_unlocked" in payload["proof_path_review"]["firstFocusIds"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_review"]["finalFocusIds"]
     assert "P035-S01" in payload["proof_path_review"]["firstText"]
     assert "飞机离地小于6ft" in payload["proof_path_review"]["firstText"]
     assert "本句 6 节点 / 5 连线" in payload["proof_path_review"]["firstText"]
@@ -1026,6 +1032,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["proof_path_final_review"]["selectedAnchor"] == "P035-S05"
     assert "wire_logic4_thr_lock" in payload["proof_path_final_review"]["reviewObjectText"]
     assert "聚焦连线" in payload["proof_path_final_review"]["reviewSyncText"]
+    assert payload["proof_path_chip_review"]["selectedAnchor"] == "P035-S01"
+    assert "tls_unlocked" in payload["proof_path_chip_review"]["reviewObjectText"]
+    assert "聚焦节点" in payload["proof_path_chip_review"]["reviewSyncText"]
+    assert "tls_unlocked" in payload["proof_path_chip_review"]["readbackText"]
     assert payload["scenario_comparator_review"]["buttonCount"] == 2
     assert "最大反推" in payload["scenario_comparator_review"]["maxText"]
     assert "抑制阻塞" in payload["scenario_comparator_review"]["inhibitText"]

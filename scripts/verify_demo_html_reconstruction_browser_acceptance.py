@@ -187,6 +187,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-control-strip-action]").length === 3
                             && document.querySelectorAll("[data-sentence-runner-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-step]").length === 5
+                            && document.querySelectorAll("[data-proof-path-focus-id]").length >= 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
                             && document.querySelectorAll("[data-review-verdict-card]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
@@ -1797,8 +1798,20 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-proof-path").evaluate(
                     """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
                 )
+                page.evaluate(
+                    """() => {
+                        const nav = document.querySelector(".unified-nav");
+                        if (nav) nav.style.setProperty("visibility", "hidden");
+                    }"""
+                )
                 page.locator("#demo-reconstruction-proof-path").screenshot(
                     path=str(proof_path_path)
+                )
+                page.evaluate(
+                    """() => {
+                        const nav = document.querySelector(".unified-nav");
+                        if (nav) nav.style.removeProperty("visibility");
+                    }"""
                 )
                 proof_path_review = page.evaluate(
                     """() => {
@@ -1811,6 +1824,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             ).map((button) => button.getAttribute("data-proof-path-step")),
                             statusText: text("#demo-reconstruction-proof-path-status"),
                             readbackText: text("#demo-reconstruction-proof-path-readback"),
+                            focusChipCount: document.querySelectorAll("[data-proof-path-focus-id]").length,
+                            firstFocusIds: Array.from(
+                                document.querySelectorAll('[data-proof-path-row="P035-S01"] [data-proof-path-focus-id]')
+                            ).map((button) => button.getAttribute("data-proof-path-focus-id")),
+                            finalFocusIds: Array.from(
+                                document.querySelectorAll('[data-proof-path-row="P035-S05"] [data-proof-path-focus-id]')
+                            ).map((button) => button.getAttribute("data-proof-path-focus-id")),
                             firstText: text('[data-proof-path-step="P035-S01"]'),
                             finalText: text('[data-proof-path-step="P035-S05"]'),
                         };
@@ -1847,6 +1867,38 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             selectedAnchor: text("#demo-reconstruction-selected-anchor"),
                             reviewObjectText: text("#demo-reconstruction-review-object"),
                             reviewSyncText: text("#demo-reconstruction-review-sync"),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-row="P035-S01"] [data-proof-path-focus-id="tls_unlocked"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        const sync = document.querySelector("#demo-reconstruction-review-sync");
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-readback");
+                        return selected
+                            && selected.textContent.trim() === "P035-S01"
+                            && object
+                            && object.textContent.includes("tls_unlocked")
+                            && sync
+                            && sync.textContent.includes("聚焦节点")
+                            && readback
+                            && readback.textContent.includes("tls_unlocked");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_chip_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            reviewSyncText: text("#demo-reconstruction-review-sync"),
+                            readbackText: text("#demo-reconstruction-proof-path-readback"),
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-step")),
                         };
                     }"""
                 )
@@ -2940,6 +2992,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             proof_path_review["stepCount"] == 5
             and proof_path_review["finalCount"] == 1
+            and proof_path_review["focusChipCount"] >= 10
+            and "tls_unlocked" in proof_path_review["firstFocusIds"]
+            and "wire_logic4_thr_lock" in proof_path_review["finalFocusIds"]
             and "P035-S01" in proof_path_review["firstText"]
             and "飞机离地小于6ft" in proof_path_review["firstText"]
             and "本句 6 节点 / 5 连线" in proof_path_review["firstText"]
@@ -2955,6 +3010,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and proof_path_final_review["selectedAnchor"] == "P035-S05"
             and "wire_logic4_thr_lock" in proof_path_final_review["reviewObjectText"]
             and "聚焦连线" in proof_path_final_review["reviewSyncText"]
+            and proof_path_chip_review["selectedAnchor"] == "P035-S01"
+            and "tls_unlocked" in proof_path_chip_review["reviewObjectText"]
+            and "聚焦节点" in proof_path_chip_review["reviewSyncText"]
+            and "tls_unlocked" in proof_path_chip_review["readbackText"]
         )
         else "fail",
         "scenario_comparator_readback": "pass"
@@ -3086,6 +3145,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "sentence_runner_s05_review": sentence_runner_s05_review,
         "proof_path_review": proof_path_review,
         "proof_path_final_review": proof_path_final_review,
+        "proof_path_chip_review": proof_path_chip_review,
         "scenario_comparator_review": scenario_comparator_review,
         "scenario_comparator_max_review": scenario_comparator_max_review,
         "scenario_comparator_inhibit_review": scenario_comparator_inhibit_review,

@@ -2071,6 +2071,21 @@
     return nodeId ? {kind: "node", id: nodeId} : {kind: "", id: ""};
   }
 
+  function proofPathFocusRecords(step, contract) {
+    const records = [];
+    const seen = new Set();
+    const add = (kind, id) => {
+      if (!kind || !id || seen.has(`${kind}:${id}`)) return;
+      seen.add(`${kind}:${id}`);
+      records.push({kind, id});
+    };
+    const primary = proofPathFocusTarget(step, contract);
+    add(primary.kind, primary.id);
+    (step.wire_ids || []).slice(-2).forEach((wireId) => add("wire", wireId));
+    (step.node_ids || []).slice(-2).forEach((nodeId) => add("node", nodeId));
+    return records.slice(0, 4);
+  }
+
   function setProofPathState(anchor) {
     document.querySelectorAll("[data-proof-path-step]").forEach((button) => {
       const selected = button.dataset.proofPathStep === anchor;
@@ -2078,7 +2093,7 @@
     });
   }
 
-  function updateProofPathStatus(step = currentTraceStep) {
+  function updateProofPathStatus(step = currentTraceStep, focusOverride = null) {
     if (!proofPathStatus || !proofPathReadback) return;
     if (!step || !traceSteps.length) {
       setText(proofPathStatus, "等待 P035");
@@ -2089,7 +2104,7 @@
     const index = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
     const safeIndex = index >= 0 ? index : 0;
     const contract = cumulativeTraceContract(safeIndex);
-    const focus = proofPathFocusTarget(step, contract);
+    const focus = focusOverride || proofPathFocusTarget(step, contract);
     const focusText = focus.id ? reviewObjectLabel(focus.kind, focus.id) : "等待聚焦";
     const outputLabel = sentenceRunnerOutputLabel(step, contract);
     setText(proofPathStatus, `${safeIndex + 1}/${traceSteps.length} · ${outputLabel}`);
@@ -2111,6 +2126,15 @@
     updateProofPathStatus(step);
   }
 
+  function applyProofPathObjectJump(anchor, kind, id) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0 || !kind || !id) return;
+    const step = traceSteps[index];
+    applyStepPlayback(index);
+    applyEmbeddedTraceFocus(kind, id);
+    updateProofPathStatus(step, {kind, id});
+  }
+
   function renderProofPathTimeline(steps) {
     if (!proofPathList) return;
     proofPathList.innerHTML = "";
@@ -2128,8 +2152,12 @@
       const outputLabel = sentenceRunnerOutputLabel(step, contract);
       const finalReady = contract.node_ids.length === EXPECTED_NODE_COUNT
         && contract.wire_ids.length === EXPECTED_WIRE_COUNT;
+      const row = document.createElement("div");
+      row.className = "demo-reconstruction-proof-path-row";
+      row.dataset.proofPathRow = step.anchor || "";
       const button = document.createElement("button");
       button.type = "button";
+      button.className = "demo-reconstruction-proof-path-step";
       button.dataset.proofPathStep = step.anchor || "";
       button.dataset.proofPathFinal = finalReady ? "true" : "false";
       button.setAttribute("aria-pressed", "false");
@@ -2144,7 +2172,22 @@
       meta.textContent = `${outputLabel} · 本句 ${(step.node_ids || []).length} 节点 / ${(step.wire_ids || []).length} 连线 · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
       button.append(anchor, title, source, meta);
       button.addEventListener("click", () => applyProofPathStep(step.anchor || ""));
-      proofPathList.appendChild(button);
+      row.appendChild(button);
+
+      const focusList = document.createElement("div");
+      focusList.className = "demo-reconstruction-proof-path-focus-list";
+      focusList.dataset.proofPathFocusList = step.anchor || "";
+      proofPathFocusRecords(step, contract).forEach((record) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.dataset.proofPathFocusKind = record.kind;
+        chip.dataset.proofPathFocusId = record.id;
+        chip.textContent = reviewObjectLabel(record.kind, record.id);
+        chip.addEventListener("click", () => applyProofPathObjectJump(step.anchor || "", record.kind, record.id));
+        focusList.appendChild(chip);
+      });
+      row.appendChild(focusList);
+      proofPathList.appendChild(row);
     });
     updateProofPathStatus(currentTraceStep || steps[0]);
   }
