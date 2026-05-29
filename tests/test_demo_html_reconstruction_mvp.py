@@ -238,6 +238,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-scenario-truth-table"' in html
     assert 'id="demo-reconstruction-scenario-truth-status"' in html
     assert 'id="demo-reconstruction-scenario-truth-body"' in html
+    assert 'id="demo-reconstruction-operator-runway"' in html
+    assert 'id="demo-reconstruction-operator-runway-status"' in html
+    assert 'id="demo-reconstruction-operator-runway-list"' in html
     assert 'id="demo-reconstruction-coverage-node-list"' in html
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
@@ -256,6 +259,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "交付链路总览" in html
     assert "演示舱输出镜像" in html
     assert "场景读回记录" in html
+    assert "演示导览轨" in html
     assert "完整电路拓扑矩阵" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
@@ -341,6 +345,12 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderScenarioLedger" in script
     assert "renderScenarioTruthTable" in script
     assert "scenarioTruthTokens" in script
+    assert "OPERATOR_RUNWAY_RECORDS" in script
+    assert "renderOperatorRunway" in script
+    assert "activateOperatorRunwayRecord" in script
+    assert "refreshOperatorRunwayReadback" in script
+    assert "runway-l4-thr-lock" in script
+    assert "runway-inhibit" in script
     assert "applyScenarioPreset" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
@@ -399,6 +409,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-scenario-row" in stylesheet
     assert ".demo-reconstruction-scenario-truth-table" in stylesheet
     assert ".demo-reconstruction-scenario-truth-row" in stylesheet
+    assert ".demo-reconstruction-operator-runway" in stylesheet
+    assert ".demo-reconstruction-operator-runway-row" in stylesheet
     assert "button.demo-reconstruction-chip" in stylesheet
 
 
@@ -421,12 +433,17 @@ def test_demo_reconstruction_mvp_console_has_first_screen_operator_guide() -> No
     ).read_text(encoding="utf-8")
 
     assert 'id="demo-reconstruction-operator-guide"' in html
+    assert 'id="demo-reconstruction-operator-runway"' in html
     assert 'data-demo-mvp-guide="first-screen"' in html
+    assert 'data-operator-runway="demo-html-walkthrough"' in html
+    assert "演示导览轨" in html
     assert "选择预设" in html
     assert "查看 HUD" in html
     assert "核对输出" in html
     assert ".demo-reconstruction-operator-guide" in stylesheet
     assert ".demo-reconstruction-guide-step" in stylesheet
+    assert ".demo-reconstruction-operator-runway" in stylesheet
+    assert ".demo-reconstruction-operator-runway-row" in stylesheet
 
 
 def test_demo_reconstruction_docx_sentence_map_covers_complete_demo_circuit() -> None:
@@ -497,6 +514,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["custody_matrix"].endswith(".png")
     assert payload["screenshots"]["scenario_ledger"].endswith(".png")
     assert payload["screenshots"]["scenario_truth_table"].endswith(".png")
+    assert payload["screenshots"]["operator_runway"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -514,6 +532,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "output_mirror_visible": True,
         "scenario_ledger_visible": True,
         "scenario_truth_table_visible": True,
+        "operator_runway_visible": True,
         "console_frame_visible": True,
         "evidence_rail_visible": True,
     }
@@ -825,6 +844,23 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["scenario_ledger_outer_control"]["truthActiveRows"] == ["max-reverse"]
     assert "L4:ON" in payload["scenario_ledger_outer_control"]["truthMaxReverseText"]
     assert "THR:ON" in payload["scenario_ledger_outer_control"]["truthMaxReverseText"]
+    assert payload["operator_runway_review"]["rowCount"] == 6
+    assert payload["operator_runway_review"]["readyRowCount"] == 6
+    assert "6/6" in payload["operator_runway_review"]["statusText"]
+    assert "THR_LOCK" in payload["operator_runway_review"]["l4Text"]
+    assert "BLOCKED" in payload["operator_runway_review"]["inhibitText"]
+    assert payload["operator_runway_l4_review"]["activeRows"] == ["runway-l4-thr-lock"]
+    assert "05/06" in payload["operator_runway_l4_review"]["statusText"]
+    assert "P035-S05" in payload["operator_runway_l4_review"]["stepText"]
+    assert "wire_logic4_thr_lock" in payload["operator_runway_l4_review"]["objectText"]
+    assert payload["operator_runway_l4_review"]["output"] == "ON"
+    assert "DEPLOYED" in payload["operator_runway_l4_review"]["readbackText"]
+    assert payload["operator_runway_inhibit_review"]["activeRows"] == ["runway-inhibit"]
+    assert "06/06" in payload["operator_runway_inhibit_review"]["statusText"]
+    assert "P035-S01" in payload["operator_runway_inhibit_review"]["stepText"]
+    assert "reverser_inhibited" in payload["operator_runway_inhibit_review"]["objectText"]
+    assert payload["operator_runway_inhibit_review"]["output"] == "BLOCKED"
+    assert "FAULT" in payload["operator_runway_inhibit_review"]["readbackText"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
@@ -863,6 +899,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "hud_output_linkage": "pass",
         "output_mirror_sync": "pass",
         "scenario_ledger_readback": "pass",
+        "operator_runway_readback": "pass",
         "boundary": "pass",
     }
 

@@ -61,6 +61,80 @@
       outputNodes: ["thr_lock"],
     },
   ];
+  const OPERATOR_RUNWAY_RECORDS = [
+    {
+      id: "runway-l1-unlock",
+      order: "01",
+      anchor: "P035-S01",
+      presetId: "landing-deploy",
+      presetLabel: "着陆展开",
+      title: "低空解锁",
+      focusKind: "wire",
+      focusId: "wire_logic1_tls115",
+      readback: "RA < 6 ft 与 SW1 进入 L1，TLS 115VAC 通电。",
+      output: "TLS -> ON",
+    },
+    {
+      id: "runway-l2-power",
+      order: "02",
+      anchor: "P035-S02",
+      presetId: "landing-deploy",
+      presetLabel: "着陆展开",
+      title: "ETRAC 供电",
+      focusKind: "wire",
+      focusId: "wire_logic2_etrac",
+      readback: "SW2、地面、发动机运行和 EEC 使能进入 L2。",
+      output: "ETRAC -> ON",
+    },
+    {
+      id: "runway-l3-deploy",
+      order: "03",
+      anchor: "P035-S03",
+      presetId: "max-reverse",
+      presetLabel: "最大反推",
+      title: "展开指令",
+      focusKind: "wire",
+      focusId: "wire_logic3_pdu",
+      readback: "TLS 解锁、TRA 阈值和 N1K 限制进入 L3。",
+      output: "EEC / PDU -> ON",
+    },
+    {
+      id: "runway-vdt90",
+      order: "04",
+      anchor: "P035-S04",
+      presetId: "max-reverse",
+      presetLabel: "最大反推",
+      title: "90% 展开反馈",
+      focusKind: "wire",
+      focusId: "wire_pdu_vdt90",
+      readback: "PDU 电机带动滑动罩，形成 VDT90 反馈。",
+      output: "VDT90 -> TRUE",
+    },
+    {
+      id: "runway-l4-thr-lock",
+      order: "05",
+      anchor: "P035-S05",
+      presetId: "max-reverse",
+      presetLabel: "最大反推",
+      title: "反推锁释放",
+      focusKind: "wire",
+      focusId: "wire_logic4_thr_lock",
+      readback: "VDT90 与 L3 进入 L4，THR_LOCK 释放。",
+      output: "THR_LOCK -> RELEASED",
+    },
+    {
+      id: "runway-inhibit",
+      order: "06",
+      anchor: "P035-S01",
+      presetId: "inhibit-block",
+      presetLabel: "抑制位阻塞",
+      title: "安全阻塞分支",
+      focusKind: "node",
+      focusId: "reverser_inhibited",
+      readback: "抑制位为真时，展开链路保持阻塞。",
+      output: "THR_LOCK -> BLOCKED",
+    },
+  ];
   const TRACE_HIGHLIGHT_STYLE_ID = "demo-reconstruction-trace-highlight-style";
 
   const $ = (id) => document.getElementById(id);
@@ -173,6 +247,9 @@
   const scenarioLedgerList = $("demo-reconstruction-scenario-ledger-list");
   const scenarioTruthStatus = $("demo-reconstruction-scenario-truth-status");
   const scenarioTruthBody = $("demo-reconstruction-scenario-truth-body");
+  const operatorRunwayStatus = $("demo-reconstruction-operator-runway-status");
+  const operatorRunwayReadback = $("demo-reconstruction-operator-runway-readback");
+  const operatorRunwayList = $("demo-reconstruction-operator-runway-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let latestDocxPayload = null;
   let sourceEntries = [];
@@ -191,6 +268,7 @@
   let nodeKindMap = new Map();
   let outputMirrorObserver = null;
   let scenarioLedgerRecords = new Map();
+  let activeOperatorRunwayId = "";
 
   function readJson(value) {
     try {
@@ -1702,6 +1780,123 @@
     setText(scenarioTruthStatus, `${captured}/${records.length} 已记录`);
   }
 
+  function operatorRunwayRecordById(recordId) {
+    return OPERATOR_RUNWAY_RECORDS.find((record) => record.id === recordId) || null;
+  }
+
+  function operatorRunwayOutputSummary() {
+    const status = outputMirrorStatus && outputMirrorStatus.textContent
+      ? outputMirrorStatus.textContent.trim()
+      : "等待同步";
+    const thr = outputMirrorThrOutput && outputMirrorThrOutput.textContent
+      ? outputMirrorThrOutput.textContent.trim()
+      : "--";
+    return `${status} · THR ${thr}`;
+  }
+
+  function refreshOperatorRunwayReadback(record) {
+    if (!operatorRunwayReadback) return;
+    if (!record) {
+      setText(operatorRunwayReadback, "选择一段演示路径");
+      return;
+    }
+    setText(
+      operatorRunwayReadback,
+      `${record.order} · ${record.title} · ${record.readback} · ${record.output} · ${operatorRunwayOutputSummary()}`,
+    );
+  }
+
+  function setOperatorRunwayState(recordId) {
+    const record = typeof recordId === "string" ? operatorRunwayRecordById(recordId) : recordId;
+    activeOperatorRunwayId = record ? record.id : "";
+    document.querySelectorAll("[data-operator-runway-row]").forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.operatorRunwayRow === activeOperatorRunwayId ? "true" : "false",
+      );
+    });
+    if (record) {
+      setText(operatorRunwayStatus, `${record.order}/${String(OPERATOR_RUNWAY_RECORDS.length).padStart(2, "0")} · ${record.presetLabel}`);
+      refreshOperatorRunwayReadback(record);
+    }
+  }
+
+  function activateOperatorRunwayRecord(record) {
+    if (!record) return;
+    applyScenarioPreset(record.presetId);
+    const step = traceStepByAnchor(record.anchor);
+    if (step) setSelectedTrace(step, {writeHash: false});
+    if (record.focusKind && record.focusId) applyEmbeddedTraceFocus(record.focusKind, record.focusId);
+    setOperatorRunwayState(record);
+  }
+
+  function renderOperatorRunway() {
+    if (!operatorRunwayList) return;
+    operatorRunwayList.innerHTML = "";
+    const readyCount = OPERATOR_RUNWAY_RECORDS.filter((record) => traceStepByAnchor(record.anchor)).length;
+    if (!OPERATOR_RUNWAY_RECORDS.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "demo-reconstruction-operator-runway-row";
+      empty.dataset.operatorRunwayRow = "empty";
+      empty.textContent = "导览路径暂无数据";
+      operatorRunwayList.appendChild(empty);
+      setText(operatorRunwayStatus, "等待链路");
+      refreshOperatorRunwayReadback(null);
+      return;
+    }
+
+    OPERATOR_RUNWAY_RECORDS.forEach((record) => {
+      const step = traceStepByAnchor(record.anchor);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-operator-runway-row";
+      button.dataset.operatorRunwayRow = record.id;
+      button.dataset.operatorRunwayPreset = record.presetId;
+      button.dataset.operatorRunwayAnchor = record.anchor;
+      button.dataset.operatorRunwayFocusKind = record.focusKind;
+      button.dataset.operatorRunwayFocusId = record.focusId;
+      button.dataset.operatorRunwayReady = step ? "true" : "false";
+      button.setAttribute("aria-pressed", record.id === activeOperatorRunwayId ? "true" : "false");
+      button.addEventListener("click", () => activateOperatorRunwayRecord(record));
+
+      const head = document.createElement("div");
+      head.className = "demo-reconstruction-operator-runway-row-head";
+      const order = document.createElement("span");
+      order.textContent = record.order;
+      const title = document.createElement("strong");
+      title.textContent = record.title;
+      const preset = document.createElement("em");
+      preset.textContent = record.presetLabel;
+      head.append(order, title, preset);
+
+      const detail = document.createElement("p");
+      detail.textContent = record.readback;
+
+      const chips = document.createElement("div");
+      chips.className = "demo-reconstruction-operator-runway-chips";
+      [
+        record.anchor,
+        record.output,
+        step ? "可演示" : "等待映射",
+      ].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        chips.appendChild(chip);
+      });
+
+      button.append(head, detail, chips);
+      operatorRunwayList.appendChild(button);
+    });
+
+    if (activeOperatorRunwayId) {
+      setOperatorRunwayState(activeOperatorRunwayId);
+    } else {
+      setText(operatorRunwayStatus, `${readyCount}/${OPERATOR_RUNWAY_RECORDS.length} 可演示`);
+      refreshOperatorRunwayReadback(null);
+    }
+  }
+
   function updateScenarioLedgerFromFrame() {
     if (!scenarioLedgerList || !consoleFrame) return;
     const frameDocument = consoleFrame.contentDocument;
@@ -1738,6 +1933,7 @@
       setText(outputMirrorStatus, "等待同步");
       updateCustodyOutputReadback();
       updateScenarioLedgerFromFrame();
+      refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
       updateReviewIndexStatus();
       return;
     }
@@ -1751,6 +1947,7 @@
     setText(outputMirrorThrOutput, frameText(frameDocument, "#fan-out-thr-value", "--"));
     updateCustodyOutputReadback();
     updateScenarioLedgerFromFrame();
+    refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
     updateReviewIndexStatus();
   }
 
@@ -2624,6 +2821,7 @@
     renderTopologyStepFilter(steps);
     renderTopologyMatrix();
     renderOutputMaturityMatrix(steps);
+    renderOperatorRunway();
   }
 
   function renderSourceEntries(entries) {
