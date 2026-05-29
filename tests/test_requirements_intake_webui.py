@@ -5951,8 +5951,12 @@ def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
     assert 'id="home-first-phase-demo-entry"' in html
     assert 'href="/demo-reconstruction"' in html
     assert 'data-home-priority="first-phase-mvp"' in html
+    assert 'id="home-first-phase-complete-entry"' in html
+    assert 'href="/demo-reconstruction#complete=1"' in html
+    assert 'data-home-priority="first-phase-complete"' in html
     assert "第一阶段可演示交付物" in html
     assert "demo.html 复刻 MVP 控制台" in html
+    assert "打开完整交付态" in html
     assert "20/20 节点" in html
     assert "23/23 连线" in html
     assert "make demo-html-reconstruction-mvp" in html

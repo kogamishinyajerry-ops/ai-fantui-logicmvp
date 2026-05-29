@@ -199,6 +199,20 @@
     border-color: var(--home-active);
     background: rgba(0,229,160,0.26);
   }
+  .home-first-phase-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .home-first-phase-demo-link-secondary {
+    border-color: rgba(0,200,245,0.42);
+    background: rgba(0,200,245,0.10);
+  }
+  .home-first-phase-demo-link-secondary:hover {
+    border-color: rgba(0,200,245,0.78);
+    background: rgba(0,200,245,0.18);
+  }
   @media (max-width: 960px) {
     .home-default-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -372,7 +386,9 @@
   }
   @media (max-width: 720px) {
     .home-first-phase-mvp { grid-template-columns: 1fr; }
+    .home-first-phase-actions,
     .home-first-phase-demo-link { width: 100%; white-space: normal; }
+    .home-first-phase-actions { justify-content: stretch; }
     .home-primary-action { grid-template-columns: 1fr; }
     .home-primary-next { width: 100%; white-space: normal; }
   }
@@ -727,7 +743,10 @@
         <span>make demo-html-reconstruction-browser-acceptance</span>
       </div>
     </div>
-    <a id="home-first-phase-demo-entry" class="home-first-phase-demo-link" href="/demo-reconstruction" data-home-priority="first-phase-mvp">打开 demo.html 复刻 MVP 控制台</a>
+    <div class="home-first-phase-actions" aria-label="第一阶段演示入口">
+      <a id="home-first-phase-demo-entry" class="home-first-phase-demo-link" href="/demo-reconstruction" data-home-priority="first-phase-mvp">打开控制台</a>
+      <a id="home-first-phase-complete-entry" class="home-first-phase-demo-link home-first-phase-demo-link-secondary" href="/demo-reconstruction#complete=1" data-home-priority="first-phase-complete">打开完整交付态</a>
+    </div>
   </section>
 
   <section id="home-default-mode-grid" class="home-default-mode-grid" aria-label="默认五入口">
