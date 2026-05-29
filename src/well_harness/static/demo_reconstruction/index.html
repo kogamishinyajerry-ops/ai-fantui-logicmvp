@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p15">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p15" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p16">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p16" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -77,6 +77,7 @@
       <button type="button" data-review-index-target="demo-reconstruction-docx-circuit-map" aria-pressed="true">DOCX 总览</button>
       <button type="button" data-review-index-target="demo-reconstruction-requirement-ledger" aria-pressed="false">覆盖账本</button>
       <button type="button" data-review-index-target="demo-reconstruction-docx-trace-board" aria-pressed="false">逐句链路</button>
+      <button type="button" data-review-index-target="demo-reconstruction-logic-equation-board" aria-pressed="false">方程板</button>
       <button type="button" data-review-index-target="demo-reconstruction-step-playback" aria-pressed="false">累计构建</button>
       <button type="button" data-review-index-target="demo-reconstruction-assembly-map" aria-pressed="false">装配总览</button>
       <button type="button" data-review-index-target="demo-reconstruction-custody-matrix" aria-pressed="false">交付链路</button>
@@ -156,6 +157,18 @@
           </div>
         </aside>
       </div>
+    </div>
+    <div id="demo-reconstruction-logic-equation-board" class="demo-reconstruction-logic-equation-board" data-logic-equation-board="p035-l1-l4" aria-label="P035 到 L1-L4 逻辑方程板">
+      <div class="demo-reconstruction-logic-equation-head">
+        <div>
+          <h3>逻辑方程板</h3>
+          <p>把 P035 拆解后的 L1、L2、L3、L4 条件写成可点击公式，核对它们如何合成 demo.html 级完整电路。</p>
+        </div>
+        <strong id="demo-reconstruction-logic-equation-summary">等待方程读回</strong>
+      </div>
+      <ol id="demo-reconstruction-logic-equation-list" class="demo-reconstruction-logic-equation-list">
+        <li>正在读取 L1-L4 方程</li>
+      </ol>
     </div>
     <div id="demo-reconstruction-step-playback" class="demo-reconstruction-step-playback" data-step-playback="docx-cumulative-circuit" aria-label="DOCX 逐句累计构建电路轨道">
       <div class="demo-reconstruction-playback-head">

@@ -124,6 +124,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     mobile_first_screen_path = artifact_dir / f"demo-reconstruction-mvp-mobile-first-screen-{stamp}.png"
     review_index_path = artifact_dir / f"demo-reconstruction-review-index-{stamp}.png"
     assembly_map_path = artifact_dir / f"demo-reconstruction-assembly-map-{stamp}.png"
+    logic_equation_path = artifact_dir / f"demo-reconstruction-logic-equation-board-{stamp}.png"
     topology_matrix_path = artifact_dir / f"demo-reconstruction-topology-matrix-{stamp}.png"
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
@@ -198,6 +199,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "trace_board_visible": page.locator(
                         "#demo-reconstruction-docx-trace-board"
+                    ).is_visible(timeout=5000),
+                    "logic_equation_board_visible": page.locator(
+                        "#demo-reconstruction-logic-equation-board"
                     ).is_visible(timeout=5000),
                     "operator_guide_visible": page.locator(
                         "#demo-reconstruction-operator-guide"
@@ -379,6 +383,68 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             s05Text: text('[data-assembly-step="P035-S05"]'),
                         };
                     }"""
+                )
+                page.locator("#demo-reconstruction-logic-equation-board").screenshot(
+                    path=str(logic_equation_path)
+                )
+                logic_equation_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        const rows = Array.from(document.querySelectorAll("[data-logic-equation-row]"));
+                        const items = Array.from(document.querySelectorAll("[data-logic-equation]"));
+                        return {
+                            visible: !!document.querySelector("#demo-reconstruction-logic-equation-board"),
+                            rowCount: rows.length,
+                            passCount: items.filter((item) => item.dataset.logicEquationStatus === "pass").length,
+                            summaryText: text("#demo-reconstruction-logic-equation-summary"),
+                            l1Text: text('[data-logic-equation="logic1"]'),
+                            l4Text: text('[data-logic-equation="logic4"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-logic-equation-row="logic4"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const row = document.querySelector('[data-logic-equation-row="logic4"]');
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        const object = document.querySelector("#demo-reconstruction-review-object")?.textContent || "";
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && selected.trim() === "P035-S05"
+                            && object.includes("wire_logic4_thr_lock")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1;
+                    }""",
+                    timeout=5000,
+                )
+                logic_equation_focus_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            activeRows: Array.from(
+                                document.querySelectorAll("[data-logic-equation-row][aria-pressed='true']")
+                            ).map((row) => row.getAttribute("data-logic-equation-row")),
+                            selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                            reviewObjectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                        };
+                    }"""
+                )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S01"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const readback = document.querySelector("#demo-reconstruction-topology-readback")?.textContent || "";
+                        return selected
+                            && selected.textContent.trim() === "P035-S01"
+                            && readback.includes("23/23");
+                    }""",
+                    timeout=5000,
                 )
                 topology_matrix_review = page.evaluate(
                     """() => {
@@ -1730,6 +1796,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 mobile_first_screen_path,
                 review_index_path,
                 assembly_map_path,
+                logic_equation_path,
                 topology_matrix_path,
                 chain_svg_path,
                 keyboard_review_path,
@@ -1754,7 +1821,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
-            and source_map_review["reviewIndexButtonCount"] == 10
+            and source_map_review["reviewIndexButtonCount"] == 11
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
@@ -1792,13 +1859,31 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_navigation": "pass"
         if (
             review_index_review["visible"]
-            and review_index_review["buttonCount"] == 10
+            and review_index_review["buttonCount"] == 11
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and "P035-S01" in review_index_review["stepText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
             and review_index_navigation["scrollY"] > 0
             and "P035-S05" in review_index_after_trace["stepText"]
             and "等待聚焦" in review_index_after_trace["objectText"]
+        )
+        else "fail",
+        "logic_equation_board_readback": "pass"
+        if (
+            logic_equation_review["visible"]
+            and logic_equation_review["rowCount"] == 4
+            and logic_equation_review["passCount"] == 4
+            and "4/4 方程" in logic_equation_review["summaryText"]
+            and "20/20 节点" in logic_equation_review["summaryText"]
+            and "23/23 连线" in logic_equation_review["summaryText"]
+            and "RA < 6 ft" in logic_equation_review["l1Text"]
+            and "TLS115" in logic_equation_review["l1Text"]
+            and "VDT90" in logic_equation_review["l4Text"]
+            and "THR_LOCK release" in logic_equation_review["l4Text"]
+            and logic_equation_focus_review["activeRows"] == ["logic4"]
+            and logic_equation_focus_review["selectedAnchor"] == "P035-S05"
+            and "wire_logic4_thr_lock" in logic_equation_focus_review["reviewObjectText"]
+            and logic_equation_focus_review["highlightedWireCount"] == 1
         )
         else "fail",
         "assembly_map_readback": "pass"
@@ -2178,6 +2263,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "mobile_first_screen": str(mobile_first_screen_path),
             "review_index": str(review_index_path),
             "assembly_map": str(assembly_map_path),
+            "logic_equation_board": str(logic_equation_path),
             "topology_matrix": str(topology_matrix_path),
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
@@ -2205,6 +2291,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_review": review_index_review,
         "review_index_navigation": review_index_navigation,
         "review_index_after_trace": review_index_after_trace,
+        "logic_equation_review": logic_equation_review,
+        "logic_equation_focus_review": logic_equation_focus_review,
         "assembly_map_review": assembly_map_review,
         "assembly_map_action_review": assembly_map_action_review,
         "topology_matrix_review": topology_matrix_review,
@@ -2308,7 +2396,9 @@ def main(argv: list[str] | None = None) -> int:
                 "screenshots": "fail",
                 "first_screen_operator_guide": "fail",
                 "docx_sentence_circuit_map": "fail",
+                "requirement_coverage_ledger": "fail",
                 "review_index_navigation": "fail",
+                "logic_equation_board_readback": "fail",
                 "assembly_map_readback": "fail",
                 "topology_matrix_readback": "fail",
                 "trace_selection_interaction": "fail",
