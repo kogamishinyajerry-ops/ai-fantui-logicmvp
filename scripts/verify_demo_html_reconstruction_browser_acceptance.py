@@ -170,7 +170,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             """() => {
                 const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                 const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
-                if (snapshot) snapshot.open = true;
+                if (snapshot) {
+                    snapshot.hidden = false;
+                    snapshot.dataset.circuitSnapshotDetails = "visible";
+                    snapshot.open = true;
+                }
                 if (drawer) {
                     drawer.hidden = false;
                     drawer.dataset.reviewDetailDrawer = "visible";
@@ -198,10 +202,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             review_page.wait_for_function(
                 """() => {
                     const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                    const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                     return drawer
                         && !drawer.hidden
                         && drawer.dataset.reviewDetailDrawer === "visible"
                         && drawer.open
+                        && snapshot
+                        && !snapshot.hidden
+                        && snapshot.dataset.circuitSnapshotDetails === "visible"
+                        && snapshot.open
                         && document.querySelector("#demo-reconstruction-review-index")?.offsetParent;
                 }""",
                 timeout=5000,
@@ -209,11 +218,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             return review_page.evaluate(
                 """() => {
                     const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                    const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                     return {
                         hash: window.location.hash,
                         drawerHidden: drawer?.hidden ?? true,
                         drawerOpen: drawer?.open ?? false,
                         drawerState: drawer?.dataset.reviewDetailDrawer || "",
+                        snapshotHidden: snapshot?.hidden ?? true,
+                        snapshotOpen: snapshot?.open ?? false,
+                        snapshotState: snapshot?.dataset.circuitSnapshotDetails || "",
                         reviewIndexVisible: !!document.querySelector("#demo-reconstruction-review-index")?.offsetParent,
                     };
                 }"""
@@ -304,6 +317,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "snapshot_details_closed": page.locator(
                         "#demo-reconstruction-circuit-snapshot-details"
                     ).evaluate("element => !element.open"),
+                    "snapshot_details_control_visible": page.locator(
+                        "#demo-reconstruction-circuit-snapshot-details"
+                    ).evaluate(
+                        """element => {
+                            const summary = element.querySelector("summary");
+                            return !element.hidden
+                                && element.dataset.circuitSnapshotDetails !== "hidden"
+                                && !!(summary && summary.offsetParent);
+                        }"""
+                    ),
                     "detail_drawer_control_visible": page.locator(
                         "#demo-reconstruction-detail-drawer"
                     ).evaluate(
@@ -4149,6 +4172,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             first_screen_review["detail_drawer_closed"]
             and first_screen_review["snapshot_details_closed"]
+            and not first_screen_review["snapshot_details_control_visible"]
             and not first_screen_review["detail_drawer_control_visible"]
             and first_screen_review["circuit_snapshot_visible"]
             and first_screen_review["circuit_snapshot_preview_visible"]
@@ -4166,6 +4190,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "20/20 节点" not in first_screen_review["visible_text"]
             and "23/23 连线" not in first_screen_review["visible_text"]
             and "62 条源记录" not in first_screen_review["visible_text"]
+            and "查看链路" not in first_screen_review["visible_text"]
             and "查看验收详情" not in first_screen_review["visible_text"]
         )
         else "fail",
@@ -4175,6 +4200,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and not review_drawer_deep_link["drawerHidden"]
             and review_drawer_deep_link["drawerOpen"]
             and review_drawer_deep_link["drawerState"] == "visible"
+            and not review_drawer_deep_link["snapshotHidden"]
+            and review_drawer_deep_link["snapshotOpen"]
+            and review_drawer_deep_link["snapshotState"] == "visible"
             and review_drawer_deep_link["reviewIndexVisible"]
             and (
                 complete_drawer_deep_link["hash"] == "#complete=1"
@@ -4183,6 +4211,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and not complete_drawer_deep_link["drawerHidden"]
             and complete_drawer_deep_link["drawerOpen"]
             and complete_drawer_deep_link["drawerState"] == "visible"
+            and not complete_drawer_deep_link["snapshotHidden"]
+            and complete_drawer_deep_link["snapshotOpen"]
+            and complete_drawer_deep_link["snapshotState"] == "visible"
             and complete_drawer_deep_link["reviewIndexVisible"]
         )
         else "fail",
