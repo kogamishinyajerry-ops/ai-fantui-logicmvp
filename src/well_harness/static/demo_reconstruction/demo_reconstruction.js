@@ -2670,7 +2670,7 @@
 
   function compactRunwayFrameOutputReady(frameDocument) {
     const summary = frameText(frameDocument, "#fan-status-summary", "");
-    return !!summary && !summary.startsWith("等待");
+    return !!summary && summary !== "等待摘要" && !summary.startsWith("等待拉杆快照");
   }
 
   function hydrateCompactRunwayDefaultState() {

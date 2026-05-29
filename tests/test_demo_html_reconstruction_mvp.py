@@ -569,6 +569,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyScenarioPreset" in script
     assert "installCompactRunwayActions" in script
     assert "hydrateCompactRunwayDefaultState" in script
+    assert 'summary !== "等待摘要"' in script
+    assert 'summary.startsWith("等待拉杆快照")' in script
     assert 'if (compactRunwayMode !== "operator")' in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
