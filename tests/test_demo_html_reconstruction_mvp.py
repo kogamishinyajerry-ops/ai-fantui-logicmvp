@@ -180,6 +180,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-compact-runway"' in html
     assert 'data-compact-runway-preset="max-reverse"' in html
     assert 'data-compact-runway-preset="inhibit-block"' in html
+    assert 'id="demo-reconstruction-compact-runway-path"' in html
+    assert 'data-compact-runway-path-step="lever"' in html
+    assert 'data-compact-runway-path-step="deploy"' in html
+    assert 'data-compact-runway-path-step="safety"' in html
+    assert 'data-compact-runway-path-step="lock"' in html
     assert 'id="demo-reconstruction-compact-runway-tra"' in html
     assert 'id="demo-reconstruction-compact-runway-vdt"' in html
     assert 'id="demo-reconstruction-compact-runway-inhibit"' in html
@@ -587,6 +592,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "installCompactRunwayActions" in script
     assert "compactRunwayOutputs" in script
     assert "compactRunwayOutputButtons" in script
+    assert "compactRunwayPathSteps" in script
+    assert "compactPathStateLabel" in script
+    assert "setCompactRunwayPathState" in script
     assert "applyCompactRunwayOutputTarget" in script
     assert "setCompactRunwayOutputFocusState" in script
     assert "updateCompactRunwayOutputs(snapshot)" in script
@@ -610,6 +618,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-circuit-snapshot-mini-connector" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-details" in stylesheet
     assert ".demo-reconstruction-compact-runway" in stylesheet
+    assert ".demo-reconstruction-compact-runway-path" in stylesheet
     assert ".demo-reconstruction-compact-runway-controls" in stylesheet
     assert ".demo-reconstruction-compact-runway-apply" in stylesheet
     assert ".demo-reconstruction-compact-runway-outputs" in stylesheet
@@ -871,6 +880,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "circuit_snapshot_mini_visible": True,
         "circuit_snapshot_mini_count": 7,
         "compact_runway_visible": True,
+        "compact_runway_path_visible": True,
+        "compact_runway_path_count": 4,
         "assembly_map_visible": False,
         "topology_matrix_visible": False,
         "source_map_visible": False,
@@ -899,6 +910,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_initial_review"]["visible"] is True
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
     assert payload["compact_runway_initial_review"]["controlCount"] == 3
+    assert payload["compact_runway_initial_review"]["pathCount"] == 4
     assert payload["compact_runway_initial_review"]["outputCount"] == 4
     assert payload["compact_runway_initial_review"]["outputTargets"] == ["tls115", "etrac_540v", "eec_deploy", "thr_lock"]
     assert payload["compact_runway_initial_review"]["pressed"] == ["max-reverse"]
@@ -907,11 +919,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_initial_review"]["lockText"] == "释放"
     assert "释放" in payload["compact_runway_initial_review"]["summaryText"]
     assert payload["compact_runway_initial_review"]["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+    assert payload["compact_runway_initial_review"]["pathStates"]["lever"]["state"] == "pass"
+    assert payload["compact_runway_initial_review"]["pathStates"]["deploy"]["state"] == "pass"
+    assert payload["compact_runway_initial_review"]["pathStates"]["safety"]["state"] == "pass"
+    assert payload["compact_runway_initial_review"]["pathStates"]["lock"]["state"] == "pass"
     assert payload["compact_runway_max_review"]["pressed"] == ["max-reverse"]
     assert payload["compact_runway_max_review"]["statusText"] == "最大反推"
     assert payload["compact_runway_max_review"]["stateText"] == "可用"
     assert payload["compact_runway_max_review"]["lockText"] == "释放"
     assert payload["compact_runway_max_review"]["outputValues"] == {"tls": "ON", "etrac": "ON", "eec": "ON", "thr": "ON"}
+    assert payload["compact_runway_max_review"]["pathStates"]["lock"]["state"] == "pass"
     assert payload["compact_runway_output_focus_review"]["pressedOutputs"] == ["thr_lock"]
     assert "wire_logic4_thr_lock" in payload["compact_runway_output_focus_review"]["reviewObjectText"]
     assert payload["compact_runway_output_focus_review"]["proofPathText"].startswith("蓝图")
@@ -924,15 +941,23 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_inhibit_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_inhibit_review"]["lockText"] == "阻塞"
     assert payload["compact_runway_inhibit_review"]["outputValues"] == {"tls": "OFF", "etrac": "OFF", "eec": "OFF", "thr": "BLOCKED"}
+    assert payload["compact_runway_inhibit_review"]["pathStates"]["safety"]["state"] == "block"
+    assert payload["compact_runway_inhibit_review"]["pathStates"]["lock"]["state"] == "block"
     assert payload["compact_runway_frame_sync_review"]["pressed"] == ["inhibit-block"]
     assert payload["compact_runway_frame_sync_review"]["statusText"] == "抑制阻塞"
     assert payload["compact_runway_frame_sync_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_frame_sync_review"]["lockText"] == "阻塞"
+    assert payload["compact_runway_frame_sync_review"]["pathStates"]["safety"]["state"] == "block"
+    assert payload["compact_runway_frame_sync_review"]["pathStates"]["lock"]["state"] == "block"
     assert payload["compact_runway_operator_input_review"]["pressed"] == []
     assert payload["compact_runway_operator_input_review"]["statusText"] == "当前输入"
     assert payload["compact_runway_operator_input_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_operator_input_review"]["lockText"] == "阻塞"
     assert payload["compact_runway_operator_input_review"]["inhibitChecked"] is True
+    assert payload["compact_runway_operator_input_review"]["pathStates"]["lever"]["state"] == "pass"
+    assert payload["compact_runway_operator_input_review"]["pathStates"]["deploy"]["state"] == "pass"
+    assert payload["compact_runway_operator_input_review"]["pathStates"]["safety"]["state"] == "block"
+    assert payload["compact_runway_operator_input_review"]["pathStates"]["lock"]["state"] == "block"
     assert payload["compact_runway_operator_input_review"]["activeOperatorRows"] == []
     assert payload["compact_runway_operator_input_review"]["activeControlActions"] == []
     assert payload["compact_runway_operator_input_review"]["activeReviewScenarios"] == []
