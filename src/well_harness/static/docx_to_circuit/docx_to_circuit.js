@@ -147,6 +147,11 @@
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
+  const acceptanceTrail = $("docx-circuit-acceptance-trail");
+  const trailSource = $("docx-circuit-trail-source");
+  const trailLogic = $("docx-circuit-trail-logic");
+  const trailElement = $("docx-circuit-trail-element");
+  const trailDemo = $("docx-circuit-trail-demo");
   const tracePanel = $("docx-circuit-trace-panel");
   const traceSelectedId = $("docx-circuit-trace-selected-id");
   const traceType = $("docx-circuit-trace-type");
@@ -260,7 +265,7 @@
     const predicate = Array.isArray(folded) && folded.length > 0
       ? compactText(folded.join("；"), 96)
       : "无折叠谓词";
-    setText(compactLogicTitle, elementLabel(kind, id));
+    setText(compactLogicTitle, elementDisplayLabel(kind, id));
     setText(compactLogicText, `${levels} · ${TRACE_KIND_LABELS[kind] || kind} · ${predicate}`);
   }
 
@@ -511,6 +516,31 @@
     return node ? `${node.label} · ${node.id}` : id;
   }
 
+  function nodeDisplayLabel(id) {
+    const node = circuitNodeById(id);
+    return node ? node.label : (NODE_LABELS[id] || id);
+  }
+
+  function elementDisplayLabel(kind, id) {
+    if (kind === "wire") {
+      const edge = circuitEdgeById(id);
+      return edge ? `${nodeDisplayLabel(edge.source)} → ${nodeDisplayLabel(edge.target)}` : id;
+    }
+    return nodeDisplayLabel(id);
+  }
+
+  function renderAcceptanceTrail(step, kind, id, logicLevels) {
+    if (!acceptanceTrail || !step) return;
+    const scenario = DEMO_SCENARIOS[step.anchor] || DEMO_SCENARIOS[DEFAULT_STEP_ANCHOR];
+    acceptanceTrail.dataset.activeAnchor = step.anchor || "";
+    acceptanceTrail.dataset.selectedElementType = kind || "";
+    acceptanceTrail.dataset.selectedElementId = id || "";
+    setText(trailSource, [step.anchor, step.title].filter(Boolean).join(" · "));
+    setText(trailLogic, Array.isArray(logicLevels) && logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
+    setText(trailElement, elementDisplayLabel(kind, id));
+    setText(trailDemo, scenario ? scenario.label : "demo.html 同步");
+  }
+
   function setSelectedElementState(kind, id) {
     if (circuitSvg) {
       circuitSvg.dataset.selectedElementType = kind;
@@ -573,11 +603,12 @@
       tracePanel.setAttribute("data-selected-element-id", id);
       tracePanel.setAttribute("data-evidence-scope", evidence.scope);
     }
-    setText(traceSelectedId, elementLabel(kind, id));
+    setText(traceSelectedId, elementDisplayLabel(kind, id));
     setText(traceType, TRACE_KIND_LABELS[kind] || kind);
     setText(traceLogicLevel, logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
     setText(traceFolded, folded.length > 0 ? folded.join("；") : "无折叠谓词");
     renderCompactLogic(kind, id, logicLevels, folded);
+    renderAcceptanceTrail(currentStep(), kind, id, logicLevels);
 
     if (!traceEvidenceList) return;
     traceEvidenceList.innerHTML = "";
@@ -914,6 +945,7 @@
         type: selectedElement.kind,
         id: selectedElement.id,
         label: elementLabel(selectedElement.kind, selectedElement.id),
+        display_label: elementDisplayLabel(selectedElement.kind, selectedElement.id),
         logic_levels: logicLevels,
         folded_predicates: foldedPredicatesForSteps(evidence.steps),
       },
@@ -980,7 +1012,7 @@
     ];
     setText(deliveryAnchor, source.anchor || currentAnchor);
     setText(deliveryTitle, source.title || "等待需求句子");
-    setText(deliveryElement, element.label || "等待选择");
+    setText(deliveryElement, element.display_label || element.label || "等待选择");
     setText(deliveryLevels, logicLevels);
     setText(deliveryScope, evidenceScopeLabel(packet.evidence_scope));
     setText(deliveryBoundary, "不改控制逻辑 · 不作适航声明");
@@ -1009,7 +1041,7 @@
       "",
       "### 摘要",
       `- 需求句子: \`${source.anchor || ""}\` ${source.title || ""}`,
-      `- 选中元素: \`${element.type || ""}:${element.id || ""}\` ${element.label || ""}`,
+      `- 选中元素: ${element.display_label || element.label || ""}`,
       `- 逻辑层级: ${levels}`,
       `- 折叠谓词: ${predicates}`,
       `- 证据范围: \`${packet.evidence_scope || "unknown"}\``,

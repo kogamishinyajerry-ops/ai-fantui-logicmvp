@@ -143,6 +143,14 @@ def _page_state(page: Any) -> dict[str, Any]:
             reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
             compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
             flowDetailsOpen: document.querySelector("#docx-circuit-flow-details")?.open || false,
+            acceptanceTrailVisible: (() => {
+                const trail = document.querySelector("#docx-circuit-acceptance-trail");
+                return Boolean(trail && trail.getBoundingClientRect().height > 0);
+            })(),
+            trailSource: document.querySelector("#docx-circuit-trail-source")?.textContent || null,
+            trailLogic: document.querySelector("#docx-circuit-trail-logic")?.textContent || null,
+            trailElement: document.querySelector("#docx-circuit-trail-element")?.textContent || null,
+            trailDemo: document.querySelector("#docx-circuit-trail-demo")?.textContent || null,
             sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
             sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
             traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
@@ -189,6 +197,7 @@ def _responsive_state(page: Any) -> dict[str, Any]:
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const previewText = document.querySelector("#docx-circuit-review-packet-preview-text");
             const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
+            const acceptanceTrail = document.querySelector("#docx-circuit-acceptance-trail");
             const compactReview = document.querySelector("#docx-circuit-compact-review");
             const sourceFocus = document.querySelector("#docx-circuit-source-focus");
             const review = document.querySelector("#docx-circuit-review-panel");
@@ -210,6 +219,7 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 workbenchNavRows: navTops.size,
                 compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
                 compactReviewVisible: Boolean(compactReview && compactReview.getBoundingClientRect().height > 0),
+                acceptanceTrailVisible: Boolean(acceptanceTrail && acceptanceTrail.getBoundingClientRect().height > 0),
                 flowDetailsOpen: Boolean(flow?.open),
                 workflowHiddenByDefault: Boolean(workflow && getComputedStyle(workflow).display === "none"),
                 firstScreenStageVisible: Boolean(stageRect && stageRect.top < window.innerHeight),
@@ -257,6 +267,7 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
             state.get("workbenchNavCount") == 4,
             state.get("compactCardCount") == 3,
             state.get("compactReviewVisible") is True,
+            state.get("acceptanceTrailVisible") is True,
             state.get("flowDetailsOpen") is False,
             state.get("workflowHiddenByDefault") is True,
             state.get("firstScreenStageVisible") is True,
@@ -558,13 +569,14 @@ def _review_packet_markdown_valid(value: str) -> bool:
         "## DOCX 电路交付摘要",
         "### 摘要",
         "- 需求句子: `P035-S01`",
-        "- 选中元素: `node:sw1`",
+        "- 选中元素: SW1",
         "### P035 证据",
         "### DOCX 证据",
         "### JSON",
         "```json",
         '"kind": "docx_circuit_review_packet"',
         '"id": "sw1"',
+        '"display_label": "SW1"',
         '"truth_effect": "none"',
         '"certification_claim": "none"',
     ]
@@ -736,6 +748,11 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "focusedSourceEntryAnchor": None,
         "compactCardCount": 3,
         "flowDetailsOpen": False,
+        "acceptanceTrailVisible": True,
+        "trailSource": "P035-S01 · RA < 6 ft 与 SW1 进入 L1，TLS 115VAC 通电并解锁",
+        "trailLogic": "L1",
+        "trailElement": "SW1",
+        "trailDemo": "L1 / TLS 解锁",
         "sequenceDetailsOpen": False,
         "sourceIndexDetailsOpen": False,
         "traceDetailsOpen": False,

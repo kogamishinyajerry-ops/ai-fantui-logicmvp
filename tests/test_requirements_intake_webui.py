@@ -6430,6 +6430,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-delivery-panel="true"' in html
     assert 'id="docx-circuit-delivery-evidence-list"' in html
     assert 'class="docx-circuit-review-packet-raw"' in html
+    assert 'id="docx-circuit-acceptance-trail"' in html
+    assert 'data-docx-circuit-acceptance-trail="true"' in html
+    assert 'id="docx-circuit-trail-source"' in html
+    assert 'id="docx-circuit-trail-element"' in html
     assert 'id="docx-circuit-sequence-details"' in html
     assert 'id="docx-circuit-source-index-details"' in html
     assert 'data-docx-circuit-source-index="true"' in html
@@ -6505,6 +6509,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function tracePacketMarkdown" in script
     assert "function renderDeliverySummary" in script
     assert "function evidenceScopeLabel" in script
+    assert "function renderAcceptanceTrail" in script
+    assert "function elementDisplayLabel" in script
     assert "function markdownEvidenceList" in script
     assert "function currentTraceMarkdown" in script
     assert "function renderTracePacketPreview" in script
@@ -6546,6 +6552,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert ".docx-circuit-source-focus strong" in stylesheet
     assert ".docx-circuit-delivery-panel" in stylesheet
     assert ".docx-circuit-review-packet-raw" in stylesheet
+    assert ".docx-circuit-acceptance-trail" in stylesheet
     assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
     assert '"source_entry_link"' in review_link_gate
     assert '"review_packet_markdown_json"' in review_link_gate
@@ -6572,6 +6579,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "firstScreenStageVisible" in review_link_gate
     assert "deliveryPanelVisible" in review_link_gate
     assert "rawReviewPacketHidden" in review_link_gate
+    assert "acceptanceTrailVisible" in review_link_gate
+    assert '"trailElement": "SW1"' in review_link_gate
     assert "RESPONSIVE_VIEWPORTS" in review_link_gate
     assert '"responsive_layout"' in review_link_gate
     assert "noHorizontalOverflow" in review_link_gate
