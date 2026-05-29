@@ -368,6 +368,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "writeReviewHashState" in script
     assert "applyReviewHashState" in script
     assert "updateReviewLink" in script
+    assert 'params.get("lane")' in script
+    assert 'params.set("lane", proofPathLaneMode)' in script
+    assert 'setProofPathLaneMode(state.lane || "blueprint", {writeHash: false})' in script
     assert "updateReviewIndexStatus" in script
     assert "installReviewIndexNavigation" in script
     assert "setReviewIndexTarget" in script
@@ -472,6 +475,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "setProofPathLaneMode" in script
     assert "proofPathLaneMode" in script
     assert "proofPathLaneGroupsForMode" in script
+    assert "normalizeProofPathLaneMode" in script
+    assert "{writeHash: true}" in script
     assert "renderProofPathOutputMap" in script
     assert "applyProofPathOutputTarget" in script
     assert "proofPathOutputTarget" in script
@@ -987,9 +992,14 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "step=P035-S05" in payload["review_deep_link"]["hash"]
     assert "focus=wire%3Awire_logic4_thr_lock" in payload["review_deep_link"]["hash"]
     assert "q=logic4" in payload["review_deep_link"]["hash"]
+    assert "lane=matrix" in payload["review_deep_link"]["hash"]
     assert "/demo-reconstruction#" in payload["review_deep_link"]["linkHref"]
     assert payload["review_deep_link"]["restoredSelectedAnchor"] == "P035-S05"
     assert payload["review_deep_link"]["restoredQuery"] == "logic4"
+    assert payload["review_deep_link"]["restoredLaneStatus"] == "矩阵"
+    assert payload["review_deep_link"]["restoredLaneActiveModes"] == ["matrix"]
+    assert payload["review_deep_link"]["restoredLaneVisibleMatrix"] is True
+    assert payload["review_deep_link"]["restoredLaneVisibleSource"] is False
     assert payload["review_deep_link"]["restoredVisibleNodeCount"] == 1
     assert payload["review_deep_link"]["restoredVisibleWireCount"] == 3
     assert payload["review_deep_link"]["restoredFocusedWireCount"] == 1
@@ -1300,6 +1310,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "custody_matrix_readback": "pass",
         "review_hash_link": "pass",
         "review_hash_restore": "pass",
+        "review_hash_lane_restore": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",

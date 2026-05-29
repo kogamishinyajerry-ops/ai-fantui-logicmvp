@@ -334,6 +334,7 @@
   let outputMirrorObserver = null;
   let scenarioLedgerRecords = new Map();
   let activeOperatorRunwayId = "";
+  const PROOF_PATH_LANE_MODES = ["blueprint", "source", "matrix", "object", "all"];
 
   function readJson(value) {
     try {
@@ -370,8 +371,12 @@
     return "蓝图";
   }
 
-  function setProofPathLaneMode(mode) {
-    const nextMode = ["blueprint", "source", "matrix", "object", "all"].includes(mode) ? mode : "blueprint";
+  function normalizeProofPathLaneMode(mode) {
+    return PROOF_PATH_LANE_MODES.includes(mode) ? mode : "blueprint";
+  }
+
+  function setProofPathLaneMode(mode, options = {}) {
+    const nextMode = normalizeProofPathLaneMode(mode);
     const visibleGroups = proofPathLaneGroupsForMode(nextMode);
     proofPathLaneMode = nextMode;
     proofPathLaneModeButtons.forEach((button) => {
@@ -384,6 +389,11 @@
       element.hidden = !visible;
     });
     setText(proofPathLaneModeStatus, proofPathLaneModeLabel(nextMode));
+    if (options.writeHash) {
+      writeReviewHashState();
+    } else {
+      updateReviewLink();
+    }
   }
 
   function itemLabel(item, fallback) {
@@ -1198,6 +1208,7 @@
       query: params.get("q") || "",
       topologyStep: params.get("topology") || "",
       topologyQuery: params.get("tq") || "",
+      lane: params.get("lane") || "",
     };
   }
 
@@ -1214,6 +1225,9 @@
     }
     const topologyQuery = topologySearch && topologySearch.value ? topologySearch.value.trim() : "";
     if (topologyQuery) params.set("tq", topologyQuery);
+    if (proofPathLaneMode && proofPathLaneMode !== "blueprint") {
+      params.set("lane", proofPathLaneMode);
+    }
     return params.toString();
   }
 
@@ -3782,12 +3796,14 @@
 
   function applyReviewHashState() {
     const state = readReviewHashState();
-    if (!state.step && !state.focusId && !state.query) {
+    if (!state.step && !state.focusId && !state.query && !state.topologyStep && !state.topologyQuery && !state.lane) {
+      setProofPathLaneMode("blueprint", {writeHash: false});
       updateReviewLink();
       return false;
     }
     applyingReviewHashState = true;
     try {
+      setProofPathLaneMode(state.lane || "blueprint", {writeHash: false});
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;
       }
@@ -4365,7 +4381,7 @@
     renderProofPathSentenceMatrix(steps);
     renderProofPathPredicateMatrix(steps);
     renderProofPathBlueprintSummary(steps);
-    setProofPathLaneMode(proofPathLaneMode);
+    setProofPathLaneMode(proofPathLaneMode, {writeHash: false});
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
@@ -4547,9 +4563,9 @@
   installControlStripActions();
   installScenarioComparatorActions();
   proofPathLaneModeButtons.forEach((button) => {
-    button.addEventListener("click", () => setProofPathLaneMode(button.dataset.proofPathLaneMode || "blueprint"));
+    button.addEventListener("click", () => setProofPathLaneMode(button.dataset.proofPathLaneMode || "blueprint", {writeHash: true}));
   });
-  setProofPathLaneMode(proofPathLaneMode);
+  setProofPathLaneMode(proofPathLaneMode, {writeHash: false});
   updateReviewIndexStatus();
   updateControlStripStatus();
   updateScenarioComparatorStatus("");
