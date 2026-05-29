@@ -661,7 +661,7 @@
 
   function setCompleteModeBanner(active) {
     if (!completeModeBanner) return;
-    completeModeBanner.hidden = !active;
+    completeModeBanner.hidden = true;
   }
 
   function setReviewDetailDrawerVisible(active) {
@@ -1971,8 +1971,8 @@
     const focus = params.get("focus") || "";
     const focusParts = focus.split(":");
     return {
-      complete: params.get("complete") === "1",
-      review: params.get("review") === "1",
+      complete: false,
+      review: false,
       step: params.get("step") || "",
       focusKind: focusParts.length === 2 ? focusParts[0] : "",
       focusId: focusParts.length === 2 ? focusParts[1] : "",
@@ -1985,9 +1985,6 @@
 
   function reviewHashForState() {
     const params = new URLSearchParams();
-    if (detailDrawer && !detailDrawer.hidden && detailDrawer.dataset.reviewDetailDrawer !== "hidden") {
-      params.set("review", "1");
-    }
     if (currentTraceStep && currentTraceStep.anchor) params.set("step", currentTraceStep.anchor);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
       params.set("focus", `${currentCircuitFocus.kind}:${currentCircuitFocus.id}`);
@@ -4452,7 +4449,7 @@
     }
     setText(
       circuitSnapshotPreviewReadback,
-      `${record.order} · ${record.label} · ${record.anchor} · ${circuitSnapshotOperatorOutput(record)}`,
+      `${record.order} · ${record.label} · ${circuitSnapshotReadableOutput(record)}`,
     );
   }
 
@@ -4477,7 +4474,21 @@
 
   function circuitSnapshotMiniStatus(record) {
     if (!record) return "";
-    return circuitSnapshotOperatorOutput(record) || record.anchor || "";
+    return circuitSnapshotReadableOutput(record) || record.anchor || "";
+  }
+
+  function circuitSnapshotReadableOutput(record) {
+    if (!record) return "";
+    const labels = {
+      "docx-source": "需求已接入",
+      "runway-l1-unlock": "解锁电源已通电",
+      "runway-l2-power": "作动器已供电",
+      "runway-l3-deploy": "展开指令已发出",
+      "runway-vdt90": "展开反馈到位",
+      "runway-l4-thr-lock": "反推锁已释放",
+      "demo-output": "可读",
+    };
+    return labels[record.id] || record.output || "";
   }
 
   function circuitSnapshotOperatorOutput(record) {
@@ -4539,7 +4550,7 @@
       button.type = "button";
       button.dataset.circuitSnapshotPreviewStep = record.id;
       button.setAttribute("aria-pressed", "false");
-      button.title = `${record.label} · ${circuitSnapshotOperatorOutput(record)}`;
+      button.title = `${record.label} · ${circuitSnapshotReadableOutput(record)}`;
       button.addEventListener("click", () => applyCircuitSnapshotChainStep(record.id));
 
       const order = document.createElement("span");
@@ -4578,7 +4589,7 @@
       button.dataset.circuitSnapshotMiniStep = record.id;
       button.dataset.circuitSnapshotMiniVariant = record.variant;
       button.setAttribute("aria-pressed", "false");
-      button.title = `${record.label} · ${circuitSnapshotOperatorOutput(record)}`;
+      button.title = `${record.label} · ${circuitSnapshotReadableOutput(record)}`;
       button.addEventListener("click", () => applyCircuitSnapshotChainStep(record.id));
 
       const label = document.createElement("strong");
@@ -5390,6 +5401,9 @@
       setCompleteModeBanner(false);
       setReviewDetailDrawerVisible(false);
       setCircuitSnapshotDetailsVisible(false);
+      if (window.location.hash) {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      }
       updateReviewLink();
       return false;
     }

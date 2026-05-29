@@ -155,14 +155,15 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-complete-mode-banner"' in html
     assert 'id="demo-reconstruction-complete-mode-link"' in html
-    assert 'href="/demo-reconstruction#complete=1"' in html
+    assert 'href="/demo-reconstruction"' in html
+    assert 'href="/demo-reconstruction#complete=1"' not in html
     assert "演示面板" in html
     assert "当前演示：需求到可运行完整电路" in html
     assert "完整交付态已启用" in html
     assert "第 5 步 · 反推锁 · 最大反推 · 5/5 验收" in html
     assert "5/5 gate" not in html
     assert "等待 gate" not in html
-    assert "固定链接" in html
+    assert "短演示" in html
     assert 'id="demo-reconstruction-circuit-snapshot"' in html
     assert 'data-circuit-snapshot="docx-to-demo-complete"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-status"' in html
@@ -623,15 +624,14 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'if (compactRunwayMode !== "operator")' in script
     assert "setReviewDetailDrawerVisible" in script
     assert "setCircuitSnapshotDetailsVisible" in script
-    assert 'params.get("review") === "1"' in script
-    assert 'params.set("review", "1")' in script
     assert "detailDrawer.open = !!active" in script
     assert "circuitSnapshotDetails.open = !!active" in script
     assert "setReviewDetailDrawerVisible(false)" in script
     assert "setReviewDetailDrawerVisible(true)" in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
-    assert 'params.get("complete") === "1"' in script
+    assert "complete: false" in script
+    assert "review: false" in script
     assert "data-docx-trace-selected" in script
     assert "traceFocusKind" in script
     assert "sourceFocusKind" in script
@@ -939,6 +939,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "62 条源记录" not in payload["first_screen_review"]["visible_text"]
     assert "查看链路" not in payload["first_screen_review"]["visible_text"]
     assert "查看验收详情" not in payload["first_screen_review"]["visible_text"]
+    assert "P035-S01" not in payload["first_screen_review"]["visible_text"]
+    assert "TLS 已通电" not in payload["first_screen_review"]["visible_text"]
+    assert "ETRAC 已供电" not in payload["first_screen_review"]["visible_text"]
     assert "source" not in payload["first_screen_review"]["visible_text"]
     assert "ON / BLOCK" not in payload["first_screen_review"]["visible_text"]
     assert "TLS\nON" not in payload["first_screen_review"]["visible_text"]
@@ -962,27 +965,30 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "反推锁释放" in payload["first_screen_review"]["visible_text"]
     assert "->" not in payload["first_screen_review"]["visible_text"]
     assert "低空解锁" in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
+    assert "P035-S01" not in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
+    assert "TLS 已通电" not in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
     assert payload["review_drawer_deep_link"] == {
-        "hash": "#review=1",
-        "drawerHidden": False,
-        "drawerOpen": True,
-        "drawerState": "visible",
-        "snapshotHidden": False,
-        "snapshotOpen": True,
-        "snapshotState": "visible",
-        "reviewIndexVisible": True,
+        "hash": "",
+        "drawerHidden": True,
+        "drawerOpen": False,
+        "drawerState": "hidden",
+        "snapshotHidden": True,
+        "snapshotOpen": False,
+        "snapshotState": "hidden",
+        "reviewIndexVisible": False,
+        "completeBannerHidden": True,
     }
-    assert (
-        payload["complete_drawer_deep_link"]["hash"] == "#complete=1"
-        or "review=1" in payload["complete_drawer_deep_link"]["hash"]
-    )
-    assert payload["complete_drawer_deep_link"]["drawerHidden"] is False
-    assert payload["complete_drawer_deep_link"]["drawerOpen"] is True
-    assert payload["complete_drawer_deep_link"]["drawerState"] == "visible"
-    assert payload["complete_drawer_deep_link"]["snapshotHidden"] is False
-    assert payload["complete_drawer_deep_link"]["snapshotOpen"] is True
-    assert payload["complete_drawer_deep_link"]["snapshotState"] == "visible"
-    assert payload["complete_drawer_deep_link"]["reviewIndexVisible"] is True
+    assert payload["complete_drawer_deep_link"] == {
+        "hash": "",
+        "drawerHidden": True,
+        "drawerOpen": False,
+        "drawerState": "hidden",
+        "snapshotHidden": True,
+        "snapshotOpen": False,
+        "snapshotState": "hidden",
+        "reviewIndexVisible": False,
+        "completeBannerHidden": True,
+    }
     assert payload["compact_runway_initial_review"]["visible"] is True
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
     assert payload["compact_runway_initial_review"]["controlCount"] == 3
@@ -1085,13 +1091,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["circuitSnapshotPreviewCount"] == 7
     assert payload["source_map_review"]["circuitSnapshotPreviewActive"] == ["runway-l1-unlock"]
     assert "低空解锁" in payload["source_map_review"]["circuitSnapshotPreviewReadback"]
+    assert "P035-S01" not in payload["source_map_review"]["circuitSnapshotPreviewReadback"]
+    assert "TLS 已通电" not in payload["source_map_review"]["circuitSnapshotPreviewReadback"]
     assert payload["source_map_review"]["circuitSnapshotMiniCount"] == 7
     assert payload["source_map_review"]["circuitSnapshotMiniActive"] == ["runway-l1-unlock"]
     assert "需求" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "已接入" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "可读" in payload["source_map_review"]["circuitSnapshotMiniText"]
-    assert "TLS 已通电" in payload["source_map_review"]["circuitSnapshotMiniText"]
-    assert "ETRAC 已供电" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "解锁电源已通电" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "作动器已供电" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "TLS 已通电" not in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "ETRAC 已供电" not in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "反推锁已释放" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "低空解锁" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "作动器供电" in payload["source_map_review"]["circuitSnapshotMiniText"]
@@ -1185,9 +1195,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["completeActionText"] == "完整交付态"
     assert payload["review_index_review"]["completeBannerInitiallyHidden"] is True
     assert "完整交付态已启用" in payload["review_index_review"]["completeBannerInitialText"]
-    assert "review=1" in payload["review_index_review"]["reviewLinkHref"]
-    assert payload["review_index_review"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
-    assert payload["review_index_review"]["completeModeLinkText"] == "固定链接"
+    assert "review=1" not in payload["review_index_review"]["reviewLinkHref"]
+    assert payload["review_index_review"]["completeModeLinkHref"] == "/demo-reconstruction"
+    assert payload["review_index_review"]["completeModeLinkText"] == "短演示"
     assert "6/6 模块" in payload["review_index_review"]["tourSummaryText"]
     assert "4/4 证据" in payload["review_index_review"]["evidenceSummaryText"]
     assert "67 条" in payload["review_index_review"]["evidenceSourceText"]
@@ -1252,26 +1262,19 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "对象" in payload["review_index_complete_action"]["proofPathText"]
     assert "完整交付态已启用" in payload["review_index_complete_action"]["completeBannerText"]
     assert "P035-S05" in payload["review_index_complete_action"]["completeBannerText"]
-    assert payload["review_index_complete_action"]["completeBannerHidden"] is False
-    assert payload["review_index_complete_action"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
-    assert payload["review_index_complete_action"]["completeModeLinkText"] == "固定链接"
+    assert payload["review_index_complete_action"]["completeBannerHidden"] is True
+    assert payload["review_index_complete_action"]["completeModeLinkHref"] == "/demo-reconstruction"
+    assert payload["review_index_complete_action"]["completeModeLinkText"] == "短演示"
     assert payload["review_index_complete_action"]["scrollY"] > 0
-    assert payload["review_index_complete_link"]["hash"] == "#complete=1"
-    assert payload["review_index_complete_link"]["selectedAnchor"] == "P035-S05"
-    assert payload["review_index_complete_link"]["activeScenarios"] == ["max-reverse"]
-    assert payload["review_index_complete_link"]["activeTargets"] == [
-        "demo-reconstruction-proof-path"
-    ]
-    assert payload["review_index_complete_link"]["activeGate"] == ["object-review"]
-    assert "5/5 验收" in payload["review_index_complete_link"]["readinessText"]
-    assert "wire_logic4_thr_lock" in payload["review_index_complete_link"]["objectText"]
-    assert "THR ON" in payload["review_index_complete_link"]["outputText"]
-    assert "对象" in payload["review_index_complete_link"]["proofPathText"]
-    assert "完整交付态已启用" in payload["review_index_complete_link"]["completeBannerText"]
-    assert "P035-S05" in payload["review_index_complete_link"]["completeBannerText"]
-    assert payload["review_index_complete_link"]["completeBannerHidden"] is False
-    assert payload["review_index_complete_link"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
-    assert payload["review_index_complete_link"]["completeModeLinkText"] == "固定链接"
+    assert payload["review_index_complete_link"]["hash"] == ""
+    assert payload["review_index_complete_link"]["drawerHidden"] is True
+    assert payload["review_index_complete_link"]["drawerOpen"] is False
+    assert payload["review_index_complete_link"]["snapshotHidden"] is True
+    assert payload["review_index_complete_link"]["snapshotOpen"] is False
+    assert payload["review_index_complete_link"]["reviewIndexVisible"] is False
+    assert payload["review_index_complete_link"]["completeBannerHidden"] is True
+    assert payload["review_index_complete_link"]["completeModeLinkHref"] == "/demo-reconstruction"
+    assert payload["review_index_complete_link"]["completeModeLinkText"] == "短演示"
     assert payload["review_index_gate_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_gate_rail_action"]["activeGate"] == ["object-review"]
     assert payload["review_index_gate_rail_action"]["activeTargets"] == [
@@ -1940,7 +1943,8 @@ def test_demo_html_reconstruction_mvp_gate_is_wired_into_make_and_ci() -> None:
     assert "demo-html-reconstruction-mvp" in makefile
     assert "demo-html-reconstruction-browser-acceptance" in makefile
     assert "demo-html-reconstruction-complete-link" in makefile
-    assert "/demo-reconstruction#complete=1" in makefile
+    assert "/demo-reconstruction#complete=1" not in makefile
+    assert "http://127.0.0.1:$${PORT:-8780}/demo-reconstruction" in makefile
     assert "scripts/verify_demo_html_reconstruction_mvp.py --format json" in makefile
     assert "scripts/verify_demo_html_reconstruction_browser_acceptance.py --format json" in makefile
     assert "test: demo-html-reconstruction-mvp" in makefile
@@ -1948,7 +1952,7 @@ def test_demo_html_reconstruction_mvp_gate_is_wired_into_make_and_ci() -> None:
     assert "scripts/verify_demo_html_reconstruction_mvp.py --format json" in workflow
 
 
-def test_demo_html_reconstruction_complete_link_target_prints_local_deep_link() -> None:
+def test_demo_html_reconstruction_complete_link_target_prints_local_compact_link() -> None:
     result = subprocess.run(
         ["make", "demo-html-reconstruction-complete-link"],
         cwd=PROJECT_ROOT,
@@ -1961,4 +1965,5 @@ def test_demo_html_reconstruction_complete_link_target_prints_local_deep_link() 
 
     assert result.returncode == 0
     assert "make dev" in result.stdout
-    assert "http://127.0.0.1:9123/demo-reconstruction#complete=1" in result.stdout
+    assert "http://127.0.0.1:9123/demo-reconstruction" in result.stdout
+    assert "#complete=1" not in result.stdout
