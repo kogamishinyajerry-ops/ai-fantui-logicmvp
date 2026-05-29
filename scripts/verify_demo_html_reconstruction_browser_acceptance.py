@@ -2063,6 +2063,32 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S02"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-proof-path-coverage-step="P035-S02"]');
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-coverage-grid-readback")?.textContent || "";
+                        return active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && readback.includes("P035-S02")
+                            && readback.includes("12/20")
+                            && readback.includes("11/23")
+                            && !readback.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_coverage_grid_trace_switch_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-coverage-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-coverage-step")),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            readbackText: text("#demo-reconstruction-proof-path-coverage-grid-readback"),
+                        };
+                    }"""
+                )
                 proof_path_output_map_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -3252,6 +3278,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in proof_path_coverage_grid_focus_review["readbackText"]
             and "wire_logic4_thr_lock" in proof_path_coverage_grid_focus_review["reviewObjectText"]
             and "wire_logic4_thr_lock" in proof_path_coverage_grid_focus_review["inspectorObjectText"]
+            and proof_path_coverage_grid_trace_switch_review["activeSteps"] == ["P035-S02"]
+            and proof_path_coverage_grid_trace_switch_review["selectedAnchor"] == "P035-S02"
+            and "12/20 节点" in proof_path_coverage_grid_trace_switch_review["readbackText"]
+            and "11/23 连线" in proof_path_coverage_grid_trace_switch_review["readbackText"]
+            and "wire_logic4_thr_lock" not in proof_path_coverage_grid_trace_switch_review["readbackText"]
         )
         else "fail",
         "proof_path_output_map": "pass"
@@ -3403,6 +3434,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_coverage_grid_review": proof_path_coverage_grid_review,
         "proof_path_coverage_grid_final_review": proof_path_coverage_grid_final_review,
         "proof_path_coverage_grid_focus_review": proof_path_coverage_grid_focus_review,
+        "proof_path_coverage_grid_trace_switch_review": proof_path_coverage_grid_trace_switch_review,
         "proof_path_output_map_review": proof_path_output_map_review,
         "proof_path_output_map_tls_review": proof_path_output_map_tls_review,
         "scenario_comparator_review": scenario_comparator_review,

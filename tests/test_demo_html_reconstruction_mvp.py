@@ -1098,6 +1098,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["proof_path_coverage_grid_focus_review"]["readbackText"]
     assert "wire_logic4_thr_lock" in payload["proof_path_coverage_grid_focus_review"]["reviewObjectText"]
     assert "wire_logic4_thr_lock" in payload["proof_path_coverage_grid_focus_review"]["inspectorObjectText"]
+    assert payload["proof_path_coverage_grid_trace_switch_review"]["activeSteps"] == ["P035-S02"]
+    assert payload["proof_path_coverage_grid_trace_switch_review"]["selectedAnchor"] == "P035-S02"
+    assert "12/20 节点" in payload["proof_path_coverage_grid_trace_switch_review"]["readbackText"]
+    assert "11/23 连线" in payload["proof_path_coverage_grid_trace_switch_review"]["readbackText"]
+    assert "wire_logic4_thr_lock" not in payload["proof_path_coverage_grid_trace_switch_review"]["readbackText"]
     assert payload["proof_path_output_map_review"]["targetCount"] == 5
     assert payload["proof_path_output_map_review"]["activeTargets"] == ["thr_lock"]
     assert "5/5" in payload["proof_path_output_map_review"]["statusText"]

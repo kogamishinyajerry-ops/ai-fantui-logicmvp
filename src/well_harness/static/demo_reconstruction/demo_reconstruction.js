@@ -3358,6 +3358,9 @@
     updateSentenceRunnerStatus(step);
     updateProofPathStatus(step);
     setProofPathCoverageGridState(step.anchor || "");
+    if (selectedTraceIndex >= 0) {
+      updateProofPathCoverageGridReadback(step, cumulativeTraceContract(selectedTraceIndex));
+    }
     if (options.writeHash !== false) writeReviewHashState();
   }
 
