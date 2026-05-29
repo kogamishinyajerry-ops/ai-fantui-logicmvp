@@ -2467,7 +2467,7 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
 
         page.click("#logic-command-palette-open")
         expect(page.locator("#logic-command-palette")).to_be_visible()
-        for label in ["运行仿真", "打开参数抽屉", "单步回放", "注入故障", "打开失败路径", "导出审查包", "主画布专注", "收起全部面板"]:
+        for label in ["运行仿真", "打开参数抽屉", "单步回放", "注入故障", "打开失败路径", "生成交付摘要", "主画布专注", "收起全部面板"]:
             expect(page.locator("#logic-command-palette")).to_contain_text(label)
         page.click('[data-command-close-panels="true"]')
         assert shell.evaluate("el => !el.classList.contains('is-left-open') && !el.classList.contains('is-right-open')")
@@ -3422,7 +3422,7 @@ def test_deepseek_workflow_streams_chunks_before_model_final_response(
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
         expect(page.locator("#logic-stream-chunks")).to_be_visible()
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="load"]')).to_contain_text("已读取需求")
-        expect(page.locator('#logic-stream-chunks [data-stream-chunk="model"]')).to_contain_text("DeepSeek 正在绘制")
+        expect(page.locator('#logic-stream-chunks [data-stream-chunk="model"]')).to_contain_text("正在生成图纸")
         expect(page.locator("#logic-step-model")).to_have_attribute("data-state", "active")
         assert logic_routes
         _fulfill_json(logic_routes.pop(0), _circuit_view_drawing())

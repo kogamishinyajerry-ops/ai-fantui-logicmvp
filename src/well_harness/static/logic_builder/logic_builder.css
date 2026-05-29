@@ -1412,13 +1412,16 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   top: 92px;
   z-index: 6;
   width: min(360px, calc(100% - 52px));
-  max-height: 188px;
+  max-height: 38px;
   overflow: hidden;
   border: 1px solid rgba(54, 198, 216, 0.36);
   border-radius: 6px;
   background: rgba(7, 20, 33, 0.86);
   box-shadow: 0 10px 24px rgba(0,0,0,0.26);
-  pointer-events: none;
+  pointer-events: auto;
+}
+.logic-drawing-stream-timeline[open] {
+  max-height: 188px;
 }
 .logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] {
   left: auto;
@@ -1430,6 +1433,9 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   background: rgba(7, 20, 33, 0.74);
   box-shadow: 0 6px 14px rgba(0,0,0,0.18);
 }
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"][open] {
+  max-height: 188px;
+}
 .logic-stream-head {
   display: flex;
   align-items: center;
@@ -1437,6 +1443,10 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   gap: 10px;
   padding: 8px 10px 6px;
   border-bottom: 1px solid rgba(38, 58, 82, 0.78);
+  cursor: pointer;
+}
+.logic-stream-head::-webkit-details-marker {
+  display: none;
 }
 .logic-stream-head .logic-kicker {
   margin: 0;
@@ -1720,7 +1730,8 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   display: block;
   color: var(--logic-muted);
 }
-.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] .logic-stream-events {
+.logic-drawing-stream-timeline:not([open]) .logic-stream-events,
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"]:not([open]) .logic-stream-events {
   display: none;
 }
 .logic-annotation-popover {

@@ -12,7 +12,7 @@
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
   <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
   <div class="unified-nav-groups">
-    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="DeepSeek 四步主线" data-ux-main-flow="four-step">
+    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="四步主线" data-ux-main-flow="four-step">
       <span class="unified-nav-group-label">主流程</span>
       <a href="/requirements-intake" class="unified-nav-link" data-nav-key="requirements-intake">1 需求解析</a>
       <a href="/logic-builder" class="unified-nav-link is-active" data-nav-key="logic-builder">2 逻辑复刻</a>
@@ -64,19 +64,19 @@
       <div class="logic-process-head">
         <div>
           <p class="logic-kicker">TASK PROGRESS</p>
-          <h2 id="logic-process-title">等待模型绘制</h2>
+          <h2 id="logic-process-title">等待图纸生成</h2>
         </div>
         <span id="logic-process-elapsed">00:00</span>
       </div>
       <div class="logic-track"><div id="logic-process-fill" class="logic-process-fill"></div></div>
-      <div id="logic-generation-stream" class="logic-steps generation-stream" data-generation-stream="deepseek" aria-label="DeepSeek 生成流">
+      <div id="logic-generation-stream" class="logic-steps generation-stream" data-generation-stream="deepseek" aria-label="生成过程">
         <span id="logic-step-load" class="logic-step generation-stream-step" data-stream-step="load" data-state="idle">读取需求</span>
-        <span id="logic-step-model" class="logic-step generation-stream-step" data-stream-step="model" data-state="idle">DeepSeek 绘图</span>
+        <span id="logic-step-model" class="logic-step generation-stream-step" data-stream-step="model" data-state="idle">生成图纸</span>
         <span id="logic-step-layout" class="logic-step generation-stream-step" data-stream-step="layout" data-state="idle">结构复核</span>
         <span id="logic-step-render" class="logic-step generation-stream-step" data-stream-step="render" data-state="idle">渲染电路</span>
       </div>
       <p id="logic-process-detail">从需求理解页进入后会自动开始。</p>
-      <div id="logic-stream-chunks" class="stream-chunks" data-stream-chunks="deepseek" aria-label="DeepSeek 分块输出"></div>
+      <div id="logic-stream-chunks" class="stream-chunks" data-stream-chunks="deepseek" aria-label="生成过程输出"></div>
     </section>
 
     <section id="logic-workflow-overview" class="logic-workflow-overview logic-cockpit-mission-strip" data-cockpit-role="mission-strip" aria-label="流程总览">
@@ -94,10 +94,10 @@
     </section>
 
     <div id="logic-command-controls" class="logic-controls">
-      <label for="logic-provider">模型</label>
-      <select id="logic-provider">
-        <option value="deepseek" selected>DeepSeek V4 Pro</option>
-        <option value="minimax">MiniMax-M2.7-highspeed</option>
+      <label for="logic-provider">生成方式</label>
+      <select id="logic-provider" aria-label="选择生成方式">
+        <option value="deepseek" selected>标准生成</option>
+        <option value="minimax">备用生成</option>
       </select>
       <div class="logic-control-actions">
         <button id="logic-regenerate" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="重新绘制逻辑图">检查：重新绘制</button>
@@ -143,7 +143,7 @@
               <div class="logic-status-rail-section" data-status-rail-section="drawing">
                 <span class="logic-status-label">图纸状态</span>
                 <h2 id="logic-result-state">尚未绘制</h2>
-                <p id="logic-result-summary" class="muted">等待大模型生成坐标、连线和参数面板。</p>
+                <p id="logic-result-summary" class="muted">等待生成坐标、连线和参数面板。</p>
                 <div id="logic-result-flags" class="logic-flags"></div>
               </div>
             </div>
@@ -242,7 +242,7 @@
           </button>
           <button type="button" data-provenance-filter="assumption" aria-pressed="false">
             <span class="logic-provenance-dot is-assumption" aria-hidden="true"></span>
-            模型假设 <span data-provenance-count>0</span>
+            候选假设 <span data-provenance-count>0</span>
           </button>
           <button type="button" data-provenance-filter="local" aria-pressed="false">
             <span class="logic-provenance-dot is-local" aria-hidden="true"></span>
@@ -280,8 +280,8 @@
           <button type="button" data-command-run-action="run">运行仿真</button>
           <button type="button" data-command-open-mode="parameters">打开参数抽屉</button>
           <button type="button" data-command-open-mode="run">打开运行时间线</button>
-          <button type="button" data-command-open-mode="evidence">打开证据追溯</button>
-          <button type="button" data-command-open-mode="report">打开报告预览</button>
+          <button type="button" data-command-open-mode="evidence">打开证据链接</button>
+          <button type="button" data-command-open-mode="report">打开交付摘要</button>
           <button type="button" data-command-run-action="step">单步回放</button>
           <button type="button" data-command-template-action="blank">空白画布</button>
           <button type="button" data-command-template-action="docx">DOCX L1-L4 模板</button>
@@ -295,7 +295,7 @@
           <a href="/fault-injection-sandbox">进入沙盒审查</a>
           <a href="/fault-injection-prepare#fault-matrix">注入故障</a>
           <a href="/fault-injection-sandbox#failure-path">打开失败路径</a>
-          <a href="/fault-injection-sandbox#review-package">导出审查包</a>
+          <a href="/fault-injection-sandbox#review-package">生成交付摘要</a>
         </div>
         <p id="logic-command-palette-status" class="muted">高级入口统一收纳在这里；默认画布保持低干扰。</p>
       </section>
@@ -305,15 +305,15 @@
         <a id="logic-docx-circuit-bridge" class="logic-demo-bridge" href="/docx-to-circuit">需求到电路入口</a>
         <a id="logic-demo-bridge" class="logic-demo-bridge" href="/demo-reconstruction">打开对齐视图</a>
       </section>
-      <section id="logic-drawing-stream-timeline" class="logic-drawing-stream-timeline" data-ai-stream="logic-drawing-replay" aria-label="DeepSeek 绘图回放">
-        <div class="logic-stream-head">
-          <p class="logic-kicker">DEEPSEEK STREAM</p>
-          <strong>DeepSeek 绘图回放</strong>
-        </div>
+      <details id="logic-drawing-stream-timeline" class="logic-drawing-stream-timeline" data-ai-stream="logic-drawing-replay" data-default-collapsed="true" aria-label="生成过程">
+        <summary class="logic-stream-head">
+          <span class="logic-kicker">生成过程</span>
+          <strong>等待生成过程</strong>
+        </summary>
         <ol id="logic-drawing-stream-events" class="logic-stream-events">
           <li class="logic-stream-event is-empty">等待图纸生成过程。</li>
         </ol>
-      </section>
+      </details>
       <section id="logic-streamed-authoring-panel" class="logic-streamed-authoring-panel" data-streamed-authoring="m21" data-panel-visibility="collapsed" data-natural-language-step-confirmation="waiting" data-demo-html-aesthetic-reference="src/well_harness/static/demo.html#fan-chain-svg" aria-label="工程师在场流式建模" hidden>
         <div class="logic-stream-head">
           <p class="logic-kicker">M21 STREAM</p>
@@ -323,7 +323,7 @@
           <span id="logic-streamed-sequence">--</span>
           <div>
             <h2 id="logic-streamed-title">当前候选编辑</h2>
-            <p id="logic-streamed-explanation">图纸生成后，模型会一次提出一个节点或连线候选。</p>
+            <p id="logic-streamed-explanation">图纸生成后，系统会一次提出一个节点或连线候选。</p>
           </div>
         </div>
         <div id="logic-streamed-queue" class="logic-streamed-queue" data-candidate-queue-status="waiting">
@@ -425,7 +425,7 @@
           <button id="logic-context-comment-shortcut" type="button" class="logic-context-comment-shortcut" data-ux-action-tier="secondary">在此对象上标注</button>
         </section>
       </aside>
-      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" data-blueprint30-surface="docx-template-circuit" data-canvas-visual-contract="demo-html-chain-svg" data-default-display="logic-circuit-only" aria-label="模型生成的逻辑链路图" tabindex="-1">
+      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" data-blueprint30-surface="docx-template-circuit" data-canvas-visual-contract="demo-html-chain-svg" data-default-display="logic-circuit-only" aria-label="生成的逻辑链路图" tabindex="-1">
         <section id="logic-template-entry" class="logic-template-entry" data-blueprint-surface="blank-canvas-template-entry" data-blueprint29-rhythm="blank-canvas-template-entry" aria-label="空白画布模板入口">
           <div class="logic-template-copy">
             <p class="logic-kicker">BLANK CANVAS</p>
@@ -537,12 +537,12 @@
             <button type="button" data-bottom-drawer-tab="run">运行记录</button>
             <a href="/fault-injection-sandbox">沙盒审查</a>
           </div>
-          <p class="muted">证据追溯以节点、来源、运行和审查的链接为主，不要求用户阅读 raw JSON。</p>
+          <p class="muted">证据以节点、来源、运行和沙盒链接为主，默认只展示可点击入口。</p>
         </section>
         <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="report" hidden>
           <div class="logic-report-preview">
-            <strong>回放报告预览</strong>
-            <p>本报告汇总需求锚点、逻辑图、参数运行、故障候选、沙盒审查和回放状态。</p>
+            <strong>交付摘要预览</strong>
+            <p>本摘要汇总需求锚点、逻辑图、参数运行、故障候选、沙盒核对和回放状态。</p>
             <dl>
               <div><dt>truth_effect</dt><dd>none</dd></div>
               <div><dt>candidate_state</dt><dd>sandbox_candidate</dd></div>
@@ -553,10 +553,10 @@
         </section>
       </section>
       <section id="logic-annotation-submit-bar" class="logic-annotation-submit-bar" data-annotation-mode="multi-target" aria-label="本次图纸标注意见提交栏">
-        <label for="logic-bottom-provider">模型</label>
-        <select id="logic-bottom-provider" aria-label="选择用于处理标注意见的模型">
-          <option value="deepseek" selected>DeepSeek V4 Pro</option>
-          <option value="minimax">MiniMax-M2.7-highspeed</option>
+        <label for="logic-bottom-provider">生成方式</label>
+        <select id="logic-bottom-provider" aria-label="选择用于处理标注意见的生成方式">
+          <option value="deepseek" selected>标准生成</option>
+          <option value="minimax">备用生成</option>
         </select>
         <div class="logic-annotation-batch">
           <span id="logic-annotation-count">0 条标注意见</span>
@@ -669,7 +669,7 @@
         <section id="logic-change-history-details" class="logic-panel logic-change-history logic-side-details logic-workbench-tab-panel" role="tabpanel" aria-labelledby="logic-workbench-tab-history" data-workbench-panel="history" tabindex="0" hidden>
           <div id="logic-change-history" class="logic-side-details-body">
             <div id="logic-change-history-list" class="logic-change-history-list">
-              <p class="muted">每次批注、模型理解、用户确认和图纸更新都会记录在这里。</p>
+              <p class="muted">每次批注、系统理解、用户确认和图纸更新都会记录在这里。</p>
             </div>
           </div>
         </section>

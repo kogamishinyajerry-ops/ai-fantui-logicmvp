@@ -6009,7 +6009,12 @@ def test_deepseek_subproject_nav_collapses_legacy_modules_into_advanced_menu():
     for path in html_paths:
         html = path.read_text(encoding="utf-8")
         assert 'id="deepseek-nav-mainline"' in html, path
-        assert 'aria-label="DeepSeek 四步主线"' in html, path
+        expected_nav_label = (
+            'aria-label="四步主线"'
+            if path.name == "index.html" and path.parent.name == "logic_builder"
+            else 'aria-label="DeepSeek 四步主线"'
+        )
+        assert expected_nav_label in html, path
         assert 'id="deepseek-nav-advanced-modules"' in html, path
         assert "更多模块" in html, path
         mainline_html = html.split('id="deepseek-nav-mainline"', 1)[1].split('id="deepseek-nav-advanced-modules"', 1)[0]
@@ -6242,7 +6247,7 @@ def test_deepseek_four_page_generation_streams_are_visible_and_compact():
         (
             STATIC_ROOT / "logic_builder" / "index.html",
             "logic-generation-stream",
-            ["读取需求", "DeepSeek 绘图", "结构复核", "渲染电路"],
+            ["读取需求", "生成图纸", "结构复核", "渲染电路"],
         ),
         (
             STATIC_ROOT / "fault_injection_prepare" / "index.html",
@@ -6277,7 +6282,7 @@ def test_deepseek_workflow_exposes_progressive_stream_chunk_rails():
             STATIC_ROOT / "logic_builder" / "index.html",
             STATIC_ROOT / "logic_builder" / "logic_builder.js",
             "logic-stream-chunks",
-            ["已读取需求", "DeepSeek 正在绘制"],
+            ["已读取需求", "正在生成图纸"],
         ),
         (
             STATIC_ROOT / "fault_injection_prepare" / "index.html",
@@ -6914,7 +6919,15 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
     assert 'data-logic-experience="cockpit-annotation-stream"' in html
     assert 'id="logic-drawing-stream-timeline"' in html
     assert 'data-ai-stream="logic-drawing-replay"' in html
-    assert "DeepSeek 绘图回放" in html
+    assert 'data-default-collapsed="true"' in html
+    assert "等待生成过程" in html
+    assert "生成图纸" in html
+    assert "DEEPSEEK STREAM" not in html
+    assert "DeepSeek V4 Pro" not in html
+    assert "MiniMax-M2.7-highspeed" not in html
+    assert "DeepSeek 绘图" not in html
+    assert "模型" not in html
+    assert "模型" not in script
     assert 'id="logic-annotation-popover"' in html
     assert 'id="logic-selected-target-label"' in html
     assert 'id="logic-node-comment-text"' in html
@@ -6932,6 +6945,7 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
 
     for selector in [
         ".logic-drawing-stream-timeline",
+        ".logic-drawing-stream-timeline[open]",
         ".logic-stream-event",
         ".logic-annotation-popover",
         ".logic-annotation-submit-bar",
@@ -7017,7 +7031,11 @@ def test_logic_builder_exposes_five_entry_mode_dock_command_palette_and_bottom_d
     assert 'data-panel-toggle="right"' in html
     assert "注入故障" in html
     assert "打开失败路径" in html
-    assert "导出审查包" in html
+    assert "生成交付摘要" in html
+    assert "导出审查包" not in html
+    assert "raw JSON" not in html
+    assert "打开证据追溯" not in html
+    assert "打开报告预览" not in html
 
     assert 'id="logic-run-parameter-drawer"' in html
     assert 'data-active-tab="none"' in html

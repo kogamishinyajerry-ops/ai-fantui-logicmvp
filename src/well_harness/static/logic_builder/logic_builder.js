@@ -63,7 +63,7 @@
   const CIRCUIT_PROVENANCE_FILTERS = new Set(["all", "source", "assumption", "local"]);
   const CIRCUIT_PROVENANCE_LABELS = {
     "source": "原文锚点",
-    "assumption": "模型假设",
+    "assumption": "候选假设",
     "local": "本地补齐",
   };
   const state = {
@@ -117,7 +117,7 @@
   const streamChunks = $("logic-stream-chunks");
   const STREAM_CHUNK_COPY = {
     load: "已读取需求：准备生成逻辑链路",
-    model: "DeepSeek 正在绘制：等待节点与连线",
+    model: "正在生成图纸：等待节点与连线",
     layout: "结构复核：校验 20/23 结构",
     render: "渲染电路：更新画布与验收状态",
   };
@@ -339,7 +339,7 @@
   }
 
   function sourceAnchorLabel(anchors) {
-    if (!Array.isArray(anchors) || anchors.length === 0) return "模型假设";
+    if (!Array.isArray(anchors) || anchors.length === 0) return "候选假设";
     return anchors
       .slice(0, 2)
       .map((anchor) => `${anchor.id || "DOCX"} · ${anchor.kind || "正文条件"}`)
@@ -470,7 +470,7 @@
       const targetId = wire.target || "";
       events.push({
         kind: "wire",
-        text: `生成连线 ${sourceId} → ${targetId} · 来源：${wire.label || sourceId || "模型链路"}`,
+        text: `生成连线 ${sourceId} → ${targetId} · 来源：${wire.label || sourceId || "候选链路"}`,
       });
     });
     events.push({
@@ -487,11 +487,11 @@
     drawingStreamTimeline.dataset.blueprint39Stream = events.length ? "compact-complete" : "empty";
     const streamTitle = drawingStreamTimeline.querySelector(".logic-stream-head strong");
     if (!events.length) {
-      if (streamTitle) streamTitle.textContent = "DeepSeek 绘图回放";
+      if (streamTitle) streamTitle.textContent = "等待生成过程";
       drawingStreamEvents.innerHTML = '<li class="logic-stream-event is-empty">等待图纸生成过程。</li>';
       return;
     }
-    if (streamTitle) streamTitle.textContent = `DeepSeek 已完成 · ${events.length} steps`;
+    if (streamTitle) streamTitle.textContent = `生成过程已完成 · ${events.length} 步`;
     drawingStreamEvents.innerHTML = "";
     events.forEach((event, index) => {
       const item = document.createElement("li");
@@ -782,7 +782,7 @@
       if (streamedAuthoringStatus) streamedAuthoringStatus.textContent = "等待候选图纸";
       if (streamedAuthoringSequence) streamedAuthoringSequence.textContent = "--";
       if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = "当前候选编辑";
-      if (streamedAuthoringExplanation) streamedAuthoringExplanation.textContent = "图纸生成后，模型会一次提出一个节点或连线候选。";
+      if (streamedAuthoringExplanation) streamedAuthoringExplanation.textContent = "图纸生成后，系统会一次提出一个节点或连线候选。";
       if (streamedAuthoringSource) streamedAuthoringSource.textContent = "等待来源片段。";
       if (streamedAuthoringNeighborhood) streamedAuthoringNeighborhood.textContent = "等待候选对象。";
       if (streamedAuthoringConfirm) streamedAuthoringConfirm.disabled = true;
@@ -835,7 +835,7 @@
     if (streamedAuthoringSequence) streamedAuthoringSequence.textContent = `#${proposal.sequence_index || 1}/${session.proposal_count || "?"}`;
     if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = streamedTargetLabel(proposal);
     if (streamedAuthoringExplanation) {
-      streamedAuthoringExplanation.textContent = proposal.interpreted_logic || proposal.confirmation_question_zh || "请确认模型对这一笔候选编辑的理解。";
+      streamedAuthoringExplanation.textContent = proposal.interpreted_logic || proposal.confirmation_question_zh || "请确认系统对这一笔候选编辑的理解。";
       streamedAuthoringExplanation.dataset.logicHighlight = "active";
     }
     if (streamedAuthoringSource) {
@@ -1593,10 +1593,10 @@
 
   function safeUiError(payload, fallback) {
     if (payload && payload.error === "missing_api_key") {
-      return "模型密钥未读取，请检查服务端环境变量后重试。";
+      return "生成服务未配置，请检查服务端环境变量后重试。";
     }
     if (payload && payload.details && payload.details.self_repair) {
-      return "模型输出仍不完整，请重新生成或切换模型。";
+      return "生成结果仍不完整，请重新生成或切换生成方式。";
     }
     return fallback;
   }
@@ -2080,7 +2080,7 @@
     if (!handoff) return "";
     const focusName = handoff.top_signal || handoff.top_node || "沙盒审查项";
     const summary = handoff.summary || "收到沙盒审查结果，建议检查关键逻辑与边界条件并给出可执行修改点。";
-    return `【沙盒审查草稿】本次审查建议围绕“${focusName}”推进。当前共 ${handoff.plan_count} 个计划、${handoff.observation_count} 个观测点、${handoff.review_count} 条审查项；核心结论：${summary}。请根据沙盒审查补充具体修改意见：1. 需要调整的逻辑节点；2. 需要同步的参数或边界；3. 期望模型更新后的图纸变化。`;
+    return `【沙盒审查草稿】本次审查建议围绕“${focusName}”推进。当前共 ${handoff.plan_count} 个计划、${handoff.observation_count} 个观测点、${handoff.review_count} 条审查项；核心结论：${summary}。请根据沙盒审查补充具体修改意见：1. 需要调整的逻辑节点；2. 需要同步的参数或边界；3. 期望更新后的图纸变化。`;
   }
 
   function fillLogicChangeFromHandoff() {
@@ -2495,7 +2495,7 @@
     });
     const payload = await response.json();
     if (!response.ok) {
-      const error = new Error(safeUiError(payload, "模型绘图失败，请重新绘制或切换模型。"));
+      const error = new Error(safeUiError(payload, "图纸生成失败，请重新绘制或切换生成方式。"));
       error.payload = payload;
       throw error;
     }
@@ -2523,7 +2523,7 @@
     });
     const payload = await response.json();
     if (!response.ok) {
-      const error = new Error(safeUiError(payload, "模型未能理解修改意见，请简化意见后重试。"));
+      const error = new Error(safeUiError(payload, "系统未能理解修改意见，请简化意见后重试。"));
       error.payload = payload;
       throw error;
     }
@@ -2677,7 +2677,7 @@
       payload.controller_truth_modified ? "需复核控制逻辑" : "未改控制逻辑",
       payload.status === "draft_ready" ? "初版草稿" : "等待生成",
       payload.certification_claim && payload.certification_claim !== "none" ? "含认证声明" : "无认证声明",
-      (payload.llm && payload.llm.provider === "minimax") ? "MiniMax" : "DeepSeek",
+      (payload.llm && payload.llm.provider === "minimax") ? "备用生成" : "标准生成",
     ];
     for (const flag of flags) {
       const span = document.createElement("span");
@@ -2729,12 +2729,12 @@
     const outputs = [
       `${metrics.nodes} 个节点`,
       `${metrics.edges} 条连线`,
-      missingAnchors ? `${missingAnchors} 个节点是模型假设` : "节点均带来源锚点或继承需求来源",
+      missingAnchors ? `${missingAnchors} 个节点是候选假设` : "节点均带来源锚点或继承需求来源",
     ];
     burdenAction.textContent = "先确认 L1-L4 分组、输出节点和来源标记。";
     burdenOutputs.innerHTML = outputs.slice(0, 3).map((item) => `<li>${escapeText(item)}</li>`).join("");
     setDetailNextAction("确认 L1-L4 与来源。");
-    setSourceTrustSummary(missingAnchors ? `${missingAnchors} 个模型假设` : "来源覆盖已确认");
+    setSourceTrustSummary(missingAnchors ? `${missingAnchors} 个候选假设` : "来源覆盖已确认");
   }
 
   function createSvgElement(name, attrs) {
@@ -2962,7 +2962,7 @@
     if (statusSourceCount) statusSourceCount.textContent = String(countsByKind.source);
     if (statusLocalCount) statusLocalCount.textContent = String(countsByKind.local);
     if (statusAssumptionCount) statusAssumptionCount.textContent = String(countsByKind.assumption);
-    setSourceTrustSummary(countsByKind.assumption ? `${countsByKind.assumption} 个模型假设` : "来源覆盖已确认");
+    setSourceTrustSummary(countsByKind.assumption ? `${countsByKind.assumption} 个候选假设` : "来源覆盖已确认");
   }
 
   function applyCircuitProvenanceFilter() {
@@ -3403,7 +3403,7 @@
     notes.innerHTML = "";
     const items = payload.drawing_notes || [];
     if (!items.length) {
-      notes.innerHTML = '<li class="muted">模型未返回布局说明。</li>';
+      notes.innerHTML = '<li class="muted">未返回布局说明。</li>';
       return;
     }
     for (const item of items) {
@@ -3445,7 +3445,7 @@
     }
     if (hasPendingChange()) {
       workflowStage.textContent = "等待用户确认修改意图";
-      workflowDetail.textContent = "模型已理解批注，请确认意图后再让模型更新完整图纸。";
+      workflowDetail.textContent = "系统已理解批注，请确认意图后再更新完整图纸。";
       setWorkflowSteps("drawing", ["requirements"]);
       return;
     }
@@ -3481,7 +3481,7 @@
     historyCount.textContent = `${state.changeHistory.length} changes`;
     historyList.innerHTML = "";
     if (!state.changeHistory.length) {
-      historyList.innerHTML = '<p class="muted">每次批注、模型理解、用户确认和图纸更新都会记录在这里。</p>';
+      historyList.innerHTML = '<p class="muted">每次批注、系统理解、用户确认和图纸更新都会记录在这里。</p>';
       return;
     }
     for (const item of state.changeHistory) {
@@ -3501,11 +3501,11 @@
           ${item.annotation_batch_count ? `<span>${escapeText(item.annotation_batch_count)} notes</span>` : ""}
         </div>
         <p class="logic-change-annotation">${escapeText(item.annotation_text || "")}</p>
-        <p class="logic-change-understanding">${escapeText(item.understanding_zh || "等待模型理解。")}</p>
+        <p class="logic-change-understanding">${escapeText(item.understanding_zh || "等待系统理解。")}</p>
         ${item.confirmation_question_zh ? `<p class="logic-change-question">${escapeText(item.confirmation_question_zh)}</p>` : ""}
         ${item.updated_summary_zh ? `<p class="logic-change-updated">${escapeText(item.updated_summary_zh)}</p>` : ""}
         ${metrics.nodes != null ? `<div class="logic-change-meta"><span>${escapeText(metrics.nodes)} nodes</span><span>${escapeText(metrics.edges)} edges</span><span>${escapeText(metrics.panels)} panels</span></div>` : ""}
-        ${proposed.length ? `<details><summary>模型修改项</summary><ul>${proposed.map((entry) => `<li>${escapeText(entry)}</li>`).join("")}</ul></details>` : ""}
+        ${proposed.length ? `<details><summary>建议修改项</summary><ul>${proposed.map((entry) => `<li>${escapeText(entry)}</li>`).join("")}</ul></details>` : ""}
       `;
       historyList.appendChild(card);
     }
@@ -3551,7 +3551,7 @@
     const record = activeChangeRecord();
     if (!record) return;
     record.status = "updated";
-    record.updated_summary_zh = payload.summary_zh || "模型已更新图纸。";
+    record.updated_summary_zh = payload.summary_zh || "图纸已更新。";
     record.updated_metrics = drawingMetrics(payload);
     record.change_applied = payload.change_applied || {};
     state.activeChangeId = "";
@@ -3842,13 +3842,13 @@
     state.interpretationPayload = payload;
     interpretationBox.hidden = false;
     interpretationState.textContent = "需要确认";
-    interpretationSummary.textContent = payload.understanding_zh || "模型已理解修改意见。";
+    interpretationSummary.textContent = payload.understanding_zh || "系统已理解修改意见。";
     interpretationMatch.textContent = payload.requirements_match_zh || "";
     interpretationQuestion.textContent = payload.confirmation_question_zh || "请确认是否按此意图更新图纸？";
     proposedChanges.innerHTML = "";
     const changes = payload.proposed_changes || [];
     if (!changes.length) {
-      proposedChanges.innerHTML = '<li class="muted">模型未返回具体修改项。</li>';
+      proposedChanges.innerHTML = '<li class="muted">未返回具体修改项。</li>';
     } else {
       for (const item of changes) {
         const li = document.createElement("li");
@@ -3955,8 +3955,8 @@
     renderDrawingStreamTimeline(payload, circuitView);
     renderFlags(payload);
     renderNotes(payload);
-    resultState.textContent = circuitView ? "电路图已完成绘制" : "模型已完成绘制";
-    resultSummary.textContent = payload.summary_zh || "模型已生成初版逻辑链路图。";
+    resultState.textContent = circuitView ? "电路图已完成绘制" : "图纸已完成绘制";
+    resultSummary.textContent = payload.summary_zh || "初版逻辑链路图已生成。";
     counts.textContent = circuitView
       ? `${(circuitView.rows || []).length} rows · ${(circuitView.nodes || []).length} circuit nodes · ${(circuitView.wires || []).length} wires`
       : `${(payload.nodes || []).length} nodes · ${(payload.edges || []).length} edges · ${(payload.parameter_panels || []).length} panels`;
@@ -3982,9 +3982,9 @@
     setBusy(true);
     clearInterpretation();
     try {
-      setProgress(18, "提交模型", "已确认需求会被发送给大模型，由模型生成节点坐标、连线路径和参数面板。", "model");
+      setProgress(18, "提交生成", "已确认需求会进入生成流程，用于生成节点坐标、连线路径和参数面板。", "model");
       const payload = await requestDrawing();
-      setProgress(84, "生成布局", "模型已返回图纸草稿，正在按模型坐标渲染。", "layout");
+      setProgress(84, "生成布局", "图纸草稿已返回，正在按坐标渲染。", "layout");
       state.changeHistory = [];
       state.activeChangeId = "";
       state.streamedAuthoringHistory = [];
@@ -3995,11 +3995,11 @@
       renderStreamedAuthoringSession(null);
       renderWorkflowOverview();
       renderDrawing(payload);
-      setProgress(96, "渲染图纸", "节点、连线和参数面板已按模型输出绘制。", "render");
-      finishTask("绘制完成", "初版逻辑链路图已由大模型生成。");
+      setProgress(96, "渲染图纸", "节点、连线和参数面板已按生成结果绘制。", "render");
+      finishTask("绘制完成", "初版逻辑链路图已生成。");
     } catch (error) {
       resultState.textContent = "绘制失败";
-      const message = error.message || "模型绘图失败，请重新绘制或切换模型。";
+      const message = error.message || "图纸生成失败，请重新绘制或切换生成方式。";
       resultSummary.textContent = message;
       failTask("绘制失败", message);
     } finally {
@@ -4010,20 +4010,20 @@
   async function submitChange() {
     const annotationText = changeText.value.trim();
     if (!annotationText) return;
-    beginTask("理解修改意见", "模型正在回到原需求和当前图纸中定位这条批注。");
+    beginTask("理解修改意见", "系统正在回到原需求和当前图纸中定位这条批注。");
     setBusy(true);
     clearInterpretation();
     try {
-      setProgress(28, "提交模型", "正在让模型解释修改意图，并列出受影响节点、连线和参数面板。", "model");
+      setProgress(28, "提交生成", "正在解释修改意图，并列出受影响节点、连线和参数面板。", "model");
       const payload = await requestChangeInterpretation(annotationText);
-      setProgress(88, "等待确认", "模型已返回理解结果，正在生成确认问题。", "layout");
+      setProgress(88, "等待确认", "理解结果已返回，正在生成确认问题。", "layout");
       renderInterpretation(payload);
       recordChangeInterpretation(payload, annotationText);
-      finishTask("需要用户确认", "请确认模型理解是否符合你的修改意图。");
+      finishTask("需要用户确认", "请确认系统理解是否符合你的修改意图。");
     } catch (error) {
       interpretationBox.hidden = false;
       interpretationState.textContent = "理解失败";
-      const message = error.message || "模型未能理解修改意见，请简化意见后重试。";
+      const message = error.message || "系统未能理解修改意见，请简化意见后重试。";
       interpretationSummary.textContent = message;
       interpretationMatch.textContent = "";
       interpretationQuestion.textContent = "";
@@ -4074,19 +4074,19 @@
 
   async function confirmChange() {
     if (!state.interpretationPayload) return;
-    beginTask("更新逻辑图纸", "用户已确认修改意图，模型正在生成完整更新后的图纸。");
+    beginTask("更新逻辑图纸", "用户已确认修改意图，正在生成完整更新后的图纸。");
     setBusy(true);
     try {
-      setProgress(24, "提交模型", "正在把已确认修改意图发送给模型。", "model");
+      setProgress(24, "提交生成", "正在处理已确认修改意图。", "model");
       const payload = await requestDrawingUpdate(state.interpretationPayload);
-      setProgress(84, "生成布局", "模型已返回更新后的节点、连线和参数面板。", "layout");
+      setProgress(84, "生成布局", "更新后的节点、连线和参数面板已返回。", "layout");
       window.localStorage.removeItem(FAULT_DRAFT_KEY);
       renderDrawing(payload);
       markChangeUpdated(payload);
       clearInterpretation();
       changeText.value = "";
       setProgress(96, "渲染图纸", "新的草稿已保存到本地。", "render");
-      finishTask("更新完成", "逻辑链路图已按确认意见由模型更新。");
+      finishTask("更新完成", "逻辑链路图已按确认意见更新。");
     } catch (error) {
       const message = error.message || "图纸更新失败，请重新确认修改意图后重试。";
       markActiveChangeFailed(message);
@@ -4116,10 +4116,10 @@
     } else if (state.requirementsPayload && state.drawingPayload && state.changeHistory.length) {
       beginTask("载入修改草稿", "正在读取上次保存的图纸和修改历史。");
       renderDrawing(state.drawingPayload);
-      finishTask("已载入修改草稿", "当前图纸包含用户确认过的模型修改历史。");
+      finishTask("已载入修改草稿", "当前图纸包含用户确认过的修改历史。");
     } else if (state.drawingPayload) {
       const hasRequirements = Boolean(state.requirementsPayload);
-      beginTask(hasRequirements ? "载入已保存图纸" : "载入本地草稿", "正在读取上次保存的模型图纸。");
+      beginTask(hasRequirements ? "载入已保存图纸" : "载入本地草稿", "正在读取上次保存的图纸。");
       renderDrawing(state.drawingPayload);
       finishTask(
         hasRequirements ? "已载入已保存图纸" : "已载入本地草稿",
@@ -4302,7 +4302,7 @@
     selectAnnotationTarget("", "", "");
   });
   cancelChangeButton.addEventListener("click", () => {
-    markActiveChangeCancelled("用户取消本次模型理解。");
+    markActiveChangeCancelled("用户取消本次理解。");
     clearInterpretation();
   });
   Object.values(circuitInputs).forEach((element) => {
