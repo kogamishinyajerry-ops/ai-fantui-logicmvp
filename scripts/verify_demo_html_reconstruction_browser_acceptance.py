@@ -142,6 +142,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     control_strip_path = artifact_dir / f"demo-reconstruction-control-strip-{stamp}.png"
     sentence_runner_path = artifact_dir / f"demo-reconstruction-sentence-runner-{stamp}.png"
     scenario_comparator_path = artifact_dir / f"demo-reconstruction-scenario-comparator-{stamp}.png"
+    review_verdict_path = artifact_dir / f"demo-reconstruction-review-verdict-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -185,6 +186,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-control-strip-action]").length === 3
                             && document.querySelectorAll("[data-sentence-runner-step]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
+                            && document.querySelectorAll("[data-review-verdict-card]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
                             && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
                             && document.querySelectorAll("[data-topology-wire]").length === 23;
@@ -228,6 +230,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "scenario_comparator_visible": page.locator(
                         "#demo-reconstruction-scenario-comparator"
+                    ).is_visible(timeout=5000),
+                    "review_verdict_visible": page.locator(
+                        "#demo-reconstruction-review-verdict"
                     ).is_visible(timeout=5000),
                     "scenario_ledger_visible": page.locator(
                         "#demo-reconstruction-scenario-ledger"
@@ -2217,6 +2222,41 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.wait_for_function(
+                    """() => {
+                        const status = document.querySelector("#demo-reconstruction-review-verdict-status");
+                        const focus = document.querySelector("#demo-reconstruction-review-verdict-focus");
+                        const readback = document.querySelector("#demo-reconstruction-review-verdict-readback");
+                        return status
+                            && status.textContent.includes("5/5")
+                            && focus
+                            && focus.textContent.includes("wire_logic4_thr_lock")
+                            && readback
+                            && readback.textContent.includes("证据可审");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator("#demo-reconstruction-review-verdict").evaluate(
+                    """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
+                )
+                page.locator("#demo-reconstruction-review-verdict").screenshot(
+                    path=str(review_verdict_path)
+                )
+                review_verdict_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            cardCount: document.querySelectorAll("[data-review-verdict-card]").length,
+                            statusText: text("#demo-reconstruction-review-verdict-status"),
+                            sourceText: text("#demo-reconstruction-review-verdict-source"),
+                            circuitText: text("#demo-reconstruction-review-verdict-circuit"),
+                            outputsText: text("#demo-reconstruction-review-verdict-outputs"),
+                            focusText: text("#demo-reconstruction-review-verdict-focus"),
+                            boundaryText: text("#demo-reconstruction-review-verdict-boundary"),
+                            readbackText: text("#demo-reconstruction-review-verdict-readback"),
+                        };
+                    }"""
+                )
                 page.locator('[data-control-strip-action="block-inhibit"]').click()
                 page.wait_for_function(
                     """() => {
@@ -2301,6 +2341,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 control_strip_path,
                 sentence_runner_path,
                 scenario_comparator_path,
+                review_verdict_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -2850,6 +2891,20 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and scenario_comparator_inhibit_review["output"] == "BLOCKED"
         )
         else "fail",
+        "review_verdict_readback": "pass"
+        if (
+            review_verdict_review["cardCount"] == 5
+            and "5/5" in review_verdict_review["statusText"]
+            and "源记录" in review_verdict_review["sourceText"]
+            and "5/5" in review_verdict_review["sourceText"]
+            and "20/20" in review_verdict_review["circuitText"]
+            and "23/23" in review_verdict_review["circuitText"]
+            and "5/5" in review_verdict_review["outputsText"]
+            and "wire_logic4_thr_lock" in review_verdict_review["focusText"]
+            and "控制逻辑未改动" in review_verdict_review["boundaryText"]
+            and "证据可审" in review_verdict_review["readbackText"]
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -2883,6 +2938,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "control_strip": str(control_strip_path),
             "sentence_runner": str(sentence_runner_path),
             "scenario_comparator": str(scenario_comparator_path),
+            "review_verdict": str(review_verdict_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -2947,6 +3003,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "scenario_comparator_review": scenario_comparator_review,
         "scenario_comparator_max_review": scenario_comparator_max_review,
         "scenario_comparator_inhibit_review": scenario_comparator_inhibit_review,
+        "review_verdict_review": review_verdict_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {

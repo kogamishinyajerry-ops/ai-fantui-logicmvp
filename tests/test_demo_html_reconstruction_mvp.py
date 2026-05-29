@@ -224,6 +224,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-packet-dashboard-metrics"' in html
     assert 'id="demo-reconstruction-review-packet-dashboard-checklist"' in html
     assert 'id="demo-reconstruction-review-packet-gates"' in html
+    assert 'id="demo-reconstruction-review-verdict"' in html
+    assert 'id="demo-reconstruction-review-verdict-status"' in html
+    assert 'id="demo-reconstruction-review-verdict-readback"' in html
+    assert 'data-review-verdict="first-screen"' in html
+    assert 'data-review-verdict-card="boundary"' in html
     assert 'id="demo-reconstruction-custody-matrix"' in html
     assert 'id="demo-reconstruction-custody-summary"' in html
     assert 'id="demo-reconstruction-custody-active"' in html
@@ -277,6 +282,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "电路邻接读回" in html
     assert "电路完成阶梯" in html
     assert "审阅交付包" in html
+    assert "审阅结论" in html
     assert "交付链路总览" in html
     assert "演示舱输出镜像" in html
     assert "场景读回记录" in html
@@ -358,6 +364,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "updateReviewPacketFromState" in script
     assert "renderReviewPacketGates" in script
     assert "renderReviewPacketDashboard" in script
+    assert "updateReviewVerdictBoard" in script
+    assert "reviewVerdictStatus" in script
     assert "requirementLedgerStats" in script
     assert "finalOutputReadinessCount" in script
     assert "renderCustodyMatrix" in script
@@ -439,6 +447,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-review-packet-dashboard-metrics" in stylesheet
     assert ".demo-reconstruction-review-packet-dashboard-checklist" in stylesheet
     assert ".demo-reconstruction-review-packet-gates" in stylesheet
+    assert ".demo-reconstruction-review-verdict" in stylesheet
+    assert ".demo-reconstruction-review-verdict-grid" in stylesheet
     assert ".demo-reconstruction-custody-matrix" in stylesheet
     assert ".demo-reconstruction-custody-button" in stylesheet
     assert ".demo-reconstruction-custody-readback" in stylesheet
@@ -583,6 +593,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["control_strip"].endswith(".png")
     assert payload["screenshots"]["sentence_runner"].endswith(".png")
     assert payload["screenshots"]["scenario_comparator"].endswith(".png")
+    assert payload["screenshots"]["review_verdict"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
     assert payload["screenshots"]["inhibit_block_outputs"].endswith(".png")
     assert payload["pixel_visibility"]["chain_svg"]["status"] == "pass"
@@ -601,6 +612,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "control_strip_visible": True,
         "sentence_runner_visible": True,
         "scenario_comparator_visible": True,
+        "review_verdict_visible": True,
         "scenario_ledger_visible": True,
         "scenario_truth_table_visible": True,
         "operator_runway_visible": True,
@@ -994,6 +1006,15 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "抑制阻塞" in payload["scenario_comparator_inhibit_review"]["readbackText"]
     assert "THR BLOCKED" in payload["scenario_comparator_inhibit_review"]["readbackText"]
     assert payload["scenario_comparator_inhibit_review"]["output"] == "BLOCKED"
+    assert payload["review_verdict_review"]["cardCount"] == 5
+    assert "5/5" in payload["review_verdict_review"]["statusText"]
+    assert "源记录" in payload["review_verdict_review"]["sourceText"]
+    assert "20/20" in payload["review_verdict_review"]["circuitText"]
+    assert "23/23" in payload["review_verdict_review"]["circuitText"]
+    assert "5/5" in payload["review_verdict_review"]["outputsText"]
+    assert "wire_logic4_thr_lock" in payload["review_verdict_review"]["focusText"]
+    assert "控制逻辑未改动" in payload["review_verdict_review"]["boundaryText"]
+    assert "证据可审" in payload["review_verdict_review"]["readbackText"]
     assert payload["deterministic_gates"] == {
         "browser_boot": "pass",
         "screenshots": "pass",
@@ -1037,6 +1058,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "control_strip_readback": "pass",
         "sentence_runner_readback": "pass",
         "scenario_comparator_readback": "pass",
+        "review_verdict_readback": "pass",
         "boundary": "pass",
     }
 

@@ -2152,6 +2152,74 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   font-family: "Courier New", monospace;
   font-size: 16px;
 }
+.demo-reconstruction-review-verdict {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+.demo-reconstruction-review-verdict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.demo-reconstruction-review-verdict-head h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+}
+.demo-reconstruction-review-verdict-head strong {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.demo-reconstruction-review-verdict-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.demo-reconstruction-review-verdict-grid div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 7px 8px;
+}
+.demo-reconstruction-review-verdict-grid span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-review-verdict-grid strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-verdict-grid [data-review-verdict-card="boundary"] {
+  grid-column: 1 / -1;
+}
+.demo-reconstruction-review-verdict p {
+  margin: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 8px;
+}
 .demo-reconstruction-control-strip {
   display: grid;
   gap: 9px;
@@ -3163,6 +3231,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   }
   .demo-reconstruction-source-metrics,
   .demo-reconstruction-metrics,
+  .demo-reconstruction-review-verdict-grid,
   .demo-reconstruction-control-strip-grid,
   .demo-reconstruction-sentence-runner-list,
   .demo-reconstruction-scenario-comparator-list,
