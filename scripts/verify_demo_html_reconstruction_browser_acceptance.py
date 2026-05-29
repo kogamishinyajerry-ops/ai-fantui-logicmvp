@@ -203,6 +203,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelector("[data-proof-path-review-strip='first-screen']")
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
+                            && document.querySelectorAll("[data-review-index-evidence]").length === 4
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
                             && document.querySelectorAll("[data-review-verdict-card]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
@@ -289,6 +290,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             requirementLedgerSummary: text("#demo-reconstruction-requirement-ledger-summary"),
                             requirementLedgerStatus: text("#demo-reconstruction-requirement-ledger-status"),
                             reviewIndexButtonCount: document.querySelectorAll("[data-review-index-target]").length,
+                            reviewIndexEvidenceCount: document.querySelectorAll("[data-review-index-evidence]").length,
                             reviewIndexBuildStepCount: document.querySelectorAll("[data-review-index-build-step]").length,
                             reviewIndexEquationCount: document.querySelectorAll("[data-review-index-equation]").length,
                             reviewIndexOutputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
@@ -418,6 +420,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             objectText: text("#demo-reconstruction-review-index-object"),
                             outputText: text("#demo-reconstruction-review-index-output"),
                             proofPathText: text("#demo-reconstruction-review-index-proof-path"),
+                            evidenceCount: document.querySelectorAll("[data-review-index-evidence]").length,
+                            evidenceSummaryText: text("#demo-reconstruction-review-index-evidence-summary"),
+                            evidenceSourceText: text('[data-review-index-evidence="docx-source"]'),
+                            evidenceCoverageText: text('[data-review-index-evidence="object-coverage"]'),
+                            activeEvidence: Array.from(
+                                document.querySelectorAll("[data-review-index-evidence][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-review-index-evidence")),
                             buildStepCount: document.querySelectorAll("[data-review-index-build-step]").length,
                             buildSummaryText: text("#demo-reconstruction-review-index-build-summary"),
                             buildFinalText: text('[data-review-index-build-step="P035-S05"]'),
@@ -449,6 +458,28 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             ).map((button) => button.getAttribute("data-review-index-target")),
                         };
                     }"""
+                )
+                page.locator('[data-review-index-evidence="object-coverage"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-review-index-evidence="object-coverage"][aria-pressed="true"]');
+                        const targetButton = document.querySelector('[data-review-index-target="demo-reconstruction-coverage-matrix"][aria-pressed="true"]');
+                        const target = document.querySelector("#demo-reconstruction-coverage-matrix");
+                        return !!active && !!targetButton && !!target && window.scrollY > 0;
+                    }""",
+                    timeout=5000,
+                )
+                review_index_evidence_rail_action = page.evaluate(
+                    """() => ({
+                        activeEvidence: Array.from(
+                            document.querySelectorAll("[data-review-index-evidence][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-evidence")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        evidenceSummaryText: document.querySelector("#demo-reconstruction-review-index-evidence-summary")?.textContent?.trim() || "",
+                        scrollY: window.scrollY,
+                    })"""
                 )
                 page.locator('[data-review-index-output-target="thr_lock"]').click()
                 page.wait_for_function(
@@ -3396,6 +3427,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             source_map_review["sourceEntryCount"] >= 10
             and source_map_review["reviewIndexButtonCount"] == 13
+            and source_map_review["reviewIndexEvidenceCount"] == 4
             and source_map_review["reviewIndexEquationCount"] == 4
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
@@ -3435,17 +3467,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             review_index_review["visible"]
             and review_index_review["buttonCount"] == 13
+            and review_index_review["evidenceCount"] == 4
             and review_index_review["buildStepCount"] == 5
             and review_index_review["equationCount"] == 4
             and review_index_review["outputTargetCount"] == 5
             and review_index_review["scenarioCount"] == 2
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
+            and review_index_review["activeEvidence"] == []
             and review_index_review["activeBuildSteps"] == ["P035-S01"]
             and review_index_review["activeEquations"] == []
             and review_index_review["activeOutputTargets"] == ["thr_lock"]
             and review_index_review["activeScenarios"] == []
             and "P035-S01" in review_index_review["stepText"]
             and "蓝图" in review_index_review["proofPathText"]
+            and "4/4 证据" in review_index_review["evidenceSummaryText"]
+            and "67 条" in review_index_review["evidenceSourceText"]
+            and "20/20 节点" in review_index_review["evidenceCoverageText"]
             and "5/5 句" in review_index_review["buildSummaryText"]
             and "20/20 节点" in review_index_review["buildSummaryText"]
             and "23/23 连线" in review_index_review["buildSummaryText"]
@@ -3513,6 +3550,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "step=P035-S05" in review_index_build_ladder_action["hash"]
             and "wire_logic4_thr_lock" in review_index_build_ladder_action["hash"]
             and review_index_build_ladder_action["scrollY"] > 0
+        )
+        else "fail",
+        "review_index_evidence_rail": "pass"
+        if (
+            review_index_evidence_rail_action["activeEvidence"] == ["object-coverage"]
+            and review_index_evidence_rail_action["activeTargets"] == ["demo-reconstruction-coverage-matrix"]
+            and "20/20 节点" in review_index_evidence_rail_action["evidenceSummaryText"]
+            and review_index_evidence_rail_action["scrollY"] > 0
         )
         else "fail",
         "review_index_equation_rail": "pass"
@@ -4299,6 +4344,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_scenario_max_action": review_index_scenario_max_action,
         "review_index_scenario_inhibit_action": review_index_scenario_inhibit_action,
         "review_index_build_ladder_action": review_index_build_ladder_action,
+        "review_index_evidence_rail_action": review_index_evidence_rail_action,
         "review_index_equation_rail_action": review_index_equation_rail_action,
         "review_index_after_trace": review_index_after_trace,
         "logic_equation_review": logic_equation_review,
@@ -4450,6 +4496,7 @@ def main(argv: list[str] | None = None) -> int:
                 "requirement_coverage_ledger": "fail",
                 "review_index_navigation": "fail",
                 "review_index_proof_path_context": "fail",
+                "review_index_evidence_rail": "fail",
                 "review_index_equation_rail": "fail",
                 "logic_equation_board_readback": "fail",
                 "assembly_map_readback": "fail",
