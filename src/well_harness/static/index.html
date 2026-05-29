@@ -758,7 +758,7 @@
     <a class="home-mode-entry" href="/logic-builder#run-drawer" data-default-entry="run">
       <span>02 运行</span>
       <strong>运行</strong>
-      <p>打开底部运行抽屉，执行 run / pause / step / reset 和仿真时间线。</p>
+      <p>打开底部运行抽屉，执行运行、暂停、单步、重置和仿真时间线。</p>
     </a>
     <a class="home-mode-entry" href="/logic-builder#parameter-drawer" data-default-entry="parameters">
       <span>03 参数</span>
@@ -859,15 +859,15 @@
     <a href="/requirements-intake" class="home-card" data-scope="workstation" data-primary-entry="deepseek-v4-pro" aria-labelledby="card-requirements-intake-title">
       <span class="home-card-kind">需求入口</span>
       <h2 class="home-card-title" id="card-requirements-intake-title">需求理解工作台</h2>
-      <p class="home-card-subtitle">/requirements-intake</p>
+      <p class="home-card-subtitle">输入与澄清</p>
       <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，默认输出澄清问题、概念节点、逻辑连线与参数候选；不写入控制逻辑基准。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/logic-builder" class="home-card" data-scope="workstation" aria-labelledby="card-logic-builder-title">
-      <span class="home-card-kind">模型绘制</span>
+      <span class="home-card-kind">逻辑绘制</span>
       <h2 class="home-card-title" id="card-logic-builder-title">逻辑链路绘制</h2>
-      <p class="home-card-subtitle">/logic-builder</p>
+      <p class="home-card-subtitle">候选链路</p>
       <p class="home-card-desc">读取需求理解页的已澄清需求包，自动生成节点坐标、正交连线路径和参数小面板；页面只负责渲染候选输出。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -875,7 +875,7 @@
     <a href="/fault-injection-prepare" class="home-card" data-scope="workstation" aria-labelledby="card-fault-prep-title">
       <span class="home-card-kind">故障准备</span>
       <h2 class="home-card-title" id="card-fault-prep-title">故障注入准备</h2>
-      <p class="home-card-subtitle">/fault-injection-prepare</p>
+      <p class="home-card-subtitle">故障边界</p>
       <p class="home-card-desc">读取生成的逻辑图纸，提出故障场景候选、建议注入点和进入沙盒注入前必须确认的安全边界；不执行仿真。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -883,7 +883,7 @@
     <a href="/fault-injection-sandbox" class="home-card" data-scope="workstation" aria-labelledby="card-fault-sandbox-title">
       <span class="home-card-kind">沙盒建议</span>
       <h2 class="home-card-title" id="card-fault-sandbox-title">沙盒故障注入</h2>
-      <p class="home-card-subtitle">/fault-injection-sandbox</p>
+      <p class="home-card-subtitle">试运行审查</p>
       <p class="home-card-desc">读取已确认边界的故障准备草稿，生成试运行注入配置、预期观测点和人工审查清单；不调用仿真接口。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -899,25 +899,25 @@
     <a href="/demo.html" class="home-card" data-scope="workstation" aria-labelledby="card-demo-title">
       <span class="home-card-kind">工作台</span>
       <h2 class="home-card-title" id="card-demo-title">反推逻辑工作台</h2>
-      <p class="home-card-subtitle">/demo.html</p>
-      <p class="home-card-desc">油门拉杆位置 → 位置开关 → 4 层 AND 逻辑门 → 油门锁释放命令。实时信号链路可视化 + 故障注入。5 个场景预设，含着陆展开全链路。</p>
+      <p class="home-card-subtitle">旧版控制台</p>
+      <p class="home-card-desc">油门拉杆位置 → 位置开关 → 4 层与门逻辑 → 油门锁释放命令。实时信号链路可视化和故障注入。5 个场景预设，含着陆展开全链路。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/c919_etras_workstation.html" class="home-card" data-scope="workstation" aria-labelledby="card-etras-title">
       <span class="home-card-kind">工作台</span>
       <h2 class="home-card-title" id="card-etras-title">C919 E-TRAS 工作台</h2>
-      <p class="home-card-subtitle">/c919_etras_workstation.html</p>
+      <p class="home-card-subtitle">C919 扩展</p>
       <p class="home-card-desc">C919 电动反推完整展开链：EICU 双通道 → FADEC 部署命令。6 预设场景 + 蒙特卡洛可靠度仿真，支持故障树验证。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <!-- 仿真（第 1 行第 3 个）-->
     <a href="http://127.0.0.1:9191/" class="home-card" data-scope="simulation" data-external="true" aria-labelledby="card-panel-title">
-      <span class="home-card-kind">仿真 · 外部服务</span>
+      <span class="home-card-kind">仿真 · 本地面板</span>
       <h2 class="home-card-title" id="card-panel-title">C919 MFD 仿真面板</h2>
-      <p class="home-card-subtitle">http://127.0.0.1:9191</p>
-      <p class="home-card-desc">有状态机的动态重放。需另起 <code>scripts/c919_etras_panel_server.py</code>。</p>
+      <p class="home-card-subtitle">本地面板服务</p>
+      <p class="home-card-desc">有状态机的动态重放。需要另行启动本地面板服务。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -925,16 +925,16 @@
     <a href="/fantui_circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-fantui-circuit-title">
       <span class="home-card-kind">电路图</span>
       <h2 class="home-card-title" id="card-fantui-circuit-title">反推电路图</h2>
-      <p class="home-card-subtitle">/fantui_circuit.html</p>
-      <p class="home-card-desc">FANTUI 域内静态 SVG：controller.py::DeployController 信号拓扑。</p>
+      <p class="home-card-subtitle">信号拓扑</p>
+      <p class="home-card-desc">FANTUI 域内控制器信号拓扑的静态电路图。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/c919_etras_panel/circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-etras-circuit-title">
       <span class="home-card-kind">电路图</span>
       <h2 class="home-card-title" id="card-etras-circuit-title">E-TRAS 电路图</h2>
-      <p class="home-card-subtitle">/c919_etras_panel/circuit.html</p>
-      <p class="home-card-desc">C919 thrust-reverser PDF §2 静态 SVG 拓扑，对应 frozen_v1 规范。</p>
+      <p class="home-card-subtitle">展开链路</p>
+      <p class="home-card-desc">C919 反推文档第 2 节对应的静态拓扑图。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -942,8 +942,8 @@
     <a href="/fan_console.html" class="home-card" data-scope="simulation" aria-labelledby="card-fan-console-title">
       <span class="home-card-kind">仿真</span>
       <h2 class="home-card-title" id="card-fan-console-title">反推实时操作台</h2>
-      <p class="home-card-subtitle">/fan_console.html</p>
-      <p class="home-card-desc">高自由度 tick 驱动的反推仿真：TRA 杠杆 / RA / N1k 实时可调，L1–L4 逻辑门 + 命令 + VDT 仪表 + 时间-状态曲线抽屉，覆盖展开 / 收起 / 抑制 / 过温全链路。</p>
+      <p class="home-card-subtitle">实时仿真</p>
+      <p class="home-card-desc">高自由度反推仿真：TRA 杠杆 / RA / N1k 实时可调，L1–L4 逻辑门、命令、VDT 仪表和时间-状态曲线抽屉，覆盖展开、收起、抑制、过温全链路。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -951,16 +951,16 @@
     <a href="/fantui_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-fantui-req-title">
       <span class="home-card-kind">文档</span>
       <h2 class="home-card-title" id="card-fantui-req-title">FANTUI 需求分析</h2>
-      <p class="home-card-subtitle">/fantui_requirements.html</p>
-      <p class="home-card-desc">SR / FR / IR / PR 需求规范 + AI 设计决策 D1–D5 + 12 条需求→代码可追溯矩阵 + L1–L4 控制逻辑推导过程。</p>
+      <p class="home-card-subtitle">需求追溯</p>
+      <p class="home-card-desc">需求规范、设计决策、12 条需求到实现的追溯矩阵，以及 L1–L4 控制逻辑推导过程。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/c919_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-c919-req-title">
       <span class="home-card-kind">文档</span>
       <h2 class="home-card-title" id="card-c919-req-title">C919 需求分析</h2>
-      <p class="home-card-subtitle">/c919_requirements.html</p>
-      <p class="home-card-desc">AR / SM / FR 架构需求 + 12 态状态机 S0–SF + AI 推导决策 C1–C4（为何 FANTUI 无状态→C919 状态机）+ 状态→命令可追溯矩阵。</p>
+      <p class="home-card-subtitle">状态机分析</p>
+      <p class="home-card-desc">架构需求、12 态状态机、推导决策和状态到命令的可追溯矩阵。</p>
       <span class="home-card-arrow">→</span>
     </a>
     </section>
