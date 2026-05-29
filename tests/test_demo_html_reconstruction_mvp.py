@@ -162,6 +162,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-handoff-rail"' in html
     assert 'id="demo-reconstruction-review-index-handoff-summary"' in html
     assert 'id="demo-reconstruction-review-index-handoff-list"' in html
+    assert 'id="demo-reconstruction-review-index-gate-rail"' in html
+    assert 'id="demo-reconstruction-review-index-gate-summary"' in html
+    assert 'id="demo-reconstruction-review-index-gate-list"' in html
     assert 'id="demo-reconstruction-review-index-tour-rail"' in html
     assert 'id="demo-reconstruction-review-index-tour-summary"' in html
     assert 'id="demo-reconstruction-review-index-tour-list"' in html
@@ -532,6 +535,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-review-index" in stylesheet
     assert ".demo-reconstruction-review-index-handoff-rail" in stylesheet
     assert ".demo-reconstruction-review-index-handoff-list" in stylesheet
+    assert ".demo-reconstruction-review-index-gate-rail" in stylesheet
+    assert ".demo-reconstruction-review-index-gate-list" in stylesheet
     assert ".demo-reconstruction-review-index-tour-rail" in stylesheet
     assert ".demo-reconstruction-review-index-tour-list" in stylesheet
     assert ".demo-reconstruction-review-index-evidence-rail" in stylesheet
@@ -826,7 +831,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["visible"] is True
     assert payload["review_index_review"]["buttonCount"] == 13
     assert payload["source_map_review"]["reviewIndexHandoffCount"] == 6
+    assert payload["source_map_review"]["reviewIndexGateCount"] == 5
     assert payload["review_index_review"]["handoffCount"] == 6
+    assert payload["review_index_review"]["gateCount"] == 5
+    assert payload["review_index_review"]["gatePassCount"] >= 4
     assert payload["review_index_review"]["tourCount"] == 6
     assert payload["review_index_review"]["evidenceCount"] == 4
     assert payload["review_index_review"]["buildStepCount"] == 5
@@ -838,6 +846,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["activeOutputTargets"] == ["thr_lock"]
     assert payload["review_index_review"]["activeScenarios"] == []
     assert payload["review_index_review"]["activeHandoff"] == []
+    assert payload["review_index_review"]["activeGate"] == []
     assert "5/5 句" in payload["review_index_review"]["buildSummaryText"]
     assert "20/20 节点" in payload["review_index_review"]["buildSummaryText"]
     assert "23/23 连线" in payload["review_index_review"]["buildSummaryText"]
@@ -866,6 +875,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "6/6 交付" in payload["review_index_review"]["handoffSummaryText"]
     assert "67 条" in payload["review_index_review"]["handoffSourceText"]
     assert "THR_LOCK" in payload["review_index_review"]["handoffOutputText"]
+    assert "gate" in payload["review_index_review"]["gateSummaryText"]
+    assert "等待聚焦" in payload["review_index_review"]["gateObjectText"]
     assert payload["review_index_navigation"]["activeTargets"] == [
         "demo-reconstruction-scenario-ledger"
     ]
@@ -907,6 +918,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["review_index_build_ladder_action"]["objectText"]
     assert "蓝图" in payload["review_index_build_ladder_action"]["proofPathText"]
     assert "链接已同步" in payload["review_index_build_ladder_action"]["proofPathText"]
+    assert payload["review_index_gate_rail_action"]["selectedAnchor"] == "P035-S05"
+    assert payload["review_index_gate_rail_action"]["activeGate"] == ["object-review"]
+    assert payload["review_index_gate_rail_action"]["activeTargets"] == [
+        "demo-reconstruction-proof-path"
+    ]
+    assert "5/5 gate" in payload["review_index_gate_rail_action"]["gateSummaryText"]
+    assert "5/5 gate" in payload["review_index_gate_rail_action"]["readinessText"]
+    assert "wire_logic4_thr_lock" in payload["review_index_gate_rail_action"]["objectText"]
+    assert "对象" in payload["review_index_gate_rail_action"]["proofPathText"]
+    assert payload["review_index_gate_rail_action"]["scrollY"] > 0
     assert payload["review_index_handoff_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_handoff_rail_action"]["activeHandoff"] == ["output"]
     assert payload["review_index_handoff_rail_action"]["activeTargets"] == [
@@ -1481,6 +1502,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_scenario_rail": "pass",
         "review_index_output_rail": "pass",
         "review_index_build_ladder": "pass",
+        "review_index_gate_rail": "pass",
         "review_index_handoff_rail": "pass",
         "review_index_tour_rail": "pass",
         "review_index_evidence_rail": "pass",
