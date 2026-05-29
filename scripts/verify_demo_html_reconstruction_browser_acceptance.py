@@ -291,6 +291,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             reviewIndexButtonCount: document.querySelectorAll("[data-review-index-target]").length,
                             reviewIndexBuildStepCount: document.querySelectorAll("[data-review-index-build-step]").length,
                             reviewIndexOutputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
+                            reviewIndexScenarioCount: document.querySelectorAll("[data-review-index-scenario]").length,
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
@@ -416,6 +417,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             activeOutputTargets: Array.from(
                                 document.querySelectorAll("[data-review-index-output-target][aria-pressed='true']")
                             ).map((button) => button.getAttribute("data-review-index-output-target")),
+                            scenarioCount: document.querySelectorAll("[data-review-index-scenario]").length,
+                            scenarioSummaryText: text("#demo-reconstruction-review-index-scenario-summary"),
+                            scenarioMaxText: text('[data-review-index-scenario="max-reverse"]'),
+                            scenarioInhibitText: text('[data-review-index-scenario="inhibit-block"]'),
+                            activeScenarios: Array.from(
+                                document.querySelectorAll("[data-review-index-scenario][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-review-index-scenario")),
                             activeTargets: Array.from(
                                 document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
                             ).map((button) => button.getAttribute("data-review-index-target")),
@@ -450,6 +458,72 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         ).map((button) => button.getAttribute("data-review-index-target")),
                         objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
                         proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                        hash: window.location.hash,
+                        scrollY: window.scrollY,
+                    })"""
+                )
+                page.locator('[data-review-index-scenario="max-reverse"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-review-index-scenario="max-reverse"][aria-pressed="true"]');
+                        const target = document.querySelector('[data-review-index-target="demo-reconstruction-operator-runway"][aria-pressed="true"]');
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const object = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        const output = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
+                        return active
+                            && target
+                            && selected
+                            && selected.textContent.trim() === "P035-S05"
+                            && object.includes("wire_logic4_thr_lock")
+                            && output.includes("THR ON");
+                    }""",
+                    timeout=5000,
+                )
+                review_index_scenario_max_action = page.evaluate(
+                    """() => ({
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        activeScenarios: Array.from(
+                            document.querySelectorAll("[data-review-index-scenario][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-scenario")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
+                        statusText: document.querySelector("#demo-reconstruction-operator-runway-status")?.textContent?.trim() || "",
+                        hash: window.location.hash,
+                        scrollY: window.scrollY,
+                    })"""
+                )
+                page.locator('[data-review-index-scenario="inhibit-block"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-review-index-scenario="inhibit-block"][aria-pressed="true"]');
+                        const target = document.querySelector('[data-review-index-target="demo-reconstruction-operator-runway"][aria-pressed="true"]');
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const object = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        const output = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
+                        return active
+                            && target
+                            && selected
+                            && selected.textContent.trim() === "P035-S01"
+                            && object.includes("reverser_inhibited")
+                            && output.includes("THR BLOCKED");
+                    }""",
+                    timeout=5000,
+                )
+                review_index_scenario_inhibit_action = page.evaluate(
+                    """() => ({
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        activeScenarios: Array.from(
+                            document.querySelectorAll("[data-review-index-scenario][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-scenario")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
+                        statusText: document.querySelector("#demo-reconstruction-operator-runway-status")?.textContent?.trim() || "",
                         hash: window.location.hash,
                         scrollY: window.scrollY,
                     })"""
@@ -3271,7 +3345,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
-            and source_map_review["reviewIndexButtonCount"] == 12
+            and source_map_review["reviewIndexButtonCount"] == 13
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
@@ -3309,12 +3383,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "review_index_navigation": "pass"
         if (
             review_index_review["visible"]
-            and review_index_review["buttonCount"] == 12
+            and review_index_review["buttonCount"] == 13
             and review_index_review["buildStepCount"] == 5
             and review_index_review["outputTargetCount"] == 5
+            and review_index_review["scenarioCount"] == 2
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and review_index_review["activeBuildSteps"] == ["P035-S01"]
             and review_index_review["activeOutputTargets"] == ["thr_lock"]
+            and review_index_review["activeScenarios"] == []
             and "P035-S01" in review_index_review["stepText"]
             and "蓝图" in review_index_review["proofPathText"]
             and "5/5 句" in review_index_review["buildSummaryText"]
@@ -3325,6 +3401,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "5/5 输出" in review_index_review["outputSummaryText"]
             and "THR_LOCK" in review_index_review["outputThrText"]
             and "P035-S05" in review_index_review["outputThrText"]
+            and "2/2 场景" in review_index_review["scenarioSummaryText"]
+            and "THR ON" in review_index_review["scenarioMaxText"]
+            and "THR BLOCKED" in review_index_review["scenarioInhibitText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
             and review_index_navigation["scrollY"] > 0
             and review_index_proof_path_navigation["activeTargets"] == ["demo-reconstruction-proof-path"]
@@ -3332,6 +3411,26 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "P035-S05" in review_index_after_trace["stepText"]
             and "等待聚焦" in review_index_after_trace["objectText"]
             and "链接已同步" in review_index_after_trace["proofPathText"]
+        )
+        else "fail",
+        "review_index_scenario_rail": "pass"
+        if (
+            review_index_scenario_max_action["selectedAnchor"] == "P035-S05"
+            and review_index_scenario_max_action["activeScenarios"] == ["max-reverse"]
+            and review_index_scenario_max_action["activeTargets"] == ["demo-reconstruction-operator-runway"]
+            and "wire_logic4_thr_lock" in review_index_scenario_max_action["objectText"]
+            and "THR ON" in review_index_scenario_max_action["outputText"]
+            and "05/06" in review_index_scenario_max_action["statusText"]
+            and "step=P035-S05" in review_index_scenario_max_action["hash"]
+            and review_index_scenario_max_action["scrollY"] > 0
+            and review_index_scenario_inhibit_action["selectedAnchor"] == "P035-S01"
+            and review_index_scenario_inhibit_action["activeScenarios"] == ["inhibit-block"]
+            and review_index_scenario_inhibit_action["activeTargets"] == ["demo-reconstruction-operator-runway"]
+            and "reverser_inhibited" in review_index_scenario_inhibit_action["objectText"]
+            and "THR BLOCKED" in review_index_scenario_inhibit_action["outputText"]
+            and "06/06" in review_index_scenario_inhibit_action["statusText"]
+            and "step=P035-S01" in review_index_scenario_inhibit_action["hash"]
+            and review_index_scenario_inhibit_action["scrollY"] > 0
         )
         else "fail",
         "review_index_output_rail": "pass"
@@ -4129,6 +4228,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_navigation": review_index_navigation,
         "review_index_proof_path_navigation": review_index_proof_path_navigation,
         "review_index_output_rail_action": review_index_output_rail_action,
+        "review_index_scenario_max_action": review_index_scenario_max_action,
+        "review_index_scenario_inhibit_action": review_index_scenario_inhibit_action,
         "review_index_build_ladder_action": review_index_build_ladder_action,
         "review_index_after_trace": review_index_after_trace,
         "logic_equation_review": logic_equation_review,
