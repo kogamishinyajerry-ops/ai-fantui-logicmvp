@@ -5944,6 +5944,7 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert "更多模块" in html
     assert "反推逻辑演示舱" in html
     assert "画布 / 运行 / 参数 / 证据 / 报告" in html
+    assert "执行运行、暂停、单步、重置和仿真时间线" in html
     assert "需求到电路的审查工作台" in html
     assert "候选审查态" in html
     assert "试运行" in html
@@ -5957,6 +5958,10 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
         assert raw_label not in default_html
     primary_html = html.split('id="home-primary-flow-grid"', 1)[1].split('id="home-advanced-modules"', 1)[0]
     assert primary_html.count('class="home-card"') == 4
+    for subtitle in ["输入与澄清", "候选链路", "故障边界", "试运行审查"]:
+        assert f'<p class="home-card-subtitle">{subtitle}</p>' in primary_html
+    assert "逻辑绘制" in primary_html
+    assert "模型绘制" not in primary_html
     for operator_hidden_token in [
         "raw JSON",
         "dry-run",
@@ -5972,6 +5977,42 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert 'href="/logic-builder"' in primary_html
     assert 'href="/fault-injection-prepare"' in primary_html
     assert 'href="/fault-injection-sandbox"' in primary_html
+    subtitle_html = "\n".join(
+        line.strip() for line in html.splitlines() if 'class="home-card-subtitle"' in line
+    )
+    for route_label in [
+        "/requirements-intake",
+        "/logic-builder",
+        "/fault-injection-prepare",
+        "/fault-injection-sandbox",
+        "/demo.html",
+        "/c919_etras_workstation.html",
+        "http://127.0.0.1:9191",
+        "/fantui_circuit.html",
+        "/c919_etras_panel/circuit.html",
+        "/fan_console.html",
+        "/fantui_requirements.html",
+        "/c919_requirements.html",
+    ]:
+        assert route_label not in subtitle_html
+    for subtitle in [
+        "旧版控制台",
+        "C919 扩展",
+        "本地面板服务",
+        "信号拓扑",
+        "展开链路",
+        "实时仿真",
+        "需求追溯",
+        "状态机分析",
+    ]:
+        assert f'<p class="home-card-subtitle">{subtitle}</p>' in subtitle_html
+    for backstage_token in [
+        "scripts/c919_etras_panel_server.py",
+        "controller.py::DeployController",
+        "frozen_v1",
+        "tick 驱动",
+    ]:
+        assert backstage_token not in html
     for legacy_href in [
         'href="/demo.html"',
         'href="/c919_etras_workstation.html"',
