@@ -129,6 +129,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     chain_svg_path = artifact_dir / f"demo-reconstruction-mvp-chain-svg-{stamp}.png"
     keyboard_review_path = artifact_dir / f"demo-reconstruction-keyboard-review-{stamp}.png"
     review_deep_link_path = artifact_dir / f"demo-reconstruction-review-deep-link-{stamp}.png"
+    complete_mode_banner_path = artifact_dir / f"demo-reconstruction-complete-mode-banner-{stamp}.png"
     step_playback_path = artifact_dir / f"demo-reconstruction-step-playback-{stamp}.png"
     object_provenance_path = artifact_dir / f"demo-reconstruction-object-provenance-{stamp}.png"
     signal_neighborhood_path = artifact_dir / f"demo-reconstruction-signal-neighborhood-{stamp}.png"
@@ -426,6 +427,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             buttonCount: document.querySelectorAll("[data-review-index-target]").length,
                             readinessText: text("#demo-reconstruction-review-index-readiness"),
                             completeActionText: text("#demo-reconstruction-review-index-complete-action"),
+                            completeBannerInitiallyHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
+                            completeBannerInitialText: text("#demo-reconstruction-complete-mode-banner"),
                             stepText: text("#demo-reconstruction-review-index-step"),
                             objectText: text("#demo-reconstruction-review-index-object"),
                             outputText: text("#demo-reconstruction-review-index-output"),
@@ -503,6 +506,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         const outputText = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
                         const readiness = document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent || "";
                         const activeScenario = document.querySelector('[data-review-index-scenario="max-reverse"][aria-pressed="true"]');
+                        const completeBanner = document.querySelector("#demo-reconstruction-complete-mode-banner");
                         return selected
                             && selected.textContent.trim() === "P035-S05"
                             && proofTarget
@@ -510,6 +514,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && objectText.includes("wire_logic4_thr_lock")
                             && outputText.includes("THR ON")
                             && readiness.includes("5/5 gate")
+                            && completeBanner
+                            && !completeBanner.hidden
+                            && completeBanner.textContent.includes("完整交付态已启用")
                             && window.scrollY > 0;
                     }""",
                     timeout=5000,
@@ -530,6 +537,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
                         outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
                         proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                        completeBannerText: document.querySelector("#demo-reconstruction-complete-mode-banner")?.textContent?.trim() || "",
+                        completeBannerHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                         hash: window.location.hash,
                         scrollY: window.scrollY,
                     })"""
@@ -544,6 +553,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
                         const outputText = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
                         const readiness = document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent || "";
+                        const completeBanner = document.querySelector("#demo-reconstruction-complete-mode-banner");
                         return selected
                             && selected.textContent.trim() === "P035-S05"
                             && proofTarget
@@ -551,7 +561,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && activeGate
                             && objectText.includes("wire_logic4_thr_lock")
                             && outputText.includes("THR ON")
-                            && readiness.includes("5/5 gate");
+                            && readiness.includes("5/5 gate")
+                            && completeBanner
+                            && !completeBanner.hidden
+                            && completeBanner.textContent.includes("完整交付态已启用");
                     }""",
                     timeout=7000,
                 )
@@ -572,7 +585,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
                         outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
                         proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                        completeBannerText: document.querySelector("#demo-reconstruction-complete-mode-banner")?.textContent?.trim() || "",
+                        completeBannerHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                     })"""
+                )
+                page.locator("#demo-reconstruction-complete-mode-banner").screenshot(
+                    path=str(complete_mode_banner_path)
                 )
                 page.locator('[data-review-index-gate="object-review"]').click()
                 page.wait_for_function(
@@ -3630,6 +3648,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 chain_svg_path,
                 keyboard_review_path,
                 review_deep_link_path,
+                complete_mode_banner_path,
                 step_playback_path,
                 object_provenance_path,
                 signal_neighborhood_path,
@@ -3715,6 +3734,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_review["scenarioCount"] == 2
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and review_index_review["completeActionText"] == "完整交付态"
+            and review_index_review["completeBannerInitiallyHidden"] is True
+            and "完整交付态已启用" in review_index_review["completeBannerInitialText"]
             and review_index_review["activeHandoff"] == []
             and review_index_review["activeGate"] == []
             and review_index_review["activeTour"] == []
@@ -3769,6 +3790,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in review_index_complete_action["objectText"]
             and "THR ON" in review_index_complete_action["outputText"]
             and "对象" in review_index_complete_action["proofPathText"]
+            and "完整交付态已启用" in review_index_complete_action["completeBannerText"]
+            and "P035-S05" in review_index_complete_action["completeBannerText"]
+            and review_index_complete_action["completeBannerHidden"] is False
             and "wire_logic4_thr_lock" in review_index_complete_action["hash"]
             and review_index_complete_action["scrollY"] > 0
         )
@@ -3784,6 +3808,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in review_index_complete_link["objectText"]
             and "THR ON" in review_index_complete_link["outputText"]
             and "对象" in review_index_complete_link["proofPathText"]
+            and "完整交付态已启用" in review_index_complete_link["completeBannerText"]
+            and "P035-S05" in review_index_complete_link["completeBannerText"]
+            and review_index_complete_link["completeBannerHidden"] is False
         )
         else "fail",
         "review_index_gate_rail": "pass"
@@ -4631,6 +4658,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "chain_svg": str(chain_svg_path),
             "keyboard_review": str(keyboard_review_path),
             "review_deep_link": str(review_deep_link_path),
+            "complete_mode_banner": str(complete_mode_banner_path),
             "step_playback": str(step_playback_path),
             "object_provenance": str(object_provenance_path),
             "signal_neighborhood": str(signal_neighborhood_path),

@@ -153,6 +153,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-console-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
+    assert 'id="demo-reconstruction-complete-mode-banner"' in html
+    assert "完整交付态已启用" in html
+    assert "P035-S05 · THR_LOCK · 最大反推 · 5/5 gate" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
     assert 'id="demo-reconstruction-review-index-complete-action"' in html
@@ -870,6 +873,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "demo-reconstruction-docx-circuit-map"
     ]
     assert payload["review_index_review"]["completeActionText"] == "完整交付态"
+    assert payload["review_index_review"]["completeBannerInitiallyHidden"] is True
+    assert "完整交付态已启用" in payload["review_index_review"]["completeBannerInitialText"]
     assert "6/6 模块" in payload["review_index_review"]["tourSummaryText"]
     assert "4/4 证据" in payload["review_index_review"]["evidenceSummaryText"]
     assert "67 条" in payload["review_index_review"]["evidenceSourceText"]
@@ -932,6 +937,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["review_index_complete_action"]["objectText"]
     assert "THR ON" in payload["review_index_complete_action"]["outputText"]
     assert "对象" in payload["review_index_complete_action"]["proofPathText"]
+    assert "完整交付态已启用" in payload["review_index_complete_action"]["completeBannerText"]
+    assert "P035-S05" in payload["review_index_complete_action"]["completeBannerText"]
+    assert payload["review_index_complete_action"]["completeBannerHidden"] is False
     assert payload["review_index_complete_action"]["scrollY"] > 0
     assert payload["review_index_complete_link"]["hash"] == "#complete=1"
     assert payload["review_index_complete_link"]["selectedAnchor"] == "P035-S05"
@@ -944,6 +952,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["review_index_complete_link"]["objectText"]
     assert "THR ON" in payload["review_index_complete_link"]["outputText"]
     assert "对象" in payload["review_index_complete_link"]["proofPathText"]
+    assert "完整交付态已启用" in payload["review_index_complete_link"]["completeBannerText"]
+    assert "P035-S05" in payload["review_index_complete_link"]["completeBannerText"]
+    assert payload["review_index_complete_link"]["completeBannerHidden"] is False
     assert payload["review_index_gate_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_gate_rail_action"]["activeGate"] == ["object-review"]
     assert payload["review_index_gate_rail_action"]["activeTargets"] == [
