@@ -216,6 +216,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-ladder-list"' in html
     assert 'id="demo-reconstruction-review-packet"' in html
     assert 'id="demo-reconstruction-review-packet-readiness"' in html
+    assert 'id="demo-reconstruction-review-packet-dashboard"' in html
+    assert 'id="demo-reconstruction-review-packet-dashboard-summary"' in html
+    assert 'id="demo-reconstruction-review-packet-dashboard-metrics"' in html
+    assert 'id="demo-reconstruction-review-packet-dashboard-checklist"' in html
     assert 'id="demo-reconstruction-review-packet-gates"' in html
     assert 'id="demo-reconstruction-custody-matrix"' in html
     assert 'id="demo-reconstruction-custody-summary"' in html
@@ -315,6 +319,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert '"P035-S03": ["EEC", "PLS", "PDU"]' not in script
     assert "updateReviewPacketFromState" in script
     assert "renderReviewPacketGates" in script
+    assert "renderReviewPacketDashboard" in script
+    assert "requirementLedgerStats" in script
+    assert "finalOutputReadinessCount" in script
     assert "renderCustodyMatrix" in script
     assert "updateCustodyActiveReadback" in script
     assert "updateCustodyOutputReadback" in script
@@ -363,6 +370,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-circuit-ladder" in stylesheet
     assert ".demo-reconstruction-ladder-item" in stylesheet
     assert ".demo-reconstruction-review-packet" in stylesheet
+    assert ".demo-reconstruction-review-packet-dashboard" in stylesheet
+    assert ".demo-reconstruction-review-packet-dashboard-metrics" in stylesheet
+    assert ".demo-reconstruction-review-packet-dashboard-checklist" in stylesheet
     assert ".demo-reconstruction-review-packet-gates" in stylesheet
     assert ".demo-reconstruction-custody-matrix" in stylesheet
     assert ".demo-reconstruction-custody-button" in stylesheet
@@ -689,9 +699,20 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "20/20" in payload["completion_ladder_review"]["s05Text"]
     assert "23/23" in payload["completion_ladder_review"]["s05Text"]
     assert payload["review_packet_review"]["visible"] is True
+    assert payload["review_packet_review"]["dashboardVisible"] is True
+    assert payload["review_packet_review"]["dashboardMetricCount"] == 5
+    assert payload["review_packet_review"]["dashboardPassMetricCount"] >= 4
+    assert payload["review_packet_review"]["dashboardChecklistCount"] == 5
+    assert payload["review_packet_review"]["dashboardPassChecklistCount"] >= 4
+    assert "67 覆盖项" in payload["review_packet_review"]["dashboardSummary"]
+    assert "5/5 输出" in payload["review_packet_review"]["dashboardSummary"]
+    assert any("覆盖账本" in item for item in payload["review_packet_review"]["dashboardMetricLabels"])
     assert payload["review_packet_review"]["gateCount"] == 5
     assert payload["review_packet_review"]["passGateCount"] >= 4
     assert payload["review_packet_after_wire_focus"]["passGateCount"] == 5
+    assert payload["review_packet_after_wire_focus"]["dashboardPassMetricCount"] == 5
+    assert payload["review_packet_after_wire_focus"]["dashboardPassChecklistCount"] == 5
+    assert "5/5 gate" in payload["review_packet_after_wire_focus"]["dashboardSummary"]
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in payload["review_packet_review"]["sourceText"]
     assert "20/20" in payload["review_packet_review"]["contractText"]
     assert "23/23" in payload["review_packet_review"]["contractText"]

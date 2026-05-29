@@ -106,6 +106,9 @@
   const reviewPacketStep = $("demo-reconstruction-review-packet-step");
   const reviewPacketObject = $("demo-reconstruction-review-packet-object");
   const reviewPacketGates = $("demo-reconstruction-review-packet-gates");
+  const reviewPacketDashboardSummary = $("demo-reconstruction-review-packet-dashboard-summary");
+  const reviewPacketDashboardMetrics = $("demo-reconstruction-review-packet-dashboard-metrics");
+  const reviewPacketDashboardChecklist = $("demo-reconstruction-review-packet-dashboard-checklist");
   const custodySummary = $("demo-reconstruction-custody-summary");
   const custodyActive = $("demo-reconstruction-custody-active");
   const custodyOutput = $("demo-reconstruction-custody-output");
@@ -1297,6 +1300,102 @@
     });
   }
 
+  function finalOutputReadinessCount(finalContract) {
+    const finalNodes = new Set(Array.isArray(finalContract && finalContract.node_ids) ? finalContract.node_ids : []);
+    return OUTPUT_PATH_TARGETS.filter((target) => finalNodes.has(target.id)).length;
+  }
+
+  function requirementLedgerStats() {
+    const items = requirementLedgerItems();
+    return {
+      total: items.length,
+      mapped: items.filter((item) => item.status === "mapped").length,
+      context: items.filter((item) => item.status === "context").length,
+      p035: items.filter((item) => item.status === "p035").length,
+    };
+  }
+
+  function renderReviewPacketDashboard(gates, context) {
+    if (!reviewPacketDashboardSummary && !reviewPacketDashboardMetrics && !reviewPacketDashboardChecklist) return;
+    const ledger = requirementLedgerStats();
+    const gateCount = gates.length;
+    const passGateCount = gates.filter((gate) => gate.pass).length;
+    const outputReadyCount = finalOutputReadinessCount(context.finalContract);
+    const expectedNodes = context.expectedNodes || EXPECTED_NODE_COUNT;
+    const expectedWires = context.expectedWires || EXPECTED_WIRE_COUNT;
+    const coveredNodes = context.coveredNodes || 0;
+    const coveredWires = context.coveredWires || 0;
+    const fullCircuitReady = coveredNodes === expectedNodes && coveredWires === expectedWires;
+    const ledgerExpectedCount = context.sourceCount + context.stepCount;
+
+    setText(
+      reviewPacketDashboardSummary,
+      `${passGateCount}/${gateCount} gate · ${ledger.total} 覆盖项 · ${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`,
+    );
+
+    if (reviewPacketDashboardMetrics) {
+      reviewPacketDashboardMetrics.innerHTML = "";
+      [
+        {
+          id: "source",
+          label: "来源覆盖",
+          value: `${context.sourceCount} 源记录 · ${context.stepCount}/5 步`,
+          pass: context.sourceCount >= 10 && context.stepCount === 5,
+        },
+        {
+          id: "ledger",
+          label: "覆盖账本",
+          value: `${ledger.total} 条 · ${ledger.mapped} 已映射 · ${ledger.context} 上下文 · ${ledger.p035} P035`,
+          pass: ledger.total === ledgerExpectedCount && ledger.mapped >= coveredNodes + coveredWires,
+        },
+        {
+          id: "circuit",
+          label: "完整电路",
+          value: `${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线`,
+          pass: fullCircuitReady,
+        },
+        {
+          id: "outputs",
+          label: "输出成熟度",
+          value: `${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出已接入`,
+          pass: outputReadyCount === OUTPUT_PATH_TARGETS.length,
+        },
+        {
+          id: "focus",
+          label: "当前审阅点",
+          value: context.focusedObject,
+          pass: Boolean(context.hasFocusedObject),
+        },
+      ].forEach((metric) => {
+        const item = document.createElement("div");
+        item.className = "demo-reconstruction-review-packet-dashboard-metric";
+        item.dataset.reviewPacketDashboardMetric = metric.id;
+        item.dataset.dashboardMetricStatus = metric.pass ? "pass" : "wait";
+        const label = document.createElement("span");
+        label.textContent = metric.label;
+        const value = document.createElement("strong");
+        value.textContent = metric.value;
+        item.append(label, value);
+        reviewPacketDashboardMetrics.appendChild(item);
+      });
+    }
+
+    if (reviewPacketDashboardChecklist) {
+      reviewPacketDashboardChecklist.innerHTML = "";
+      gates.forEach((gate) => {
+        const li = document.createElement("li");
+        li.dataset.reviewPacketDashboardCheck = gate.id;
+        li.dataset.dashboardCheckStatus = gate.pass ? "pass" : "wait";
+        const label = document.createElement("strong");
+        label.textContent = gate.label;
+        const detail = document.createElement("span");
+        detail.textContent = gate.detail;
+        li.append(label, detail);
+        reviewPacketDashboardChecklist.appendChild(li);
+      });
+    }
+  }
+
   function frameText(frameDocument, selector, fallback) {
     const element = frameDocument ? frameDocument.querySelector(selector) : null;
     const value = element && element.textContent ? element.textContent.trim() : "";
@@ -1467,6 +1566,8 @@
     const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
     const sourceCount = sourceEntries.length || coverage.source_entry_count || 0;
     const stepCount = traceSteps.length || coverage.sequence_step_count || 0;
+    const coveredNodes = coverage.covered_node_count || finalContract.node_ids.length;
+    const coveredWires = coverage.covered_wire_count || finalContract.wire_ids.length;
     const focusedObject = currentCircuitFocus.kind && currentCircuitFocus.id
       ? reviewObjectLabel(currentCircuitFocus.kind, currentCircuitFocus.id)
       : "等待聚焦";
@@ -1477,7 +1578,7 @@
     setText(reviewPacketSource, `${source.path || "原始 DOCX"} -> /demo-reconstruction`);
     setText(
       reviewPacketContract,
-      `${coverage.covered_node_count || finalContract.node_ids.length}/${expectedNodes} 节点 · ${coverage.covered_wire_count || finalContract.wire_ids.length}/${expectedWires} 连线`,
+      `${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线`,
     );
     setText(reviewPacketStep, selectedStep);
     setText(reviewPacketObject, focusedObject);
@@ -1492,8 +1593,8 @@
       {
         id: "complete-circuit",
         label: "完整电路",
-        pass: (coverage.covered_node_count || 0) === expectedNodes && (coverage.covered_wire_count || 0) === expectedWires,
-        detail: `${coverage.covered_node_count || 0}/${expectedNodes} 节点 · ${coverage.covered_wire_count || 0}/${expectedWires} 连线`,
+        pass: coveredNodes === expectedNodes && coveredWires === expectedWires,
+        detail: `${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线`,
       },
       {
         id: "cumulative-build",
@@ -1517,6 +1618,17 @@
     const passed = gates.filter((gate) => gate.pass).length;
     setText(reviewPacketReadiness, `${passed}/${gates.length} gate`);
     renderReviewPacketGates(gates);
+    renderReviewPacketDashboard(gates, {
+      sourceCount,
+      stepCount,
+      expectedNodes,
+      expectedWires,
+      coveredNodes,
+      coveredWires,
+      finalContract,
+      focusedObject,
+      hasFocusedObject: Boolean(currentCircuitFocus.kind && currentCircuitFocus.id),
+    });
     updateReviewIndexStatus();
   }
 

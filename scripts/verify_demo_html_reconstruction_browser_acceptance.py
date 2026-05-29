@@ -959,8 +959,17 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
                         const gates = Array.from(document.querySelectorAll("[data-review-packet-gate]"));
+                        const dashboardMetrics = Array.from(document.querySelectorAll("[data-review-packet-dashboard-metric]"));
+                        const dashboardChecks = Array.from(document.querySelectorAll("[data-review-packet-dashboard-check]"));
                         return {
                             visible: !!document.querySelector("#demo-reconstruction-review-packet"),
+                            dashboardVisible: !!document.querySelector("#demo-reconstruction-review-packet-dashboard"),
+                            dashboardSummary: text("#demo-reconstruction-review-packet-dashboard-summary"),
+                            dashboardMetricCount: dashboardMetrics.length,
+                            dashboardPassMetricCount: dashboardMetrics.filter((metric) => metric.dataset.dashboardMetricStatus === "pass").length,
+                            dashboardChecklistCount: dashboardChecks.length,
+                            dashboardPassChecklistCount: dashboardChecks.filter((check) => check.dataset.dashboardCheckStatus === "pass").length,
+                            dashboardMetricLabels: dashboardMetrics.map((metric) => metric.textContent.trim()),
                             readinessText: text("#demo-reconstruction-review-packet-readiness"),
                             sourceText: text("#demo-reconstruction-review-packet-source"),
                             contractText: text("#demo-reconstruction-review-packet-contract"),
@@ -1018,10 +1027,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
                         const gates = Array.from(document.querySelectorAll("[data-review-packet-gate]"));
+                        const dashboardMetrics = Array.from(document.querySelectorAll("[data-review-packet-dashboard-metric]"));
+                        const dashboardChecks = Array.from(document.querySelectorAll("[data-review-packet-dashboard-check]"));
                         return {
                             readinessText: text("#demo-reconstruction-review-packet-readiness"),
+                            dashboardSummary: text("#demo-reconstruction-review-packet-dashboard-summary"),
                             objectText: text("#demo-reconstruction-review-packet-object"),
                             passGateCount: gates.filter((gate) => gate.dataset.packetGateStatus === "pass").length,
+                            dashboardPassMetricCount: dashboardMetrics.filter((metric) => metric.dataset.dashboardMetricStatus === "pass").length,
+                            dashboardPassChecklistCount: dashboardChecks.filter((check) => check.dataset.dashboardCheckStatus === "pass").length,
                         };
                     }"""
                 )
@@ -2032,9 +2046,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_packet_readiness": "pass"
         if (
             review_packet_review["visible"]
+            and review_packet_review["dashboardVisible"]
+            and review_packet_review["dashboardMetricCount"] == 5
+            and review_packet_review["dashboardPassMetricCount"] >= 4
+            and review_packet_review["dashboardChecklistCount"] == 5
+            and review_packet_review["dashboardPassChecklistCount"] >= 4
+            and "67 覆盖项" in review_packet_review["dashboardSummary"]
+            and "5/5 输出" in review_packet_review["dashboardSummary"]
             and review_packet_review["gateCount"] == 5
             and review_packet_review["passGateCount"] >= 4
             and review_packet_after_wire_focus["passGateCount"] == 5
+            and review_packet_after_wire_focus["dashboardPassMetricCount"] == 5
+            and review_packet_after_wire_focus["dashboardPassChecklistCount"] == 5
+            and "5/5 gate" in review_packet_after_wire_focus["dashboardSummary"]
             and "uploads/20260409-thrust-reverser-control-logic.docx" in review_packet_review["sourceText"]
             and "20/20" in review_packet_review["contractText"]
             and "23/23" in review_packet_review["contractText"]

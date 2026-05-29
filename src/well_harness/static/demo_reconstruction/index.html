@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p14">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p14" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p15">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p15" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -226,6 +226,19 @@
           <span>当前对象</span>
           <strong id="demo-reconstruction-review-packet-object">等待聚焦</strong>
         </div>
+      </div>
+      <div id="demo-reconstruction-review-packet-dashboard" class="demo-reconstruction-review-packet-dashboard" data-review-packet-dashboard="handoff-readiness" aria-label="审阅交付聚合看板">
+        <div class="demo-reconstruction-review-packet-dashboard-head">
+          <div>
+            <span>交付看板</span>
+            <strong id="demo-reconstruction-review-packet-dashboard-summary">等待聚合读回</strong>
+          </div>
+          <p>把需求账本、完整电路、输出成熟度和当前审阅证据合并成一屏交付状态。</p>
+        </div>
+        <div id="demo-reconstruction-review-packet-dashboard-metrics" class="demo-reconstruction-review-packet-dashboard-metrics" aria-label="交付看板指标"></div>
+        <ol id="demo-reconstruction-review-packet-dashboard-checklist" class="demo-reconstruction-review-packet-dashboard-checklist" aria-label="交付看板检查项">
+          <li>正在读取交付看板</li>
+        </ol>
       </div>
       <ol id="demo-reconstruction-review-packet-gates" class="demo-reconstruction-review-packet-gates">
         <li>正在读取交付 gate</li>
