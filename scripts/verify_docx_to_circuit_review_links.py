@@ -142,6 +142,7 @@ def _page_state(page: Any) -> dict[str, Any]:
             reviewPacketPreviewOpen: document.querySelector("#docx-circuit-review-packet-preview")?.open || false,
             reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
             compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
+            flowDetailsOpen: document.querySelector("#docx-circuit-flow-details")?.open || false,
             sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
             sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
             traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
@@ -191,9 +192,12 @@ def _responsive_state(page: Any) -> dict[str, Any]:
             const sourceFocus = document.querySelector("#docx-circuit-source-focus");
             const review = document.querySelector("#docx-circuit-review-panel");
             const demo = document.querySelector("#docx-circuit-demo-panel");
+            const flow = document.querySelector("#docx-circuit-flow-details");
+            const workflow = document.querySelector("#docx-circuit-workflow-steps");
             const columns = stage
                 ? getComputedStyle(stage).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean)
                 : [];
+            const stageRect = stage?.getBoundingClientRect();
             const reviewRect = review?.getBoundingClientRect();
             const demoRect = demo?.getBoundingClientRect();
             return {
@@ -205,6 +209,9 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 workbenchNavRows: navTops.size,
                 compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
                 compactReviewVisible: Boolean(compactReview && compactReview.getBoundingClientRect().height > 0),
+                flowDetailsOpen: Boolean(flow?.open),
+                workflowHiddenByDefault: Boolean(workflow && getComputedStyle(workflow).display === "none"),
+                firstScreenStageVisible: Boolean(stageRect && stageRect.top < window.innerHeight),
                 sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
                 sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
                 traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
@@ -245,6 +252,9 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
             state.get("workbenchNavCount") == 4,
             state.get("compactCardCount") == 3,
             state.get("compactReviewVisible") is True,
+            state.get("flowDetailsOpen") is False,
+            state.get("workflowHiddenByDefault") is True,
+            state.get("firstScreenStageVisible") is True,
             state.get("sequenceDetailsOpen") is False,
             state.get("sourceIndexDetailsOpen") is True,
             state.get("traceDetailsOpen") is False,
@@ -708,6 +718,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "sourceFocusButtonDisabled": True,
         "focusedSourceEntryAnchor": None,
         "compactCardCount": 3,
+        "flowDetailsOpen": False,
         "sequenceDetailsOpen": False,
         "sourceIndexDetailsOpen": False,
         "traceDetailsOpen": False,

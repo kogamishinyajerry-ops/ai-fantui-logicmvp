@@ -3422,6 +3422,7 @@ def test_demo_reconstruction_comparison_page_shows_original_and_current_replica(
 
         expect(page.locator("#demo-reconstruction-console-frame")).to_be_visible()
         expect(page.locator("#demo-reconstruction-browser-evidence")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-docx-circuit-map summary")).to_be_visible()
         expect(page.locator("#demo-reconstruction-mode")).to_have_text("当前模式：原始反推需求 DOCX 到 demo.html 完整电路")
         expect(page.locator("#demo-reconstruction-fidelity")).to_have_text("复刻度：20/20 节点 · 23/23 连线")
         expect(page.locator("#demo-reconstruction-browser-evidence")).to_contain_text("节点")
@@ -3435,9 +3436,13 @@ def test_demo_reconstruction_comparison_page_shows_original_and_current_replica(
 
         console_box = page.locator("#demo-reconstruction-console-frame").bounding_box()
         evidence_box = page.locator("#demo-reconstruction-browser-evidence").bounding_box()
+        source_box = page.locator("#demo-reconstruction-docx-circuit-map").bounding_box()
         assert console_box is not None and evidence_box is not None
+        assert source_box is not None
         assert console_box["width"] > 360
         assert evidence_box["width"] >= 360
+        assert page.locator("#demo-reconstruction-docx-circuit-map").evaluate("element => element.open") is False
+        assert console_box["y"] < source_box["y"]
     finally:
         page.close()
 

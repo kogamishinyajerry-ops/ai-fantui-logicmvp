@@ -60,45 +60,6 @@
     </div>
   </section>
 
-  <section id="demo-reconstruction-docx-circuit-map" class="demo-reconstruction-source-map" data-source-docx-circuit-map="true" aria-labelledby="demo-reconstruction-docx-title">
-    <div class="demo-reconstruction-source-head">
-      <div>
-        <p class="demo-reconstruction-kicker">SOURCE TO CIRCUIT</p>
-        <h2 id="demo-reconstruction-docx-title">原始 DOCX 逐句到完整电路</h2>
-      </div>
-      <div class="demo-reconstruction-source-path" aria-label="原始需求文档路径">
-        <span>源文档</span>
-        <strong id="demo-reconstruction-docx-source-path">uploads/20260409-thrust-reverser-control-logic.docx</strong>
-      </div>
-    </div>
-    <div class="demo-reconstruction-source-metrics" aria-label="DOCX 到电路映射指标">
-      <div><span>DOCX 覆盖</span><strong id="demo-reconstruction-docx-coverage">45 段 · 2 表</strong></div>
-      <div><span>完整电路</span><strong id="demo-reconstruction-docx-circuit-contract">20/20 节点 · 23/23 连线</strong></div>
-      <div><span>节点映射</span><strong id="demo-reconstruction-docx-node-coverage">20/20</strong></div>
-      <div><span>连线映射</span><strong id="demo-reconstruction-docx-wire-coverage">23/23</strong></div>
-    </div>
-    <div class="demo-reconstruction-source-layout">
-      <section class="demo-reconstruction-source-column" aria-label="原始文档逐段逐句清单">
-        <div class="demo-reconstruction-source-subhead">
-          <h3>原文逐段/逐句清单</h3>
-          <span id="demo-reconstruction-docx-entry-count">加载中</span>
-        </div>
-        <ol id="demo-reconstruction-source-entry-list" class="demo-reconstruction-source-list">
-          <li>正在读取原始 DOCX 解析结果</li>
-        </ol>
-      </section>
-      <section class="demo-reconstruction-source-column demo-reconstruction-source-column-sequence" aria-label="工作过程到电路链路">
-        <div class="demo-reconstruction-source-subhead">
-          <h3>P035 工作过程拆解</h3>
-          <span id="demo-reconstruction-docx-sequence-count">5 步</span>
-        </div>
-        <ol id="demo-reconstruction-sequence-step-list" class="demo-reconstruction-sequence-list">
-          <li>正在读取 P035 到 L1-L4 的链路拆解</li>
-        </ol>
-      </section>
-    </div>
-  </section>
-
   <section class="demo-reconstruction-console-stage" aria-label="demo.html 复刻 MVP 控制台">
     <article class="demo-reconstruction-console-panel">
       <div class="demo-reconstruction-panel-head">
@@ -177,6 +138,49 @@
       </section>
     </aside>
   </section>
+
+  <details id="demo-reconstruction-docx-circuit-map" class="demo-reconstruction-source-map" data-source-docx-circuit-map="true" aria-labelledby="demo-reconstruction-docx-title">
+    <summary>
+      <span>原文到电路映射</span>
+      <strong id="demo-reconstruction-docx-circuit-contract">20/20 节点 · 23/23 连线</strong>
+    </summary>
+    <div class="demo-reconstruction-source-head">
+      <div>
+        <p class="demo-reconstruction-kicker">SOURCE TO CIRCUIT</p>
+        <h2 id="demo-reconstruction-docx-title">原始 DOCX 逐句到完整电路</h2>
+      </div>
+      <div class="demo-reconstruction-source-path" aria-label="原始需求文档路径">
+        <span>源文档</span>
+        <strong id="demo-reconstruction-docx-source-path" data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx">已登记源文档</strong>
+      </div>
+    </div>
+    <div class="demo-reconstruction-source-metrics" aria-label="DOCX 到电路映射指标">
+      <div><span>DOCX 覆盖</span><strong id="demo-reconstruction-docx-coverage">45 段 · 2 表</strong></div>
+      <div><span>节点映射</span><strong id="demo-reconstruction-docx-node-coverage">20/20</strong></div>
+      <div><span>连线映射</span><strong id="demo-reconstruction-docx-wire-coverage">23/23</strong></div>
+      <div><span>过程拆解</span><strong id="demo-reconstruction-docx-sequence-count">5 步</strong></div>
+    </div>
+    <div class="demo-reconstruction-source-layout">
+      <section class="demo-reconstruction-source-column" aria-label="原始文档逐段逐句清单">
+        <div class="demo-reconstruction-source-subhead">
+          <h3>原文逐段/逐句清单</h3>
+          <span id="demo-reconstruction-docx-entry-count">加载中</span>
+        </div>
+        <ol id="demo-reconstruction-source-entry-list" class="demo-reconstruction-source-list">
+          <li>正在读取原始 DOCX 解析结果</li>
+        </ol>
+      </section>
+      <section class="demo-reconstruction-source-column demo-reconstruction-source-column-sequence" aria-label="工作过程到电路链路">
+        <div class="demo-reconstruction-source-subhead">
+          <h3>P035 工作过程拆解</h3>
+          <span>按 L1-L4 串联</span>
+        </div>
+        <ol id="demo-reconstruction-sequence-step-list" class="demo-reconstruction-sequence-list">
+          <li>正在读取 P035 到 L1-L4 的链路拆解</li>
+        </ol>
+      </section>
+    </div>
+  </details>
 </main>
 </body>
 </html>

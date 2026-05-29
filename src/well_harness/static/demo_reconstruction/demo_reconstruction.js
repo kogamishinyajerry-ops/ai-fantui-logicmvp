@@ -169,7 +169,10 @@
     const expectedNodes = Array.isArray(contract.node_ids) ? contract.node_ids.length : EXPECTED_NODE_COUNT;
     const expectedWires = Array.isArray(contract.wire_ids) ? contract.wire_ids.length : EXPECTED_WIRE_COUNT;
 
-    setText(docxSourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
+    if (docxSourcePath) {
+      docxSourcePath.dataset.sourceDocumentPath = source.path || docxSourcePath.dataset.sourceDocumentPath || "";
+      setText(docxSourcePath, "已登记源文档");
+    }
     setText(
       docxCoverage,
       `${coverage.paragraph_count || source.paragraph_count || 0} 段 · ${source.table_count || 0} 表 · ${coverage.source_entry_count || 0} 条`,

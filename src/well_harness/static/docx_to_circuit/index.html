@@ -60,7 +60,36 @@
     <div><span>过程拆解</span><strong id="docx-circuit-sequence-count">5 步</strong></div>
   </section>
 
-  <section class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">
+  <nav id="docx-circuit-workbench-bar" class="docx-circuit-workbench-bar" aria-label="核对工作台快速定位" data-docx-circuit-workbench-bar="true">
+    <a href="#docx-circuit-review-panel">句子核对</a>
+    <a href="#docx-circuit-demo-panel">电路核对</a>
+    <a href="#docx-circuit-source-index-panel">需求索引</a>
+    <a href="#docx-circuit-review-packet-preview">交付摘要</a>
+  </nav>
+
+  <section id="docx-circuit-compact-review" class="docx-circuit-compact-review" aria-label="需求逻辑电路三块核对" data-docx-circuit-compact="true">
+    <article class="docx-circuit-compact-card" data-compact-review-card="requirements">
+      <span>需求</span>
+      <strong id="docx-circuit-compact-demand-title">P035-S05 · VDT90 与 L3 展开链路进入 L4</strong>
+      <p id="docx-circuit-compact-demand-text">等待读取需求句子。</p>
+    </article>
+    <article class="docx-circuit-compact-card" data-compact-review-card="logic">
+      <span>逻辑</span>
+      <strong id="docx-circuit-compact-logic-title">wire_logic4_thr_lock</strong>
+      <p id="docx-circuit-compact-logic-text">L4 · 等待映射。</p>
+    </article>
+    <article class="docx-circuit-compact-card" data-compact-review-card="circuit">
+      <span>电路</span>
+      <strong id="docx-circuit-compact-demo-title">最大反推（展开到位）</strong>
+      <p id="docx-circuit-compact-demo-text">20/20 节点 · 23/23 连线 · 等待 iframe 加载。</p>
+    </article>
+  </section>
+
+  <details id="docx-circuit-flow-details" class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">
+    <summary>
+      <span>三步核对路径</span>
+      <strong>需求解析 → 逻辑复刻 → 电路验收</strong>
+    </summary>
     <div class="docx-circuit-section-head">
       <p class="docx-circuit-kicker">主流程</p>
       <h2 id="docx-circuit-flow-title">三步核对路径</h2>
@@ -85,32 +114,7 @@
         <a id="docx-circuit-open-reconstruction" href="/demo-reconstruction">进入电路验收</a>
       </li>
     </ol>
-  </section>
-
-  <nav id="docx-circuit-workbench-bar" class="docx-circuit-workbench-bar" aria-label="核对工作台快速定位" data-docx-circuit-workbench-bar="true">
-    <a href="#docx-circuit-source-index-panel">需求索引</a>
-    <a href="#docx-circuit-review-panel">句子核对</a>
-    <a href="#docx-circuit-demo-panel">电路核对</a>
-    <a href="#docx-circuit-review-packet-preview">交付摘要</a>
-  </nav>
-
-  <section id="docx-circuit-compact-review" class="docx-circuit-compact-review" aria-label="需求逻辑电路三块核对" data-docx-circuit-compact="true">
-    <article class="docx-circuit-compact-card" data-compact-review-card="requirements">
-      <span>需求</span>
-      <strong id="docx-circuit-compact-demand-title">P035-S05 · VDT90 与 L3 展开链路进入 L4</strong>
-      <p id="docx-circuit-compact-demand-text">等待读取需求句子。</p>
-    </article>
-    <article class="docx-circuit-compact-card" data-compact-review-card="logic">
-      <span>逻辑</span>
-      <strong id="docx-circuit-compact-logic-title">wire_logic4_thr_lock</strong>
-      <p id="docx-circuit-compact-logic-text">L4 · 等待映射。</p>
-    </article>
-    <article class="docx-circuit-compact-card" data-compact-review-card="circuit">
-      <span>电路</span>
-      <strong id="docx-circuit-compact-demo-title">最大反推（展开到位）</strong>
-      <p id="docx-circuit-compact-demo-text">20/20 节点 · 23/23 连线 · 等待 iframe 加载。</p>
-    </article>
-  </section>
+  </details>
 
   <section class="docx-circuit-stage" aria-label="反推工作过程到电路">
     <article class="docx-circuit-sequence-panel">
@@ -262,10 +266,10 @@
   </section>
 
   <section id="docx-circuit-boundary" class="docx-circuit-boundary" aria-label="边界声明">
-    <span>truth_effect:none</span>
-    <span>candidate_state:sandbox_candidate</span>
-    <span>certification_claim:none</span>
-    <span>controller_truth_modified:false</span>
+    <span data-boundary-token="truth_effect:none">不改控制逻辑</span>
+    <span data-boundary-token="candidate_state:sandbox_candidate">候选电路</span>
+    <span data-boundary-token="certification_claim:none">不作适航声明</span>
+    <span data-boundary-token="controller_truth_modified:false">只读验收</span>
   </section>
 </main>
 </body>

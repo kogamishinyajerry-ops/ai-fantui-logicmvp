@@ -6398,6 +6398,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-workbench-bar="true"' in html
     assert 'id="docx-circuit-compact-review"' in html
     assert 'data-docx-circuit-compact="true"' in html
+    assert '<details id="docx-circuit-flow-details"' in html
+    assert "docx-circuit-flow-details" in html
+    assert "三步核对路径" in html
+    assert '<details id="docx-circuit-flow-details" class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">' in html
     assert html.count('data-compact-review-card="') == 3
     assert 'id="docx-circuit-compact-demand-title"' in html
     assert 'id="docx-circuit-compact-logic-title"' in html
@@ -6449,8 +6453,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-demo-column="true"' in html
     assert 'id="docx-circuit-demo-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
-    assert "truth_effect:none" in html
-    assert "controller_truth_modified:false" in html
+    assert 'data-boundary-token="truth_effect:none"' in html
+    assert 'data-boundary-token="controller_truth_modified:false"' in html
+    assert "不改控制逻辑" in html
+    assert "只读验收" in html
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "docx-circuit-sequence-list" in script
     assert "function activateStep" in script
@@ -6512,6 +6518,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "aria-pressed" in script
     assert "wire_logic4_thr_lock" in html
     assert ".docx-circuit-stage" in stylesheet
+    assert ".docx-circuit-flow > summary" in stylesheet
+    assert ".docx-circuit-flow:not([open]) .docx-circuit-workflow" in stylesheet
     assert ".docx-circuit-workbench-bar" in stylesheet
     assert ".docx-circuit-compact-review" in stylesheet
     assert ".docx-circuit-compact-card" in stylesheet
@@ -6551,6 +6559,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "preview_matches_clipboard" in review_link_gate
     assert "workbenchThreeColumn" in review_link_gate
     assert "demoPanelInline" in review_link_gate
+    assert "flowDetailsOpen" in review_link_gate
+    assert "workflowHiddenByDefault" in review_link_gate
+    assert "firstScreenStageVisible" in review_link_gate
     assert "RESPONSIVE_VIEWPORTS" in review_link_gate
     assert '"responsive_layout"' in review_link_gate
     assert "noHorizontalOverflow" in review_link_gate
@@ -6624,6 +6635,13 @@ def test_demo_reconstruction_page_is_productized_main_mvp_console():
     assert 'data-demo-mvp-console="true"' in html
     assert 'data-console-palette="codex-light"' in html
     assert 'id="demo-reconstruction-console-frame"' in html
+    assert '<details id="demo-reconstruction-docx-circuit-map"' in html
+    assert (
+        html.index('class="demo-reconstruction-console-stage"')
+        < html.index('id="demo-reconstruction-docx-circuit-map"')
+    )
+    assert 'data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx"' in html
+    assert "已登记源文档" in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-fidelity"' in html
@@ -6646,7 +6664,10 @@ def test_demo_reconstruction_page_is_productized_main_mvp_console():
     assert "/api/requirements-intake/deepseek-live-demo-replay" in script
     assert "20/20 节点" in script
     assert "23/23 连线" in script
+    assert "dataset.sourceDocumentPath" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
+    assert ".demo-reconstruction-source-map > summary" in stylesheet
+    assert ".demo-reconstruction-source-map:not([open]) .demo-reconstruction-source-layout" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert "--demo-bg: #f7f8fb" in stylesheet
     assert '.demo-reconstruction-shell[data-console-palette="codex-light"]' in stylesheet

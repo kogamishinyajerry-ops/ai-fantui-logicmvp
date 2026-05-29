@@ -23,7 +23,7 @@ body.unified-nav-enabled { padding-top: 48px; }
 .docx-circuit-shell {
   max-width: 1500px;
   margin: 0 auto;
-  padding: 24px 28px 40px;
+  padding: 18px 28px 36px;
 }
 .docx-circuit-hero,
 .docx-circuit-flow,
@@ -40,7 +40,7 @@ body.unified-nav-enabled { padding-top: 48px; }
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
-  padding: 20px;
+  padding: 16px 18px;
 }
 .docx-circuit-kicker {
   margin: 0 0 6px;
@@ -105,7 +105,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .docx-circuit-metrics div {
   display: grid;
@@ -113,7 +113,7 @@ h2 {
   border: 1px solid var(--docx-border);
   border-radius: 8px;
   background: var(--docx-panel);
-  padding: 12px;
+  padding: 9px 11px;
   box-shadow: var(--docx-shadow);
 }
 .docx-circuit-metrics span {
@@ -127,14 +127,42 @@ h2 {
   overflow-wrap: anywhere;
 }
 .docx-circuit-flow {
-  margin-top: 14px;
-  padding: 16px;
+  margin-top: 12px;
+  padding: 11px 14px;
+}
+.docx-circuit-flow > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  cursor: pointer;
+  list-style: none;
+}
+.docx-circuit-flow > summary::-webkit-details-marker {
+  display: none;
+}
+.docx-circuit-flow > summary span {
+  color: var(--docx-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+.docx-circuit-flow > summary strong {
+  color: var(--docx-text);
+  font-size: 13px;
+}
+.docx-circuit-flow:not([open]) .docx-circuit-section-head,
+.docx-circuit-flow:not([open]) .docx-circuit-workflow {
+  display: none;
+}
+.docx-circuit-flow[open] > summary {
+  margin-bottom: 12px;
 }
 .docx-circuit-workbench-bar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .docx-circuit-workbench-bar a {
   display: inline-flex;
@@ -161,13 +189,13 @@ h2 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .docx-circuit-compact-card {
   display: grid;
   align-content: start;
   gap: 6px;
-  min-height: 118px;
+  min-height: 92px;
   border: 1px solid var(--docx-border);
   border-radius: 8px;
   background: #ffffff;
@@ -234,7 +262,7 @@ h2 {
   grid-template-columns: minmax(250px, 0.55fr) minmax(500px, 1fr) minmax(340px, 0.72fr);
   gap: 14px;
   align-items: start;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .docx-circuit-sequence-panel,
 .docx-circuit-review-panel,
@@ -952,8 +980,8 @@ h2 {
   border: 1px solid rgba(30, 103, 255, 0.2);
   border-radius: 999px;
   color: var(--docx-muted);
-  font-family: "Courier New", monospace;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   padding: 5px 8px;
 }
 
@@ -979,6 +1007,9 @@ h2 {
   }
   .docx-circuit-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .docx-circuit-flow > summary {
+    grid-template-columns: 1fr;
   }
   .docx-circuit-logic-ladder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
