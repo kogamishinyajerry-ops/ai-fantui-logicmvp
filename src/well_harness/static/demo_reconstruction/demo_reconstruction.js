@@ -2804,6 +2804,16 @@
     return "idle";
   }
 
+  function compactOutputReadback(key, value) {
+    const labels = {
+      tls: {ON: "通电", OFF: "未通电", BLOCKED: "阻塞", RELEASED: "释放"},
+      etrac: {ON: "供电", OFF: "未供电", BLOCKED: "阻塞", RELEASED: "释放"},
+      eec: {ON: "展开", OFF: "未展开", BLOCKED: "阻塞", RELEASED: "释放"},
+      thr: {ON: "释放", OFF: "未释放", BLOCKED: "阻塞", RELEASED: "释放"},
+    };
+    return labels[key]?.[value] || value || "--";
+  }
+
   function compactPathStateLabel(frameDocument, snapshot) {
     const tra = frameNumber(frameDocument, "#fan-tra-lever", Number(compactRunwayTra?.value) || 0);
     const vdt = frameNumber(frameDocument, "#fan-vdt", Number(compactRunwayVdt?.value) || 0);
@@ -2852,7 +2862,7 @@
     Object.entries(compactRunwayOutputs).forEach(([key, element]) => {
       if (!element) return;
       const value = values[key] || "--";
-      setText(element, value);
+      setText(element, compactOutputReadback(key, value));
       if (element.parentElement) {
         element.parentElement.dataset.state = compactOutputState(value);
       }
