@@ -264,6 +264,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-proof-path-status"' in html
     assert 'id="demo-reconstruction-proof-path-list"' in html
     assert 'id="demo-reconstruction-proof-path-readback"' in html
+    assert 'id="demo-reconstruction-proof-path-coverage-grid"' in html
+    assert 'id="demo-reconstruction-proof-path-coverage-grid-status"' in html
+    assert 'id="demo-reconstruction-proof-path-coverage-grid-list"' in html
+    assert 'id="demo-reconstruction-proof-path-coverage-grid-readback"' in html
     assert 'data-proof-path="first-screen"' in html
     assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-scenario-comparator-status"' in html
@@ -418,6 +422,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderProofPathInspectorNeighbors" in script
     assert "applyProofPathInspectorJump" in script
     assert "proofPathInspectorFocusId" in script
+    assert "renderProofPathCoverageGrid" in script
+    assert "applyProofPathCoverageStep" in script
+    assert "applyProofPathCoverageObject" in script
+    assert "proofPathCoverageFocusId" in script
     assert "renderProofPathOutputMap" in script
     assert "applyProofPathOutputTarget" in script
     assert "proofPathOutputTarget" in script
@@ -494,6 +502,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-proof-path-object-inspector" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector-metrics" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector-neighbors" in stylesheet
+    assert ".demo-reconstruction-proof-path-coverage-grid" in stylesheet
+    assert ".demo-reconstruction-proof-path-coverage-step" in stylesheet
+    assert ".demo-reconstruction-proof-path-coverage-focus-list" in stylesheet
     assert ".demo-reconstruction-proof-path-output-map" in stylesheet
     assert ".demo-reconstruction-proof-path-output-map-list" in stylesheet
     assert ".demo-reconstruction-proof-path-step em" in stylesheet
@@ -1069,6 +1080,24 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "节点" in payload["proof_path_object_inspector_chip_review"]["coverageText"]
     assert payload["proof_path_object_inspector_chip_review"]["neighborCount"] >= 2
     assert "L3" in payload["proof_path_object_inspector_chip_review"]["neighborText"]
+    assert payload["proof_path_coverage_grid_review"]["stepCount"] == 5
+    assert payload["proof_path_coverage_grid_review"]["focusChipCount"] >= 10
+    assert "5/5 步" in payload["proof_path_coverage_grid_review"]["statusText"]
+    assert "20/20 节点" in payload["proof_path_coverage_grid_review"]["statusText"]
+    assert "23/23 连线" in payload["proof_path_coverage_grid_review"]["statusText"]
+    assert "TLS 115VAC" in payload["proof_path_coverage_grid_review"]["firstText"]
+    assert "THR_LOCK" in payload["proof_path_coverage_grid_review"]["finalText"]
+    assert payload["proof_path_coverage_grid_final_review"]["activeSteps"] == ["P035-S05"]
+    assert payload["proof_path_coverage_grid_final_review"]["highlightedNodeCount"] == 20
+    assert payload["proof_path_coverage_grid_final_review"]["highlightedWireCount"] == 23
+    assert "累计构建" in payload["proof_path_coverage_grid_final_review"]["reviewObjectText"]
+    assert payload["proof_path_coverage_grid_focus_review"]["activeSteps"] == ["P035-S05"]
+    assert payload["proof_path_coverage_grid_focus_review"]["activeFocusIds"] == [
+        "wire_logic4_thr_lock"
+    ]
+    assert "wire_logic4_thr_lock" in payload["proof_path_coverage_grid_focus_review"]["readbackText"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_coverage_grid_focus_review"]["reviewObjectText"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_coverage_grid_focus_review"]["inspectorObjectText"]
     assert payload["proof_path_output_map_review"]["targetCount"] == 5
     assert payload["proof_path_output_map_review"]["activeTargets"] == ["thr_lock"]
     assert "5/5" in payload["proof_path_output_map_review"]["statusText"]
@@ -1143,6 +1172,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "control_strip_readback": "pass",
         "sentence_runner_readback": "pass",
         "proof_path_timeline": "pass",
+        "proof_path_coverage_grid": "pass",
         "proof_path_output_map": "pass",
         "scenario_comparator_readback": "pass",
         "review_verdict_readback": "pass",

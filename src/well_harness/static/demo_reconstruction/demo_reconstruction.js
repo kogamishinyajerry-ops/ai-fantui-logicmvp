@@ -263,6 +263,9 @@
   const proofPathStatus = $("demo-reconstruction-proof-path-status");
   const proofPathList = $("demo-reconstruction-proof-path-list");
   const proofPathReadback = $("demo-reconstruction-proof-path-readback");
+  const proofPathCoverageGridStatus = $("demo-reconstruction-proof-path-coverage-grid-status");
+  const proofPathCoverageGridList = $("demo-reconstruction-proof-path-coverage-grid-list");
+  const proofPathCoverageGridReadback = $("demo-reconstruction-proof-path-coverage-grid-readback");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -300,6 +303,7 @@
   let activePlaybackIndex = -1;
   let topologyStepFilterAnchor = "all";
   let outputPathTargetId = "thr_lock";
+  let proofPathCoverageAnchor = "";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -2275,6 +2279,124 @@
     updateProofPathStatus(currentTraceStep || steps[0]);
   }
 
+  function proofPathCoverageOutputs(contract) {
+    const activeNodes = new Set(Array.isArray(contract && contract.node_ids) ? contract.node_ids : []);
+    return OUTPUT_PATH_TARGETS.filter((target) => activeNodes.has(target.id));
+  }
+
+  function setProofPathCoverageGridState(anchor) {
+    document.querySelectorAll("[data-proof-path-coverage-step]").forEach((button) => {
+      const selected = button.dataset.proofPathCoverageStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    proofPathCoverageAnchor = anchor || "";
+  }
+
+  function updateProofPathCoverageGridReadback(step, contract, focus = null) {
+    if (!proofPathCoverageGridReadback || !step || !contract) return;
+    const outputs = proofPathCoverageOutputs(contract).map((target) => target.label);
+    const outputText = outputs.length ? outputs.join(" / ") : "等待输出";
+    const focusText = focus && focus.id ? ` · ${reviewObjectLabel(focus.kind, focus.id)}` : "";
+    setText(
+      proofPathCoverageGridReadback,
+      `${step.anchor || "P035"} · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · 输出 ${outputText}${focusText}`,
+    );
+  }
+
+  function applyProofPathCoverageStep(anchor) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0) return;
+    const step = traceSteps[index];
+    const contract = cumulativeTraceContract(index);
+    applyStepPlayback(index);
+    setProofPathCoverageGridState(anchor);
+    updateProofPathStatus(step);
+    updateProofPathCoverageGridReadback(step, contract);
+  }
+
+  function applyProofPathCoverageObject(anchor, kind, id) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0 || !kind || !id) return;
+    const step = traceSteps[index];
+    const contract = cumulativeTraceContract(index);
+    applyStepPlayback(index);
+    applyEmbeddedTraceFocus(kind, id);
+    setProofPathCoverageGridState(anchor);
+    updateProofPathStatus(step, {kind, id});
+    updateProofPathCoverageGridReadback(step, contract, {kind, id});
+  }
+
+  function renderProofPathCoverageGrid(steps) {
+    if (!proofPathCoverageGridList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    proofPathCoverageGridList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.proofPathCoverageStep = "empty";
+      empty.textContent = "等待逐句覆盖";
+      proofPathCoverageGridList.appendChild(empty);
+      setText(proofPathCoverageGridStatus, "等待覆盖矩阵");
+      setText(proofPathCoverageGridReadback, "等待选择逐句覆盖。");
+      return;
+    }
+
+    const finalContract = cumulativeTraceContract(items.length - 1);
+    setText(
+      proofPathCoverageGridStatus,
+      `${items.length}/5 步 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+
+    items.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const outputLabels = proofPathCoverageOutputs(contract).map((target) => target.label);
+      const row = document.createElement("div");
+      row.className = "demo-reconstruction-proof-path-coverage-row";
+      row.dataset.proofPathCoverageRow = step.anchor || "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-path-coverage-step";
+      button.dataset.proofPathCoverageStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyProofPathCoverageStep(step.anchor || ""));
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const metric = document.createElement("small");
+      metric.textContent = `累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · 输出 ${outputLabels.join(" / ") || "待接入"}`;
+      button.append(anchor, title, metric);
+      row.appendChild(button);
+
+      const focusList = document.createElement("div");
+      focusList.className = "demo-reconstruction-proof-path-coverage-focus-list";
+      proofPathFocusRecords(step, contract).forEach((record) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.dataset.proofPathCoverageFocusKind = record.kind;
+        chip.dataset.proofPathCoverageFocusId = record.id;
+        chip.textContent = reviewObjectLabel(record.kind, record.id);
+        chip.addEventListener(
+          "click",
+          () => applyProofPathCoverageObject(step.anchor || "", record.kind, record.id),
+        );
+        focusList.appendChild(chip);
+      });
+      row.appendChild(focusList);
+      proofPathCoverageGridList.appendChild(row);
+    });
+
+    const selectedAnchor = proofPathCoverageAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedIndex = items.findIndex((step) => step && step.anchor === selectedAnchor);
+    const safeIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const selectedStep = items[safeIndex];
+    const selectedContract = cumulativeTraceContract(safeIndex);
+    setProofPathCoverageGridState(selectedStep.anchor || "");
+    updateProofPathCoverageGridReadback(selectedStep, selectedContract);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -3003,10 +3125,18 @@
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind]")
       .forEach((button) => {
-        const chipKind = button.dataset.traceFocusKind || button.dataset.sourceFocusKind || button.dataset.proofPathFocusKind || "";
-        const chipId = button.dataset.traceFocusId || button.dataset.sourceFocusId || button.dataset.proofPathFocusId || "";
+        const chipKind = button.dataset.traceFocusKind
+          || button.dataset.sourceFocusKind
+          || button.dataset.proofPathFocusKind
+          || button.dataset.proofPathCoverageFocusKind
+          || "";
+        const chipId = button.dataset.traceFocusId
+          || button.dataset.sourceFocusId
+          || button.dataset.proofPathFocusId
+          || button.dataset.proofPathCoverageFocusId
+          || "";
         const isCurrent = chipKind === kind && chipId === id;
         button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
         button.dataset.reviewObjectSelected = isCurrent ? "true" : "false";
@@ -3023,7 +3153,7 @@
     setLogicEquationRowState("");
     renderObjectProvenance("", "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind]")
       .forEach((button) => {
         button.setAttribute("aria-pressed", "false");
         button.dataset.reviewObjectSelected = "false";
@@ -3227,6 +3357,7 @@
     updateControlStripStatus();
     updateSentenceRunnerStatus(step);
     updateProofPathStatus(step);
+    setProofPathCoverageGridState(step.anchor || "");
     if (options.writeHash !== false) writeReviewHashState();
   }
 
@@ -3446,6 +3577,7 @@
     setSelectedTrace(steps[0], {writeHash: false});
     renderSentenceRunner(steps);
     renderProofPathTimeline(steps);
+    renderProofPathCoverageGrid(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
