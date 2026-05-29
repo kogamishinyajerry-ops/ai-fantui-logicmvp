@@ -365,6 +365,45 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
                     })"""
                 )
+                page.goto(f"{base_url}/demo-reconstruction{topology_filter_review['hash']}", wait_until="networkidle")
+                page.wait_for_function(
+                    """() => {
+                        return document.querySelectorAll("[data-trace-card]").length >= 5
+                            && document.querySelectorAll(".demo-reconstruction-source-entry").length >= 10
+                            && document.querySelectorAll("[data-topology-wire]").length === 23;
+                    }""",
+                    timeout=7000,
+                )
+                page.wait_for_function(
+                    """() => {
+                        const rows = Array.from(document.querySelectorAll("[data-topology-wire]"));
+                        const visibleRows = rows.filter((row) => !row.hidden);
+                        const status = document.querySelector("#demo-reconstruction-topology-filter-status")?.textContent || "";
+                        const selected = document.querySelector('[data-topology-step-filter="P035-S05"][aria-pressed="true"]');
+                        const query = document.querySelector("#demo-reconstruction-topology-search")?.value || "";
+                        return selected
+                            && query === "THR_LOCK"
+                            && visibleRows.length === 1
+                            && visibleRows[0].getAttribute("data-topology-wire") === "wire_logic4_thr_lock"
+                            && status.includes("1/23")
+                            && status.includes("P035-S05");
+                    }""",
+                    timeout=5000,
+                )
+                topology_filter_restore_review = page.evaluate(
+                    """() => ({
+                        query: document.querySelector("#demo-reconstruction-topology-search")?.value || "",
+                        hash: window.location.hash || "",
+                        statusText: document.querySelector("#demo-reconstruction-topology-filter-status")?.textContent?.trim() || "",
+                        selectedFilters: Array.from(
+                            document.querySelectorAll("[data-topology-step-filter][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-topology-step-filter")),
+                        visibleRows: Array.from(document.querySelectorAll("[data-topology-wire]"))
+                            .filter((row) => !row.hidden)
+                            .map((row) => row.getAttribute("data-topology-wire")),
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                    })"""
+                )
                 page.locator('[data-trace-card][data-trace-anchor="P035-S05"]').click()
                 page.wait_for_function(
                     """() => {
@@ -1475,12 +1514,20 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             topology_filter_review["query"] == "THR_LOCK"
             and "step=P035-S05" in topology_filter_review["hash"]
+            and "topology=P035-S05" in topology_filter_review["hash"]
+            and "tq=THR_LOCK" in topology_filter_review["hash"]
             and "focus=" not in topology_filter_review["hash"]
             and topology_filter_review["selectedFilters"] == ["P035-S05"]
             and topology_filter_review["visibleRows"] == ["wire_logic4_thr_lock"]
             and topology_filter_review["selectedAnchor"] == "P035-S05"
             and "1/23" in topology_filter_review["statusText"]
             and "P035-S05" in topology_filter_review["statusText"]
+            and topology_filter_restore_review["query"] == "THR_LOCK"
+            and topology_filter_restore_review["hash"] == topology_filter_review["hash"]
+            and topology_filter_restore_review["selectedFilters"] == ["P035-S05"]
+            and topology_filter_restore_review["visibleRows"] == ["wire_logic4_thr_lock"]
+            and topology_filter_restore_review["selectedAnchor"] == "P035-S05"
+            and "1/23" in topology_filter_restore_review["statusText"]
         )
         else "fail",
         "trace_selection_interaction": "pass"
@@ -1649,10 +1696,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         else "fail",
         "review_hash_link": "pass"
         if (
-            review_deep_link["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
-            and review_deep_link["linkHref"].endswith(
-                "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
-            )
+            "step=P035-S05" in review_deep_link["hash"]
+            and "focus=wire%3Awire_logic4_thr_lock" in review_deep_link["hash"]
+            and "q=logic4" in review_deep_link["hash"]
+            and "topology=P035-S05" in review_deep_link["hash"]
+            and "tq=THR_LOCK" in review_deep_link["hash"]
+            and "/demo-reconstruction#" in review_deep_link["linkHref"]
         )
         else "fail",
         "review_hash_restore": "pass"
@@ -1770,6 +1819,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "topology_matrix_review": topology_matrix_review,
         "topology_focus_review": topology_focus_review,
         "topology_filter_review": topology_filter_review,
+        "topology_filter_restore_review": topology_filter_restore_review,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,

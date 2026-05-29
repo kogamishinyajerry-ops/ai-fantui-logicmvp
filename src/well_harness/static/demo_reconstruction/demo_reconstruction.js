@@ -404,6 +404,7 @@
     allButton.addEventListener("click", () => {
       topologyStepFilterAnchor = "all";
       updateTopologyFilter();
+      writeReviewHashState();
     });
     topologyStepFilter.appendChild(allButton);
     (Array.isArray(steps) ? steps : []).forEach((step) => {
@@ -572,6 +573,8 @@
       focusKind: focusParts.length === 2 ? focusParts[0] : "",
       focusId: focusParts.length === 2 ? focusParts[1] : "",
       query: params.get("q") || "",
+      topologyStep: params.get("topology") || "",
+      topologyQuery: params.get("tq") || "",
     };
   }
 
@@ -583,6 +586,11 @@
     }
     const query = coverageSearch && coverageSearch.value ? coverageSearch.value.trim() : "";
     if (query) params.set("q", query);
+    if (topologyStepFilterAnchor && topologyStepFilterAnchor !== "all") {
+      params.set("topology", topologyStepFilterAnchor);
+    }
+    const topologyQuery = topologySearch && topologySearch.value ? topologySearch.value.trim() : "";
+    if (topologyQuery) params.set("tq", topologyQuery);
     return params.toString();
   }
 
@@ -1528,7 +1536,13 @@
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;
       }
+      const nextTopologyStep = topologyStepForAnchor(state.topologyStep) ? state.topologyStep : "all";
+      topologyStepFilterAnchor = nextTopologyStep;
+      if (topologySearch && topologySearch.value !== state.topologyQuery) {
+        topologySearch.value = state.topologyQuery;
+      }
       updateCoverageFilter();
+      updateTopologyFilter();
       if (state.step) {
         const step = traceSteps.find((item) => item && item.anchor === state.step);
         if (step) setSelectedTrace(step, {writeHash: false});
@@ -2051,7 +2065,10 @@
     });
   }
   if (topologySearch) {
-    topologySearch.addEventListener("input", updateTopologyFilter);
+    topologySearch.addEventListener("input", () => {
+      updateTopologyFilter();
+      writeReviewHashState();
+    });
   }
   window.addEventListener("hashchange", applyReviewHashState);
 

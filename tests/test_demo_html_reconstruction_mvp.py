@@ -279,6 +279,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "updateTopologyReadback" in script
     assert "renderTopologyStepFilter" in script
     assert "updateTopologyFilter" in script
+    assert 'params.get("topology")' in script
+    assert 'params.set("topology"' in script
+    assert 'params.set("tq"' in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -504,11 +507,19 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["topology_focus_review"]["reviewObjectText"]
     assert payload["topology_filter_review"]["query"] == "THR_LOCK"
     assert "step=P035-S05" in payload["topology_filter_review"]["hash"]
+    assert "topology=P035-S05" in payload["topology_filter_review"]["hash"]
+    assert "tq=THR_LOCK" in payload["topology_filter_review"]["hash"]
     assert "focus=" not in payload["topology_filter_review"]["hash"]
     assert payload["topology_filter_review"]["selectedFilters"] == ["P035-S05"]
     assert payload["topology_filter_review"]["visibleRows"] == ["wire_logic4_thr_lock"]
     assert payload["topology_filter_review"]["selectedAnchor"] == "P035-S05"
     assert "1/23" in payload["topology_filter_review"]["statusText"]
+    assert payload["topology_filter_restore_review"]["query"] == "THR_LOCK"
+    assert payload["topology_filter_restore_review"]["hash"] == payload["topology_filter_review"]["hash"]
+    assert payload["topology_filter_restore_review"]["selectedFilters"] == ["P035-S05"]
+    assert payload["topology_filter_restore_review"]["visibleRows"] == ["wire_logic4_thr_lock"]
+    assert payload["topology_filter_restore_review"]["selectedAnchor"] == "P035-S05"
+    assert "1/23" in payload["topology_filter_restore_review"]["statusText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -614,10 +625,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "THR_LOCK" in payload["custody_matrix_review"]["s05Text"]
     assert payload["custody_matrix_review"]["highlightedNodeCount"] == 18
     assert payload["custody_matrix_review"]["highlightedWireCount"] == 20
-    assert payload["review_deep_link"]["hash"] == "#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
-    assert payload["review_deep_link"]["linkHref"].endswith(
-        "/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4"
-    )
+    assert "step=P035-S05" in payload["review_deep_link"]["hash"]
+    assert "focus=wire%3Awire_logic4_thr_lock" in payload["review_deep_link"]["hash"]
+    assert "q=logic4" in payload["review_deep_link"]["hash"]
+    assert "topology=P035-S05" in payload["review_deep_link"]["hash"]
+    assert "tq=THR_LOCK" in payload["review_deep_link"]["hash"]
+    assert "/demo-reconstruction#" in payload["review_deep_link"]["linkHref"]
     assert payload["review_deep_link"]["restoredSelectedAnchor"] == "P035-S05"
     assert payload["review_deep_link"]["restoredQuery"] == "logic4"
     assert payload["review_deep_link"]["restoredVisibleNodeCount"] == 1
