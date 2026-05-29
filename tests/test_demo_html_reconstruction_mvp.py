@@ -875,6 +875,14 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_operator_input_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_operator_input_review"]["lockText"] == "阻塞"
     assert payload["compact_runway_operator_input_review"]["inhibitChecked"] is True
+    assert payload["compact_runway_operator_input_review"]["activeOperatorRows"] == []
+    assert payload["compact_runway_operator_input_review"]["activeControlActions"] == []
+    assert payload["compact_runway_operator_input_review"]["activeReviewScenarios"] == []
+    assert payload["compact_runway_operator_input_review"]["operatorReadbackText"] == "选择一段演示路径"
+    assert payload["compact_runway_operator_input_review"]["controlStripStatusText"] == "等待选择"
+    assert payload["compact_runway_operator_fault_review"]["faultCountText"] == "0 故障"
+    assert payload["compact_runway_operator_fault_review"]["activeFaultText"] == ""
+    assert payload["compact_runway_operator_fault_review"]["checkedFaultCount"] == 0
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["reviewIndexButtonCount"] == 13
     assert payload["source_map_review"]["requirementLedgerRowCount"] == 67

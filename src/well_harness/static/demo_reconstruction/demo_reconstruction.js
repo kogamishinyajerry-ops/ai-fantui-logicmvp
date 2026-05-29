@@ -2643,6 +2643,21 @@
     if (status) status.textContent = "当前场景：手动输入";
   }
 
+  function clearFrameFaults(frameDocument) {
+    if (!frameDocument) return;
+    const clearButton = frameDocument.querySelector("#fan-fault-clear");
+    if (clearButton && typeof clearButton.click === "function") {
+      clearButton.click();
+      return;
+    }
+    frameDocument.querySelectorAll(".fan-fault-check").forEach((checkbox) => {
+      if (checkbox.checked) {
+        checkbox.checked = false;
+        dispatchFrameEvent(frameDocument, checkbox, "change");
+      }
+    });
+  }
+
   function applyScenarioPreset(presetId) {
     if (!consoleFrame || !presetId) return;
     const frameDocument = consoleFrame.contentDocument;
@@ -2795,9 +2810,8 @@
     const inhibit = compactRunwayInhibit ? compactRunwayInhibit.checked : false;
     compactRunwayMode = "operator";
     clearFramePresetState(frameDocument);
-    frameDocument.querySelectorAll(".fan-fault-check").forEach((checkbox) => {
-      checkbox.checked = false;
-    });
+    clearFrameFaults(frameDocument);
+    setOperatorRunwayState("");
     setFrameValue(frameDocument, "#fan-ra", 2);
     setFrameValue(frameDocument, "#fan-n1k", inhibit ? 70 : 80);
     setFrameChecked(frameDocument, "#fan-engine-running", true);
@@ -4393,6 +4407,10 @@
     if (record) {
       setText(operatorRunwayStatus, `${record.order}/${String(OPERATOR_RUNWAY_RECORDS.length).padStart(2, "0")} · ${record.presetLabel}`);
       refreshOperatorRunwayReadback(record);
+    } else {
+      const readyCount = OPERATOR_RUNWAY_RECORDS.filter((item) => traceStepByAnchor(item.anchor)).length;
+      setText(operatorRunwayStatus, `${readyCount}/${OPERATOR_RUNWAY_RECORDS.length} 可演示`);
+      refreshOperatorRunwayReadback(null);
     }
     updateControlStripStatus();
   }
