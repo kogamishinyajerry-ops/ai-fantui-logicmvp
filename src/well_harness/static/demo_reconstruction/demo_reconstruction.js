@@ -260,6 +260,9 @@
   const sentenceRunnerStatus = $("demo-reconstruction-sentence-runner-status");
   const sentenceRunnerList = $("demo-reconstruction-sentence-runner-list");
   const sentenceRunnerReadback = $("demo-reconstruction-sentence-runner-readback");
+  const proofPathStatus = $("demo-reconstruction-proof-path-status");
+  const proofPathList = $("demo-reconstruction-proof-path-list");
+  const proofPathReadback = $("demo-reconstruction-proof-path-readback");
   const scenarioComparatorStatus = $("demo-reconstruction-scenario-comparator-status");
   const scenarioComparatorReadback = $("demo-reconstruction-scenario-comparator-readback");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
@@ -2044,6 +2047,106 @@
     updateSentenceRunnerStatus(currentTraceStep || steps[0]);
   }
 
+  function proofPathFocusTarget(step, contract) {
+    const nodeIds = Array.isArray(step && step.node_ids) ? step.node_ids : [];
+    const wireIds = Array.isArray(contract && contract.wire_ids) ? contract.wire_ids : [];
+    if (
+      contract
+      && contract.node_ids.length === EXPECTED_NODE_COUNT
+      && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+      && wireIds.includes("wire_logic4_thr_lock")
+    ) {
+      return {kind: "wire", id: "wire_logic4_thr_lock"};
+    }
+    const outputPriority = [
+      "vdt90",
+      "pdu_motor",
+      "pls_power",
+      "eec_deploy",
+      "etrac_540v",
+      "tls_unlocked",
+      "tls115",
+    ];
+    const nodeId = outputPriority.find((id) => nodeIds.includes(id)) || nodeIds[nodeIds.length - 1] || "";
+    return nodeId ? {kind: "node", id: nodeId} : {kind: "", id: ""};
+  }
+
+  function setProofPathState(anchor) {
+    document.querySelectorAll("[data-proof-path-step]").forEach((button) => {
+      const selected = button.dataset.proofPathStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function updateProofPathStatus(step = currentTraceStep) {
+    if (!proofPathStatus || !proofPathReadback) return;
+    if (!step || !traceSteps.length) {
+      setText(proofPathStatus, "等待 P035");
+      setText(proofPathReadback, "等待完整电路证明");
+      setProofPathState("");
+      return;
+    }
+    const index = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
+    const safeIndex = index >= 0 ? index : 0;
+    const contract = cumulativeTraceContract(safeIndex);
+    const focus = proofPathFocusTarget(step, contract);
+    const focusText = focus.id ? reviewObjectLabel(focus.kind, focus.id) : "等待聚焦";
+    const outputLabel = sentenceRunnerOutputLabel(step, contract);
+    setText(proofPathStatus, `${safeIndex + 1}/${traceSteps.length} · ${outputLabel}`);
+    setText(
+      proofPathReadback,
+      `${step.anchor || "P035"} · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${focusText}`,
+    );
+    setProofPathState(step.anchor || "");
+  }
+
+  function applyProofPathStep(anchor) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0) return;
+    const step = traceSteps[index];
+    const contract = cumulativeTraceContract(index);
+    applyStepPlayback(index);
+    const focus = proofPathFocusTarget(step, contract);
+    if (focus.kind && focus.id) applyEmbeddedTraceFocus(focus.kind, focus.id);
+    updateProofPathStatus(step);
+  }
+
+  function renderProofPathTimeline(steps) {
+    if (!proofPathList) return;
+    proofPathList.innerHTML = "";
+    if (!Array.isArray(steps) || !steps.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.proofPathStep = "empty";
+      button.textContent = "等待逐句证明路径";
+      proofPathList.appendChild(button);
+      updateProofPathStatus(null);
+      return;
+    }
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const outputLabel = sentenceRunnerOutputLabel(step, contract);
+      const finalReady = contract.node_ids.length === EXPECTED_NODE_COUNT
+        && contract.wire_ids.length === EXPECTED_WIRE_COUNT;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.proofPathStep = step.anchor || "";
+      button.dataset.proofPathFinal = finalReady ? "true" : "false";
+      button.setAttribute("aria-pressed", "false");
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const meta = document.createElement("small");
+      meta.textContent = `${outputLabel} · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      button.append(anchor, title, meta);
+      button.addEventListener("click", () => applyProofPathStep(step.anchor || ""));
+      proofPathList.appendChild(button);
+    });
+    updateProofPathStatus(currentTraceStep || steps[0]);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -2925,6 +3028,7 @@
     updateCustodyActiveReadback();
     updateControlStripStatus();
     updateSentenceRunnerStatus(step);
+    updateProofPathStatus(step);
     if (options.writeHash !== false) writeReviewHashState();
   }
 
@@ -3143,6 +3247,7 @@
     });
     setSelectedTrace(steps[0], {writeHash: false});
     renderSentenceRunner(steps);
+    renderProofPathTimeline(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
