@@ -5909,8 +5909,18 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert 'href="/logic-builder#evidence"' in html
     assert 'href="/logic-builder#report"' in html
     assert "命令面板" in html
-    assert "truth_effect:none" in html
-    assert "candidate_state:sandbox_candidate" in html
+    assert "所有输出保持候选只读，不改动控制逻辑基准" in html
+    for label in ["只读演示", "候选输出", "无认证声明", "控制逻辑未改动"]:
+        assert f'<span class="home-shell-pill">{label}</span>' in html
+    for hidden_token in [
+        "truth_effect:none",
+        "candidate_state:sandbox_candidate",
+        "certification_claim:none",
+        "controller_truth_modified:false",
+        "sandbox candidate",
+        "controller truth",
+    ]:
+        assert hidden_token not in html
     assert 'id="home-primary-flow-grid"' in html
     assert 'aria-label="DeepSeek 四步主流程"' in html
     assert 'id="home-advanced-modules"' in html
