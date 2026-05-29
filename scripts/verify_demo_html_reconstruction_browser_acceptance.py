@@ -205,6 +205,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelector("#demo-reconstruction-review-index-complete-action")
                             && document.querySelectorAll("[data-circuit-snapshot-step]").length === 5
+                            && document.querySelectorAll("[data-circuit-snapshot-chain-step]").length === 7
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-review-index-handoff]").length === 6
                             && document.querySelectorAll("[data-review-index-gate]").length === 5
@@ -317,6 +318,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             circuitSnapshotReview: text("#demo-reconstruction-circuit-snapshot-review"),
                             circuitSnapshotReadback: text("#demo-reconstruction-circuit-snapshot-readback"),
                             circuitSnapshotFinalText: text('[data-circuit-snapshot-step="P035-S05"]'),
+                            circuitSnapshotChainCount: document.querySelectorAll("[data-circuit-snapshot-chain-step]").length,
+                            circuitSnapshotChainSourceText: text('[data-circuit-snapshot-chain-step="docx-source"]'),
+                            circuitSnapshotChainL4Text: text('[data-circuit-snapshot-chain-step="runway-l4-thr-lock"]'),
+                            circuitSnapshotChainOutputText: text('[data-circuit-snapshot-chain-step="demo-output"]'),
+                            circuitSnapshotChainActive: Array.from(
+                                document.querySelectorAll("[data-circuit-snapshot-chain-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-circuit-snapshot-chain-step")),
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
@@ -3712,6 +3720,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "P035-S01" in source_map_review["circuitSnapshotReadback"]
             and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
             and "THR_LOCK" in source_map_review["circuitSnapshotFinalText"]
+            and source_map_review["circuitSnapshotChainCount"] == 7
+            and "62 条源记录" in source_map_review["circuitSnapshotChainSourceText"]
+            and "反推锁释放" in source_map_review["circuitSnapshotChainL4Text"]
+            and "THR_LOCK -> RELEASED" in source_map_review["circuitSnapshotChainL4Text"]
+            and "demo 输出" in source_map_review["circuitSnapshotChainOutputText"]
+            and "THR_LOCK / HUD" in source_map_review["circuitSnapshotChainOutputText"]
+            and source_map_review["circuitSnapshotChainActive"] == ["runway-l1-unlock"]
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5

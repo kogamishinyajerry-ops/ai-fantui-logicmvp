@@ -168,9 +168,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-circuit"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-output"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-review"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-chain"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
     assert "原始需求到 demo.html 完整逻辑电路" in html
+    assert "等待闭环链路" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
     assert 'id="demo-reconstruction-review-index-complete-action"' in html
@@ -400,8 +402,12 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "setSelectedTrace" in script
     assert "renderCircuitSnapshot" in script
     assert "applyCircuitSnapshotStep" in script
+    assert "renderCircuitSnapshotChain" in script
+    assert "applyCircuitSnapshotChainStep" in script
+    assert "circuitSnapshotChainRecords" in script
     assert "circuitSnapshotRecord" in script
     assert "data-circuit-snapshot-step" in script
+    assert "data-circuit-snapshot-chain-step" in script
     assert "TRACE_WIRE_ENDPOINTS" not in script
     assert "updateWireEndpointMapFromWires" in script
     assert "wireEndpointsForId" in script
@@ -559,6 +565,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-metrics" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-chain" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-list" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-step" in stylesheet
     assert ".demo-reconstruction-review-index" in stylesheet
@@ -849,6 +856,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "P035-S01" in payload["source_map_review"]["circuitSnapshotReadback"]
     assert "P035-S05" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert "THR_LOCK" in payload["source_map_review"]["circuitSnapshotFinalText"]
+    assert payload["source_map_review"]["circuitSnapshotChainCount"] == 7
+    assert "62 条源记录" in payload["source_map_review"]["circuitSnapshotChainSourceText"]
+    assert "反推锁释放" in payload["source_map_review"]["circuitSnapshotChainL4Text"]
+    assert "THR_LOCK -> RELEASED" in payload["source_map_review"]["circuitSnapshotChainL4Text"]
+    assert "demo 输出" in payload["source_map_review"]["circuitSnapshotChainOutputText"]
+    assert "THR_LOCK / HUD" in payload["source_map_review"]["circuitSnapshotChainOutputText"]
+    assert payload["source_map_review"]["circuitSnapshotChainActive"] == ["runway-l1-unlock"]
     assert payload["requirement_ledger_context_review"]["selectedFilters"] == ["context"]
     assert payload["requirement_ledger_context_review"]["visibleRows"] == 18
     assert "18/67" in payload["requirement_ledger_context_review"]["statusText"]
