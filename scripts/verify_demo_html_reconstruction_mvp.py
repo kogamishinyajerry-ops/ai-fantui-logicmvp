@@ -227,7 +227,7 @@ def _compare_to_fixture(
         mismatches.append("replica_surface.claimed_preset_count")
     if replica_surface["claimed_status_count"] != "6/6":
         mismatches.append("replica_surface.claimed_status_count")
-    if "20/20 节点" not in replica_surface["fidelity_text"]:
+    if "可运行电路" not in replica_surface["fidelity_text"]:
         mismatches.append("replica_surface.fidelity_text")
     if replica_surface["has_node_list"] is not True or replica_surface["has_wire_list"] is not True:
         mismatches.append("replica_surface.detail_lists")

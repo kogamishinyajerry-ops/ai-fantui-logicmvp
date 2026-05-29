@@ -4282,7 +4282,7 @@
     setCircuitSnapshotChainState(selectedRecordId);
   }
 
-  function updateCircuitSnapshotReadback(step, index = -1) {
+  function updateCircuitSnapshotReadback(step, index = -1, options = {}) {
     if (!circuitSnapshotReadback || !step) return;
     const safeIndex = index >= 0 ? index : traceSteps.findIndex((item) => item && item.anchor === step.anchor);
     const record = circuitSnapshotRecord(step, safeIndex >= 0 ? safeIndex : 0);
@@ -4290,7 +4290,7 @@
       circuitSnapshotReadback,
       `${step.anchor || "P035"} · ${record.sourceAnchor} -> ${record.predicate.gate} -> ${record.predicate.output} · ${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputLabel}`,
     );
-    setText(circuitSnapshotReview, `第 ${(safeIndex >= 0 ? safeIndex : 0) + 1} 步 · 可审`);
+    setText(circuitSnapshotReview, options.showStepReview ? `第 ${(safeIndex >= 0 ? safeIndex : 0) + 1} 步 · 可审` : "可运行");
   }
 
   function applyCircuitSnapshotStep(anchor) {
@@ -4300,7 +4300,7 @@
     setSelectedTrace(step, {writeHash: false});
     setProofPathLaneMode("blueprint", {writeHash: false});
     setCircuitSnapshotState(anchor);
-    updateCircuitSnapshotReadback(step, index);
+    updateCircuitSnapshotReadback(step, index, {showStepReview: true});
     writeReviewHashState();
   }
 
@@ -4316,10 +4316,10 @@
       empty.textContent = "等待步骤电路";
       circuitSnapshotList.appendChild(empty);
       setText(circuitSnapshotStatus, "等待电路");
-      setText(circuitSnapshotSource, "等待来源");
-      setText(circuitSnapshotCircuit, "等待电路");
+      setText(circuitSnapshotSource, "等待读取");
+      setText(circuitSnapshotCircuit, "等待闭合");
       setText(circuitSnapshotOutput, "等待输出");
-      setText(circuitSnapshotReview, "等待选择");
+      setText(circuitSnapshotReview, "等待运行");
       setText(circuitSnapshotReadback, "等待生成完整电路。");
       renderCircuitSnapshotChain({node_ids: [], wire_ids: []});
       return;
@@ -4330,10 +4330,10 @@
     const outputStatus = assemblyOutputLabelForStep(finalStep, finalContract)
       .replace("完整 demo 电路闭合", "完整电路闭合")
       .replace("THR_LOCK 输出可读", "反推锁可读");
-    setText(circuitSnapshotStatus, `${items.length}/5 句 · 完整电路闭合`);
-    setText(circuitSnapshotSource, `${sourceEntries.length} 条源记录 · ${items.length}/5 句`);
-    setText(circuitSnapshotCircuit, `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`);
-    setText(circuitSnapshotOutput, `${OUTPUT_PATH_TARGETS.length}/5 输出 · ${outputStatus}`);
+    setText(circuitSnapshotStatus, "完整电路可运行");
+    setText(circuitSnapshotSource, "需求已接入");
+    setText(circuitSnapshotCircuit, "链路已闭合");
+    setText(circuitSnapshotOutput, outputStatus.includes("反推锁可读") ? "反推锁可读" : "等待反推锁");
     renderCircuitSnapshotChain(finalContract);
 
     items.forEach((step, index) => {
@@ -5743,8 +5743,8 @@
     setText(
       fidelity,
       nodes.length === EXPECTED_NODE_COUNT && wires.length === EXPECTED_WIRE_COUNT
-        ? "复刻度：20/20 节点 · 23/23 连线"
-        : `复刻度：${nodeText} 节点 · ${wireText} 连线`,
+        ? "复刻完成 · 可运行电路"
+        : "复刻进行中",
     );
     setText(nodeCount, nodeText);
     setText(wireCount, wireText);

@@ -829,6 +829,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["pixel_visibility"]["chain_svg"]["node_count"] == 20
     assert payload["pixel_visibility"]["chain_svg"]["wire_count"] == 23
     assert payload["first_screen_review"] == {
+        "visible_text": payload["first_screen_review"]["visible_text"],
         "detail_drawer_closed": True,
         "snapshot_details_closed": True,
         "review_index_visible": False,
@@ -855,6 +856,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "console_frame_visible": False,
         "evidence_rail_visible": False,
     }
+    assert "20/20 节点" not in payload["first_screen_review"]["visible_text"]
+    assert "23/23 连线" not in payload["first_screen_review"]["visible_text"]
+    assert "62 条源记录" not in payload["first_screen_review"]["visible_text"]
     assert payload["compact_runway_initial_review"]["visible"] is True
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
     assert payload["compact_runway_initial_review"]["controlCount"] == 3
@@ -896,14 +900,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["reviewIndexOutputTargetCount"] == 5
     assert payload["source_map_review"]["reviewIndexScenarioCount"] == 2
     assert payload["source_map_review"]["circuitSnapshotStepCount"] == 5
-    assert "5/5 句" in payload["source_map_review"]["circuitSnapshotStatus"]
-    assert "62 条源记录" in payload["source_map_review"]["circuitSnapshotSource"]
-    assert "20/20 节点" in payload["source_map_review"]["circuitSnapshotCircuit"]
-    assert "23/23 连线" in payload["source_map_review"]["circuitSnapshotCircuit"]
-    assert "完整电路闭合" in payload["source_map_review"]["circuitSnapshotOutput"]
-    assert "反推锁可读" in payload["source_map_review"]["circuitSnapshotOutput"]
-    assert "第 1 步" in payload["source_map_review"]["circuitSnapshotReview"]
-    assert "可审" in payload["source_map_review"]["circuitSnapshotReview"]
+    assert payload["source_map_review"]["circuitSnapshotStatus"] == "完整电路可运行"
+    assert payload["source_map_review"]["circuitSnapshotSource"] == "需求已接入"
+    assert payload["source_map_review"]["circuitSnapshotCircuit"] == "链路已闭合"
+    assert payload["source_map_review"]["circuitSnapshotOutput"] == "反推锁可读"
+    assert payload["source_map_review"]["circuitSnapshotReview"] == "可运行"
     assert "P035-S01" in payload["source_map_review"]["circuitSnapshotReadback"]
     assert "P035-S05" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert "THR_LOCK" in payload["source_map_review"]["circuitSnapshotFinalText"]
