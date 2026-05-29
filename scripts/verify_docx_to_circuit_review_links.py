@@ -188,6 +188,7 @@ def _responsive_state(page: Any) -> dict[str, Any]:
             const navTops = new Set(navLinks.map((link) => Math.round(link.getBoundingClientRect().top)));
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const previewText = document.querySelector("#docx-circuit-review-packet-preview-text");
+            const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
             const compactReview = document.querySelector("#docx-circuit-compact-review");
             const sourceFocus = document.querySelector("#docx-circuit-source-focus");
             const review = document.querySelector("#docx-circuit-review-panel");
@@ -227,10 +228,14 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 ),
                 sourceLocatorFocused: document.activeElement?.dataset.sourceEntryAnchor === "P004",
                 reviewPacketPreviewOpen: Boolean(preview?.open),
+                deliveryPanelVisible: Boolean(deliveryPanel && deliveryPanel.getBoundingClientRect().height > 0),
+                rawReviewPacketHidden: Boolean(previewText && getComputedStyle(previewText).display === "none"),
                 reviewPacketPreviewVisible: Boolean(
                     previewText
                     && previewText.textContent.includes("## DOCX 电路交付摘要")
-                    && previewText.getBoundingClientRect().height > 0
+                    && deliveryPanel
+                    && deliveryPanel.getBoundingClientRect().height > 0
+                    && getComputedStyle(previewText).display === "none"
                 ),
                 visibleNodeCount: document.querySelectorAll("#docx-circuit-svg [data-node-id]").length,
                 visibleWireCount: document.querySelectorAll("#docx-circuit-svg [data-wire-id]").length,
@@ -262,6 +267,8 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
             state.get("sourceFocusVisible") is True,
             state.get("sourceLocatorFocused") is True,
             state.get("reviewPacketPreviewOpen") is True,
+            state.get("deliveryPanelVisible") is True,
+            state.get("rawReviewPacketHidden") is True,
             state.get("reviewPacketPreviewVisible") is True,
             state.get("visibleNodeCount") == 20,
             state.get("visibleWireCount") == 23,
@@ -526,7 +533,12 @@ def _capture_responsive_state(
         """() => {
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const text = document.querySelector("#docx-circuit-review-packet-preview-text");
-            return preview?.open && text?.textContent.includes("## DOCX 电路交付摘要");
+            const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
+            return preview?.open
+              && text?.textContent.includes("## DOCX 电路交付摘要")
+              && deliveryPanel
+              && deliveryPanel.getBoundingClientRect().height > 0
+              && getComputedStyle(text).display === "none";
         }""",
         timeout=7000,
     )
@@ -635,7 +647,12 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         const preview = document.querySelector("#docx-circuit-review-packet-preview");
                         const text = document.querySelector("#docx-circuit-review-packet-preview-text");
-                        return preview?.open && text?.textContent.includes("## DOCX 电路交付摘要");
+                        const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
+                        return preview?.open
+                          && text?.textContent.includes("## DOCX 电路交付摘要")
+                          && deliveryPanel
+                          && deliveryPanel.getBoundingClientRect().height > 0
+                          && getComputedStyle(text).display === "none";
                     }""",
                     timeout=7000,
                 )

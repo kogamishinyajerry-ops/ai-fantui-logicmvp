@@ -595,17 +595,79 @@ h2 {
 .docx-circuit-review-packet-preview[open] summary {
   border-bottom: 1px solid var(--docx-border);
 }
-.docx-circuit-review-packet-preview pre {
-  max-height: 260px;
-  margin: 0;
-  overflow: auto;
-  background: #f8fafc;
-  color: var(--docx-text);
+.docx-circuit-delivery-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+.docx-circuit-delivery-head {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(30, 103, 255, 0.22);
+  border-radius: 8px;
+  background: #f7faff;
+  padding: 9px 10px;
+}
+.docx-circuit-delivery-head span {
+  color: var(--docx-accent);
   font-family: "Courier New", monospace;
   font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-delivery-head strong {
+  color: var(--docx-text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.docx-circuit-delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.docx-circuit-delivery-grid div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+}
+.docx-circuit-delivery-grid span {
+  color: var(--docx-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-delivery-grid strong {
+  color: var(--docx-text);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.docx-circuit-delivery-evidence-list {
+  display: grid;
+  gap: 6px;
+  max-height: 150px;
+  margin: 0;
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+}
+.docx-circuit-delivery-evidence-list li {
+  display: grid;
+  gap: 3px;
+  border-left: 3px solid #cbd5e1;
+  background: #f8fafc;
+  color: var(--docx-muted);
+  font-size: 12px;
   line-height: 1.45;
-  padding: 10px;
-  white-space: pre-wrap;
+  padding: 7px 8px;
+}
+.docx-circuit-delivery-evidence-list strong {
+  color: var(--docx-text);
+  font-size: 12px;
+}
+.docx-circuit-review-packet-raw {
+  display: none;
 }
 .docx-circuit-collapsible {
   margin-top: 10px;
@@ -1007,6 +1069,9 @@ h2 {
   }
   .docx-circuit-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .docx-circuit-delivery-grid {
+    grid-template-columns: 1fr;
   }
   .docx-circuit-flow > summary {
     grid-template-columns: 1fr;

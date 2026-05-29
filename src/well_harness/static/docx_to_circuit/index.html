@@ -186,8 +186,35 @@
         <button id="docx-circuit-show-source-entry" type="button" class="docx-circuit-tool-button">定位需求</button>
       </div>
       <details id="docx-circuit-review-packet-preview" class="docx-circuit-review-packet-preview">
-        <summary>交付摘要预览</summary>
-        <pre id="docx-circuit-review-packet-preview-text">等待生成交付摘要。</pre>
+        <summary>交付摘要</summary>
+        <section id="docx-circuit-delivery-panel" class="docx-circuit-delivery-panel" data-docx-circuit-delivery-panel="true" aria-label="当前验收摘要">
+          <div class="docx-circuit-delivery-head">
+            <span id="docx-circuit-delivery-anchor">P035-S05</span>
+            <strong id="docx-circuit-delivery-title">等待需求句子</strong>
+          </div>
+          <div class="docx-circuit-delivery-grid">
+            <div>
+              <span>电路元素</span>
+              <strong id="docx-circuit-delivery-element">等待选择</strong>
+            </div>
+            <div>
+              <span>逻辑层级</span>
+              <strong id="docx-circuit-delivery-levels">等待映射</strong>
+            </div>
+            <div>
+              <span>证据范围</span>
+              <strong id="docx-circuit-delivery-scope">当前元素</strong>
+            </div>
+            <div>
+              <span>边界</span>
+              <strong id="docx-circuit-delivery-boundary">不改控制逻辑 · 不作适航声明</strong>
+            </div>
+          </div>
+          <ul id="docx-circuit-delivery-evidence-list" class="docx-circuit-delivery-evidence-list">
+            <li>等待读取交付证据。</li>
+          </ul>
+        </section>
+        <pre id="docx-circuit-review-packet-preview-text" class="docx-circuit-review-packet-raw" aria-hidden="true">等待生成交付摘要。</pre>
       </details>
 
       <section class="docx-circuit-source-card" aria-label="当前需求句子">

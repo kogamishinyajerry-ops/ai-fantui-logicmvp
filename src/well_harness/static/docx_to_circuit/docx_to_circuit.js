@@ -137,6 +137,13 @@
   const showSourceEntryButton = $("docx-circuit-show-source-entry");
   const reviewPacketPreview = $("docx-circuit-review-packet-preview");
   const reviewPacketPreviewText = $("docx-circuit-review-packet-preview-text");
+  const deliveryAnchor = $("docx-circuit-delivery-anchor");
+  const deliveryTitle = $("docx-circuit-delivery-title");
+  const deliveryElement = $("docx-circuit-delivery-element");
+  const deliveryLevels = $("docx-circuit-delivery-levels");
+  const deliveryScope = $("docx-circuit-delivery-scope");
+  const deliveryBoundary = $("docx-circuit-delivery-boundary");
+  const deliveryEvidenceList = $("docx-circuit-delivery-evidence-list");
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
@@ -941,6 +948,52 @@
       .join("\n");
   }
 
+  function evidenceScopeLabel(scope) {
+    if (scope === "selected_element") return "当前元素";
+    if (scope === "active_sentence") return "当前句子";
+    return "当前核对";
+  }
+
+  function appendDeliveryEvidenceItem(item, fallbackRole) {
+    if (!deliveryEvidenceList) return;
+    const row = document.createElement("li");
+    const label = document.createElement("strong");
+    const text = document.createElement("span");
+    label.textContent = `${item.anchor || "DOCX"} · ${item.title || item.role || fallbackRole}`;
+    text.textContent = compactText(item.text || "", 132);
+    row.appendChild(label);
+    row.appendChild(text);
+    deliveryEvidenceList.appendChild(row);
+  }
+
+  function renderDeliverySummary(packet) {
+    if (!packet) return;
+    const source = packet.source || {};
+    const element = packet.selected_element || {};
+    const evidence = packet.evidence || {};
+    const logicLevels = Array.isArray(element.logic_levels) && element.logic_levels.length > 0
+      ? element.logic_levels.join(" / ")
+      : "动作链路";
+    const evidenceItems = [
+      ...listFrom(evidence.p035).slice(0, 2).map((item) => ({...item, role: item.title || "P035 证据"})),
+      ...listFrom(evidence.docx).slice(0, 2).map((item) => ({...item, role: sourceEntryDisplayRole(item)})),
+    ];
+    setText(deliveryAnchor, source.anchor || currentAnchor);
+    setText(deliveryTitle, source.title || "等待需求句子");
+    setText(deliveryElement, element.label || "等待选择");
+    setText(deliveryLevels, logicLevels);
+    setText(deliveryScope, evidenceScopeLabel(packet.evidence_scope));
+    setText(deliveryBoundary, "不改控制逻辑 · 不作适航声明");
+    if (!deliveryEvidenceList) return;
+    deliveryEvidenceList.innerHTML = "";
+    evidenceItems.forEach((item) => appendDeliveryEvidenceItem(item, "证据"));
+    if (deliveryEvidenceList.children.length === 0) {
+      const row = document.createElement("li");
+      row.textContent = "当前选择没有命中可展示证据。";
+      deliveryEvidenceList.appendChild(row);
+    }
+  }
+
   function tracePacketMarkdown(packet) {
     const element = packet.selected_element || {};
     const source = packet.source || {};
@@ -981,8 +1034,10 @@
 
   function renderTracePacketPreview() {
     if (!reviewPacketPreview || !reviewPacketPreviewText || !currentPayload) return;
+    const packet = currentTracePacket();
     reviewPacketPreview.dataset.packetFormat = "markdown_with_json";
-    setText(reviewPacketPreviewText, currentTraceMarkdown());
+    renderDeliverySummary(packet);
+    setText(reviewPacketPreviewText, tracePacketMarkdown(packet));
   }
 
   async function copyText(value) {
