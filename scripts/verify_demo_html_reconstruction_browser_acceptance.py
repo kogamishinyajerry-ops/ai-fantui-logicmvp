@@ -240,6 +240,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.screenshot(path=str(first_screen_path), full_page=True)
                 first_screen_review = {
+                    "visible_text": page.evaluate(
+                        """() => [
+                            ".demo-reconstruction-hero",
+                            "#demo-reconstruction-circuit-snapshot",
+                            "#demo-reconstruction-compact-runway",
+                            "#demo-reconstruction-detail-drawer > summary",
+                        ].map((selector) => document.querySelector(selector)?.innerText?.trim() || "").join("\\n")"""
+                    ),
                     "detail_drawer_closed": page.locator(
                         "#demo-reconstruction-detail-drawer"
                     ).evaluate("element => !element.open"),
@@ -3889,6 +3897,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and not first_screen_review["source_map_visible"]
             and not first_screen_review["console_frame_visible"]
             and not first_screen_review["evidence_rail_visible"]
+            and "20/20 节点" not in first_screen_review["visible_text"]
+            and "23/23 连线" not in first_screen_review["visible_text"]
+            and "62 条源记录" not in first_screen_review["visible_text"]
         )
         else "fail",
         "compact_runway": "pass"
@@ -3937,14 +3948,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["reviewIndexEquationCount"] == 4
             and source_map_review["reviewIndexClosureCount"] == 5
             and source_map_review["circuitSnapshotStepCount"] == 5
-            and "5/5 句" in source_map_review["circuitSnapshotStatus"]
-            and "62 条源记录" in source_map_review["circuitSnapshotSource"]
-            and "20/20 节点" in source_map_review["circuitSnapshotCircuit"]
-            and "23/23 连线" in source_map_review["circuitSnapshotCircuit"]
-            and "完整电路闭合" in source_map_review["circuitSnapshotOutput"]
-            and "反推锁可读" in source_map_review["circuitSnapshotOutput"]
-            and "第 1 步" in source_map_review["circuitSnapshotReview"]
-            and "可审" in source_map_review["circuitSnapshotReview"]
+            and source_map_review["circuitSnapshotStatus"] == "完整电路可运行"
+            and source_map_review["circuitSnapshotSource"] == "需求已接入"
+            and source_map_review["circuitSnapshotCircuit"] == "链路已闭合"
+            and source_map_review["circuitSnapshotOutput"] == "反推锁可读"
+            and source_map_review["circuitSnapshotReview"] == "可运行"
             and "P035-S01" in source_map_review["circuitSnapshotReadback"]
             and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
             and "THR_LOCK" in source_map_review["circuitSnapshotFinalText"]
