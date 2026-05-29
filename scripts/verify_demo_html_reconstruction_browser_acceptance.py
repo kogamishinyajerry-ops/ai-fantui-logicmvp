@@ -194,6 +194,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-path-delta-focus-id]").length >= 5
                             && document.querySelectorAll("[data-proof-path-source-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-source-anchor]").length >= 5
+                            && document.querySelectorAll("[data-proof-path-sentence-step]").length === 5
+                            && document.querySelectorAll("[data-proof-path-sentence-focus-id]").length >= 40
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
@@ -2241,6 +2243,69 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                proof_path_sentence_matrix_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            stepCount: document.querySelectorAll("[data-proof-path-sentence-step]").length,
+                            objectChipCount: document.querySelectorAll("[data-proof-path-sentence-focus-id]").length,
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-sentence-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-sentence-step")),
+                            statusText: text("#demo-reconstruction-proof-path-sentence-matrix-status"),
+                            readbackText: text("#demo-reconstruction-proof-path-sentence-matrix-readback"),
+                            firstText: text('[data-proof-path-sentence-row="P035-S01"]'),
+                            finalText: text('[data-proof-path-sentence-row="P035-S05"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-sentence-step="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-proof-path-sentence-step="P035-S05"]');
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-sentence-matrix-readback")?.textContent || "";
+                        return active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && selected.includes("P035-S05")
+                            && readback.includes("P035-S05")
+                            && readback.includes("20/20 节点")
+                            && readback.includes("23/23 连线")
+                            && readback.includes("THR_LOCK");
+                    }""",
+                    timeout=5000,
+                )
+                page.locator(
+                    '[data-proof-path-sentence-row="P035-S05"] [data-proof-path-sentence-focus-id="wire_logic4_thr_lock"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-sentence-matrix-readback")?.textContent || "";
+                        const object = document.querySelector("#demo-reconstruction-review-object")?.textContent || "";
+                        const inspector = document.querySelector("#demo-reconstruction-proof-path-object-inspector-object")?.textContent || "";
+                        return readback.includes("wire_logic4_thr_lock")
+                            && object.includes("wire_logic4_thr_lock")
+                            && inspector.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_sentence_matrix_focus_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-sentence-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-sentence-step")),
+                            activeFocusIds: Array.from(
+                                document.querySelectorAll("[data-proof-path-sentence-focus-id][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-sentence-focus-id")),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            readbackText: text("#demo-reconstruction-proof-path-sentence-matrix-readback"),
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            inspectorObjectText: text("#demo-reconstruction-proof-path-object-inspector-object"),
+                        };
+                    }"""
+                )
                 proof_path_output_map_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -3477,6 +3542,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "油门台反推电子锁" in proof_path_source_rail_anchor_review["readbackText"]
         )
         else "fail",
+        "proof_path_sentence_matrix": "pass"
+        if (
+            proof_path_sentence_matrix_review["stepCount"] == 5
+            and proof_path_sentence_matrix_review["objectChipCount"] >= 40
+            and "5/5 句" in proof_path_sentence_matrix_review["statusText"]
+            and "20/20 节点" in proof_path_sentence_matrix_review["finalText"]
+            and "23/23 连线" in proof_path_sentence_matrix_review["finalText"]
+            and "THR_LOCK" in proof_path_sentence_matrix_review["finalText"]
+            and "wire_logic4_thr_lock" in proof_path_sentence_matrix_review["finalText"]
+            and proof_path_sentence_matrix_focus_review["activeSteps"] == ["P035-S05"]
+            and proof_path_sentence_matrix_focus_review["activeFocusIds"] == ["wire_logic4_thr_lock"]
+            and proof_path_sentence_matrix_focus_review["selectedAnchor"] == "P035-S05"
+            and "wire_logic4_thr_lock" in proof_path_sentence_matrix_focus_review["readbackText"]
+            and "wire_logic4_thr_lock" in proof_path_sentence_matrix_focus_review["reviewObjectText"]
+            and "wire_logic4_thr_lock" in proof_path_sentence_matrix_focus_review["inspectorObjectText"]
+        )
+        else "fail",
         "proof_path_output_map": "pass"
         if (
             proof_path_output_map_review["targetCount"] == 5
@@ -3632,6 +3714,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_delta_rail_focus_review": proof_path_delta_rail_focus_review,
         "proof_path_source_rail_review": proof_path_source_rail_review,
         "proof_path_source_rail_anchor_review": proof_path_source_rail_anchor_review,
+        "proof_path_sentence_matrix_review": proof_path_sentence_matrix_review,
+        "proof_path_sentence_matrix_focus_review": proof_path_sentence_matrix_focus_review,
         "proof_path_output_map_review": proof_path_output_map_review,
         "proof_path_output_map_tls_review": proof_path_output_map_tls_review,
         "scenario_comparator_review": scenario_comparator_review,
