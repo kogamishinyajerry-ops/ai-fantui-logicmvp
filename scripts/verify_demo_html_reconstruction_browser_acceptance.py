@@ -200,6 +200,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-path-predicate-focus-id]").length >= 5
                             && document.querySelectorAll("[data-proof-path-blueprint-step]").length === 5
                             && document.querySelector("[data-proof-path-blueprint-chain='complete']")
+                            && document.querySelector("[data-proof-path-review-strip='first-screen']")
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
@@ -247,6 +248,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "proof_path_visible": page.locator(
                         "#demo-reconstruction-proof-path"
+                    ).is_visible(timeout=5000),
+                    "proof_path_review_strip_visible": page.locator(
+                        "#demo-reconstruction-proof-path-review-strip"
                     ).is_visible(timeout=5000),
                     "scenario_comparator_visible": page.locator(
                         "#demo-reconstruction-scenario-comparator"
@@ -1509,6 +1513,18 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                                 ).map((button) => button.getAttribute("data-proof-path-lane-mode")),
                                 laneVisibleMatrix: visible("#demo-reconstruction-proof-path-coverage-grid"),
                                 laneVisibleSource: visible("#demo-reconstruction-proof-path-source-rail"),
+                                stripLane: document
+                                    .querySelector("#demo-reconstruction-proof-path-review-lane")
+                                    ?.textContent?.trim() || "",
+                                stripStep: document
+                                    .querySelector("#demo-reconstruction-proof-path-review-step")
+                                    ?.textContent?.trim() || "",
+                                stripObject: document
+                                    .querySelector("#demo-reconstruction-proof-path-review-object")
+                                    ?.textContent?.trim() || "",
+                                stripLinkState: document
+                                    .querySelector("#demo-reconstruction-proof-path-review-link-state")
+                                    ?.textContent?.trim() || "",
                                 visibleNodeCount: visibleNodes.length,
                                 visibleWireCount: visibleWires.length,
                                 focusedWireCount: doc
@@ -1531,6 +1547,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             "restoredLaneActiveModes": restored_review["laneActiveModes"],
                             "restoredLaneVisibleMatrix": restored_review["laneVisibleMatrix"],
                             "restoredLaneVisibleSource": restored_review["laneVisibleSource"],
+                            "restoredStripLane": restored_review["stripLane"],
+                            "restoredStripStep": restored_review["stripStep"],
+                            "restoredStripObject": restored_review["stripObject"],
+                            "restoredStripLinkState": restored_review["stripLinkState"],
                             "restoredVisibleNodeCount": restored_review["visibleNodeCount"],
                             "restoredVisibleWireCount": restored_review["visibleWireCount"],
                             "restoredFocusedWireCount": restored_review["focusedWireCount"],
@@ -1912,6 +1932,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 proof_path_lane_default_review = page.evaluate(
                     """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
                         const visible = (selector) => {
                             const element = document.querySelector(selector);
                             return Boolean(element && !element.hidden);
@@ -1927,6 +1948,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             visibleOutput: visible("#demo-reconstruction-proof-path-output-map"),
                             visibleSource: visible("#demo-reconstruction-proof-path-source-rail"),
                             visibleMatrix: visible("#demo-reconstruction-proof-path-coverage-grid"),
+                            stripLaneText: text("#demo-reconstruction-proof-path-review-lane"),
+                            stripStepText: text("#demo-reconstruction-proof-path-review-step"),
+                            stripObjectText: text("#demo-reconstruction-proof-path-review-object"),
+                            stripLinkStateText: text("#demo-reconstruction-proof-path-review-link-state"),
                         };
                     }"""
                 )
@@ -1958,6 +1983,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             visibleSource: visible("#demo-reconstruction-proof-path-source-rail"),
                             visibleMatrix: visible("#demo-reconstruction-proof-path-coverage-grid"),
                             visibleObject: visible("#demo-reconstruction-proof-path-object-inspector"),
+                            stripLaneText: document
+                                .querySelector("#demo-reconstruction-proof-path-review-lane")
+                                ?.textContent?.trim() || "",
                         };
                     }"""
                 )
@@ -3511,6 +3539,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_deep_link["restoredLaneActiveModes"] == ["matrix"]
             and review_deep_link["restoredLaneVisibleMatrix"]
             and not review_deep_link["restoredLaneVisibleSource"]
+        )
+        else "fail",
+        "proof_path_review_strip": "pass"
+        if (
+            first_screen_review["proof_path_review_strip_visible"]
+            and proof_path_lane_default_review["stripLaneText"] == "蓝图"
+            and proof_path_lane_default_review["stripStepText"].startswith("P035-")
+            and proof_path_lane_default_review["stripLinkStateText"] in {"默认视图", "链接已同步"}
+            and proof_path_lane_all_review["stripLaneText"] == "全部"
+            and review_deep_link["restoredStripLane"] == "矩阵"
+            and review_deep_link["restoredStripStep"] == "P035-S05"
+            and "wire_logic4_thr_lock" in review_deep_link["restoredStripObject"]
+            and review_deep_link["restoredStripLinkState"] == "链接已同步"
         )
         else "fail",
         "source_chip_focus": "pass"

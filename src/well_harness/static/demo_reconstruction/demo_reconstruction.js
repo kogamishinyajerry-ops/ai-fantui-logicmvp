@@ -283,6 +283,10 @@
   const proofPathBlueprintSummaryReadback = $("demo-reconstruction-proof-path-blueprint-summary-readback");
   const proofPathLaneModeStatus = $("demo-reconstruction-proof-path-lane-mode-status");
   const proofPathLaneModeButtons = Array.from(document.querySelectorAll("[data-proof-path-lane-mode]"));
+  const proofPathReviewLane = $("demo-reconstruction-proof-path-review-lane");
+  const proofPathReviewStep = $("demo-reconstruction-proof-path-review-step");
+  const proofPathReviewObject = $("demo-reconstruction-proof-path-review-object");
+  const proofPathReviewLinkState = $("demo-reconstruction-proof-path-review-link-state");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -1232,10 +1236,23 @@
   }
 
   function updateReviewLink() {
-    if (!reviewLink) return;
     const hash = reviewHashForState();
     const suffix = hash ? `#${hash}` : "";
-    reviewLink.href = `${window.location.pathname}${window.location.search}${suffix}`;
+    if (reviewLink) {
+      reviewLink.href = `${window.location.pathname}${window.location.search}${suffix}`;
+    }
+    updateProofPathReviewStrip(hash);
+  }
+
+  function updateProofPathReviewStrip(hash = reviewHashForState()) {
+    const stepText = currentTraceStep && currentTraceStep.anchor ? currentTraceStep.anchor : "等待选择";
+    const objectText = currentCircuitFocus.kind && currentCircuitFocus.id
+      ? reviewObjectLabel(currentCircuitFocus.kind, currentCircuitFocus.id)
+      : "等待聚焦";
+    setText(proofPathReviewLane, proofPathLaneModeLabel(proofPathLaneMode));
+    setText(proofPathReviewStep, stepText);
+    setText(proofPathReviewObject, objectText);
+    setText(proofPathReviewLinkState, hash ? "链接已同步" : "默认视图");
   }
 
   function cumulativeTraceContract(index) {
