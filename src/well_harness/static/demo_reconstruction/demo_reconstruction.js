@@ -3014,16 +3014,39 @@
     return presetId || "场景";
   }
 
+  function scenarioComparatorStatusLabel(status) {
+    if (status === "DEPLOYED") return "展开可用";
+    if (status === "FAULT") return "安全阻塞";
+    if (status === "STOWED") return "收起";
+    return status || "等待运行";
+  }
+
+  function scenarioComparatorThrLabel(value) {
+    if (value === "ON" || value === "RELEASED") return "反推锁释放";
+    if (value === "BLOCKED") return "反推锁阻塞";
+    if (value === "OFF") return "反推锁未释放";
+    return "反推锁等待";
+  }
+
+  function scenarioComparatorOutputLabel(name, value) {
+    const labels = {
+      tls: {ON: "解锁电源通电", OFF: "解锁电源关闭", BLOCKED: "解锁电源阻塞"},
+      etrac: {ON: "作动器供电", OFF: "作动器未供电", BLOCKED: "作动器阻塞"},
+      eec: {ON: "展开指令发出", OFF: "展开指令未发出", BLOCKED: "展开指令阻塞"},
+    };
+    return labels[name]?.[value] || `${name} ${value || "等待"}`;
+  }
+
   function scenarioComparatorExpected(presetId) {
-    if (presetId === "max-reverse") return "目标 DEPLOYED · THR ON";
-    if (presetId === "inhibit-block") return "目标 FAULT · THR BLOCKED";
+    if (presetId === "max-reverse") return "目标 反推锁释放";
+    if (presetId === "inhibit-block") return "目标 反推锁阻塞";
     return "等待运行";
   }
 
   function scenarioComparatorSummary(presetId) {
     const record = scenarioLedgerRecords.get(presetId);
     if (!record || !record.captured) return scenarioComparatorExpected(presetId);
-    return `${record.status} · THR ${record.thr}`;
+    return `${scenarioComparatorStatusLabel(record.status)} · ${scenarioComparatorThrLabel(record.thr)}`;
   }
 
   function updateScenarioComparatorStatus(activeId = "") {
@@ -3045,9 +3068,17 @@
     setText(scenarioComparatorStatus, `${capturedCount}/${SCENARIO_COMPARATOR_IDS.length} 已运行`);
     const activeRecord = SCENARIO_COMPARATOR_IDS.includes(activeId) ? scenarioLedgerRecords.get(activeId) : null;
     if (activeRecord && activeRecord.captured) {
+      const readbackParts = [
+        scenarioComparatorLabel(activeId),
+        scenarioComparatorStatusLabel(activeRecord.status),
+        scenarioComparatorThrLabel(activeRecord.thr),
+        scenarioComparatorOutputLabel("tls", activeRecord.tls),
+        scenarioComparatorOutputLabel("etrac", activeRecord.etrac),
+        scenarioComparatorOutputLabel("eec", activeRecord.eec),
+      ];
       setText(
         scenarioComparatorReadback,
-        `${scenarioComparatorLabel(activeId)} · ${activeRecord.status} · THR ${activeRecord.thr} · TLS ${activeRecord.tls} · ETRAC ${activeRecord.etrac} · EEC ${activeRecord.eec}`,
+        readbackParts.join(" · "),
       );
     } else {
       setText(scenarioComparatorReadback, "运行最大反推和抑制阻塞，核对 THR_LOCK 输出差异");
