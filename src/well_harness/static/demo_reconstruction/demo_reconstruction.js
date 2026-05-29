@@ -205,6 +205,12 @@
   const compactRunwayInhibit = $("demo-reconstruction-compact-runway-inhibit");
   const compactRunwayInhibitValue = $("demo-reconstruction-compact-runway-inhibit-value");
   const compactRunwayApply = $("demo-reconstruction-compact-runway-apply");
+  const compactRunwayOutputs = {
+    tls: $("demo-reconstruction-compact-runway-output-tls"),
+    etrac: $("demo-reconstruction-compact-runway-output-etrac"),
+    eec: $("demo-reconstruction-compact-runway-output-eec"),
+    thr: $("demo-reconstruction-compact-runway-output-thr"),
+  };
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
   const requirementLedgerSummary = $("demo-reconstruction-requirement-ledger-summary");
@@ -2750,6 +2756,30 @@
     return `${Number.isInteger(numeric) ? numeric.toFixed(0) : numeric.toFixed(1)}°`;
   }
 
+  function compactOutputState(value) {
+    if (value === "ON" || value === "RELEASED") return "on";
+    if (value === "BLOCKED") return "blocked";
+    if (value === "OFF") return "off";
+    return "idle";
+  }
+
+  function updateCompactRunwayOutputs(snapshot) {
+    const values = {
+      tls: snapshot && snapshot.tls ? snapshot.tls : "--",
+      etrac: snapshot && snapshot.etrac ? snapshot.etrac : "--",
+      eec: snapshot && snapshot.eec ? snapshot.eec : "--",
+      thr: snapshot && snapshot.thr ? snapshot.thr : "--",
+    };
+    Object.entries(compactRunwayOutputs).forEach(([key, element]) => {
+      if (!element) return;
+      const value = values[key] || "--";
+      setText(element, value);
+      if (element.parentElement) {
+        element.parentElement.dataset.state = compactOutputState(value);
+      }
+    });
+  }
+
   function updateCompactOperatorInputLabels() {
     if (compactRunwayTra && compactRunwayTraValue) {
       setText(compactRunwayTraValue, compactAngleLabel(compactRunwayTra.value));
@@ -2784,6 +2814,7 @@
     const active = activeScenarioFromFrame(frameDocument);
     const snapshot = scenarioOutputSnapshot(frameDocument);
     syncCompactOperatorInputsFromFrame(frameDocument);
+    updateCompactRunwayOutputs(snapshot);
     if (active) compactRunwayMode = active.id;
     if (!active && compactRunwayMode === "operator") {
       setCompactRunwayButtonState("");
