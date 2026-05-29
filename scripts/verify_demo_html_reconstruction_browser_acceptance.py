@@ -1419,6 +1419,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-proof-path-lane-mode="matrix"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-proof-path-lane-mode="matrix"]');
+                        const status = document.querySelector("#demo-reconstruction-proof-path-lane-mode-status");
+                        const matrix = document.querySelector("#demo-reconstruction-proof-path-coverage-grid");
+                        const source = document.querySelector("#demo-reconstruction-proof-path-source-rail");
+                        return active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && status
+                            && status.textContent.trim() === "矩阵"
+                            && matrix
+                            && !matrix.hidden
+                            && source
+                            && source.hidden
+                            && window.location.hash.includes("lane=matrix");
+                    }""",
+                    timeout=5000,
+                )
                 review_deep_link = page.evaluate(
                     """() => ({
                         hash: window.location.hash,
@@ -1428,7 +1447,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 restored_page = browser.new_page(viewport={"width": 1366, "height": 768})
                 try:
                     restored_page.goto(
-                        f"{base_url}/demo-reconstruction#step=P035-S05&focus=wire%3Awire_logic4_thr_lock&q=logic4",
+                        f"{base_url}/demo-reconstruction{review_deep_link['hash']}",
                         wait_until="networkidle",
                     )
                     restored_page.wait_for_function(
@@ -1438,10 +1457,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             const selected = document.querySelector("#demo-reconstruction-selected-anchor");
                             const search = document.querySelector("#demo-reconstruction-coverage-search");
                             const status = document.querySelector("#demo-reconstruction-embedded-highlight-status")?.textContent || "";
+                            const laneStatus = document.querySelector("#demo-reconstruction-proof-path-lane-mode-status");
+                            const activeLane = document.querySelector('[data-proof-path-lane-mode="matrix"]');
+                            const matrix = document.querySelector("#demo-reconstruction-proof-path-coverage-grid");
+                            const source = document.querySelector("#demo-reconstruction-proof-path-source-rail");
                             return selected
                                 && selected.textContent.trim() === "P035-S05"
                                 && search
                                 && search.value === "logic4"
+                                && laneStatus
+                                && laneStatus.textContent.trim() === "矩阵"
+                                && activeLane
+                                && activeLane.getAttribute("aria-pressed") === "true"
+                                && matrix
+                                && !matrix.hidden
+                                && source
+                                && source.hidden
                                 && doc
                                 && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1
                                 && status.includes("wire_logic4_thr_lock");
@@ -1461,11 +1492,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             const visibleWires = Array.from(
                                 document.querySelectorAll("[data-circuit-coverage-kind='wire']")
                             ).filter((button) => !button.hidden);
+                            const visible = (selector) => {
+                                const element = document.querySelector(selector);
+                                return Boolean(element && !element.hidden);
+                            };
                             return {
                                 selectedAnchor: document
                                     .querySelector("#demo-reconstruction-selected-anchor")
                                     ?.textContent?.trim() || "",
                                 query: document.querySelector("#demo-reconstruction-coverage-search")?.value || "",
+                                laneStatus: document
+                                    .querySelector("#demo-reconstruction-proof-path-lane-mode-status")
+                                    ?.textContent?.trim() || "",
+                                laneActiveModes: Array.from(
+                                    document.querySelectorAll("[data-proof-path-lane-mode][aria-pressed='true']")
+                                ).map((button) => button.getAttribute("data-proof-path-lane-mode")),
+                                laneVisibleMatrix: visible("#demo-reconstruction-proof-path-coverage-grid"),
+                                laneVisibleSource: visible("#demo-reconstruction-proof-path-source-rail"),
                                 visibleNodeCount: visibleNodes.length,
                                 visibleWireCount: visibleWires.length,
                                 focusedWireCount: doc
@@ -1484,6 +1527,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         {
                             "restoredSelectedAnchor": restored_review["selectedAnchor"],
                             "restoredQuery": restored_review["query"],
+                            "restoredLaneStatus": restored_review["laneStatus"],
+                            "restoredLaneActiveModes": restored_review["laneActiveModes"],
+                            "restoredLaneVisibleMatrix": restored_review["laneVisibleMatrix"],
+                            "restoredLaneVisibleSource": restored_review["laneVisibleSource"],
                             "restoredVisibleNodeCount": restored_review["visibleNodeCount"],
                             "restoredVisibleWireCount": restored_review["visibleWireCount"],
                             "restoredFocusedWireCount": restored_review["focusedWireCount"],
@@ -1493,6 +1540,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     )
                 finally:
                     restored_page.close()
+                page.locator('[data-proof-path-lane-mode="blueprint"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-proof-path-lane-mode="blueprint"]');
+                        const status = document.querySelector("#demo-reconstruction-proof-path-lane-mode-status");
+                        return active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && status
+                            && status.textContent.trim() === "蓝图"
+                            && !window.location.hash.includes("lane=");
+                    }""",
+                    timeout=5000,
+                )
                 page.locator('[data-trace-card][data-trace-anchor="P035-S02"]').click()
                 page.wait_for_function(
                     """() => {
@@ -3430,6 +3490,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "step=P035-S05" in review_deep_link["hash"]
             and "focus=wire%3Awire_logic4_thr_lock" in review_deep_link["hash"]
             and "q=logic4" in review_deep_link["hash"]
+            and "lane=matrix" in review_deep_link["hash"]
             and "/demo-reconstruction#" in review_deep_link["linkHref"]
         )
         else "fail",
@@ -3442,6 +3503,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_deep_link["restoredFocusedWireCount"] == 1
             and "wire_logic4_thr_lock" in review_deep_link["restoredObjectText"]
             and "wire_logic4_thr_lock" in review_deep_link["restoredStatusText"]
+        )
+        else "fail",
+        "review_hash_lane_restore": "pass"
+        if (
+            review_deep_link["restoredLaneStatus"] == "矩阵"
+            and review_deep_link["restoredLaneActiveModes"] == ["matrix"]
+            and review_deep_link["restoredLaneVisibleMatrix"]
+            and not review_deep_link["restoredLaneVisibleSource"]
         )
         else "fail",
         "source_chip_focus": "pass"
