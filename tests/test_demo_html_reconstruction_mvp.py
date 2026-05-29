@@ -927,6 +927,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "62 条源记录" not in payload["first_screen_review"]["visible_text"]
     assert "查看链路" not in payload["first_screen_review"]["visible_text"]
     assert "查看验收详情" not in payload["first_screen_review"]["visible_text"]
+    assert "source" not in payload["first_screen_review"]["visible_text"]
+    assert "ON / BLOCK" not in payload["first_screen_review"]["visible_text"]
     assert "低空解锁" in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
     assert payload["review_drawer_deep_link"] == {
         "hash": "#review=1",
@@ -1033,7 +1035,12 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "低空解锁" in payload["source_map_review"]["circuitSnapshotPreviewReadback"]
     assert payload["source_map_review"]["circuitSnapshotMiniCount"] == 7
     assert payload["source_map_review"]["circuitSnapshotMiniActive"] == ["runway-l1-unlock"]
+    assert "需求" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "已接入" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "可读" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "THR" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "source" not in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "ON / BLOCK" not in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "P035-S05" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert "THR_LOCK" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert payload["source_map_review"]["circuitSnapshotChainCount"] == 7
