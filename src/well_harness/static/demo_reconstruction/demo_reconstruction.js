@@ -269,6 +269,9 @@
   const proofPathDeltaRailStatus = $("demo-reconstruction-proof-path-delta-rail-status");
   const proofPathDeltaRailList = $("demo-reconstruction-proof-path-delta-rail-list");
   const proofPathDeltaRailReadback = $("demo-reconstruction-proof-path-delta-rail-readback");
+  const proofPathSourceRailStatus = $("demo-reconstruction-proof-path-source-rail-status");
+  const proofPathSourceRailList = $("demo-reconstruction-proof-path-source-rail-list");
+  const proofPathSourceRailReadback = $("demo-reconstruction-proof-path-source-rail-readback");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -308,6 +311,7 @@
   let outputPathTargetId = "thr_lock";
   let proofPathCoverageAnchor = "";
   let proofPathDeltaAnchor = "";
+  let proofPathSourceAnchor = "";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -2542,6 +2546,158 @@
     updateProofPathDeltaRailReadback(proofPathDeltaRecord(safeIndex));
   }
 
+  function proofPathSourceRecords(step) {
+    if (!step || !Array.isArray(sourceEntries)) return [];
+    const stepNodes = new Set(Array.isArray(step.node_ids) ? step.node_ids : []);
+    const stepWires = new Set(Array.isArray(step.wire_ids) ? step.wire_ids : []);
+    const baseAnchor = typeof step.anchor === "string" ? step.anchor.split("-")[0] : "";
+    const records = sourceEntries.filter((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      if (entry.anchor === step.anchor || entry.anchor === baseAnchor) return true;
+      const entryNodes = Array.isArray(entry.node_ids) ? entry.node_ids : [];
+      const entryWires = Array.isArray(entry.wire_ids) ? entry.wire_ids : [];
+      return entryNodes.some((nodeId) => stepNodes.has(nodeId))
+        || entryWires.some((wireId) => stepWires.has(wireId));
+    });
+    return records.sort((left, right) => {
+      const priority = (entry) => {
+        if (entry.anchor === step.anchor) return 0;
+        if (entry.anchor === baseAnchor) return 1;
+        if (entry.role === "动作顺序") return 2;
+        return 3;
+      };
+      return priority(left) - priority(right);
+    });
+  }
+
+  function proofPathSourceNeedle(step, sourceText) {
+    const source = step && typeof step.source_text === "string" ? step.source_text.replace(/\s+/g, " ").trim() : "";
+    const target = typeof sourceText === "string" ? sourceText.replace(/\s+/g, " ").trim() : "";
+    if (!source || !target) return "";
+    const chunks = source.split(/[，；。]/).map((chunk) => chunk.trim()).filter((chunk) => chunk.length >= 6);
+    return chunks.find((chunk) => target.includes(chunk))
+      || chunks.map((chunk) => chunk.slice(0, 12)).find((chunk) => target.includes(chunk))
+      || "";
+  }
+
+  function proofPathSourceExcerpt(text, limit = 96, needle = "") {
+    const value = typeof text === "string" ? text.replace(/\s+/g, " ").trim() : "";
+    const marker = typeof needle === "string" ? needle.replace(/\s+/g, " ").trim() : "";
+    if (value.length > limit && marker && value.includes(marker)) {
+      const start = Math.max(0, value.indexOf(marker) - Math.floor((limit - marker.length) / 2));
+      const end = Math.min(value.length, start + limit);
+      const prefix = start > 0 ? "..." : "";
+      const suffix = end < value.length ? "..." : "";
+      return `${prefix}${value.slice(start, end)}${suffix}`;
+    }
+    return value.length > limit ? `${value.slice(0, limit)}...` : value;
+  }
+
+  function setProofPathSourceRailState(anchor) {
+    document.querySelectorAll("[data-proof-path-source-step]").forEach((button) => {
+      const selected = button.dataset.proofPathSourceStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    proofPathSourceAnchor = anchor || "";
+  }
+
+  function updateProofPathSourceRailReadback(step, sourceEntry = null) {
+    if (!proofPathSourceRailReadback || !step) return;
+    const records = proofPathSourceRecords(step);
+    const source = sourceEntry || records[0] || {};
+    const sourceAnchor = source.anchor ? ` · ${source.anchor}` : "";
+    const sourceText = source.text || step.source_text || "";
+    const needle = proofPathSourceNeedle(step, sourceText);
+    setText(
+      proofPathSourceRailReadback,
+      `${step.anchor || "P035"} · ${records.length} 条源句命中${sourceAnchor} · ${proofPathSourceExcerpt(sourceText, 120, needle)}`,
+    );
+  }
+
+  function applyProofPathSourceStep(anchor) {
+    const step = traceSteps.find((item) => item && item.anchor === anchor);
+    if (!step) return;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathSourceRailState(anchor);
+    updateProofPathSourceRailReadback(step);
+    writeReviewHashState();
+  }
+
+  function applyProofPathSourceAnchor(stepAnchor, sourceAnchor) {
+    const step = traceSteps.find((item) => item && item.anchor === stepAnchor);
+    if (!step) return;
+    const source = proofPathSourceRecords(step).find((entry) => entry.anchor === sourceAnchor) || null;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathSourceRailState(stepAnchor);
+    updateProofPathSourceRailReadback(step, source);
+    writeReviewHashState();
+  }
+
+  function renderProofPathSourceRail(steps) {
+    if (!proofPathSourceRailList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    proofPathSourceRailList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.proofPathSourceStep = "empty";
+      empty.textContent = "等待源句核验";
+      proofPathSourceRailList.appendChild(empty);
+      setText(proofPathSourceRailStatus, "等待源句核验");
+      setText(proofPathSourceRailReadback, "等待选择源句。");
+      return;
+    }
+
+    const totalMatches = items.reduce((sum, step) => sum + proofPathSourceRecords(step).length, 0);
+    setText(proofPathSourceRailStatus, `${items.length}/5 步 · ${totalMatches} 源句命中`);
+
+    items.forEach((step, index) => {
+      const records = proofPathSourceRecords(step);
+      const row = document.createElement("div");
+      row.className = "demo-reconstruction-proof-path-source-row";
+      row.dataset.proofPathSourceRow = step.anchor || "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-path-source-step";
+      button.dataset.proofPathSourceStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyProofPathSourceStep(step.anchor || ""));
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const excerpt = document.createElement("small");
+      excerpt.textContent = proofPathSourceExcerpt(step.source_text || "", 120);
+      button.append(anchor, title, excerpt);
+      row.appendChild(button);
+
+      const chips = document.createElement("div");
+      chips.className = "demo-reconstruction-proof-path-source-anchors";
+      records.slice(0, 6).forEach((entry) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.dataset.proofPathSourceAnchor = entry.anchor || "";
+        chip.textContent = entry.anchor || "source";
+        chip.addEventListener("click", () => applyProofPathSourceAnchor(step.anchor || "", entry.anchor || ""));
+        chips.appendChild(chip);
+      });
+      if (!records.length) {
+        const empty = document.createElement("span");
+        empty.textContent = "等待源句命中";
+        chips.appendChild(empty);
+      }
+      row.appendChild(chips);
+      proofPathSourceRailList.appendChild(row);
+    });
+
+    const selectedAnchor = proofPathSourceAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedStep = items.find((step) => step && step.anchor === selectedAnchor) || items[0];
+    setProofPathSourceRailState(selectedStep.anchor || "");
+    updateProofPathSourceRailReadback(selectedStep);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -3506,10 +3662,12 @@
     updateProofPathStatus(step);
     setProofPathCoverageGridState(step.anchor || "");
     setProofPathDeltaRailState(step.anchor || "");
+    setProofPathSourceRailState(step.anchor || "");
     if (selectedTraceIndex >= 0) {
       const contract = cumulativeTraceContract(selectedTraceIndex);
       updateProofPathCoverageGridReadback(step, contract);
       updateProofPathDeltaRailReadback(proofPathDeltaRecord(selectedTraceIndex));
+      updateProofPathSourceRailReadback(step);
     }
     if (options.writeHash !== false) writeReviewHashState();
   }
@@ -3732,6 +3890,7 @@
     renderProofPathTimeline(steps);
     renderProofPathCoverageGrid(steps);
     renderProofPathDeltaRail(steps);
+    renderProofPathSourceRail(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
@@ -3836,6 +3995,7 @@
     setText(docxWireCoverage, `${coverage.covered_wire_count || 0}/${expectedWires}`);
     setText(docxEntryCount, `${coverage.source_entry_count || 0} 条源文档记录`);
     setText(docxSequenceCount, `${coverage.sequence_step_count || 0} 步`);
+    sourceEntries = Array.isArray(payload && payload.source_entries) ? payload.source_entries : [];
     renderTraceBoard(payload);
     renderLogicEquationBoard();
     renderCoverageMatrix(payload);

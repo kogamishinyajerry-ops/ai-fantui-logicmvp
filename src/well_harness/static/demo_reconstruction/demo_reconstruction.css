@@ -2775,6 +2775,120 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   color: #475467;
   padding: 0;
 }
+.demo-reconstruction-proof-path-source-rail {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+}
+.demo-reconstruction-proof-path-source-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-source-rail-head span {
+  color: #475467;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-source-rail-head strong {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.demo-reconstruction-proof-path-source-rail-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-source-row {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-source-step {
+  display: grid;
+  grid-template-columns: minmax(58px, auto) 1fr;
+  gap: 3px 8px;
+  min-width: 0;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  padding: 7px;
+  text-align: left;
+}
+.demo-reconstruction-proof-path-source-step:hover,
+.demo-reconstruction-proof-path-source-step:focus-visible {
+  border-color: #4f46e5;
+  outline: none;
+}
+.demo-reconstruction-proof-path-source-step[aria-pressed="true"] {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+.demo-reconstruction-proof-path-source-step strong,
+.demo-reconstruction-proof-path-source-step span,
+.demo-reconstruction-proof-path-source-step small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path-source-step strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-source-step span {
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.demo-reconstruction-proof-path-source-step small {
+  grid-column: 1 / -1;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.demo-reconstruction-proof-path-source-anchors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-source-anchors button,
+.demo-reconstruction-proof-path-source-anchors span {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 5px 7px;
+}
+.demo-reconstruction-proof-path-source-anchors button {
+  cursor: pointer;
+}
+.demo-reconstruction-proof-path-source-anchors button:hover,
+.demo-reconstruction-proof-path-source-anchors button:focus-visible {
+  border-color: #4f46e5;
+  color: #3730a3;
+  outline: none;
+}
+.demo-reconstruction-proof-path-source-rail p {
+  border: 0;
+  background: transparent;
+  color: #475467;
+  padding: 0;
+}
 .demo-reconstruction-proof-path-object-inspector {
   display: grid;
   gap: 8px;
