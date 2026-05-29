@@ -162,6 +162,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-build-ladder"' in html
     assert 'id="demo-reconstruction-review-index-build-summary"' in html
     assert 'id="demo-reconstruction-review-index-build-list"' in html
+    assert 'id="demo-reconstruction-review-index-equation-rail"' in html
+    assert 'id="demo-reconstruction-review-index-equation-summary"' in html
+    assert 'id="demo-reconstruction-review-index-equation-list"' in html
     assert 'id="demo-reconstruction-review-index-output-rail"' in html
     assert 'id="demo-reconstruction-review-index-output-summary"' in html
     assert 'id="demo-reconstruction-review-index-output-list"' in html
@@ -517,6 +520,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-review-index" in stylesheet
     assert ".demo-reconstruction-review-index-build-ladder" in stylesheet
     assert ".demo-reconstruction-review-index-build-list" in stylesheet
+    assert ".demo-reconstruction-review-index-equation-rail" in stylesheet
+    assert ".demo-reconstruction-review-index-equation-list" in stylesheet
     assert ".demo-reconstruction-review-index-output-rail" in stylesheet
     assert ".demo-reconstruction-review-index-output-list" in stylesheet
     assert ".demo-reconstruction-review-index-scenario-rail" in stylesheet
@@ -801,6 +806,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["visible"] is True
     assert payload["review_index_review"]["buttonCount"] == 13
     assert payload["review_index_review"]["buildStepCount"] == 5
+    assert payload["review_index_review"]["equationCount"] == 4
     assert payload["review_index_review"]["outputTargetCount"] == 5
     assert payload["review_index_review"]["scenarioCount"] == 2
     assert payload["review_index_review"]["activeBuildSteps"] == ["P035-S01"]
@@ -811,6 +817,9 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "23/23 连线" in payload["review_index_review"]["buildSummaryText"]
     assert "P035-S05" in payload["review_index_review"]["buildFinalText"]
     assert "THR_LOCK" in payload["review_index_review"]["buildFinalText"]
+    assert "4/4 方程" in payload["review_index_review"]["equationSummaryText"]
+    assert "RA < 6 ft" in payload["review_index_review"]["equationL1Text"]
+    assert "VDT90" in payload["review_index_review"]["equationL4Text"]
     assert "5/5 输出" in payload["review_index_review"]["outputSummaryText"]
     assert "THR_LOCK" in payload["review_index_review"]["outputThrText"]
     assert "P035-S05" in payload["review_index_review"]["outputThrText"]
@@ -863,6 +872,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["review_index_build_ladder_action"]["objectText"]
     assert "蓝图" in payload["review_index_build_ladder_action"]["proofPathText"]
     assert "链接已同步" in payload["review_index_build_ladder_action"]["proofPathText"]
+    assert payload["review_index_equation_rail_action"]["selectedAnchor"] == "P035-S05"
+    assert payload["review_index_equation_rail_action"]["activeEquations"] == ["logic4"]
+    assert payload["review_index_equation_rail_action"]["activeTargets"] == [
+        "demo-reconstruction-logic-equation-board"
+    ]
+    assert "wire_logic4_thr_lock" in payload["review_index_equation_rail_action"]["objectText"]
+    assert "L1-L4" in payload["review_index_equation_rail_action"]["equationSummaryText"]
     assert payload["logic_equation_review"]["visible"] is True
     assert payload["logic_equation_review"]["rowCount"] == 4
     assert payload["logic_equation_review"]["passCount"] == 4
@@ -1407,6 +1423,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_scenario_rail": "pass",
         "review_index_output_rail": "pass",
         "review_index_build_ladder": "pass",
+        "review_index_equation_rail": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",

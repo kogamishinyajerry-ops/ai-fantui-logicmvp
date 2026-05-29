@@ -290,6 +290,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             requirementLedgerStatus: text("#demo-reconstruction-requirement-ledger-status"),
                             reviewIndexButtonCount: document.querySelectorAll("[data-review-index-target]").length,
                             reviewIndexBuildStepCount: document.querySelectorAll("[data-review-index-build-step]").length,
+                            reviewIndexEquationCount: document.querySelectorAll("[data-review-index-equation]").length,
                             reviewIndexOutputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
                             reviewIndexScenarioCount: document.querySelectorAll("[data-review-index-scenario]").length,
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
@@ -385,9 +386,21 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     }""",
                     timeout=5000,
                 )
+                page.add_style_tag(
+                    content=(
+                        ".demo-reconstruction-screenshot-clean .unified-nav {"
+                        " display: none !important;"
+                        "}"
+                        ".demo-reconstruction-screenshot-clean.unified-nav-enabled {"
+                        " padding-top: 0 !important;"
+                        "}"
+                    )
+                )
+                page.evaluate("document.body.classList.add('demo-reconstruction-screenshot-clean')")
                 page.locator("#demo-reconstruction-review-index").screenshot(
                     path=str(review_index_path)
                 )
+                page.evaluate("document.body.classList.remove('demo-reconstruction-screenshot-clean')")
                 page.locator("#demo-reconstruction-assembly-map").screenshot(
                     path=str(assembly_map_path)
                 )
@@ -411,6 +424,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             activeBuildSteps: Array.from(
                                 document.querySelectorAll("[data-review-index-build-step][aria-pressed='true']")
                             ).map((button) => button.getAttribute("data-review-index-build-step")),
+                            equationCount: document.querySelectorAll("[data-review-index-equation]").length,
+                            equationSummaryText: text("#demo-reconstruction-review-index-equation-summary"),
+                            equationL1Text: text('[data-review-index-equation="logic1"]'),
+                            equationL4Text: text('[data-review-index-equation="logic4"]'),
+                            activeEquations: Array.from(
+                                document.querySelectorAll("[data-review-index-equation][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-review-index-equation")),
                             outputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
                             outputSummaryText: text("#demo-reconstruction-review-index-output-summary"),
                             outputThrText: text('[data-review-index-output-target="thr_lock"]'),
@@ -592,6 +612,36 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         ).map((button) => button.getAttribute("data-review-index-target")),
                         objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
                         proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                        hash: window.location.hash,
+                        scrollY: window.scrollY,
+                    })"""
+                )
+                page.locator('[data-review-index-equation="logic4"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const active = document.querySelector('[data-review-index-equation="logic4"][aria-pressed="true"]');
+                        const equationTarget = document.querySelector('[data-review-index-target="demo-reconstruction-logic-equation-board"][aria-pressed="true"]');
+                        const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        return selected
+                            && selected.textContent.trim() === "P035-S05"
+                            && active
+                            && equationTarget
+                            && objectText.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                review_index_equation_rail_action = page.evaluate(
+                    """() => ({
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        activeEquations: Array.from(
+                            document.querySelectorAll("[data-review-index-equation][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-equation")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        equationSummaryText: document.querySelector("#demo-reconstruction-review-index-equation-summary")?.textContent?.trim() || "",
                         hash: window.location.hash,
                         scrollY: window.scrollY,
                     })"""
@@ -3346,6 +3396,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             source_map_review["sourceEntryCount"] >= 10
             and source_map_review["reviewIndexButtonCount"] == 13
+            and source_map_review["reviewIndexEquationCount"] == 4
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
@@ -3385,10 +3436,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             review_index_review["visible"]
             and review_index_review["buttonCount"] == 13
             and review_index_review["buildStepCount"] == 5
+            and review_index_review["equationCount"] == 4
             and review_index_review["outputTargetCount"] == 5
             and review_index_review["scenarioCount"] == 2
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and review_index_review["activeBuildSteps"] == ["P035-S01"]
+            and review_index_review["activeEquations"] == []
             and review_index_review["activeOutputTargets"] == ["thr_lock"]
             and review_index_review["activeScenarios"] == []
             and "P035-S01" in review_index_review["stepText"]
@@ -3398,6 +3451,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "23/23 连线" in review_index_review["buildSummaryText"]
             and "P035-S05" in review_index_review["buildFinalText"]
             and "THR_LOCK" in review_index_review["buildFinalText"]
+            and "4/4 方程" in review_index_review["equationSummaryText"]
+            and "RA < 6 ft" in review_index_review["equationL1Text"]
+            and "VDT90" in review_index_review["equationL4Text"]
             and "5/5 输出" in review_index_review["outputSummaryText"]
             and "THR_LOCK" in review_index_review["outputThrText"]
             and "P035-S05" in review_index_review["outputThrText"]
@@ -3457,6 +3513,18 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "step=P035-S05" in review_index_build_ladder_action["hash"]
             and "wire_logic4_thr_lock" in review_index_build_ladder_action["hash"]
             and review_index_build_ladder_action["scrollY"] > 0
+        )
+        else "fail",
+        "review_index_equation_rail": "pass"
+        if (
+            review_index_equation_rail_action["selectedAnchor"] == "P035-S05"
+            and review_index_equation_rail_action["activeEquations"] == ["logic4"]
+            and review_index_equation_rail_action["activeTargets"] == ["demo-reconstruction-logic-equation-board"]
+            and "wire_logic4_thr_lock" in review_index_equation_rail_action["objectText"]
+            and "L1-L4" in review_index_equation_rail_action["equationSummaryText"]
+            and "step=P035-S05" in review_index_equation_rail_action["hash"]
+            and "wire_logic4_thr_lock" in review_index_equation_rail_action["hash"]
+            and review_index_equation_rail_action["scrollY"] > 0
         )
         else "fail",
         "review_index_proof_path_context": "pass"
@@ -4231,6 +4299,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_scenario_max_action": review_index_scenario_max_action,
         "review_index_scenario_inhibit_action": review_index_scenario_inhibit_action,
         "review_index_build_ladder_action": review_index_build_ladder_action,
+        "review_index_equation_rail_action": review_index_equation_rail_action,
         "review_index_after_trace": review_index_after_trace,
         "logic_equation_review": logic_equation_review,
         "logic_equation_focus_review": logic_equation_focus_review,
@@ -4381,6 +4450,7 @@ def main(argv: list[str] | None = None) -> int:
                 "requirement_coverage_ledger": "fail",
                 "review_index_navigation": "fail",
                 "review_index_proof_path_context": "fail",
+                "review_index_equation_rail": "fail",
                 "logic_equation_board_readback": "fail",
                 "assembly_map_readback": "fail",
                 "topology_matrix_readback": "fail",

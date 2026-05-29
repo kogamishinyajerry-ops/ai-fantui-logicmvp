@@ -157,6 +157,8 @@
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
   const reviewIndexBuildSummary = $("demo-reconstruction-review-index-build-summary");
   const reviewIndexBuildList = $("demo-reconstruction-review-index-build-list");
+  const reviewIndexEquationSummary = $("demo-reconstruction-review-index-equation-summary");
+  const reviewIndexEquationList = $("demo-reconstruction-review-index-equation-list");
   const reviewIndexOutputSummary = $("demo-reconstruction-review-index-output-summary");
   const reviewIndexOutputList = $("demo-reconstruction-review-index-output-list");
   const reviewIndexScenarioSummary = $("demo-reconstruction-review-index-scenario-summary");
@@ -546,6 +548,68 @@
       `${steps.length}/5 句 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
     );
     setReviewIndexBuildState(currentTraceStep && currentTraceStep.anchor ? currentTraceStep.anchor : steps[0].anchor || "");
+  }
+
+  function setReviewIndexEquationState(recordId) {
+    if (!reviewIndexEquationList) return;
+    reviewIndexEquationList.querySelectorAll("[data-review-index-equation]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexEquation === recordId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexEquation(recordId) {
+    const record = LOGIC_EQUATION_RECORDS.find((item) => item.id === recordId);
+    if (!record) return;
+    activateLogicEquationRecord(record);
+    setReviewIndexTarget("demo-reconstruction-logic-equation-board");
+    setReviewIndexEquationState(record.id);
+    const target = $("demo-reconstruction-logic-equation-board");
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexEquationRail() {
+    if (!reviewIndexEquationList) return;
+    reviewIndexEquationList.innerHTML = "";
+    if (!LOGIC_EQUATION_RECORDS.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexEquation = "empty";
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = "等待方程";
+      reviewIndexEquationList.appendChild(button);
+      setText(reviewIndexEquationSummary, "等待方程接入");
+      return;
+    }
+
+    const states = LOGIC_EQUATION_RECORDS.map((record) => ({
+      record,
+      state: logicEquationState(record),
+    }));
+    const readyCount = states.filter((item) => item.state.ready).length;
+    states.forEach(({record, state}) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexEquation = record.id;
+      button.setAttribute("aria-pressed", currentCircuitFocus.id === record.focusId ? "true" : "false");
+
+      const title = document.createElement("strong");
+      title.textContent = record.title;
+      const expression = document.createElement("code");
+      expression.textContent = record.expression;
+      const metric = document.createElement("span");
+      metric.textContent = `${state.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${state.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      const meta = document.createElement("small");
+      meta.textContent = `${record.anchor} · ${record.output}`;
+
+      button.append(title, expression, metric, meta);
+      button.addEventListener("click", () => applyReviewIndexEquation(record.id));
+      reviewIndexEquationList.appendChild(button);
+    });
+    setText(reviewIndexEquationSummary, `${readyCount}/${LOGIC_EQUATION_RECORDS.length} 方程 · L1-L4 到 THR_LOCK`);
+    const activeEquation = LOGIC_EQUATION_RECORDS.find((record) => record.focusId === currentCircuitFocus.id);
+    setReviewIndexEquationState(activeEquation ? activeEquation.id : "");
   }
 
   function setReviewIndexOutputState(targetId) {
@@ -1188,6 +1252,7 @@
     if (state.step) setSelectedTrace(state.step, {writeHash: false});
     applyEmbeddedTraceFocus(record.focusKind, record.focusId);
     setLogicEquationRowState(record.id);
+    setReviewIndexEquationState(record.id);
   }
 
   function renderLogicEquationBoard() {
@@ -1257,6 +1322,7 @@
       li.appendChild(button);
       logicEquationList.appendChild(li);
     });
+    renderReviewIndexEquationRail();
   }
 
   function setTopologyRowState(wireId) {
@@ -4128,6 +4194,7 @@
     setCoverageButtonTabStops(kind, id);
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
+    setReviewIndexEquationState(equation ? equation.id : "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
       .forEach((button) => {
@@ -4161,6 +4228,7 @@
     setOutputPathWireState("");
     setOutputMaturityCellState("", "");
     setLogicEquationRowState("");
+    setReviewIndexEquationState("");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
