@@ -491,6 +491,133 @@ h2 { margin-bottom: 0; font-size: 18px; }
   padding: 8px 10px;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-logic-equation-board {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.demo-reconstruction-logic-equation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.demo-reconstruction-logic-equation-head h3 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 15px;
+}
+.demo-reconstruction-logic-equation-head p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.demo-reconstruction-logic-equation-head > strong {
+  min-width: 220px;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-logic-equation-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-reconstruction-logic-equation-item {
+  min-width: 0;
+}
+.demo-reconstruction-logic-equation-row {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 172px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #1f2937;
+  cursor: pointer;
+  padding: 10px;
+  text-align: left;
+}
+.demo-reconstruction-logic-equation-row:hover,
+.demo-reconstruction-logic-equation-row:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-logic-equation-row[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+}
+.demo-reconstruction-logic-equation-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.demo-reconstruction-logic-equation-row-head strong {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-logic-equation-row-head span {
+  color: #2563eb;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.demo-reconstruction-logic-equation-row code {
+  display: block;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 7px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-logic-equation-row p {
+  margin: 0;
+  color: #475467;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-logic-equation-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.demo-reconstruction-logic-equation-chips span {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475467;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 2px 6px;
+}
+.demo-reconstruction-logic-equation-item[data-logic-equation-status="pass"] .demo-reconstruction-logic-equation-chips span:last-child {
+  border-color: #99f6e4;
+  background: #ccfbf1;
+  color: #0f766e;
+}
 .demo-reconstruction-coverage-matrix {
   display: grid;
   gap: 12px;
@@ -2256,6 +2383,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-requirement-ledger-head,
   .demo-reconstruction-trace-head,
   .demo-reconstruction-trace-grid,
+  .demo-reconstruction-logic-equation-head,
   .demo-reconstruction-playback-head,
   .demo-reconstruction-assembly-head,
   .demo-reconstruction-ladder-head,
@@ -2311,6 +2439,13 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   }
   .demo-reconstruction-trace-head {
     display: grid;
+  }
+  .demo-reconstruction-logic-equation-head {
+    display: grid;
+  }
+  .demo-reconstruction-logic-equation-head > strong {
+    min-width: 0;
+    text-align: left;
   }
   .demo-reconstruction-playback-head {
     display: grid;
@@ -2400,6 +2535,9 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-trace-card-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-logic-equation-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .demo-reconstruction-review-index-list {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -2462,6 +2600,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
     grid-template-columns: 1fr;
   }
   .demo-reconstruction-trace-card-list,
+  .demo-reconstruction-logic-equation-list,
   .demo-reconstruction-review-index-list,
   .demo-reconstruction-playback-steps,
   .demo-reconstruction-assembly-list,

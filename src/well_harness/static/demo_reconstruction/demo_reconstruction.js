@@ -15,6 +15,52 @@
     {id: "pdu_motor", label: "PDU Motor"},
     {id: "thr_lock", label: "THR_LOCK"},
   ];
+  const LOGIC_EQUATION_RECORDS = [
+    {
+      id: "logic1",
+      anchor: "P035-S01",
+      title: "L1 · TLS 解锁供电",
+      expression: "RA < 6 ft AND SW1 AND NOT inhibited",
+      output: "TLS115 -> TLS_Unlocked",
+      focusKind: "wire",
+      focusId: "wire_logic1_tls115",
+      sourceNodes: ["radio_altitude_ft", "sw1", "reverser_inhibited"],
+      outputNodes: ["tls115", "tls_unlocked"],
+    },
+    {
+      id: "logic2",
+      anchor: "P035-S02",
+      title: "L2 · ETRAC 540VDC",
+      expression: "SW2 AND ground AND engine_running AND eec_enable AND NOT inhibited",
+      output: "ETRAC 540VDC",
+      focusKind: "wire",
+      focusId: "wire_logic2_etrac",
+      sourceNodes: ["sw2", "aircraft_on_ground", "engine_running", "eec_enable", "reverser_inhibited"],
+      outputNodes: ["etrac_540v"],
+    },
+    {
+      id: "logic3",
+      anchor: "P035-S03",
+      title: "L3 · EEC / PLS / PDU",
+      expression: "TLS_Unlocked AND TRA <= -11.74 deg AND N1K AND ground AND NOT inhibited",
+      output: "EEC Deploy + PLS power + PDU motor",
+      focusKind: "wire",
+      focusId: "wire_logic3_pdu",
+      sourceNodes: ["tls_unlocked", "n1k", "aircraft_on_ground", "reverser_inhibited"],
+      outputNodes: ["eec_deploy", "pls_power", "pdu_motor"],
+    },
+    {
+      id: "logic4",
+      anchor: "P035-S05",
+      title: "L4 · THR_LOCK 释放",
+      expression: "VDT90 AND L3 AND reverse range AND ground AND engine_running",
+      output: "THR_LOCK release",
+      focusKind: "wire",
+      focusId: "wire_logic4_thr_lock",
+      sourceNodes: ["vdt90", "logic3", "aircraft_on_ground", "engine_running"],
+      outputNodes: ["thr_lock"],
+    },
+  ];
   const TRACE_HIGHLIGHT_STYLE_ID = "demo-reconstruction-trace-highlight-style";
 
   const $ = (id) => document.getElementById(id);
@@ -58,6 +104,8 @@
   const selectedWires = $("demo-reconstruction-selected-wires");
   const selectedFolded = $("demo-reconstruction-selected-folded");
   const embeddedHighlightStatus = $("demo-reconstruction-embedded-highlight-status");
+  const logicEquationSummary = $("demo-reconstruction-logic-equation-summary");
+  const logicEquationList = $("demo-reconstruction-logic-equation-list");
   const coverageContract = $("demo-reconstruction-coverage-contract");
   const coverageSearch = $("demo-reconstruction-coverage-search");
   const coverageFilterStatus = $("demo-reconstruction-coverage-filter-status");
@@ -638,6 +686,108 @@
       outputMaturitySummary,
       `${items.length}/5 步 · ${OUTPUT_PATH_TARGETS.length} 输出 · 最终 ${finalReadyCount}/${OUTPUT_PATH_TARGETS.length} 接入`,
     );
+  }
+
+  function traceStepByAnchor(anchor) {
+    return traceSteps.find((step) => step.anchor === anchor) || null;
+  }
+
+  function logicEquationState(record) {
+    const step = traceStepByAnchor(record.anchor);
+    const stepIndex = step ? traceSteps.indexOf(step) : -1;
+    const contract = stepIndex >= 0 ? cumulativeTraceContract(stepIndex) : {node_ids: [], wire_ids: []};
+    const contractNodes = new Set(contract.node_ids || []);
+    const contractWires = new Set(contract.wire_ids || []);
+    const nodeReady = [...(record.sourceNodes || []), ...(record.outputNodes || [])].every((nodeId) => contractNodes.has(nodeId));
+    const wireReady = record.focusKind !== "wire" || contractWires.has(record.focusId);
+    return {
+      step,
+      contract,
+      ready: Boolean(step && nodeReady && wireReady),
+    };
+  }
+
+  function setLogicEquationRowState(recordId) {
+    document.querySelectorAll("[data-logic-equation-row]").forEach((button) => {
+      const selected = button.dataset.logicEquationRow === recordId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function activateLogicEquationRecord(record) {
+    const state = logicEquationState(record);
+    if (state.step) setSelectedTrace(state.step, {writeHash: false});
+    applyEmbeddedTraceFocus(record.focusKind, record.focusId);
+    setLogicEquationRowState(record.id);
+  }
+
+  function renderLogicEquationBoard() {
+    if (!logicEquationList) return;
+    logicEquationList.innerHTML = "";
+    const states = LOGIC_EQUATION_RECORDS.map((record) => ({
+      record,
+      state: logicEquationState(record),
+    }));
+    const readyCount = states.filter((item) => item.state.ready).length;
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    setText(
+      logicEquationSummary,
+      `${readyCount}/${LOGIC_EQUATION_RECORDS.length} 方程 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+
+    if (!states.length) {
+      const empty = document.createElement("li");
+      empty.textContent = "L1-L4 方程暂无数据";
+      logicEquationList.appendChild(empty);
+      return;
+    }
+
+    states.forEach(({record, state}) => {
+      const li = document.createElement("li");
+      li.className = "demo-reconstruction-logic-equation-item";
+      li.dataset.logicEquation = record.id;
+      li.dataset.logicEquationAnchor = record.anchor;
+      li.dataset.logicEquationStatus = state.ready ? "pass" : "wait";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-logic-equation-row";
+      button.dataset.logicEquationRow = record.id;
+      button.dataset.logicEquationFocusKind = record.focusKind;
+      button.dataset.logicEquationFocusId = record.focusId;
+      button.setAttribute("aria-pressed", currentCircuitFocus.id === record.focusId ? "true" : "false");
+      button.addEventListener("click", () => activateLogicEquationRecord(record));
+
+      const head = document.createElement("div");
+      head.className = "demo-reconstruction-logic-equation-row-head";
+      const title = document.createElement("strong");
+      title.textContent = record.title;
+      const anchor = document.createElement("span");
+      anchor.textContent = record.anchor;
+      head.append(title, anchor);
+
+      const expression = document.createElement("code");
+      expression.textContent = record.expression;
+
+      const output = document.createElement("p");
+      output.textContent = `${record.output} · ${record.focusId}`;
+
+      const chips = document.createElement("div");
+      chips.className = "demo-reconstruction-logic-equation-chips";
+      [
+        `${state.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`,
+        `${state.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+        state.ready ? "可追踪" : "等待映射",
+      ].forEach((value) => {
+        const chip = document.createElement("span");
+        chip.textContent = value;
+        chips.appendChild(chip);
+      });
+
+      button.append(head, expression, output, chips);
+      li.appendChild(button);
+      logicEquationList.appendChild(li);
+    });
   }
 
   function setTopologyRowState(wireId) {
@@ -1962,6 +2112,8 @@
   function markCircuitObjectFocus(kind, id) {
     currentCircuitFocus = {kind, id};
     setCoverageButtonTabStops(kind, id);
+    const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
+    setLogicEquationRowState(equation ? equation.id : "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
       .forEach((button) => {
@@ -1979,6 +2131,7 @@
     resetTopologyReadback();
     setOutputPathWireState("");
     setOutputMaturityCellState("", "");
+    setLogicEquationRowState("");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
@@ -2501,6 +2654,7 @@
     setText(docxEntryCount, `${coverage.source_entry_count || 0} 条源文档记录`);
     setText(docxSequenceCount, `${coverage.sequence_step_count || 0} 步`);
     renderTraceBoard(payload);
+    renderLogicEquationBoard();
     renderCoverageMatrix(payload);
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
@@ -2538,6 +2692,7 @@
     updateWireEndpointMapFromWires(wires);
     renderTopologyMatrix();
     refreshEmbeddedReviewFromCircuit();
+    renderLogicEquationBoard();
     updateReviewPacketFromState();
     updateReviewIndexStatus();
   }
