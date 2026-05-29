@@ -1128,6 +1128,129 @@ h2 { margin-bottom: 0; font-size: 18px; }
 .demo-reconstruction-topology-item[hidden] {
   display: none;
 }
+.demo-reconstruction-output-path-lane {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 9px;
+}
+.demo-reconstruction-output-path-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.demo-reconstruction-output-path-head h4 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 13px;
+}
+.demo-reconstruction-output-path-head p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.demo-reconstruction-output-path-head > strong {
+  min-width: 230px;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #0f766e;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 5px 8px;
+  text-align: right;
+}
+.demo-reconstruction-output-path-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.demo-reconstruction-output-path-targets button {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 4px 7px;
+}
+.demo-reconstruction-output-path-targets button:hover,
+.demo-reconstruction-output-path-targets button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-output-path-targets button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+  color: #0f766e;
+  box-shadow: inset 0 0 0 1px #0f766e;
+}
+.demo-reconstruction-output-path-readback {
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #1d4ed8;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 7px 8px;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-output-path-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  margin: 0;
+  overflow: auto;
+  padding-left: 20px;
+}
+.demo-reconstruction-output-path-item {
+  min-width: 0;
+}
+.demo-reconstruction-output-path-row {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2937;
+  cursor: pointer;
+  padding: 7px 8px;
+  text-align: left;
+}
+.demo-reconstruction-output-path-row:hover,
+.demo-reconstruction-output-path-row:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-output-path-row[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+  box-shadow: inset 0 0 0 1px #0f766e;
+}
+.demo-reconstruction-output-path-row strong {
+  color: #2563eb;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-output-path-row span,
+.demo-reconstruction-output-path-row small {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .demo-reconstruction-topology-row {
   display: grid;
   gap: 6px;
@@ -1893,6 +2016,16 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
     text-align: left;
     white-space: normal;
   }
+  .demo-reconstruction-output-path-head {
+    display: grid;
+  }
+  .demo-reconstruction-output-path-head > strong {
+    min-width: 0;
+    text-align: left;
+  }
+  .demo-reconstruction-output-path-list {
+    grid-template-columns: 1fr;
+  }
   .demo-reconstruction-topology-head > strong {
     min-width: 0;
     text-align: left;
@@ -1963,6 +2096,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-playback-steps,
   .demo-reconstruction-assembly-list,
   .demo-reconstruction-ladder-list,
+  .demo-reconstruction-output-path-list,
   .demo-reconstruction-custody-list {
     grid-template-columns: 1fr;
   }

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p12">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p12" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p13">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p13" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -279,6 +279,20 @@
           <input id="demo-reconstruction-topology-search" type="search" autocomplete="off" placeholder="wire / L4 / THR_LOCK / P035-S05">
           <div id="demo-reconstruction-topology-step-filter" class="demo-reconstruction-topology-step-filter" aria-label="按 P035 步骤筛选拓扑连线"></div>
           <strong id="demo-reconstruction-topology-filter-status">23/23 连线</strong>
+        </div>
+        <div id="demo-reconstruction-output-path-lane" class="demo-reconstruction-output-path-lane" data-output-path-lane="demo-output-upstream" aria-label="demo 输出路径追踪">
+          <div class="demo-reconstruction-output-path-head">
+            <div>
+              <h4>输出路径追踪</h4>
+              <p>选择一个 demo 输出，反查它在完整电路里的上游连线和首次装配步骤。</p>
+            </div>
+            <strong id="demo-reconstruction-output-path-summary">等待输出路径</strong>
+          </div>
+          <div id="demo-reconstruction-output-path-targets" class="demo-reconstruction-output-path-targets" aria-label="选择 demo 输出"></div>
+          <div id="demo-reconstruction-output-path-readback" class="demo-reconstruction-output-path-readback" aria-live="polite">等待选择输出</div>
+          <ol id="demo-reconstruction-output-path-list" class="demo-reconstruction-output-path-list">
+            <li>正在读取输出路径</li>
+          </ol>
         </div>
         <ol id="demo-reconstruction-topology-list" class="demo-reconstruction-topology-list">
           <li>正在读取完整电路拓扑</li>
