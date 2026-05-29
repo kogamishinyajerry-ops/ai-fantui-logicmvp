@@ -3754,8 +3754,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "62 条源记录" in source_map_review["circuitSnapshotSource"]
             and "20/20 节点" in source_map_review["circuitSnapshotCircuit"]
             and "23/23 连线" in source_map_review["circuitSnapshotCircuit"]
-            and "完整 demo 电路闭合" in source_map_review["circuitSnapshotOutput"]
-            and "P035-S01" in source_map_review["circuitSnapshotReview"]
+            and "完整电路闭合" in source_map_review["circuitSnapshotOutput"]
+            and "反推锁可读" in source_map_review["circuitSnapshotOutput"]
+            and "第 1 步" in source_map_review["circuitSnapshotReview"]
+            and "可审" in source_map_review["circuitSnapshotReview"]
             and "P035-S01" in source_map_review["circuitSnapshotReadback"]
             and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
             and "THR_LOCK" in source_map_review["circuitSnapshotFinalText"]
@@ -3875,7 +3877,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "THR ON" in review_index_complete_action["outputText"]
             and "对象" in review_index_complete_action["proofPathText"]
             and "完整交付态已启用" in review_index_complete_action["completeBannerText"]
-            and "P035-S05" in review_index_complete_action["completeBannerText"]
+            and "第 5 步" in review_index_complete_action["completeBannerText"]
+            and "反推锁" in review_index_complete_action["completeBannerText"]
             and review_index_complete_action["completeBannerHidden"] is False
             and review_index_complete_action["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
             and review_index_complete_action["completeModeLinkText"] == "固定链接"
@@ -3895,7 +3898,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "THR ON" in review_index_complete_link["outputText"]
             and "对象" in review_index_complete_link["proofPathText"]
             and "完整交付态已启用" in review_index_complete_link["completeBannerText"]
-            and "P035-S05" in review_index_complete_link["completeBannerText"]
+            and "第 5 步" in review_index_complete_link["completeBannerText"]
+            and "反推锁" in review_index_complete_link["completeBannerText"]
             and review_index_complete_link["completeBannerHidden"] is False
             and review_index_complete_link["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
             and review_index_complete_link["completeModeLinkText"] == "固定链接"

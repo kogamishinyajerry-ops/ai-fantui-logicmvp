@@ -157,7 +157,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-complete-mode-link"' in html
     assert 'href="/demo-reconstruction#complete=1"' in html
     assert "完整交付态已启用" in html
-    assert "P035-S05 · THR_LOCK · 最大反推 · 5/5 验收" in html
+    assert "第 5 步 · 反推锁 · 最大反推 · 5/5 验收" in html
     assert "5/5 gate" not in html
     assert "等待 gate" not in html
     assert "固定链接" in html
@@ -172,10 +172,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-chain"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
-    assert "原始需求到 demo.html 完整逻辑电路" in html
-    assert "查看逐句链路" in html
+    assert "需求到可运行完整逻辑电路" in html
+    assert "查看链路" in html
     assert 'id="demo-reconstruction-detail-drawer"' in html
-    assert "打开详细审查区" in html
+    assert "查看验收详情" in html
     assert "等待闭环链路" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
@@ -374,8 +374,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-coverage-wire-list"' in html
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
-    assert "demo.html 复刻 MVP 控制台" in html
-    assert "逐句蓝图" in html
+    assert "反推控制逻辑复刻" in html
+    assert "电路快照" in html
     assert "审阅路径索引" in html
     assert "原始 DOCX 逐句到完整电路" in html
     assert "需求覆盖账本" in html
@@ -399,7 +399,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "demo-reconstruction-comparison-table" not in html
     assert "demo-reconstruction-compare-grid" not in html
     assert "DeepSeek live replay" not in script
-    assert "读取 golden demo 控制台" in script
+    assert "基准控制台已读取" in script
     assert "DOCX_SENTENCE_CIRCUIT_ENDPOINT" in script
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "renderTraceBoard" in script
@@ -859,8 +859,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "62 条源记录" in payload["source_map_review"]["circuitSnapshotSource"]
     assert "20/20 节点" in payload["source_map_review"]["circuitSnapshotCircuit"]
     assert "23/23 连线" in payload["source_map_review"]["circuitSnapshotCircuit"]
-    assert "完整 demo 电路闭合" in payload["source_map_review"]["circuitSnapshotOutput"]
-    assert "P035-S01" in payload["source_map_review"]["circuitSnapshotReview"]
+    assert "完整电路闭合" in payload["source_map_review"]["circuitSnapshotOutput"]
+    assert "反推锁可读" in payload["source_map_review"]["circuitSnapshotOutput"]
+    assert "第 1 步" in payload["source_map_review"]["circuitSnapshotReview"]
+    assert "可审" in payload["source_map_review"]["circuitSnapshotReview"]
     assert "P035-S01" in payload["source_map_review"]["circuitSnapshotReadback"]
     assert "P035-S05" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert "THR_LOCK" in payload["source_map_review"]["circuitSnapshotFinalText"]

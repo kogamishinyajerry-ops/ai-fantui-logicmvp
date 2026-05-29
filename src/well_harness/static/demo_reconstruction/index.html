@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
+<title>反推控制逻辑复刻 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
 <link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p35">
 <script src="/demo_reconstruction/demo_reconstruction.js?v=p35" defer></script>
@@ -25,7 +25,7 @@
         <div class="unified-nav-advanced-group">
           <span class="unified-nav-advanced-group-label">demo 对照</span>
           <a href="/demo-reconstruction" class="unified-nav-link" data-nav-key="demo-reconstruction">高保真复刻</a>
-          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">原版 demo.html</a>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">基准控制台</a>
         </div>
         <div class="unified-nav-advanced-group">
           <span class="unified-nav-advanced-group-label">电路图</span>
@@ -50,48 +50,48 @@
 <main class="demo-reconstruction-shell" data-demo-mvp-console="true" data-console-palette="codex-light">
   <section class="demo-reconstruction-hero" aria-labelledby="demo-reconstruction-title">
     <div>
-      <p class="demo-reconstruction-kicker">DEMO.HTML MVP COCKPIT</p>
-      <h1 id="demo-reconstruction-title">demo.html 复刻 MVP 控制台</h1>
-      <p id="demo-reconstruction-mode">当前模式：原始反推需求 DOCX 到 demo.html 完整电路</p>
+      <p class="demo-reconstruction-kicker">控制逻辑</p>
+      <h1 id="demo-reconstruction-title">反推控制逻辑复刻</h1>
+      <p id="demo-reconstruction-mode">当前模式：需求到可运行完整电路</p>
     </div>
     <div class="demo-reconstruction-verdict">
       <strong id="demo-reconstruction-fidelity">复刻度：20/20 节点 · 23/23 连线</strong>
-      <span id="demo-reconstruction-source-state">读取 golden demo 控制台</span>
+      <span id="demo-reconstruction-source-state">基准控制台已读取</span>
     </div>
   </section>
   <section id="demo-reconstruction-complete-mode-banner" class="demo-reconstruction-complete-mode-banner" aria-live="polite" hidden>
     <strong>完整交付态已启用</strong>
-    <span>P035-S05 · THR_LOCK · 最大反推 · 5/5 验收</span>
+    <span>第 5 步 · 反推锁 · 最大反推 · 5/5 验收</span>
     <a id="demo-reconstruction-complete-mode-link" href="/demo-reconstruction#complete=1">固定链接</a>
   </section>
-  <section id="demo-reconstruction-circuit-snapshot" class="demo-reconstruction-circuit-snapshot" data-circuit-snapshot="docx-to-demo-complete" aria-label="逐句到完整 demo.html 电路快照">
+  <section id="demo-reconstruction-circuit-snapshot" class="demo-reconstruction-circuit-snapshot" data-circuit-snapshot="docx-to-demo-complete" aria-label="需求到完整电路快照">
     <div class="demo-reconstruction-circuit-snapshot-head">
       <div>
-        <p class="demo-reconstruction-kicker">逐句蓝图</p>
-        <h2>原始需求到 demo.html 完整逻辑电路</h2>
+        <p class="demo-reconstruction-kicker">电路快照</p>
+        <h2>需求到可运行完整逻辑电路</h2>
       </div>
-      <strong id="demo-reconstruction-circuit-snapshot-status">等待逐句电路</strong>
+      <strong id="demo-reconstruction-circuit-snapshot-status">等待电路</strong>
     </div>
     <div class="demo-reconstruction-circuit-snapshot-metrics" aria-label="完整电路快照指标">
-      <div><span>源句覆盖</span><strong id="demo-reconstruction-circuit-snapshot-source">等待 DOCX</strong></div>
+      <div><span>来源覆盖</span><strong id="demo-reconstruction-circuit-snapshot-source">等待来源</strong></div>
       <div><span>完整电路</span><strong id="demo-reconstruction-circuit-snapshot-circuit">等待电路</strong></div>
-      <div><span>demo 输出</span><strong id="demo-reconstruction-circuit-snapshot-output">等待输出</strong></div>
-      <div><span>审查入口</span><strong id="demo-reconstruction-circuit-snapshot-review">等待选择</strong></div>
+      <div><span>输出状态</span><strong id="demo-reconstruction-circuit-snapshot-output">等待输出</strong></div>
+      <div><span>当前步骤</span><strong id="demo-reconstruction-circuit-snapshot-review">等待选择</strong></div>
     </div>
     <details id="demo-reconstruction-circuit-snapshot-details" class="demo-reconstruction-circuit-snapshot-details">
-      <summary>查看逐句链路</summary>
-      <div id="demo-reconstruction-circuit-snapshot-chain" class="demo-reconstruction-circuit-snapshot-chain" aria-label="DOCX 到 demo 输出完整电路链路">
+      <summary>查看链路</summary>
+      <div id="demo-reconstruction-circuit-snapshot-chain" class="demo-reconstruction-circuit-snapshot-chain" aria-label="需求到输出完整电路链路">
         <button type="button" data-circuit-snapshot-chain-step="empty" aria-pressed="false">等待闭环链路</button>
       </div>
-      <div id="demo-reconstruction-circuit-snapshot-list" class="demo-reconstruction-circuit-snapshot-list" aria-label="P035 逐句电路快照">
-        <button type="button" data-circuit-snapshot-step="empty" aria-pressed="false">等待逐句电路</button>
+      <div id="demo-reconstruction-circuit-snapshot-list" class="demo-reconstruction-circuit-snapshot-list" aria-label="步骤电路快照">
+        <button type="button" data-circuit-snapshot-step="empty" aria-pressed="false">等待步骤电路</button>
       </div>
-      <p id="demo-reconstruction-circuit-snapshot-readback" class="demo-reconstruction-circuit-snapshot-readback">等待逐句生成完整电路。</p>
+      <p id="demo-reconstruction-circuit-snapshot-readback" class="demo-reconstruction-circuit-snapshot-readback">等待生成完整电路。</p>
     </details>
   </section>
 
   <details id="demo-reconstruction-detail-drawer" class="demo-reconstruction-detail-drawer">
-    <summary>打开详细审查区</summary>
+    <summary>查看验收详情</summary>
   <section id="demo-reconstruction-review-index" class="demo-reconstruction-review-index" data-review-index="demo-reconstruction" aria-label="审阅路径索引">
     <div class="demo-reconstruction-review-index-head">
       <div>
