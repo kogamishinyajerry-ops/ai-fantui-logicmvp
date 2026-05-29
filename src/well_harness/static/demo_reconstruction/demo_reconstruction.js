@@ -4062,7 +4062,7 @@
       circuitSnapshotReadback,
       `${step.anchor || "P035"} · ${record.sourceAnchor} -> ${record.predicate.gate} -> ${record.predicate.output} · ${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputLabel}`,
     );
-    setText(circuitSnapshotReview, `${step.anchor || "P035"} · 蓝图可审`);
+    setText(circuitSnapshotReview, `第 ${(safeIndex >= 0 ? safeIndex : 0) + 1} 步 · 可审`);
   }
 
   function applyCircuitSnapshotStep(anchor) {
@@ -4085,24 +4085,27 @@
       empty.type = "button";
       empty.dataset.circuitSnapshotStep = "empty";
       empty.setAttribute("aria-pressed", "false");
-      empty.textContent = "等待逐句电路";
+      empty.textContent = "等待步骤电路";
       circuitSnapshotList.appendChild(empty);
-      setText(circuitSnapshotStatus, "等待逐句电路");
-      setText(circuitSnapshotSource, "等待 DOCX");
+      setText(circuitSnapshotStatus, "等待电路");
+      setText(circuitSnapshotSource, "等待来源");
       setText(circuitSnapshotCircuit, "等待电路");
       setText(circuitSnapshotOutput, "等待输出");
       setText(circuitSnapshotReview, "等待选择");
-      setText(circuitSnapshotReadback, "等待逐句生成完整电路。");
+      setText(circuitSnapshotReadback, "等待生成完整电路。");
       renderCircuitSnapshotChain({node_ids: [], wire_ids: []});
       return;
     }
 
     const finalStep = items[items.length - 1] || {};
     const finalContract = cumulativeTraceContract(items.length - 1);
+    const outputStatus = assemblyOutputLabelForStep(finalStep, finalContract)
+      .replace("完整 demo 电路闭合", "完整电路闭合")
+      .replace("THR_LOCK 输出可读", "反推锁可读");
     setText(circuitSnapshotStatus, `${items.length}/5 句 · 完整电路闭合`);
     setText(circuitSnapshotSource, `${sourceEntries.length} 条源记录 · ${items.length}/5 句`);
     setText(circuitSnapshotCircuit, `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`);
-    setText(circuitSnapshotOutput, `${OUTPUT_PATH_TARGETS.length}/5 输出 · ${assemblyOutputLabelForStep(finalStep, finalContract)}`);
+    setText(circuitSnapshotOutput, `${OUTPUT_PATH_TARGETS.length}/5 输出 · ${outputStatus}`);
     renderCircuitSnapshotChain(finalContract);
 
     items.forEach((step, index) => {
@@ -5603,19 +5606,19 @@
 
     const stored = circuitViewFromDrawing(readJson(window.localStorage.getItem(DRAWING_KEY)));
     if (stored) {
-      renderCircuit(stored, "读取本地复刻草稿");
+      renderCircuit(stored, "本地草稿已读取");
       return;
     }
     try {
       const replay = await loadReplayCircuit();
       if (replay) {
-        renderCircuit(replay, "读取 golden demo 控制台");
+        renderCircuit(replay, "基准控制台已读取");
         return;
       }
     } catch (error) {
       // Keep the static acceptance text visible; the page remains read-only.
     }
-    renderCircuit({nodes: [], wires: []}, "未找到本地复刻草稿");
+    renderCircuit({nodes: [], wires: []}, "等待电路数据");
   }
 
   boot();
