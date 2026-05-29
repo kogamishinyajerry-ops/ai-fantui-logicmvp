@@ -2628,8 +2628,14 @@
 
   function compactSummary(snapshot, presetId) {
     if (!snapshot) return "选择演示状态";
-    if (presetId === "max-reverse") return "最大反推链路已释放";
-    if (presetId === "inhibit-block") return "抑制生效，反推锁保持阻塞";
+    const state = compactStatusLabel(snapshot.status);
+    const lock = compactLockLabel(snapshot.thr);
+    if (presetId === "max-reverse") {
+      return state === "可用" && lock === "释放" ? "最大反推链路已释放" : "等待最大反推结果";
+    }
+    if (presetId === "inhibit-block") {
+      return state === "阻塞" && lock === "阻塞" ? "抑制生效，反推锁保持阻塞" : "等待抑制阻塞结果";
+    }
     return snapshot.summary || "等待输出";
   }
 

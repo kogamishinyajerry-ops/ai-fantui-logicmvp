@@ -2401,6 +2401,34 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 if frame is None:
                     raise RuntimeError("demo reconstruction console iframe did not load")
                 frame.wait_for_selector("#fan-chain-svg", timeout=5000)
+                frame.locator('[data-preset="max-reverse"]').click()
+                page.wait_for_function(
+                    """() => {
+                        return document.querySelector("#demo-reconstruction-compact-runway-status")?.textContent?.includes("最大反推")
+                            && document.querySelector("#demo-reconstruction-compact-runway-lock")?.textContent?.includes("释放");
+                    }""",
+                    timeout=5000,
+                )
+                frame.locator('[data-preset="inhibit-block"]').click()
+                page.wait_for_function(
+                    """() => {
+                        return document.querySelector("#demo-reconstruction-compact-runway-status")?.textContent?.includes("抑制阻塞")
+                            && document.querySelector("#demo-reconstruction-compact-runway-lock")?.textContent?.includes("阻塞");
+                    }""",
+                    timeout=5000,
+                )
+                compact_runway_frame_sync_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
+                            statusText: text("#demo-reconstruction-compact-runway-status"),
+                            stateText: text("#demo-reconstruction-compact-runway-state"),
+                            lockText: text("#demo-reconstruction-compact-runway-lock"),
+                            summaryText: text("#demo-reconstruction-compact-runway-summary"),
+                        };
+                    }"""
+                )
                 embedded_palette = frame.evaluate(
                     """() => {
                         const readStyle = (selector, property) => {
@@ -3810,6 +3838,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_inhibit_review["stateText"] == "阻塞"
             and compact_runway_inhibit_review["lockText"] == "阻塞"
             and "阻塞" in compact_runway_inhibit_review["summaryText"]
+            and compact_runway_frame_sync_review["pressed"] == ["inhibit-block"]
+            and compact_runway_frame_sync_review["statusText"] == "抑制阻塞"
+            and compact_runway_frame_sync_review["stateText"] == "阻塞"
+            and compact_runway_frame_sync_review["lockText"] == "阻塞"
+            and "阻塞" in compact_runway_frame_sync_review["summaryText"]
         )
         else "fail",
         "docx_sentence_circuit_map": "pass"
@@ -4854,6 +4887,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "compact_runway_initial_review": compact_runway_initial_review,
         "compact_runway_max_review": compact_runway_max_review,
         "compact_runway_inhibit_review": compact_runway_inhibit_review,
+        "compact_runway_frame_sync_review": compact_runway_frame_sync_review,
         "source_map_review": source_map_review,
         "requirement_ledger_context_review": requirement_ledger_context_review,
         "requirement_ledger_action_review": requirement_ledger_action_review,

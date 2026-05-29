@@ -859,6 +859,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_inhibit_review"]["statusText"] == "抑制阻塞"
     assert payload["compact_runway_inhibit_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_inhibit_review"]["lockText"] == "阻塞"
+    assert payload["compact_runway_frame_sync_review"]["pressed"] == ["inhibit-block"]
+    assert payload["compact_runway_frame_sync_review"]["statusText"] == "抑制阻塞"
+    assert payload["compact_runway_frame_sync_review"]["stateText"] == "阻塞"
+    assert payload["compact_runway_frame_sync_review"]["lockText"] == "阻塞"
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["reviewIndexButtonCount"] == 13
     assert payload["source_map_review"]["requirementLedgerRowCount"] == 67
