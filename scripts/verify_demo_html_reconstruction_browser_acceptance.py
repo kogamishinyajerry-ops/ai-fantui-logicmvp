@@ -5303,16 +5303,27 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             scenario_comparator_review["buttonCount"] == 2
             and "最大反推" in scenario_comparator_review["maxText"]
+            and "目标 反推锁释放" in scenario_comparator_review["maxText"]
+            and "THR ON" not in scenario_comparator_review["maxText"]
             and "抑制阻塞" in scenario_comparator_review["inhibitText"]
+            and "目标 反推锁阻塞" in scenario_comparator_review["inhibitText"]
+            and "THR BLOCKED" not in scenario_comparator_review["inhibitText"]
             and scenario_comparator_max_review["activeActions"] == ["max-reverse"]
             and "/2" in scenario_comparator_max_review["statusText"]
             and "最大反推" in scenario_comparator_max_review["readbackText"]
-            and "THR ON" in scenario_comparator_max_review["readbackText"]
+            and "展开可用" in scenario_comparator_max_review["readbackText"]
+            and "反推锁释放" in scenario_comparator_max_review["readbackText"]
+            and "解锁电源通电" in scenario_comparator_max_review["readbackText"]
+            and "作动器供电" in scenario_comparator_max_review["readbackText"]
+            and "THR ON" not in scenario_comparator_max_review["readbackText"]
             and scenario_comparator_max_review["output"] == "ON"
             and scenario_comparator_inhibit_review["activeActions"] == ["inhibit-block"]
             and "2/2" in scenario_comparator_inhibit_review["statusText"]
             and "抑制阻塞" in scenario_comparator_inhibit_review["readbackText"]
-            and "THR BLOCKED" in scenario_comparator_inhibit_review["readbackText"]
+            and "安全阻塞" in scenario_comparator_inhibit_review["readbackText"]
+            and "反推锁阻塞" in scenario_comparator_inhibit_review["readbackText"]
+            and "解锁电源关闭" in scenario_comparator_inhibit_review["readbackText"]
+            and "THR BLOCKED" not in scenario_comparator_inhibit_review["readbackText"]
             and scenario_comparator_inhibit_review["output"] == "BLOCKED"
         )
         else "fail",
