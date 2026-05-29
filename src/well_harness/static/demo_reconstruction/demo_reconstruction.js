@@ -155,6 +155,8 @@
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
+  const reviewIndexTourSummary = $("demo-reconstruction-review-index-tour-summary");
+  const reviewIndexTourList = $("demo-reconstruction-review-index-tour-list");
   const reviewIndexEvidenceSummary = $("demo-reconstruction-review-index-evidence-summary");
   const reviewIndexEvidenceList = $("demo-reconstruction-review-index-evidence-list");
   const reviewIndexBuildSummary = $("demo-reconstruction-review-index-build-summary");
@@ -485,6 +487,50 @@
         }
       });
     });
+  }
+
+  function reviewIndexTourRecords() {
+    return [
+      {id: "evidence", label: "1 证据", targetId: "demo-reconstruction-review-index-evidence-rail"},
+      {id: "build", label: "2 逐句", targetId: "demo-reconstruction-review-index-build-ladder"},
+      {id: "equation", label: "3 方程", targetId: "demo-reconstruction-review-index-equation-rail"},
+      {id: "closure", label: "4 闭环", targetId: "demo-reconstruction-review-index-closure-rail"},
+      {id: "output", label: "5 输出", targetId: "demo-reconstruction-review-index-output-rail"},
+      {id: "scenario", label: "6 场景", targetId: "demo-reconstruction-review-index-scenario-rail"},
+    ];
+  }
+
+  function setReviewIndexTourState(recordId) {
+    if (!reviewIndexTourList) return;
+    reviewIndexTourList.querySelectorAll("[data-review-index-tour]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexTour === recordId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexTour(recordId) {
+    const record = reviewIndexTourRecords().find((item) => item.id === recordId);
+    const target = record ? document.getElementById(record.targetId) : null;
+    if (!record || !target) return;
+    setReviewIndexTourState(record.id);
+    if (typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexTourRail() {
+    if (!reviewIndexTourList) return;
+    reviewIndexTourList.innerHTML = "";
+    const records = reviewIndexTourRecords();
+    records.forEach((record) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexTour = record.id;
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = record.label;
+      button.addEventListener("click", () => applyReviewIndexTour(record.id));
+      reviewIndexTourList.appendChild(button);
+    });
+    setText(reviewIndexTourSummary, `${records.length}/6 模块 · 证据到场景`);
   }
 
   function reviewIndexEvidenceRecords() {
@@ -3986,6 +4032,7 @@
     renderReviewPacketGates(gates);
     renderReviewPacketDashboard(gates, reviewContext);
     updateReviewVerdictBoard(gates, reviewContext);
+    renderReviewIndexTourRail();
     renderReviewIndexEvidenceRail();
     renderReviewIndexClosureRail();
     updateReviewIndexStatus();
