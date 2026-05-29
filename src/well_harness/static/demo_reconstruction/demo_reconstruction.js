@@ -266,6 +266,9 @@
   const proofPathCoverageGridStatus = $("demo-reconstruction-proof-path-coverage-grid-status");
   const proofPathCoverageGridList = $("demo-reconstruction-proof-path-coverage-grid-list");
   const proofPathCoverageGridReadback = $("demo-reconstruction-proof-path-coverage-grid-readback");
+  const proofPathDeltaRailStatus = $("demo-reconstruction-proof-path-delta-rail-status");
+  const proofPathDeltaRailList = $("demo-reconstruction-proof-path-delta-rail-list");
+  const proofPathDeltaRailReadback = $("demo-reconstruction-proof-path-delta-rail-readback");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -304,6 +307,7 @@
   let topologyStepFilterAnchor = "all";
   let outputPathTargetId = "thr_lock";
   let proofPathCoverageAnchor = "";
+  let proofPathDeltaAnchor = "";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -2397,6 +2401,147 @@
     updateProofPathCoverageGridReadback(selectedStep, selectedContract);
   }
 
+  function proofPathDeltaRecord(index) {
+    const step = traceSteps[index] || {};
+    const contract = cumulativeTraceContract(index);
+    const previous = index > 0 ? cumulativeTraceContract(index - 1) : {node_ids: [], wire_ids: []};
+    const previousNodes = new Set(previous.node_ids || []);
+    const previousWires = new Set(previous.wire_ids || []);
+    return {
+      step,
+      contract,
+      previous,
+      newNodes: contract.node_ids.filter((nodeId) => !previousNodes.has(nodeId)),
+      newWires: contract.wire_ids.filter((wireId) => !previousWires.has(wireId)),
+    };
+  }
+
+  function setProofPathDeltaRailState(anchor) {
+    document.querySelectorAll("[data-proof-path-delta-step]").forEach((button) => {
+      const selected = button.dataset.proofPathDeltaStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    proofPathDeltaAnchor = anchor || "";
+  }
+
+  function updateProofPathDeltaRailReadback(record, focus = null) {
+    if (!proofPathDeltaRailReadback || !record || !record.step) return;
+    const {step, contract, previous, newNodes, newWires} = record;
+    const focusText = focus && focus.id ? ` · ${reviewObjectLabel(focus.kind, focus.id)}` : "";
+    setText(
+      proofPathDeltaRailReadback,
+      `${step.anchor || "P035"} · ${previous.node_ids.length}->${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${previous.wire_ids.length}->${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · +${newNodes.length} 节点 · +${newWires.length} 连线${focusText}`,
+    );
+  }
+
+  function applyProofPathDeltaStep(anchor) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0) return;
+    const record = proofPathDeltaRecord(index);
+    applyStepPlayback(index);
+    setProofPathDeltaRailState(anchor);
+    updateProofPathStatus(record.step);
+    updateProofPathDeltaRailReadback(record);
+  }
+
+  function applyProofPathDeltaObject(anchor, kind, id) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0 || !kind || !id) return;
+    const record = proofPathDeltaRecord(index);
+    applyStepPlayback(index);
+    applyEmbeddedTraceFocus(kind, id);
+    setProofPathDeltaRailState(anchor);
+    updateProofPathStatus(record.step, {kind, id});
+    updateProofPathDeltaRailReadback(record, {kind, id});
+  }
+
+  function appendProofPathDeltaChips(container, anchor, label, values, kind) {
+    const group = document.createElement("div");
+    group.className = "demo-reconstruction-proof-path-delta-group";
+    const title = document.createElement("strong");
+    title.textContent = label;
+    const chips = document.createElement("div");
+    chips.className = "demo-reconstruction-proof-path-delta-chips";
+    const list = Array.isArray(values) ? values : [];
+    if (!list.length) {
+      const empty = document.createElement("span");
+      empty.className = "demo-reconstruction-proof-path-delta-chip";
+      empty.textContent = "无新增";
+      chips.appendChild(empty);
+    } else {
+      list.forEach((value) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "demo-reconstruction-proof-path-delta-chip";
+        chip.dataset.proofPathDeltaFocusKind = kind;
+        chip.dataset.proofPathDeltaFocusId = value;
+        chip.textContent = value;
+        chip.addEventListener("click", () => applyProofPathDeltaObject(anchor, kind, value));
+        chips.appendChild(chip);
+      });
+    }
+    group.append(title, chips);
+    container.appendChild(group);
+  }
+
+  function renderProofPathDeltaRail(steps) {
+    if (!proofPathDeltaRailList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    proofPathDeltaRailList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.proofPathDeltaStep = "empty";
+      empty.textContent = "等待逐句增量";
+      proofPathDeltaRailList.appendChild(empty);
+      setText(proofPathDeltaRailStatus, "等待增量轨道");
+      setText(proofPathDeltaRailReadback, "等待选择增量轨道。");
+      return;
+    }
+
+    const finalRecord = proofPathDeltaRecord(items.length - 1);
+    setText(
+      proofPathDeltaRailStatus,
+      `${items.length}/5 步 · +${finalRecord.contract.node_ids.length} 节点 · +${finalRecord.contract.wire_ids.length} 连线`,
+    );
+
+    items.forEach((step, index) => {
+      const record = proofPathDeltaRecord(index);
+      const row = document.createElement("div");
+      row.className = "demo-reconstruction-proof-path-delta-row";
+      row.dataset.proofPathDeltaRow = step.anchor || "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-path-delta-step";
+      button.dataset.proofPathDeltaStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyProofPathDeltaStep(step.anchor || ""));
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const metric = document.createElement("small");
+      metric.textContent = `${record.previous.node_ids.length}->${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.previous.wire_ids.length}->${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · +${record.newNodes.length} 节点 · +${record.newWires.length} 连线`;
+      button.append(anchor, title, metric);
+      row.appendChild(button);
+
+      const groups = document.createElement("div");
+      groups.className = "demo-reconstruction-proof-path-delta-groups";
+      appendProofPathDeltaChips(groups, step.anchor || "", "新增节点", record.newNodes, "node");
+      appendProofPathDeltaChips(groups, step.anchor || "", "新增连线", record.newWires, "wire");
+      row.appendChild(groups);
+      proofPathDeltaRailList.appendChild(row);
+    });
+
+    const selectedAnchor = proofPathDeltaAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedIndex = items.findIndex((step) => step && step.anchor === selectedAnchor);
+    const safeIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    setProofPathDeltaRailState(items[safeIndex].anchor || "");
+    updateProofPathDeltaRailReadback(proofPathDeltaRecord(safeIndex));
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -3125,17 +3270,19 @@
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind]")
       .forEach((button) => {
         const chipKind = button.dataset.traceFocusKind
           || button.dataset.sourceFocusKind
           || button.dataset.proofPathFocusKind
           || button.dataset.proofPathCoverageFocusKind
+          || button.dataset.proofPathDeltaFocusKind
           || "";
         const chipId = button.dataset.traceFocusId
           || button.dataset.sourceFocusId
           || button.dataset.proofPathFocusId
           || button.dataset.proofPathCoverageFocusId
+          || button.dataset.proofPathDeltaFocusId
           || "";
         const isCurrent = chipKind === kind && chipId === id;
         button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
@@ -3153,7 +3300,7 @@
     setLogicEquationRowState("");
     renderObjectProvenance("", "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind]")
       .forEach((button) => {
         button.setAttribute("aria-pressed", "false");
         button.dataset.reviewObjectSelected = "false";
@@ -3358,8 +3505,11 @@
     updateSentenceRunnerStatus(step);
     updateProofPathStatus(step);
     setProofPathCoverageGridState(step.anchor || "");
+    setProofPathDeltaRailState(step.anchor || "");
     if (selectedTraceIndex >= 0) {
-      updateProofPathCoverageGridReadback(step, cumulativeTraceContract(selectedTraceIndex));
+      const contract = cumulativeTraceContract(selectedTraceIndex);
+      updateProofPathCoverageGridReadback(step, contract);
+      updateProofPathDeltaRailReadback(proofPathDeltaRecord(selectedTraceIndex));
     }
     if (options.writeHash !== false) writeReviewHashState();
   }
@@ -3581,6 +3731,7 @@
     renderSentenceRunner(steps);
     renderProofPathTimeline(steps);
     renderProofPathCoverageGrid(steps);
+    renderProofPathDeltaRail(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);

@@ -190,6 +190,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-path-focus-id]").length >= 5
                             && document.querySelectorAll("[data-proof-path-coverage-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-coverage-focus-id]").length >= 5
+                            && document.querySelectorAll("[data-proof-path-delta-step]").length === 5
+                            && document.querySelectorAll("[data-proof-path-delta-focus-id]").length >= 5
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
@@ -2089,6 +2091,97 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                proof_path_delta_rail_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            stepCount: document.querySelectorAll("[data-proof-path-delta-step]").length,
+                            focusChipCount: document.querySelectorAll("[data-proof-path-delta-focus-id]").length,
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-delta-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-delta-step")),
+                            statusText: text("#demo-reconstruction-proof-path-delta-rail-status"),
+                            readbackText: text("#demo-reconstruction-proof-path-delta-rail-readback"),
+                            firstText: text('[data-proof-path-delta-step="P035-S01"]'),
+                            finalText: text('[data-proof-path-delta-step="P035-S05"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-delta-step="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const button = document.querySelector('[data-proof-path-delta-step="P035-S05"]');
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-delta-rail-readback")?.textContent || "";
+                        const object = document.querySelector("#demo-reconstruction-review-object")?.textContent || "";
+                        return button
+                            && button.getAttribute("aria-pressed") === "true"
+                            && readback.includes("18->20/20")
+                            && readback.includes("20->23/23")
+                            && readback.includes("+2 节点")
+                            && readback.includes("+3 连线")
+                            && object.includes("累计构建")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length === 20
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 23;
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_delta_rail_final_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-delta-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-delta-step")),
+                            readbackText: text("#demo-reconstruction-proof-path-delta-rail-readback"),
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            highlightedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-docx-trace-selected='true'][data-node]").length
+                                : 0,
+                            highlightedWireCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length
+                                : 0,
+                        };
+                    }"""
+                )
+                page.locator(
+                    '[data-proof-path-delta-row="P035-S05"] [data-proof-path-delta-focus-id="wire_logic4_thr_lock"]'
+                ).click()
+                page.wait_for_function(
+                    """() => {
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-delta-rail-readback");
+                        const inspector = document.querySelector("#demo-reconstruction-proof-path-object-inspector-object");
+                        return object
+                            && object.textContent.includes("wire_logic4_thr_lock")
+                            && readback
+                            && readback.textContent.includes("wire_logic4_thr_lock")
+                            && inspector
+                            && inspector.textContent.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_delta_rail_focus_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-delta-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-delta-step")),
+                            activeFocusIds: Array.from(
+                                document.querySelectorAll("[data-proof-path-delta-focus-id][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-delta-focus-id")),
+                            readbackText: text("#demo-reconstruction-proof-path-delta-rail-readback"),
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            inspectorObjectText: text("#demo-reconstruction-proof-path-object-inspector-object"),
+                        };
+                    }"""
+                )
                 proof_path_output_map_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -3285,6 +3378,31 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" not in proof_path_coverage_grid_trace_switch_review["readbackText"]
         )
         else "fail",
+        "proof_path_delta_rail": "pass"
+        if (
+            proof_path_delta_rail_review["stepCount"] == 5
+            and proof_path_delta_rail_review["focusChipCount"] >= 20
+            and "5/5 步" in proof_path_delta_rail_review["statusText"]
+            and "+20 节点" in proof_path_delta_rail_review["statusText"]
+            and "+23 连线" in proof_path_delta_rail_review["statusText"]
+            and "0->6/20 节点" in proof_path_delta_rail_review["firstText"]
+            and "+6 节点" in proof_path_delta_rail_review["firstText"]
+            and "18->20/20 节点" in proof_path_delta_rail_review["finalText"]
+            and "20->23/23 连线" in proof_path_delta_rail_review["finalText"]
+            and "+2 节点" in proof_path_delta_rail_review["finalText"]
+            and "+3 连线" in proof_path_delta_rail_review["finalText"]
+            and proof_path_delta_rail_final_review["activeSteps"] == ["P035-S05"]
+            and proof_path_delta_rail_final_review["selectedAnchor"] == "P035-S05"
+            and proof_path_delta_rail_final_review["highlightedNodeCount"] == 20
+            and proof_path_delta_rail_final_review["highlightedWireCount"] == 23
+            and "累计构建" in proof_path_delta_rail_final_review["reviewObjectText"]
+            and proof_path_delta_rail_focus_review["activeSteps"] == ["P035-S05"]
+            and proof_path_delta_rail_focus_review["activeFocusIds"] == ["wire_logic4_thr_lock"]
+            and "wire_logic4_thr_lock" in proof_path_delta_rail_focus_review["readbackText"]
+            and "wire_logic4_thr_lock" in proof_path_delta_rail_focus_review["reviewObjectText"]
+            and "wire_logic4_thr_lock" in proof_path_delta_rail_focus_review["inspectorObjectText"]
+        )
+        else "fail",
         "proof_path_output_map": "pass"
         if (
             proof_path_output_map_review["targetCount"] == 5
@@ -3435,6 +3553,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_coverage_grid_final_review": proof_path_coverage_grid_final_review,
         "proof_path_coverage_grid_focus_review": proof_path_coverage_grid_focus_review,
         "proof_path_coverage_grid_trace_switch_review": proof_path_coverage_grid_trace_switch_review,
+        "proof_path_delta_rail_review": proof_path_delta_rail_review,
+        "proof_path_delta_rail_final_review": proof_path_delta_rail_final_review,
+        "proof_path_delta_rail_focus_review": proof_path_delta_rail_focus_review,
         "proof_path_output_map_review": proof_path_output_map_review,
         "proof_path_output_map_tls_review": proof_path_output_map_tls_review,
         "scenario_comparator_review": scenario_comparator_review,
