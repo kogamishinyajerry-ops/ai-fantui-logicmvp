@@ -197,6 +197,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-compact-runway-output-etrac"' in html
     assert 'id="demo-reconstruction-compact-runway-output-eec"' in html
     assert 'id="demo-reconstruction-compact-runway-output-thr"' in html
+    assert "<span>解锁电源</span>" in html
+    assert "<span>作动器供电</span>" in html
+    assert "<span>展开指令</span>" in html
+    assert "<span>反推锁</span>" in html
     assert 'data-compact-runway-output-target="tls115"' in html
     assert 'data-compact-runway-output-target="etrac_540v"' in html
     assert 'data-compact-runway-output-target="eec_deploy"' in html
@@ -933,6 +937,21 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "ETRAC\nON" not in payload["first_screen_review"]["visible_text"]
     assert "EEC\nON" not in payload["first_screen_review"]["visible_text"]
     assert "THR\nON" not in payload["first_screen_review"]["visible_text"]
+    assert "TLS\n通电" not in payload["first_screen_review"]["visible_text"]
+    assert "ETRAC\n供电" not in payload["first_screen_review"]["visible_text"]
+    assert "EEC\n展开" not in payload["first_screen_review"]["visible_text"]
+    assert "THR\n释放" not in payload["first_screen_review"]["visible_text"]
+    assert "01\nL1" not in payload["first_screen_review"]["visible_text"]
+    assert "02\nL2" not in payload["first_screen_review"]["visible_text"]
+    assert "03\nL3" not in payload["first_screen_review"]["visible_text"]
+    assert "04\nVDT" not in payload["first_screen_review"]["visible_text"]
+    assert "05\nL4" not in payload["first_screen_review"]["visible_text"]
+    assert "06\nTHR" not in payload["first_screen_review"]["visible_text"]
+    assert "01\n解锁" in payload["first_screen_review"]["visible_text"]
+    assert "低空解锁" in payload["first_screen_review"]["visible_text"]
+    assert "解锁电源" in payload["first_screen_review"]["visible_text"]
+    assert "作动器供电" in payload["first_screen_review"]["visible_text"]
+    assert "反推锁释放" in payload["first_screen_review"]["visible_text"]
     assert "->" not in payload["first_screen_review"]["visible_text"]
     assert "低空解锁" in payload["first_screen_review"]["circuit_snapshot_preview_readback"]
     assert payload["review_drawer_deep_link"] == {
@@ -1066,7 +1085,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "TLS 已通电" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "ETRAC 已供电" in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "反推锁已释放" in payload["source_map_review"]["circuitSnapshotMiniText"]
-    assert "THR" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "低空解锁" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "作动器供电" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "反推锁释放" in payload["source_map_review"]["circuitSnapshotMiniText"]
+    assert "THR" not in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "source" not in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "ON / BLOCK" not in payload["source_map_review"]["circuitSnapshotMiniText"]
     assert "->" not in payload["source_map_review"]["circuitSnapshotMiniText"]

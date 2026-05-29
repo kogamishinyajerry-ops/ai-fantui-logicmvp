@@ -4404,11 +4404,11 @@
   function circuitSnapshotPreviewLabel(record) {
     if (!record) return "链路";
     if (record.id === "docx-source") return "需求";
-    if (record.id === "runway-l1-unlock") return "L1";
-    if (record.id === "runway-l2-power") return "L2";
-    if (record.id === "runway-l3-deploy") return "L3";
-    if (record.id === "runway-vdt90") return "VDT";
-    if (record.id === "runway-l4-thr-lock") return "L4";
+    if (record.id === "runway-l1-unlock") return "解锁";
+    if (record.id === "runway-l2-power") return "供电";
+    if (record.id === "runway-l3-deploy") return "展开";
+    if (record.id === "runway-vdt90") return "到位";
+    if (record.id === "runway-l4-thr-lock") return "反推锁";
     if (record.id === "demo-output") return "输出";
     return record.label || "链路";
   }
@@ -4435,12 +4435,12 @@
   function circuitSnapshotMiniLabel(record) {
     if (!record) return "电路";
     if (record.id === "docx-source") return "需求";
-    if (record.id === "runway-l1-unlock") return "L1";
-    if (record.id === "runway-l2-power") return "L2";
-    if (record.id === "runway-l3-deploy") return "L3";
-    if (record.id === "runway-vdt90") return "VDT90";
-    if (record.id === "runway-l4-thr-lock") return "L4";
-    if (record.id === "demo-output") return "THR";
+    if (record.id === "runway-l1-unlock") return "低空解锁";
+    if (record.id === "runway-l2-power") return "作动器供电";
+    if (record.id === "runway-l3-deploy") return "展开指令";
+    if (record.id === "runway-vdt90") return "展开到位";
+    if (record.id === "runway-l4-thr-lock") return "反推锁释放";
+    if (record.id === "demo-output") return "输出";
     return record.label || "电路";
   }
 
