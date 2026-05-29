@@ -4198,6 +4198,21 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "ETRAC\nON" not in first_screen_review["visible_text"]
             and "EEC\nON" not in first_screen_review["visible_text"]
             and "THR\nON" not in first_screen_review["visible_text"]
+            and "TLS\n通电" not in first_screen_review["visible_text"]
+            and "ETRAC\n供电" not in first_screen_review["visible_text"]
+            and "EEC\n展开" not in first_screen_review["visible_text"]
+            and "THR\n释放" not in first_screen_review["visible_text"]
+            and "01\nL1" not in first_screen_review["visible_text"]
+            and "02\nL2" not in first_screen_review["visible_text"]
+            and "03\nL3" not in first_screen_review["visible_text"]
+            and "04\nVDT" not in first_screen_review["visible_text"]
+            and "05\nL4" not in first_screen_review["visible_text"]
+            and "06\nTHR" not in first_screen_review["visible_text"]
+            and "01\n解锁" in first_screen_review["visible_text"]
+            and "低空解锁" in first_screen_review["visible_text"]
+            and "解锁电源" in first_screen_review["visible_text"]
+            and "作动器供电" in first_screen_review["visible_text"]
+            and "反推锁释放" in first_screen_review["visible_text"]
             and "->" not in first_screen_review["visible_text"]
         )
         else "fail",
@@ -4315,7 +4330,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "低空解锁" in source_map_review["circuitSnapshotPreviewReadback"]
             and source_map_review["circuitSnapshotMiniCount"] == 7
             and source_map_review["circuitSnapshotMiniActive"] == ["runway-l1-unlock"]
-            and "THR" in source_map_review["circuitSnapshotMiniText"]
+            and "低空解锁" in source_map_review["circuitSnapshotMiniText"]
+            and "作动器供电" in source_map_review["circuitSnapshotMiniText"]
+            and "反推锁释放" in source_map_review["circuitSnapshotMiniText"]
+            and "THR" not in source_map_review["circuitSnapshotMiniText"]
             and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
             and "THR_LOCK" in source_map_review["circuitSnapshotFinalText"]
             and source_map_review["circuitSnapshotChainCount"] == 7
