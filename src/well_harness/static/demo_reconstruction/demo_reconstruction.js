@@ -152,6 +152,7 @@
   const statusCell = $("demo-reconstruction-status-cell");
   const reviewIndexReadiness = $("demo-reconstruction-review-index-readiness");
   const reviewIndexCompleteAction = $("demo-reconstruction-review-index-complete-action");
+  const completeModeBanner = $("demo-reconstruction-complete-mode-banner");
   const reviewIndexStep = $("demo-reconstruction-review-index-step");
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
@@ -621,7 +622,13 @@
     setReviewIndexGateState(gateId);
   }
 
+  function setCompleteModeBanner(active) {
+    if (!completeModeBanner) return;
+    completeModeBanner.hidden = !active;
+  }
+
   function applyReviewIndexCompleteState() {
+    setCompleteModeBanner(true);
     applyReviewIndexScenario("max-reverse");
     applyReviewIndexOutputTarget("thr_lock");
     setReviewIndexGateState("object-review");
@@ -4515,6 +4522,7 @@
     const state = readReviewHashState();
     if (!state.complete && !state.step && !state.focusId && !state.query && !state.topologyStep && !state.topologyQuery && !state.lane) {
       setProofPathLaneMode("blueprint", {writeHash: false});
+      setCompleteModeBanner(false);
       updateReviewLink();
       return false;
     }
@@ -4525,6 +4533,7 @@
         updateReviewLink();
         return true;
       }
+      setCompleteModeBanner(false);
       setProofPathLaneMode(state.lane || "blueprint", {writeHash: false});
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;
