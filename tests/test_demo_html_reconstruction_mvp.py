@@ -568,6 +568,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "data-proof-transcript-row" in script
     assert "applyScenarioPreset" in script
     assert "installCompactRunwayActions" in script
+    assert "hydrateCompactRunwayDefaultState" in script
+    assert 'if (compactRunwayMode !== "operator")' in script
     assert "installOutputMirrorObserver" in script
     assert "updateOutputMirrorFromFrame" in script
     assert 'params.get("complete") === "1"' in script

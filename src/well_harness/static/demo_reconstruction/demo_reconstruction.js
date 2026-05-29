@@ -2683,6 +2683,13 @@
       updateOutputMirrorFromFrame();
       return;
     }
+    if (compactRunwayMode) {
+      if (compactRunwayMode !== "operator") {
+        applyScenarioPreset(compactRunwayMode);
+        requestAnimationFrame(updateOutputMirrorFromFrame);
+      }
+      return;
+    }
     compactRunwayMode = "max-reverse";
     setCompactRunwayButtonState("max-reverse");
     setText(compactRunwayStatus, compactScenarioLabel("max-reverse"));
