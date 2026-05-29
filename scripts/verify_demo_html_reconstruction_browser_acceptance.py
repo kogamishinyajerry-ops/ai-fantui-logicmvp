@@ -273,6 +273,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "circuit_snapshot_visible": page.locator(
                         "#demo-reconstruction-circuit-snapshot"
                     ).is_visible(timeout=5000),
+                    "circuit_snapshot_preview_visible": page.locator(
+                        "#demo-reconstruction-circuit-snapshot-preview"
+                    ).is_visible(timeout=5000),
+                    "circuit_snapshot_preview_count": page.locator(
+                        "[data-circuit-snapshot-preview-step]"
+                    ).count(),
+                    "circuit_snapshot_preview_readback": page.locator(
+                        "#demo-reconstruction-circuit-snapshot-preview-readback"
+                    ).inner_text(timeout=5000).strip(),
                     "compact_runway_visible": page.locator(
                         "#demo-reconstruction-compact-runway"
                     ).is_visible(timeout=5000),
@@ -473,6 +482,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             circuitSnapshotOutput: text("#demo-reconstruction-circuit-snapshot-output"),
                             circuitSnapshotReview: text("#demo-reconstruction-circuit-snapshot-review"),
                             circuitSnapshotReadback: text("#demo-reconstruction-circuit-snapshot-readback"),
+                            circuitSnapshotPreviewCount: document.querySelectorAll("[data-circuit-snapshot-preview-step]").length,
+                            circuitSnapshotPreviewReadback: text("#demo-reconstruction-circuit-snapshot-preview-readback"),
+                            circuitSnapshotPreviewActive: Array.from(
+                                document.querySelectorAll("[data-circuit-snapshot-preview-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-circuit-snapshot-preview-step")),
                             circuitSnapshotFinalText: text('[data-circuit-snapshot-step="P035-S05"]'),
                             circuitSnapshotChainCount: document.querySelectorAll("[data-circuit-snapshot-chain-step]").length,
                             circuitSnapshotChainSourceText: text('[data-circuit-snapshot-chain-step="docx-source"]'),
@@ -499,6 +513,38 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             traceContract: text("#demo-reconstruction-trace-contract"),
                         };
                     }"""
+                )
+                page.locator('[data-circuit-snapshot-preview-step="runway-l4-thr-lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        const active = document.querySelector('[data-circuit-snapshot-preview-step="runway-l4-thr-lock"][aria-pressed="true"]');
+                        const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        return selected.includes("P035-S05") && active && objectText.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                circuit_snapshot_preview_action = page.evaluate(
+                    """() => ({
+                        activePreview: Array.from(
+                            document.querySelectorAll("[data-circuit-snapshot-preview-step][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-circuit-snapshot-preview-step")),
+                        activeChain: Array.from(
+                            document.querySelectorAll("[data-circuit-snapshot-chain-step][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-circuit-snapshot-chain-step")),
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        readbackText: document.querySelector("#demo-reconstruction-circuit-snapshot-preview-readback")?.textContent?.trim() || "",
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        hash: window.location.hash,
+                    })"""
+                )
+                page.locator('[data-trace-card][data-trace-anchor="P035-S01"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        return selected && selected.textContent.trim() === "P035-S01";
+                    }""",
+                    timeout=5000,
                 )
                 page.locator('[data-requirement-ledger-filter="context"]').click()
                 page.wait_for_function(
@@ -3965,6 +4011,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             first_screen_review["detail_drawer_closed"]
             and first_screen_review["snapshot_details_closed"]
             and first_screen_review["circuit_snapshot_visible"]
+            and first_screen_review["circuit_snapshot_preview_visible"]
+            and first_screen_review["circuit_snapshot_preview_count"] == 7
+            and "低空解锁" in first_screen_review["circuit_snapshot_preview_readback"]
             and first_screen_review["compact_runway_visible"]
             and not first_screen_review["review_index_visible"]
             and not first_screen_review["source_map_visible"]
@@ -4045,6 +4094,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["circuitSnapshotOutput"] == "反推锁可读"
             and source_map_review["circuitSnapshotReview"] == "可运行"
             and "P035-S01" in source_map_review["circuitSnapshotReadback"]
+            and source_map_review["circuitSnapshotPreviewCount"] == 7
+            and source_map_review["circuitSnapshotPreviewActive"] == ["runway-l1-unlock"]
+            and "低空解锁" in source_map_review["circuitSnapshotPreviewReadback"]
             and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
             and "THR_LOCK" in source_map_review["circuitSnapshotFinalText"]
             and source_map_review["circuitSnapshotChainCount"] == 7
@@ -4067,6 +4119,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["selectedWireChipCount"] > 0
             and source_map_review["nodeCoverage"] == "20/20"
             and source_map_review["wireCoverage"] == "23/23"
+        )
+        else "fail",
+        "circuit_snapshot_preview": "pass"
+        if (
+            circuit_snapshot_preview_action["activePreview"] == ["runway-l4-thr-lock"]
+            and circuit_snapshot_preview_action["activeChain"] == ["runway-l4-thr-lock"]
+            and circuit_snapshot_preview_action["selectedAnchor"] == "P035-S05"
+            and "反推锁释放" in circuit_snapshot_preview_action["readbackText"]
+            and "wire_logic4_thr_lock" in circuit_snapshot_preview_action["objectText"]
+            and "focus=wire%3Awire_logic4_thr_lock" in circuit_snapshot_preview_action["hash"]
         )
         else "fail",
         "requirement_coverage_ledger": "pass"
@@ -5072,6 +5134,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "compact_runway_operator_input_review": compact_runway_operator_input_review,
         "compact_runway_operator_fault_review": compact_runway_operator_fault_review,
         "source_map_review": source_map_review,
+        "circuit_snapshot_preview_action": circuit_snapshot_preview_action,
         "requirement_ledger_context_review": requirement_ledger_context_review,
         "requirement_ledger_action_review": requirement_ledger_action_review,
         "review_index_review": review_index_review,
