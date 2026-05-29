@@ -2423,7 +2423,12 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   display: grid;
   gap: 7px;
 }
-.demo-reconstruction-proof-path-list button {
+.demo-reconstruction-proof-path-row {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-step {
   display: grid;
   grid-template-columns: minmax(52px, auto) 1fr;
   gap: 4px 8px;
@@ -2436,31 +2441,31 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   padding: 8px;
   text-align: left;
 }
-.demo-reconstruction-proof-path-list button:hover,
-.demo-reconstruction-proof-path-list button:focus-visible {
+.demo-reconstruction-proof-path-step:hover,
+.demo-reconstruction-proof-path-step:focus-visible {
   border-color: #4f46e5;
   outline: none;
 }
-.demo-reconstruction-proof-path-list button[aria-pressed="true"] {
+.demo-reconstruction-proof-path-step[aria-pressed="true"] {
   border-color: #4f46e5;
   background: #eef2ff;
 }
-.demo-reconstruction-proof-path-list button[data-proof-path-final="true"] {
+.demo-reconstruction-proof-path-step[data-proof-path-final="true"] {
   border-color: #a7f3d0;
 }
-.demo-reconstruction-proof-path-list strong {
+.demo-reconstruction-proof-path-step strong {
   color: #111827;
   font-family: "Courier New", monospace;
   font-size: 12px;
 }
-.demo-reconstruction-proof-path-list span {
+.demo-reconstruction-proof-path-step span {
   min-width: 0;
   color: #344054;
   font-size: 12px;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.demo-reconstruction-proof-path-list em {
+.demo-reconstruction-proof-path-step em {
   grid-column: 1 / -1;
   display: -webkit-box;
   min-width: 0;
@@ -2474,13 +2479,36 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
-.demo-reconstruction-proof-path-list small {
+.demo-reconstruction-proof-path-step small {
   grid-column: 1 / -1;
   color: #667085;
   font-family: "Courier New", monospace;
   font-size: 11px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path-focus-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-focus-list button {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 5px 7px;
+}
+.demo-reconstruction-proof-path-focus-list button:hover,
+.demo-reconstruction-proof-path-focus-list button:focus-visible {
+  border-color: #4f46e5;
+  color: #3730a3;
+  outline: none;
 }
 .demo-reconstruction-proof-path p {
   margin: 0;
