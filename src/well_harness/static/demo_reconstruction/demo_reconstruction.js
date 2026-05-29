@@ -382,6 +382,7 @@
   let scenarioLedgerRecords = new Map();
   let activeOperatorRunwayId = "";
   let compactRunwayMode = "";
+  let compactRunwayAutoHydrated = false;
   const PROOF_PATH_LANE_MODES = ["blueprint", "source", "matrix", "object", "all"];
 
   function readJson(value) {
@@ -2667,6 +2668,31 @@
     if (button && typeof button.click === "function") button.click();
   }
 
+  function compactRunwayFrameOutputReady(frameDocument) {
+    const summary = frameText(frameDocument, "#fan-status-summary", "");
+    return !!summary && !summary.startsWith("等待");
+  }
+
+  function hydrateCompactRunwayDefaultState() {
+    if (compactRunwayAutoHydrated || !consoleFrame) return;
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument || !frameDocument.querySelector(".fan-preset-btn[data-preset]")) return;
+    if (!compactRunwayFrameOutputReady(frameDocument)) return;
+    compactRunwayAutoHydrated = true;
+    if (activeScenarioFromFrame(frameDocument)) {
+      updateOutputMirrorFromFrame();
+      return;
+    }
+    compactRunwayMode = "max-reverse";
+    setCompactRunwayButtonState("max-reverse");
+    setText(compactRunwayStatus, compactScenarioLabel("max-reverse"));
+    setText(compactRunwayState, "运行中");
+    setText(compactRunwayLock, "等待输出");
+    setText(compactRunwaySummary, "正在读取结果");
+    applyScenarioPreset("max-reverse");
+    requestAnimationFrame(updateOutputMirrorFromFrame);
+  }
+
   function compactScenarioLabel(presetId) {
     if (presetId === "max-reverse") return "最大反推";
     if (presetId === "inhibit-block") return "抑制阻塞";
@@ -4610,6 +4636,7 @@
     refreshOperatorRunwayReadback(operatorRunwayRecordById(activeOperatorRunwayId));
     updateControlStripStatus();
     updateReviewIndexStatus();
+    hydrateCompactRunwayDefaultState();
   }
 
   function installOutputMirrorObserver() {
@@ -4627,6 +4654,7 @@
     });
     updateOutputMirrorFromFrame();
     updateScenarioLedgerFromFrame();
+    hydrateCompactRunwayDefaultState();
   }
 
   function updateReviewPacketFromState() {
