@@ -179,6 +179,46 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-circuit-snapshot-details,
+.demo-reconstruction-detail-drawer {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.demo-reconstruction-circuit-snapshot-details {
+  padding: 0;
+}
+.demo-reconstruction-detail-drawer {
+  margin-top: 16px;
+  box-shadow: var(--demo-shadow);
+}
+.demo-reconstruction-circuit-snapshot-details > summary,
+.demo-reconstruction-detail-drawer > summary {
+  min-height: 40px;
+  cursor: pointer;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 11px 12px;
+}
+.demo-reconstruction-circuit-snapshot-details > summary:focus-visible,
+.demo-reconstruction-detail-drawer > summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.demo-reconstruction-circuit-snapshot-details[open],
+.demo-reconstruction-detail-drawer[open] {
+  padding: 0 10px 10px;
+}
+.demo-reconstruction-circuit-snapshot-details[open] > summary,
+.demo-reconstruction-detail-drawer[open] > summary {
+  margin: 0 -10px;
+  border-bottom: 1px solid #d8dee8;
+  background: #f9fafb;
+}
 .demo-reconstruction-circuit-snapshot-chain {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
