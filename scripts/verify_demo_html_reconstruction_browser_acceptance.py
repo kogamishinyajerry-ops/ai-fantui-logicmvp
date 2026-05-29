@@ -1485,6 +1485,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             const search = document.querySelector("#demo-reconstruction-coverage-search");
                             const status = document.querySelector("#demo-reconstruction-embedded-highlight-status")?.textContent || "";
                             const laneStatus = document.querySelector("#demo-reconstruction-proof-path-lane-mode-status");
+                            const indexProofPath = document.querySelector("#demo-reconstruction-review-index-proof-path");
                             const activeLane = document.querySelector('[data-proof-path-lane-mode="matrix"]');
                             const matrix = document.querySelector("#demo-reconstruction-proof-path-coverage-grid");
                             const source = document.querySelector("#demo-reconstruction-proof-path-source-rail");
@@ -1494,6 +1495,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                                 && search.value === "logic4"
                                 && laneStatus
                                 && laneStatus.textContent.trim() === "矩阵"
+                                && indexProofPath
+                                && indexProofPath.textContent.includes("矩阵")
+                                && indexProofPath.textContent.includes("链接已同步")
                                 && activeLane
                                 && activeLane.getAttribute("aria-pressed") === "true"
                                 && matrix
@@ -1548,6 +1552,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                                 stripLinkState: document
                                     .querySelector("#demo-reconstruction-proof-path-review-link-state")
                                     ?.textContent?.trim() || "",
+                                indexProofPath: document
+                                    .querySelector("#demo-reconstruction-review-index-proof-path")
+                                    ?.textContent?.trim() || "",
                                 visibleNodeCount: visibleNodes.length,
                                 visibleWireCount: visibleWires.length,
                                 focusedWireCount: doc
@@ -1574,6 +1581,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             "restoredStripStep": restored_review["stripStep"],
                             "restoredStripObject": restored_review["stripObject"],
                             "restoredStripLinkState": restored_review["stripLinkState"],
+                            "restoredIndexProofPath": restored_review["indexProofPath"],
                             "restoredVisibleNodeCount": restored_review["visibleNodeCount"],
                             "restoredVisibleWireCount": restored_review["visibleWireCount"],
                             "restoredFocusedWireCount": restored_review["focusedWireCount"],
@@ -3244,6 +3252,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_proof_path_navigation["activeTargets"] == ["demo-reconstruction-proof-path"]
             and "P035-S05" in review_index_after_trace["stepText"]
             and "链接已同步" in review_index_after_trace["proofPathText"]
+            and "矩阵" in review_deep_link["restoredIndexProofPath"]
+            and "链接已同步" in review_deep_link["restoredIndexProofPath"]
         )
         else "fail",
         "logic_equation_board_readback": "pass"

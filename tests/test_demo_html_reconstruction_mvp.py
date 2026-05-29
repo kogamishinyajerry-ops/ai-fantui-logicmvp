@@ -1020,6 +1020,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_deep_link"]["restoredStripStep"] == "P035-S05"
     assert "wire_logic4_thr_lock" in payload["review_deep_link"]["restoredStripObject"]
     assert payload["review_deep_link"]["restoredStripLinkState"] == "链接已同步"
+    assert "矩阵" in payload["review_deep_link"]["restoredIndexProofPath"]
+    assert "链接已同步" in payload["review_deep_link"]["restoredIndexProofPath"]
     assert payload["review_deep_link"]["restoredVisibleNodeCount"] == 1
     assert payload["review_deep_link"]["restoredVisibleWireCount"] == 3
     assert payload["review_deep_link"]["restoredFocusedWireCount"] == 1
