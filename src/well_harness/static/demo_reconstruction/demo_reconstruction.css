@@ -179,6 +179,50 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-circuit-snapshot-preview {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.demo-reconstruction-circuit-snapshot-preview button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  min-height: 50px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px;
+  text-align: left;
+}
+.demo-reconstruction-circuit-snapshot-preview button:hover,
+.demo-reconstruction-circuit-snapshot-preview button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-circuit-snapshot-preview button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+}
+.demo-reconstruction-circuit-snapshot-preview span {
+  color: #667085;
+  font-size: 10px;
+}
+.demo-reconstruction-circuit-snapshot-preview strong {
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-circuit-snapshot-preview-readback {
+  margin: 0;
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.45;
+}
 .demo-reconstruction-circuit-snapshot-details,
 .demo-reconstruction-detail-drawer {
   display: grid;
@@ -5423,6 +5467,9 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-circuit-snapshot-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .demo-reconstruction-circuit-snapshot-preview {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
   .demo-reconstruction-circuit-snapshot-chain {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -5503,6 +5550,9 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-coverage-tools,
   .demo-reconstruction-topology-controls {
     grid-template-columns: 1fr;
+  }
+  .demo-reconstruction-circuit-snapshot-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .demo-reconstruction-trace-card-list,
   .demo-reconstruction-logic-equation-list,
