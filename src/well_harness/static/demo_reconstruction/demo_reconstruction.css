@@ -902,6 +902,99 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.demo-reconstruction-review-packet-dashboard {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+.demo-reconstruction-review-packet-dashboard-head {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: start;
+}
+.demo-reconstruction-review-packet-dashboard-head div {
+  display: grid;
+  gap: 3px;
+}
+.demo-reconstruction-review-packet-dashboard-head span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-review-packet-dashboard-head strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-packet-dashboard-head p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.demo-reconstruction-review-packet-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.demo-reconstruction-review-packet-dashboard-metric {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border-top: 3px solid #cbd5e1;
+  background: #ffffff;
+  padding: 8px;
+}
+.demo-reconstruction-review-packet-dashboard-metric[data-dashboard-metric-status="pass"] {
+  border-top-color: #0f766e;
+}
+.demo-reconstruction-review-packet-dashboard-metric span {
+  color: #667085;
+  font-size: 11px;
+}
+.demo-reconstruction-review-packet-dashboard-metric strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-review-packet-dashboard-checklist {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo-reconstruction-review-packet-dashboard-checklist li {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border-left: 3px solid #cbd5e1;
+  background: #ffffff;
+  padding: 8px;
+}
+.demo-reconstruction-review-packet-dashboard-checklist li[data-dashboard-check-status="pass"] {
+  border-left-color: #0f766e;
+}
+.demo-reconstruction-review-packet-dashboard-checklist strong {
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.demo-reconstruction-review-packet-dashboard-checklist span {
+  color: #475467;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .demo-reconstruction-review-packet-gates {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -2167,6 +2260,7 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-assembly-head,
   .demo-reconstruction-ladder-head,
   .demo-reconstruction-review-packet-head,
+  .demo-reconstruction-review-packet-dashboard-head,
   .demo-reconstruction-custody-head,
   .demo-reconstruction-custody-readback,
   .demo-reconstruction-coverage-head,
@@ -2325,6 +2419,8 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .demo-reconstruction-review-packet-grid,
+  .demo-reconstruction-review-packet-dashboard-metrics,
+  .demo-reconstruction-review-packet-dashboard-checklist,
   .demo-reconstruction-review-packet-gates {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2353,6 +2449,9 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   .demo-reconstruction-neighborhood-summary,
   .demo-reconstruction-neighborhood-grid,
   .demo-reconstruction-review-packet-grid,
+  .demo-reconstruction-review-packet-dashboard-head,
+  .demo-reconstruction-review-packet-dashboard-metrics,
+  .demo-reconstruction-review-packet-dashboard-checklist,
   .demo-reconstruction-review-packet-gates,
   .demo-reconstruction-custody-readback,
   .demo-reconstruction-output-mirror-values,
