@@ -157,6 +157,8 @@
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
   const reviewIndexBuildSummary = $("demo-reconstruction-review-index-build-summary");
   const reviewIndexBuildList = $("demo-reconstruction-review-index-build-list");
+  const reviewIndexOutputSummary = $("demo-reconstruction-review-index-output-summary");
+  const reviewIndexOutputList = $("demo-reconstruction-review-index-output-list");
   const reviewIndexList = $("demo-reconstruction-review-index-list");
   const nodeList = $("demo-reconstruction-node-list");
   const wireList = $("demo-reconstruction-wire-list");
@@ -541,6 +543,67 @@
     setReviewIndexBuildState(currentTraceStep && currentTraceStep.anchor ? currentTraceStep.anchor : steps[0].anchor || "");
   }
 
+  function setReviewIndexOutputState(targetId) {
+    if (!reviewIndexOutputList) return;
+    reviewIndexOutputList.querySelectorAll("[data-review-index-output-target]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexOutputTarget === targetId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexOutputTarget(targetId) {
+    const target = OUTPUT_PATH_TARGETS.find((item) => item.id === targetId);
+    if (!target) return;
+    const record = proofPathOutputRecord(target);
+    if (record.terminalStep) {
+      setSelectedTrace(record.terminalStep, {writeHash: false});
+    }
+    setProofPathLaneMode("object", {writeHash: false});
+    applyProofPathOutputTarget(targetId);
+    setReviewIndexTarget("demo-reconstruction-proof-path");
+    setReviewIndexOutputState(targetId);
+    const proofPath = $("demo-reconstruction-proof-path");
+    if (proofPath && typeof proofPath.scrollIntoView === "function") {
+      proofPath.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexOutputRail() {
+    if (!reviewIndexOutputList) return;
+    reviewIndexOutputList.innerHTML = "";
+    if (wireEndpointMap.size === 0) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexOutputTarget = "empty";
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = "等待输出";
+      reviewIndexOutputList.appendChild(button);
+      setText(reviewIndexOutputSummary, "等待输出接入");
+      return;
+    }
+    const records = OUTPUT_PATH_TARGETS.map((target) => proofPathOutputRecord(target));
+    const readyCount = records.filter((record) => record.path.wire_ids.length > 0).length;
+    records.forEach((record) => {
+      const {target, path, terminalWire, terminalStep} = record;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexOutputTarget = target.id;
+      button.setAttribute("aria-pressed", outputPathTargetId === target.id ? "true" : "false");
+
+      const title = document.createElement("strong");
+      title.textContent = target.label;
+      const metric = document.createElement("span");
+      metric.textContent = `${path.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${path.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`;
+      const meta = document.createElement("small");
+      meta.textContent = `${terminalStep ? terminalStep.anchor : "待匹配"} · ${terminalWire || target.id}`;
+
+      button.append(title, metric, meta);
+      button.addEventListener("click", () => applyReviewIndexOutputTarget(target.id));
+      reviewIndexOutputList.appendChild(button);
+    });
+    setText(reviewIndexOutputSummary, `${readyCount}/${OUTPUT_PATH_TARGETS.length} 输出 · THR_LOCK 可审`);
+    setReviewIndexOutputState(outputPathTargetId);
+  }
+
   function appendChipGroup(container, label, values, className, highlightKind) {
     if (!container || !Array.isArray(values) || values.length === 0) return;
     const group = document.createElement("div");
@@ -902,6 +965,7 @@
       setOutputPathTargetState(outputPathTargetId);
       setOutputPathWireState("");
       renderProofPathOutputMap();
+      renderReviewIndexOutputRail();
       return;
     }
     path.wire_ids.forEach((wireId, index) => {
@@ -942,6 +1006,7 @@
     setOutputPathTargetState(outputPathTargetId);
     setOutputPathWireState(currentCircuitFocus.kind === "wire" ? currentCircuitFocus.id : "");
     renderProofPathOutputMap();
+    renderReviewIndexOutputRail();
   }
 
   function setOutputMaturityCellState(stepAnchor, targetId) {

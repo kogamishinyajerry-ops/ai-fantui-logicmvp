@@ -162,6 +162,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-build-ladder"' in html
     assert 'id="demo-reconstruction-review-index-build-summary"' in html
     assert 'id="demo-reconstruction-review-index-build-list"' in html
+    assert 'id="demo-reconstruction-review-index-output-rail"' in html
+    assert 'id="demo-reconstruction-review-index-output-summary"' in html
+    assert 'id="demo-reconstruction-review-index-output-list"' in html
     assert 'id="demo-reconstruction-review-index-list"' in html
     assert 'data-review-index-target="demo-reconstruction-proof-path"' in html
     assert 'id="demo-reconstruction-docx-circuit-map"' in html
@@ -510,6 +513,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-review-index" in stylesheet
     assert ".demo-reconstruction-review-index-build-ladder" in stylesheet
     assert ".demo-reconstruction-review-index-build-list" in stylesheet
+    assert ".demo-reconstruction-review-index-output-rail" in stylesheet
+    assert ".demo-reconstruction-review-index-output-list" in stylesheet
     assert ".demo-reconstruction-review-index-list" in stylesheet
     assert ".demo-reconstruction-source-map" in stylesheet
     assert ".demo-reconstruction-requirement-ledger" in stylesheet
@@ -764,6 +769,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "44 已映射" in payload["source_map_review"]["requirementLedgerSummary"]
     assert payload["source_map_review"]["requirementLedgerStatus"] == "67/67 条"
     assert payload["source_map_review"]["reviewIndexBuildStepCount"] == 5
+    assert payload["source_map_review"]["reviewIndexOutputTargetCount"] == 5
     assert payload["requirement_ledger_context_review"]["selectedFilters"] == ["context"]
     assert payload["requirement_ledger_context_review"]["visibleRows"] == 18
     assert "18/67" in payload["requirement_ledger_context_review"]["statusText"]
@@ -788,12 +794,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["visible"] is True
     assert payload["review_index_review"]["buttonCount"] == 12
     assert payload["review_index_review"]["buildStepCount"] == 5
+    assert payload["review_index_review"]["outputTargetCount"] == 5
     assert payload["review_index_review"]["activeBuildSteps"] == ["P035-S01"]
+    assert payload["review_index_review"]["activeOutputTargets"] == ["thr_lock"]
     assert "5/5 句" in payload["review_index_review"]["buildSummaryText"]
     assert "20/20 节点" in payload["review_index_review"]["buildSummaryText"]
     assert "23/23 连线" in payload["review_index_review"]["buildSummaryText"]
     assert "P035-S05" in payload["review_index_review"]["buildFinalText"]
     assert "THR_LOCK" in payload["review_index_review"]["buildFinalText"]
+    assert "5/5 输出" in payload["review_index_review"]["outputSummaryText"]
+    assert "THR_LOCK" in payload["review_index_review"]["outputThrText"]
+    assert "P035-S05" in payload["review_index_review"]["outputThrText"]
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
@@ -810,6 +821,14 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "P035-S05" in payload["review_index_after_trace"]["stepText"]
     assert "等待聚焦" in payload["review_index_after_trace"]["objectText"]
     assert "链接已同步" in payload["review_index_after_trace"]["proofPathText"]
+    assert payload["review_index_output_rail_action"]["selectedAnchor"] == "P035-S05"
+    assert payload["review_index_output_rail_action"]["activeOutputTargets"] == ["thr_lock"]
+    assert payload["review_index_output_rail_action"]["activeTargets"] == [
+        "demo-reconstruction-proof-path"
+    ]
+    assert "wire_logic4_thr_lock" in payload["review_index_output_rail_action"]["objectText"]
+    assert "对象" in payload["review_index_output_rail_action"]["proofPathText"]
+    assert "链接已同步" in payload["review_index_output_rail_action"]["proofPathText"]
     assert payload["review_index_build_ladder_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_build_ladder_action"]["activeBuildSteps"] == ["P035-S05"]
     assert payload["review_index_build_ladder_action"]["activeTargets"] == [
@@ -1359,6 +1378,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_hash_restore": "pass",
         "review_hash_lane_restore": "pass",
         "proof_path_review_strip": "pass",
+        "review_index_output_rail": "pass",
         "review_index_build_ladder": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",

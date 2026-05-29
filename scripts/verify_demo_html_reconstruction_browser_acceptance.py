@@ -290,6 +290,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             requirementLedgerStatus: text("#demo-reconstruction-requirement-ledger-status"),
                             reviewIndexButtonCount: document.querySelectorAll("[data-review-index-target]").length,
                             reviewIndexBuildStepCount: document.querySelectorAll("[data-review-index-build-step]").length,
+                            reviewIndexOutputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
                             sequenceStepCount: document.querySelectorAll(".demo-reconstruction-sequence-step").length,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
@@ -409,11 +410,49 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             activeBuildSteps: Array.from(
                                 document.querySelectorAll("[data-review-index-build-step][aria-pressed='true']")
                             ).map((button) => button.getAttribute("data-review-index-build-step")),
+                            outputTargetCount: document.querySelectorAll("[data-review-index-output-target]").length,
+                            outputSummaryText: text("#demo-reconstruction-review-index-output-summary"),
+                            outputThrText: text('[data-review-index-output-target="thr_lock"]'),
+                            activeOutputTargets: Array.from(
+                                document.querySelectorAll("[data-review-index-output-target][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-review-index-output-target")),
                             activeTargets: Array.from(
                                 document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
                             ).map((button) => button.getAttribute("data-review-index-target")),
                         };
                     }"""
+                )
+                page.locator('[data-review-index-output-target="thr_lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const active = document.querySelector('[data-review-index-output-target="thr_lock"][aria-pressed="true"]');
+                        const proofTarget = document.querySelector('[data-review-index-target="demo-reconstruction-proof-path"][aria-pressed="true"]');
+                        const proofPath = document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent || "";
+                        const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
+                        return selected
+                            && selected.textContent.trim() === "P035-S05"
+                            && active
+                            && proofTarget
+                            && proofPath.includes("对象")
+                            && objectText.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                review_index_output_rail_action = page.evaluate(
+                    """() => ({
+                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                        activeOutputTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-output-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-output-target")),
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
+                        proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
+                        hash: window.location.hash,
+                        scrollY: window.scrollY,
+                    })"""
                 )
                 page.locator('[data-review-index-target="demo-reconstruction-scenario-ledger"]').click()
                 page.wait_for_function(
@@ -3272,8 +3311,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             review_index_review["visible"]
             and review_index_review["buttonCount"] == 12
             and review_index_review["buildStepCount"] == 5
+            and review_index_review["outputTargetCount"] == 5
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and review_index_review["activeBuildSteps"] == ["P035-S01"]
+            and review_index_review["activeOutputTargets"] == ["thr_lock"]
             and "P035-S01" in review_index_review["stepText"]
             and "蓝图" in review_index_review["proofPathText"]
             and "5/5 句" in review_index_review["buildSummaryText"]
@@ -3281,6 +3322,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "23/23 连线" in review_index_review["buildSummaryText"]
             and "P035-S05" in review_index_review["buildFinalText"]
             and "THR_LOCK" in review_index_review["buildFinalText"]
+            and "5/5 输出" in review_index_review["outputSummaryText"]
+            and "THR_LOCK" in review_index_review["outputThrText"]
+            and "P035-S05" in review_index_review["outputThrText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
             and review_index_navigation["scrollY"] > 0
             and review_index_proof_path_navigation["activeTargets"] == ["demo-reconstruction-proof-path"]
@@ -3288,6 +3332,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "P035-S05" in review_index_after_trace["stepText"]
             and "等待聚焦" in review_index_after_trace["objectText"]
             and "链接已同步" in review_index_after_trace["proofPathText"]
+        )
+        else "fail",
+        "review_index_output_rail": "pass"
+        if (
+            review_index_output_rail_action["selectedAnchor"] == "P035-S05"
+            and review_index_output_rail_action["activeOutputTargets"] == ["thr_lock"]
+            and review_index_output_rail_action["activeTargets"] == ["demo-reconstruction-proof-path"]
+            and "wire_logic4_thr_lock" in review_index_output_rail_action["objectText"]
+            and "对象" in review_index_output_rail_action["proofPathText"]
+            and "链接已同步" in review_index_output_rail_action["proofPathText"]
+            and "lane=object" in review_index_output_rail_action["hash"]
+            and "wire_logic4_thr_lock" in review_index_output_rail_action["hash"]
+            and review_index_output_rail_action["scrollY"] > 0
         )
         else "fail",
         "review_index_build_ladder": "pass"
@@ -4071,6 +4128,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_review": review_index_review,
         "review_index_navigation": review_index_navigation,
         "review_index_proof_path_navigation": review_index_proof_path_navigation,
+        "review_index_output_rail_action": review_index_output_rail_action,
         "review_index_build_ladder_action": review_index_build_ladder_action,
         "review_index_after_trace": review_index_after_trace,
         "logic_equation_review": logic_equation_review,
