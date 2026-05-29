@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>原始 DOCX 到完整电路 · FANTUI LogicMVP</title>
+<title>反推需求到可运行电路 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
 <link rel="stylesheet" href="/docx_to_circuit/docx_to_circuit.css">
 <script src="/docx_to_circuit/docx_to_circuit.js" defer></script>
@@ -23,8 +23,8 @@
       <summary>更多模块</summary>
       <div class="unified-nav-advanced-links">
         <div class="unified-nav-advanced-group">
-          <span class="unified-nav-advanced-group-label">源文档到电路</span>
-          <a href="/docx-to-circuit" class="unified-nav-link is-active" data-nav-key="docx-to-circuit">原始 DOCX 主入口</a>
+          <span class="unified-nav-advanced-group-label">需求到电路</span>
+          <a href="/docx-to-circuit" class="unified-nav-link is-active" data-nav-key="docx-to-circuit">需求到电路入口</a>
           <a href="/demo-reconstruction" class="unified-nav-link" data-nav-key="demo-reconstruction">高保真复刻</a>
         </div>
         <div class="unified-nav-advanced-group">
@@ -40,36 +40,36 @@
 <main class="docx-circuit-shell" data-docx-circuit-main-entry="true" data-docx-circuit-review-workbench="interactive">
   <section class="docx-circuit-hero" aria-labelledby="docx-circuit-title">
     <div>
-      <p class="docx-circuit-kicker">SOURCE DOCUMENT TO CIRCUIT</p>
-      <h1 id="docx-circuit-title">原始 DOCX 到完整电路</h1>
+      <p class="docx-circuit-kicker">需求到电路</p>
+      <h1 id="docx-circuit-title">反推需求到可运行电路</h1>
       <p>
-        以 <strong id="docx-circuit-source-path">uploads/20260409-thrust-reverser-control-logic.docx</strong>
-        为唯一需求源头，直达 L1-L4 逻辑复刻和 demo.html 完整电路验收。
+        以 <strong id="docx-circuit-source-path" data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx">已登记源文档</strong>
+        为需求源头，串联 L1-L4 逻辑复刻和 demo.html 电路验收。
       </p>
     </div>
     <div class="docx-circuit-hero-actions">
       <a id="docx-circuit-start-requirements" class="docx-circuit-primary-link" href="/requirements-intake?source=official-docx" data-primary-next-action="true">从原文档开始</a>
-      <a id="docx-circuit-open-demo" href="/demo-reconstruction">查看完整电路</a>
+      <a id="docx-circuit-open-demo" href="/demo-reconstruction">查看电路</a>
     </div>
   </section>
 
-  <section class="docx-circuit-metrics" aria-label="原始 DOCX 到完整电路指标">
-    <div><span>源文档覆盖</span><strong id="docx-circuit-source-count">45 段 · 2 表 · 62 条</strong></div>
+  <section class="docx-circuit-metrics" aria-label="需求到电路指标">
+    <div><span>需求覆盖</span><strong id="docx-circuit-source-count">45 段 · 2 表 · 62 条</strong></div>
     <div><span>节点覆盖</span><strong id="docx-circuit-node-count">20/20</strong></div>
     <div><span>连线覆盖</span><strong id="docx-circuit-wire-count">23/23</strong></div>
-    <div><span>主过程拆解</span><strong id="docx-circuit-sequence-count">P035 · 5 步</strong></div>
+    <div><span>过程拆解</span><strong id="docx-circuit-sequence-count">5 步</strong></div>
   </section>
 
   <section class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">
     <div class="docx-circuit-section-head">
-      <p class="docx-circuit-kicker">MAIN ENTRY</p>
-      <h2 id="docx-circuit-flow-title">三段主路径</h2>
+      <p class="docx-circuit-kicker">主流程</p>
+      <h2 id="docx-circuit-flow-title">三步核对路径</h2>
     </div>
     <ol id="docx-circuit-workflow-steps" class="docx-circuit-workflow">
       <li>
         <span>01</span>
-        <strong>原始需求解析</strong>
-        <p>读取用户指定 DOCX，保留正文条件来源，不把 traceability matrix 或 supplement 当成需求源。</p>
+        <strong>需求解析</strong>
+        <p>读取已登记的需求文档，保留正文条件来源；补充材料和追溯表只作为背景参考。</p>
         <a id="docx-circuit-open-requirements" href="/requirements-intake?source=official-docx">进入需求解析</a>
       </li>
       <li>
@@ -80,39 +80,39 @@
       </li>
       <li>
         <span>03</span>
-        <strong>demo.html 完整电路</strong>
-        <p>使用同一 demo.html 合同验收 20 个节点、23 条连线、5 个预设和 6 类状态输出。</p>
+        <strong>demo.html 电路验收</strong>
+        <p>使用同一 demo.html 核对 20 个节点、23 条连线、5 个预设和 6 类状态输出。</p>
         <a id="docx-circuit-open-reconstruction" href="/demo-reconstruction">进入电路验收</a>
       </li>
     </ol>
   </section>
 
-  <nav id="docx-circuit-workbench-bar" class="docx-circuit-workbench-bar" aria-label="审阅工作台快速定位" data-docx-circuit-workbench-bar="true">
-    <a href="#docx-circuit-source-index-panel">源文索引</a>
-    <a href="#docx-circuit-review-panel">逐句审阅</a>
-    <a href="#docx-circuit-demo-panel">完整电路</a>
-    <a href="#docx-circuit-review-packet-preview">审阅包</a>
+  <nav id="docx-circuit-workbench-bar" class="docx-circuit-workbench-bar" aria-label="核对工作台快速定位" data-docx-circuit-workbench-bar="true">
+    <a href="#docx-circuit-source-index-panel">需求索引</a>
+    <a href="#docx-circuit-review-panel">句子核对</a>
+    <a href="#docx-circuit-demo-panel">电路核对</a>
+    <a href="#docx-circuit-review-packet-preview">交付摘要</a>
   </nav>
 
-  <section class="docx-circuit-stage" aria-label="P035 工作过程到完整电路">
+  <section class="docx-circuit-stage" aria-label="反推工作过程到电路">
     <article class="docx-circuit-sequence-panel">
       <div class="docx-circuit-section-head">
-        <p class="docx-circuit-kicker">P035 TO L1-L4</p>
-        <h2>P035 工作过程拆解</h2>
+        <p class="docx-circuit-kicker">过程到逻辑</p>
+        <h2>反推工作过程拆解</h2>
       </div>
       <div class="docx-circuit-active-step" aria-live="polite">
-        <span>当前审阅</span>
+        <span>当前核对</span>
         <strong id="docx-circuit-active-anchor">P035-S05</strong>
       </div>
       <ol id="docx-circuit-sequence-list" class="docx-circuit-sequence-list">
-        <li>正在读取原始 DOCX 到电路映射</li>
+        <li>正在读取需求到电路映射</li>
       </ol>
-      <section id="docx-circuit-source-index-panel" class="docx-circuit-source-index-panel" aria-label="源文索引" data-docx-circuit-source-index="true">
+      <section id="docx-circuit-source-index-panel" class="docx-circuit-source-index-panel" aria-label="需求索引" data-docx-circuit-source-index="true">
         <div class="docx-circuit-source-index-head">
-          <h3>源文索引</h3>
+          <h3>需求索引</h3>
           <span id="docx-circuit-source-index-count">待加载</span>
         </div>
-        <div class="docx-circuit-source-index-controls" aria-label="源文索引筛选">
+        <div class="docx-circuit-source-index-controls" aria-label="需求索引筛选">
           <label>
             <span>搜索</span>
             <input id="docx-circuit-source-index-search" type="search" placeholder="开关 / 角度 / 电源">
@@ -130,17 +130,17 @@
           <button id="docx-circuit-source-index-clear" type="button">清空</button>
         </div>
         <ol id="docx-circuit-source-index-list" class="docx-circuit-source-index-list">
-          <li>正在读取源文条目</li>
+          <li>正在读取需求条目</li>
         </ol>
       </section>
     </article>
 
     <article id="docx-circuit-review-panel" class="docx-circuit-review-panel" aria-labelledby="docx-circuit-review-title" data-active-anchor="P035-S05">
       <div class="docx-circuit-section-head">
-        <p class="docx-circuit-kicker">INTERACTIVE REVIEW</p>
-        <h2 id="docx-circuit-review-title">逐句电路审阅台</h2>
+        <p class="docx-circuit-kicker">句子核对</p>
+        <h2 id="docx-circuit-review-title">逐句电路核对台</h2>
       </div>
-      <div class="docx-circuit-review-toolbar" aria-label="逐句审阅控制" data-docx-circuit-sentence-toolbar="true">
+      <div class="docx-circuit-review-toolbar" aria-label="逐句核对控制" data-docx-circuit-sentence-toolbar="true">
         <button id="docx-circuit-prev-step" type="button" class="docx-circuit-tool-button">上一句</button>
         <strong id="docx-circuit-step-position">5 / 5</strong>
         <button id="docx-circuit-next-step" type="button" class="docx-circuit-tool-button">下一句</button>
@@ -148,27 +148,27 @@
           <input id="docx-circuit-element-evidence-only" type="checkbox" checked>
           <span>仅当前元素</span>
         </label>
-        <button id="docx-circuit-copy-trace-packet" type="button" class="docx-circuit-tool-button">复制审阅包</button>
+        <button id="docx-circuit-copy-trace-packet" type="button" class="docx-circuit-tool-button">复制交付摘要</button>
         <button id="docx-circuit-copy-review-link" type="button" class="docx-circuit-tool-button">复制链接</button>
         <span id="docx-circuit-copy-status" class="docx-circuit-copy-status" aria-live="polite">待复制</span>
       </div>
       <div id="docx-circuit-source-focus" class="docx-circuit-source-focus" data-has-source="false" aria-live="polite">
-        <span>当前源文</span>
+        <span>当前需求</span>
         <strong id="docx-circuit-active-source-entry">未指定</strong>
-        <button id="docx-circuit-show-source-entry" type="button" class="docx-circuit-tool-button">定位源文</button>
+        <button id="docx-circuit-show-source-entry" type="button" class="docx-circuit-tool-button">定位需求</button>
       </div>
       <details id="docx-circuit-review-packet-preview" class="docx-circuit-review-packet-preview">
-        <summary>审阅包预览</summary>
-        <pre id="docx-circuit-review-packet-preview-text">等待生成审阅包。</pre>
+        <summary>交付摘要预览</summary>
+        <pre id="docx-circuit-review-packet-preview-text">等待生成交付摘要。</pre>
       </details>
 
-      <section class="docx-circuit-source-card" aria-label="当前原文句子">
+      <section class="docx-circuit-source-card" aria-label="当前需求句子">
         <span id="docx-circuit-source-anchor">P035-S05</span>
         <strong id="docx-circuit-source-title">VDT90 与 L3 展开链路进入 L4</strong>
-        <p id="docx-circuit-source-text">等待读取原始 DOCX 句子。</p>
+        <p id="docx-circuit-source-text">等待读取需求句子。</p>
       </section>
 
-      <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="SVG 元素反查" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
+      <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="电路元素反查" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
         <div class="docx-circuit-trace-head">
           <h3>元素反查</h3>
           <span id="docx-circuit-trace-selected-id">wire_logic4_thr_lock</span>
@@ -219,7 +219,7 @@
 
     <article id="docx-circuit-demo-panel" class="docx-circuit-demo-panel" data-docx-circuit-demo-column="true">
       <div class="docx-circuit-section-head">
-        <p class="docx-circuit-kicker">DEMO.HTML CONTRACT</p>
+        <p class="docx-circuit-kicker">电路联动</p>
         <h2>完整反推电路</h2>
       </div>
       <div class="docx-circuit-demo-sync" aria-live="polite">

@@ -210,7 +210,7 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 reviewPacketPreviewOpen: Boolean(preview?.open),
                 reviewPacketPreviewVisible: Boolean(
                     previewText
-                    && previewText.textContent.includes("## DOCX Circuit Review Packet")
+                    && previewText.textContent.includes("## DOCX 电路交付摘要")
                     && previewText.getBoundingClientRect().height > 0
                 ),
                 visibleNodeCount: document.querySelectorAll("#docx-circuit-svg [data-node-id]").length,
@@ -498,7 +498,7 @@ def _capture_responsive_state(
         """() => {
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const text = document.querySelector("#docx-circuit-review-packet-preview-text");
-            return preview?.open && text?.textContent.includes("## DOCX Circuit Review Packet");
+            return preview?.open && text?.textContent.includes("## DOCX 电路交付摘要");
         }""",
         timeout=7000,
     )
@@ -515,12 +515,12 @@ def _capture_responsive_state(
 
 def _review_packet_markdown_valid(value: str) -> bool:
     required = [
-        "## DOCX Circuit Review Packet",
-        "### Summary",
-        "- Source: `P035-S01`",
-        "- Selected element: `node:sw1`",
-        "### P035 Evidence",
-        "### DOCX Evidence",
+        "## DOCX 电路交付摘要",
+        "### 摘要",
+        "- 需求句子: `P035-S01`",
+        "- 选中元素: `node:sw1`",
+        "### P035 证据",
+        "### DOCX 证据",
         "### JSON",
         "```json",
         '"kind": "docx_circuit_review_packet"',
@@ -607,7 +607,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         const preview = document.querySelector("#docx-circuit-review-packet-preview");
                         const text = document.querySelector("#docx-circuit-review-packet-preview-text");
-                        return preview?.open && text?.textContent.includes("## DOCX Circuit Review Packet");
+                        return preview?.open && text?.textContent.includes("## DOCX 电路交付摘要");
                     }""",
                     timeout=7000,
                 )
@@ -619,7 +619,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.locator("#docx-circuit-copy-trace-packet").click()
                 page.wait_for_function(
-                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("审阅包 Markdown 已复制")""",
+                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("交付摘要已复制")""",
                     timeout=7000,
                 )
                 copied_review_packet = page.evaluate("navigator.clipboard.readText()")
@@ -700,7 +700,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     source_expected = {
         **current_expected,
         "activeSourceEntryAnchor": "P004",
-        "activeSourceEntryLabel": "P004 · 源文档条目",
+        "activeSourceEntryLabel": "P004 · 需求条目",
         "sourceFocusVisible": True,
         "sourceFocusButtonDisabled": False,
     }

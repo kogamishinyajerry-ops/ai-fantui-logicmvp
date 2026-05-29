@@ -220,6 +220,12 @@
     return `${value.slice(0, limit - 1)}…`;
   }
 
+  function sourceEntryDisplayRole(entry) {
+    const role = String(entry && entry.role || "").trim();
+    if (!role) return "需求条目";
+    return role.replace(/源文档条目|源文条目/g, "需求条目");
+  }
+
   function sourceIndexQuery() {
     return sourceIndexRawQuery().toLowerCase();
   }
@@ -532,7 +538,7 @@
       appendEvidenceItem(step.anchor || "P035", step.title || "P035 步骤", step.source_text || "", "sequence_step");
     });
     entries.forEach((entry) => {
-      appendEvidenceItem(entry.anchor || "DOCX", entry.role || "源文档条目", entry.text || "", "source_entry");
+      appendEvidenceItem(entry.anchor || "DOCX", sourceEntryDisplayRole(entry), entry.text || "", "source_entry");
     });
     if (traceEvidenceList.children.length === 0) {
       appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前选择没有命中可展示证据。", "empty");
@@ -801,7 +807,7 @@
     const entry = sourceEntryByAnchor(activeSourceEntryAnchor);
     sourceFocus.dataset.hasSource = entry ? "true" : "false";
     activeSourceEntry.textContent = entry
-      ? `${entry.anchor || "DOCX"} · ${entry.role || "源文条目"}`
+      ? `${entry.anchor || "DOCX"} · ${sourceEntryDisplayRole(entry)}`
       : "未指定";
     if (showSourceEntryButton) showSourceEntryButton.disabled = !entry;
   }
@@ -848,7 +854,7 @@
     return {
       kind: "docx_circuit_review_packet",
       source: {
-        path: sourcePath ? sourcePath.textContent.trim() : "",
+        path: sourcePath ? (sourcePath.dataset.sourceDocumentPath || sourcePath.textContent.trim()) : "",
         anchor: step ? step.anchor : currentAnchor,
         title: step ? step.title : "",
         text: step ? step.source_text : "",
@@ -902,20 +908,20 @@
       ? element.folded_predicates.join("；")
       : "无折叠谓词";
     return [
-      "## DOCX Circuit Review Packet",
+      "## DOCX 电路交付摘要",
       "",
-      "### Summary",
-      `- Source: \`${source.anchor || ""}\` ${source.title || ""}`,
-      `- Selected element: \`${element.type || ""}:${element.id || ""}\` ${element.label || ""}`,
-      `- Logic level: ${levels}`,
-      `- Folded predicates: ${predicates}`,
-      `- Evidence scope: \`${packet.evidence_scope || "unknown"}\``,
-      "- Boundary: `truth_effect=none`, `certification_claim=none`",
+      "### 摘要",
+      `- 需求句子: \`${source.anchor || ""}\` ${source.title || ""}`,
+      `- 选中元素: \`${element.type || ""}:${element.id || ""}\` ${element.label || ""}`,
+      `- 逻辑层级: ${levels}`,
+      `- 折叠谓词: ${predicates}`,
+      `- 证据范围: \`${packet.evidence_scope || "unknown"}\``,
+      "- 边界: `truth_effect=none`, `certification_claim=none`",
       "",
-      "### P035 Evidence",
+      "### P035 证据",
       markdownEvidenceList(evidence.p035, "无 P035 证据"),
       "",
-      "### DOCX Evidence",
+      "### DOCX 证据",
       markdownEvidenceList(evidence.docx, "无 DOCX 证据"),
       "",
       "### JSON",
@@ -961,7 +967,7 @@
       renderTracePacketPreview();
       await copyText(packet);
       copyTracePacketButton.dataset.copyState = "success";
-      setText(copyStatus, "审阅包 Markdown 已复制");
+      setText(copyStatus, "交付摘要已复制");
     } catch (error) {
       copyTracePacketButton.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");
@@ -989,7 +995,7 @@
     try {
       await copyText(sourceEntryReviewUrl(entry));
       button.dataset.copyState = "success";
-      setText(copyStatus, `${entry.anchor || "源文"} 链接已复制`);
+      setText(copyStatus, `${entry.anchor || "需求"} 链接已复制`);
     } catch (error) {
       button.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");
@@ -1094,7 +1100,7 @@
       button.dataset.sourceEntryAnchor = entry.anchor || "";
       button.dataset.active = "false";
       const label = document.createElement("strong");
-      label.textContent = `${entry.anchor || "DOCX"} · ${entry.role || "源文条目"}`;
+      label.textContent = `${entry.anchor || "DOCX"} · ${sourceEntryDisplayRole(entry)}`;
       const summary = document.createElement("span");
       summary.textContent = compactText(entry.text, 58);
       button.appendChild(label);
@@ -1106,7 +1112,7 @@
       copyButton.dataset.sourceEntryLinkAnchor = entry.anchor || "";
       copyButton.textContent = "复制";
       copyButton.title = "复制链接";
-      copyButton.setAttribute("aria-label", `复制 ${entry.anchor || "源文"} 链接`);
+      copyButton.setAttribute("aria-label", `复制 ${entry.anchor || "需求"} 链接`);
       copyButton.addEventListener("click", (event) => {
         event.stopPropagation();
         copySourceEntryLink(entry, copyButton);
@@ -1136,14 +1142,17 @@
     applyReviewHashState();
     const restoredSourceEntryAnchor = activeSourceEntryAnchor;
     const restoredSectionAnchor = pendingWorkbenchSectionAnchor;
-    setText(sourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
+    if (sourcePath) {
+      sourcePath.dataset.sourceDocumentPath = source.path || sourcePath.dataset.sourceDocumentPath || "uploads/20260409-thrust-reverser-control-logic.docx";
+      sourcePath.textContent = "已登记源文档";
+    }
     setText(
       sourceCount,
       `${coverage.paragraph_count || 0} 段 · ${source.table_count || 0} 表 · ${coverage.source_entry_count || 0} 条`,
     );
     setText(nodeCount, `${coverage.covered_node_count || 0}/${contract.node_count || EXPECTED_NODE_COUNT}`);
     setText(wireCount, `${coverage.covered_wire_count || 0}/${contract.wire_count || EXPECTED_WIRE_COUNT}`);
-    setText(sequenceCount, `P035 · ${coverage.sequence_step_count || 0} 步`);
+    setText(sequenceCount, `${coverage.sequence_step_count || 0} 步`);
     renderSequence(payload && payload.sequence_steps);
     renderSourceIndex(payload && payload.source_entries);
     renderSubcircuit();

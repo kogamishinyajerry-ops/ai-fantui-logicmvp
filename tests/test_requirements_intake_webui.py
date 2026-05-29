@@ -5852,7 +5852,7 @@ def test_landing_page_links_requirements_intake_tool():
     html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
 
     assert "/docx-to-circuit" in html
-    assert "原始 DOCX 到完整电路" in html
+    assert "反推需求到可运行电路" in html
     assert "/requirements-intake" in html
     assert "需求理解工作台" in html
     assert "/fault-injection-prepare" in html
@@ -5974,9 +5974,9 @@ def test_landing_page_promotes_docx_to_circuit_as_primary_main_entry():
     primary_next = html.split('id="home-primary-next"', 1)[1].split(">", 1)[0]
     assert 'href="/docx-to-circuit"' in primary_next
     assert 'data-primary-entry="docx-source-to-circuit"' in primary_next
-    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" not in html
     assert "L1-L4 逻辑复刻" in html
-    assert "demo.html 完整电路" in html
+    assert "demo.html 电路验收" in html
     assert html.index('id="home-docx-to-circuit-mainline"') < html.index('id="home-first-phase-mvp"')
 
 
@@ -6391,8 +6391,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-review-workbench="interactive"' in html
     assert 'id="docx-circuit-workbench-bar"' in html
     assert 'data-docx-circuit-workbench-bar="true"' in html
-    assert "原始 DOCX 到完整电路" in html
-    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert "反推需求到可运行电路" in html
+    assert "已登记源文档" in html
+    assert 'data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx"' in html
     assert 'href="/requirements-intake?source=official-docx"' in html
     assert 'href="/logic-builder?template=docx-l1-l4"' in html
     assert 'href="/demo-reconstruction"' in html
@@ -6482,9 +6483,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "docx-circuit-svg-wire-hit" in script
     assert "data-wire-hit-id" in script
     assert "docx_circuit_review_packet" in script
-    assert "DOCX Circuit Review Packet" in script
+    assert "DOCX 电路交付摘要" in script
     assert "```json" in script
-    assert "审阅包 Markdown 已复制" in script
+    assert "交付摘要已复制" in script
     assert "CIRCUIT_NODES" in script
     assert "CIRCUIT_EDGES" in script
     assert "data-review-anchor" in script
@@ -6536,7 +6537,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "logic-template-query-link-" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
-    assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
+    assert '"activeSourceEntryLabel": "P004 · 需求条目"' in review_link_gate
     assert '"section": "docx-circuit-demo-panel"' in review_link_gate
     assert '"workbench_anchor_reopen"' in review_link_gate
     requirements_script = (STATIC_ROOT / "requirements_intake" / "requirements_intake.js").read_text(encoding="utf-8")
@@ -6580,7 +6581,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
 
     assert response.status == 200
     assert "docx-circuit-demo-frame" in body
-    assert "原始 DOCX 到完整电路" in body
+    assert "反推需求到可运行电路" in body
 
 
 def test_demo_reconstruction_page_is_productized_main_mvp_console():
