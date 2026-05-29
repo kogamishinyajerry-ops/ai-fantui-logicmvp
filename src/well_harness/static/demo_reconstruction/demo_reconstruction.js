@@ -190,6 +190,7 @@
   const circuitSnapshotCircuit = $("demo-reconstruction-circuit-snapshot-circuit");
   const circuitSnapshotOutput = $("demo-reconstruction-circuit-snapshot-output");
   const circuitSnapshotReview = $("demo-reconstruction-circuit-snapshot-review");
+  const circuitSnapshotChain = $("demo-reconstruction-circuit-snapshot-chain");
   const circuitSnapshotList = $("demo-reconstruction-circuit-snapshot-list");
   const circuitSnapshotReadback = $("demo-reconstruction-circuit-snapshot-readback");
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
@@ -359,6 +360,7 @@
   let proofPathPredicateMatrixAnchor = "";
   let proofPathBlueprintSummaryAnchor = "";
   let circuitSnapshotAnchor = "";
+  let circuitSnapshotChainAnchor = "";
   let proofPathLaneMode = "blueprint";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
@@ -3925,6 +3927,133 @@
     circuitSnapshotAnchor = anchor || "";
   }
 
+  function circuitSnapshotChainIdForStep(step) {
+    const anchor = step && step.anchor ? step.anchor : "";
+    if (anchor === "P035-S01") return "runway-l1-unlock";
+    if (anchor === "P035-S02") return "runway-l2-power";
+    if (anchor === "P035-S03") return "runway-l3-deploy";
+    if (anchor === "P035-S04") return "runway-vdt90";
+    if (anchor === "P035-S05") return "runway-l4-thr-lock";
+    return "";
+  }
+
+  function circuitSnapshotChainRecords(finalContract) {
+    const finalNodes = finalContract && Array.isArray(finalContract.node_ids) ? finalContract.node_ids : [];
+    const finalWires = finalContract && Array.isArray(finalContract.wire_ids) ? finalContract.wire_ids : [];
+    const outputLabel = finalNodes.length || finalWires.length
+      ? `${finalNodes.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalWires.length}/${EXPECTED_WIRE_COUNT} 连线`
+      : "等待完整电路";
+    const runwayRecords = OPERATOR_RUNWAY_RECORDS.slice(0, 5).map((record) => ({
+      id: record.id,
+      order: record.order,
+      anchor: record.anchor,
+      label: record.title,
+      detail: record.readback,
+      output: record.output,
+      focusKind: record.focusKind,
+      focusId: record.focusId,
+      variant: record.id === "runway-l4-thr-lock" ? "final" : "logic",
+    }));
+    return [
+      {
+        id: "docx-source",
+        order: "00",
+        anchor: "P035-S01",
+        label: "DOCX 原句",
+        detail: `${sourceEntries.length} 条源记录进入 P035 工作过程`,
+        output: "逐句生成起点",
+        focusKind: "",
+        focusId: "",
+        variant: "source",
+      },
+      ...runwayRecords,
+      {
+        id: "demo-output",
+        order: "06",
+        anchor: "P035-S05",
+        label: "demo 输出",
+        detail: outputLabel,
+        output: "THR_LOCK / HUD / 状态输出可读",
+        focusKind: "wire",
+        focusId: "wire_logic4_thr_lock",
+        variant: "output",
+      },
+    ];
+  }
+
+  function setCircuitSnapshotChainState(recordId) {
+    document.querySelectorAll("[data-circuit-snapshot-chain-step]").forEach((button) => {
+      const selected = button.dataset.circuitSnapshotChainStep === recordId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    circuitSnapshotChainAnchor = recordId || "";
+  }
+
+  function applyCircuitSnapshotChainStep(recordId) {
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    const record = circuitSnapshotChainRecords(finalContract).find((item) => item.id === recordId);
+    if (!record) return;
+    const step = traceSteps.find((item) => item && item.anchor === record.anchor);
+    if (step) {
+      setSelectedTrace(step, {writeHash: false});
+    }
+    if (record.focusKind && record.focusId) {
+      applyEmbeddedTraceFocus(record.focusKind, record.focusId);
+    } else {
+      writeReviewHashState();
+    }
+    setCircuitSnapshotChainState(record.id);
+    setText(circuitSnapshotReview, `${record.order} · ${record.label}`);
+  }
+
+  function renderCircuitSnapshotChain(finalContract) {
+    if (!circuitSnapshotChain) return;
+    if (!traceSteps.length) {
+      circuitSnapshotChain.innerHTML = "";
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.circuitSnapshotChainStep = "empty";
+      empty.setAttribute("aria-pressed", "false");
+      empty.textContent = "等待闭环链路";
+      circuitSnapshotChain.appendChild(empty);
+      circuitSnapshotChainAnchor = "";
+      return;
+    }
+    const records = circuitSnapshotChainRecords(finalContract);
+    circuitSnapshotChain.innerHTML = "";
+    records.forEach((record, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.circuitSnapshotChainStep = record.id;
+      button.dataset.circuitSnapshotChainVariant = record.variant;
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyCircuitSnapshotChainStep(record.id));
+
+      const order = document.createElement("strong");
+      order.textContent = record.order;
+      const label = document.createElement("span");
+      label.textContent = record.label;
+      const detail = document.createElement("small");
+      detail.textContent = record.detail;
+      const output = document.createElement("em");
+      output.textContent = record.output;
+      button.append(order, label, detail, output);
+      circuitSnapshotChain.appendChild(button);
+
+      if (index < records.length - 1) {
+        const connector = document.createElement("i");
+        connector.className = "demo-reconstruction-circuit-snapshot-chain-connector";
+        connector.setAttribute("aria-hidden", "true");
+        connector.textContent = "->";
+        circuitSnapshotChain.appendChild(connector);
+      }
+    });
+    const selectedRecordId = circuitSnapshotChainAnchor
+      || circuitSnapshotChainIdForStep(currentTraceStep)
+      || records[1].id;
+    setCircuitSnapshotChainState(selectedRecordId);
+  }
+
   function updateCircuitSnapshotReadback(step, index = -1) {
     if (!circuitSnapshotReadback || !step) return;
     const safeIndex = index >= 0 ? index : traceSteps.findIndex((item) => item && item.anchor === step.anchor);
@@ -3964,6 +4093,7 @@
       setText(circuitSnapshotOutput, "等待输出");
       setText(circuitSnapshotReview, "等待选择");
       setText(circuitSnapshotReadback, "等待逐句生成完整电路。");
+      renderCircuitSnapshotChain({node_ids: [], wire_ids: []});
       return;
     }
 
@@ -3973,6 +4103,7 @@
     setText(circuitSnapshotSource, `${sourceEntries.length} 条源记录 · ${items.length}/5 句`);
     setText(circuitSnapshotCircuit, `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`);
     setText(circuitSnapshotOutput, `${OUTPUT_PATH_TARGETS.length}/5 输出 · ${assemblyOutputLabelForStep(finalStep, finalContract)}`);
+    renderCircuitSnapshotChain(finalContract);
 
     items.forEach((step, index) => {
       const record = circuitSnapshotRecord(step, index);
@@ -5008,6 +5139,7 @@
     setProofPathPredicateMatrixState(step.anchor || "");
     setProofPathBlueprintSummaryState(step.anchor || "");
     setCircuitSnapshotState(step.anchor || "");
+    setCircuitSnapshotChainState(circuitSnapshotChainIdForStep(step));
     if (selectedTraceIndex >= 0) {
       const contract = cumulativeTraceContract(selectedTraceIndex);
       updateProofPathCoverageGridReadback(step, contract);
