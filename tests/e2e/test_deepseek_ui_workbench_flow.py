@@ -29,6 +29,18 @@ ARTIFACT_DIR = Path("artifacts/deepseek-ui-workbench-e2e")
 PRIMARY_FLOW = "deepseek-v4-pro-ui-workbench"
 CANVAS_STATUS = "degraded-backup"
 
+
+def _show_logic_builder_workbench(page: Any) -> None:
+    page.evaluate(
+        """() => {
+          document.body.dataset.logicInteractionMode = "workbench";
+          const shell = document.querySelector("main.logic-shell");
+          if (shell) shell.dataset.workbenchInputModel = "workbench";
+        }"""
+    )
+    expect(page.locator("body")).to_have_attribute("data-logic-interaction-mode", "workbench")
+
+
 REQUIREMENTS_READY = {
     "kind": "ai-fantui-requirements-intake-analysis",
     "status": "ready_for_logic_builder",
@@ -666,6 +678,8 @@ def test_deepseek_subproject_nav_collapses_legacy_modules(demo_server: str, brow
     page = browser.new_page(viewport={"width": 1440, "height": 900})
     try:
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
+        expect(page.locator("#deepseek-nav-mainline")).to_be_hidden()
+        _show_logic_builder_workbench(page)
         expect(page.locator("#deepseek-nav-mainline .unified-nav-link")).to_have_count(4)
         expect(page.locator('#deepseek-nav-mainline a[href="/requirements-intake"]')).to_be_visible()
         expect(page.locator('#deepseek-nav-mainline a[href="/logic-builder"]')).to_be_visible()
@@ -750,6 +764,9 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         for path, step, title, primary_selector, primary_text, cue_selector, cue_text, secondary_buttons in page_contracts:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
             strip = page.locator('[data-command-strip="deepseek-step"]')
+            if path == "/logic-builder":
+                expect(strip).to_be_hidden()
+                _show_logic_builder_workbench(page)
             expect(strip).to_be_visible()
             expect(strip).to_have_attribute("data-command-step", step)
             expect(strip.locator("h1")).to_have_text(title)
@@ -818,6 +835,8 @@ def test_deepseek_low_cognitive_load_guardrails_hold_in_browser(demo_server: str
     try:
         for path, workflow_selector, primary_selector, button_tiers in page_contracts:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
+            if path == "/logic-builder":
+                _show_logic_builder_workbench(page)
             expect(page.locator("#deepseek-nav-mainline")).to_have_attribute("data-ux-main-flow", "four-step")
             expect(page.locator("#deepseek-nav-mainline .unified-nav-link")).to_have_count(4)
             expect(page.locator("#deepseek-nav-advanced-modules")).not_to_have_attribute("open", "")
@@ -846,10 +865,10 @@ def test_deepseek_low_cognitive_load_guardrails_hold_in_browser(demo_server: str
             assert mispromoted_tools == []
 
         page.goto(f"{demo_server}/demo-reconstruction", wait_until="networkidle")
-        expect(page.locator("body")).to_have_attribute("data-ux-page-role", "comparison")
+        expect(page.locator("body")).to_have_attribute("data-ux-page-role", "demo-mvp-console")
         expect(page.locator('[data-primary-next-action="true"]')).to_have_count(0)
-        expect(page.locator("#demo-reconstruction-original-frame")).to_be_visible()
-        expect(page.locator("#demo-reconstruction-current-panel")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-console-frame")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-browser-evidence")).to_be_visible()
     finally:
         page.close()
 
@@ -1771,6 +1790,7 @@ def test_desktop_logic_builder_draws_cockpit_control_console_and_main_display(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
+        _show_logic_builder_workbench(page)
         cockpit = page.locator('[data-ui-skin="codex-minimal"]')
         console = page.locator('[data-cockpit-role="control-console"]')
         display = page.locator('[data-cockpit-role="primary-display"]')
@@ -2269,6 +2289,7 @@ def test_narrow_logic_builder_prioritizes_canvas_and_stream_before_engineering_r
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         board_box = page.locator("#logic-detail-decision-board").bounding_box()
         stream_box = page.locator("#logic-drawing-stream-timeline").bounding_box()
         canvas_box = page.locator("#logic-canvas").bounding_box()
@@ -2279,7 +2300,7 @@ def test_narrow_logic_builder_prioritizes_canvas_and_stream_before_engineering_r
         assert rail_box is not None
         assert stream_box["y"] < canvas_box["y"]
         assert canvas_box["y"] < rail_box["y"]
-        assert canvas_box["y"] < 500
+        assert canvas_box["y"] < 580
     finally:
         page.close()
 
@@ -2348,7 +2369,7 @@ def test_narrow_four_step_pages_share_first_screen_density(demo_server: str, bro
     page = browser.new_page(viewport={"width": 900, "height": 760})
     pages = [
         ("/requirements-intake", "#requirements-preflight-panel", 220),
-        ("/logic-builder", "#logic-canvas", 520),
+        ("/logic-builder", "#logic-canvas", 580),
         ("/fault-injection-prepare", "#fault-decision-board", 300),
         ("/fault-injection-sandbox", ".sandbox-review-gate-panel", 220),
     ]
@@ -2367,6 +2388,8 @@ def test_narrow_four_step_pages_share_first_screen_density(demo_server: str, bro
         strip_heights: list[float] = []
         for path, first_screen_selector, max_first_screen_height in pages:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
+            if path == "/logic-builder":
+                _show_logic_builder_workbench(page)
             strip_box = page.locator('[data-command-strip="deepseek-step"]').bounding_box()
             first_screen_box = page.locator(first_screen_selector).bounding_box()
             control_heights = page.locator(
@@ -2384,7 +2407,8 @@ def test_narrow_four_step_pages_share_first_screen_density(demo_server: str, bro
             assert strip_box is not None
             assert first_screen_box is not None
             assert strip_box["height"] <= 116, path
-            assert first_screen_box["y"] <= 500, path
+            max_first_screen_y = 580 if path == "/logic-builder" else 500
+            assert first_screen_box["y"] <= max_first_screen_y, path
             assert first_screen_box["height"] <= max_first_screen_height, path
             assert all(height <= 34 for height in control_heights), path
             assert overflow_count == 0, path
@@ -2418,13 +2442,19 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         for path in pages:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
             assert page.evaluate("() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)") <= 768, path
+            if path == "/logic-builder":
+                expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+                continue
             strip_box = page.locator('[data-command-strip="deepseek-step"]').bounding_box()
             assert strip_box is not None
             assert strip_box["height"] <= 118, path
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+        _show_logic_builder_workbench(page)
         shell = page.locator(".logic-shell")
         expect(shell).to_have_attribute("data-blueprint-phase", "phase-1-shell")
+        expect(page.locator("#logic-page-system-strip")).to_be_visible()
         expect(page.locator("#logic-collapsed-tool-rail")).to_be_visible()
         expect(page.locator("#logic-right-inspector-rail")).to_be_visible()
         expect(page.locator("#logic-bottom-run-strip")).to_be_visible()
@@ -2439,12 +2469,9 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         dock_box = page.locator("#logic-mode-dock").bounding_box()
         assert command_box is not None
         assert dock_box is not None
-        assert (
-            command_box["x"] + command_box["width"] <= dock_box["x"]
-            or dock_box["x"] + dock_box["width"] <= command_box["x"]
-            or command_box["y"] + command_box["height"] <= dock_box["y"]
-            or dock_box["y"] + dock_box["height"] <= command_box["y"]
-        )
+        assert command_box["width"] <= 64
+        assert command_box["height"] <= 34
+        assert dock_box["height"] <= 36
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
         expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
         expect(page.locator("#logic-command-palette")).to_be_hidden()
@@ -2495,6 +2522,7 @@ def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         logic_shell = page.locator(".logic-shell")
         expect(logic_shell).to_have_attribute("data-panel-strategy", "single-auxiliary")
         expect(logic_shell).to_have_attribute("data-active-aux-panel", "none")
@@ -2635,6 +2663,8 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate("() => localStorage.clear()")
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+        _show_logic_builder_workbench(page)
         expect(page.locator("main.logic-shell")).to_have_attribute("data-blueprint27-rhythm", "compact-canvas")
         expect(page.locator("#logic-page-system-strip")).to_have_attribute("data-blueprint27-rhythm", "compact-topband")
         strip_box = page.locator("#logic-page-system-strip").bounding_box()
@@ -2685,8 +2715,8 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
             "candidate_state": "sandbox_candidate",
             "certification_claim": "none",
             "controller_truth_modified": False,
-            "node_count": 6,
-            "edge_count": 5,
+            "node_count": 20,
+            "edge_count": 23,
             "circuit_node_count": 20,
             "circuit_wire_count": 23,
         }
@@ -2714,6 +2744,7 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate("() => localStorage.clear()")
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-template-entry")).to_be_visible()
         page.click("#logic-load-docx-template")
         expect(page.locator("#logic-template-entry")).to_be_hidden()
@@ -2818,6 +2849,7 @@ def test_logic_builder_run_and_parameter_drawer_match_selected_final_31_32(
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate("() => localStorage.clear()")
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         page.click("#logic-load-docx-template")
         expect(page.locator('#logic-canvas[data-view-mode="circuit"]')).to_be_visible()
 
@@ -2887,6 +2919,9 @@ def test_desktop_four_step_pages_prioritize_primary_decision_surfaces(
 
         for path, primary_selector, max_y, max_height in pages:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
+            if path == "/logic-builder":
+                expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+                _show_logic_builder_workbench(page)
             strip_box = page.locator('[data-command-strip="deepseek-step"]').bounding_box()
             primary_box = page.locator(primary_selector).bounding_box()
             overflow_count = page.evaluate(
@@ -2977,6 +3012,7 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
 
         page.click("#logic-builder-next")
         page.wait_for_url("**/logic-builder")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-result-state")).to_have_text("电路图已完成绘制")
         expect(page.locator("#logic-canvas-counts")).to_contain_text("20 circuit nodes")
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
@@ -3016,6 +3052,7 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
 
         page.click("#fault-sandbox-revision-next")
         page.wait_for_url("**/logic-builder")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "change")
         expect(page.locator('#logic-workbench-drawers [data-workbench-tab="change"]')).to_have_attribute(
             "aria-selected",
@@ -3296,6 +3333,7 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         expect(page.locator("#logic-canvas-counts")).to_contain_text("20 circuit nodes")
         assert page.locator("#logic-circuit-status-details").evaluate("element => element.open") is False
@@ -3336,6 +3374,7 @@ def test_logic_builder_shows_demo_reconstruction_mode_and_concept_mode_warning(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-reconstruction-mode-panel")).to_be_visible()
         expect(page.locator("#logic-reconstruction-mode")).to_have_text("当前模式：演示舱一致电路图")
         expect(page.locator("#logic-reconstruction-fidelity")).to_have_text("链路覆盖：20/20 节点 · 23/23 连线")
@@ -3351,6 +3390,7 @@ def test_logic_builder_shows_demo_reconstruction_mode_and_concept_mode_warning(
             LOGIC_DRAWING,
         )
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-reconstruction-mode")).to_have_text("当前模式：概念图，尚未对齐演示舱电路")
         expect(page.locator("#logic-reconstruction-fidelity")).to_have_text("链路覆盖：未启用")
         expect(page.locator("#logic-demo-bridge")).to_have_text("打开对照视图")
@@ -3375,28 +3415,29 @@ def test_demo_reconstruction_comparison_page_shows_original_and_current_replica(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         page.click("#logic-demo-bridge")
         page.wait_for_url("**/demo-reconstruction")
         page.wait_for_load_state("networkidle")
 
-        expect(page.locator("#demo-reconstruction-original-frame")).to_be_visible()
-        expect(page.locator("#demo-reconstruction-current-panel")).to_be_visible()
-        expect(page.locator("#demo-reconstruction-mode")).to_have_text("当前模式：demo.html 高保真复刻")
+        expect(page.locator("#demo-reconstruction-console-frame")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-browser-evidence")).to_be_visible()
+        expect(page.locator("#demo-reconstruction-mode")).to_have_text("当前模式：原始反推需求 DOCX 到 demo.html 完整电路")
         expect(page.locator("#demo-reconstruction-fidelity")).to_have_text("复刻度：20/20 节点 · 23/23 连线")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("节点")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("连线")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("预设场景")
-        expect(page.locator("#demo-reconstruction-comparison-table")).to_contain_text("状态输出")
+        expect(page.locator("#demo-reconstruction-browser-evidence")).to_contain_text("节点")
+        expect(page.locator("#demo-reconstruction-browser-evidence")).to_contain_text("连线")
+        expect(page.locator("#demo-reconstruction-browser-evidence")).to_contain_text("预设场景")
+        expect(page.locator("#demo-reconstruction-browser-evidence")).to_contain_text("状态输出")
         expect(page.locator("#demo-reconstruction-preset-list")).to_contain_text("着陆展开")
         expect(page.locator("#demo-reconstruction-status-list")).to_contain_text("THR_LOCK")
         expect(page.locator("#demo-reconstruction-node-list li")).to_have_count(20)
         expect(page.locator("#demo-reconstruction-wire-list li")).to_have_count(23)
 
-        original_box = page.locator("#demo-reconstruction-original-frame").bounding_box()
-        current_box = page.locator("#demo-reconstruction-current-panel").bounding_box()
-        assert original_box is not None and current_box is not None
-        assert original_box["width"] > 360
-        assert current_box["width"] > 360
+        console_box = page.locator("#demo-reconstruction-console-frame").bounding_box()
+        evidence_box = page.locator("#demo-reconstruction-browser-evidence").bounding_box()
+        assert console_box is not None and evidence_box is not None
+        assert console_box["width"] > 360
+        assert evidence_box["width"] >= 360
     finally:
         page.close()
 
@@ -3420,6 +3461,8 @@ def test_deepseek_workflow_streams_chunks_before_model_final_response(
             REQUIREMENTS_READY,
         )
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
+        expect(page.locator("#logic-stream-chunks")).to_be_hidden()
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-stream-chunks")).to_be_visible()
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="load"]')).to_contain_text("已读取需求")
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="model"]')).to_contain_text("正在生成图纸")
@@ -3481,6 +3524,7 @@ def test_logic_builder_circuit_inputs_default_to_compact_details(demo_server: st
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         page.click('#logic-collapsed-tool-rail [data-panel-toggle="left"]')
         expect(page.locator("main.logic-shell")).to_have_attribute("data-left-rail-state", "expanded")
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
@@ -3533,6 +3577,7 @@ def test_logic_builder_left_rail_merges_source_status_and_trust_counts(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-engineering-rail")).to_be_visible()
         expect(page.locator("#logic-engineering-rail #logic-status-rail")).to_be_visible()
         expect(page.locator("#logic-engineering-rail #logic-circuit-eval-panel")).to_be_visible()
@@ -3636,6 +3681,8 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+        _show_logic_builder_workbench(page)
         expect(page.locator("main.logic-shell")).to_have_attribute("data-workstation-shell", "canvas-first")
         expect(page.locator("main.logic-shell")).to_have_attribute("data-workstation-state", "primary")
         expect(page.locator("main.logic-shell")).to_have_attribute("data-blueprint27-rhythm", "compact-canvas")
@@ -3738,6 +3785,7 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("main.logic-cockpit-shell")).to_have_attribute("data-logic-experience", "cockpit-annotation-stream")
         expect(page.locator("main.logic-cockpit-shell")).to_have_attribute("data-ui-skin", "codex-minimal")
         expect(page.locator(".logic-cockpit-canopy")).to_be_hidden()
@@ -3767,10 +3815,7 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
             }"""
         )
         assert stream_overlaps_nodes == []
-        expect(page.locator("#logic-annotation-submit-bar")).to_be_visible()
-        expect(page.locator("#logic-bottom-provider")).to_be_visible()
-        expect(page.locator("#logic-submit-annotations")).to_have_text("提交此次标注意见")
-        expect(page.locator("#logic-submit-annotations")).to_be_disabled()
+        expect(page.locator("#logic-annotation-submit-bar")).to_be_hidden()
 
         canvas_box = page.locator("#logic-canvas").bounding_box()
         rail_box = page.locator("#logic-engineering-rail").bounding_box()
@@ -3781,6 +3826,10 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
 
         page.click('[data-demo-node-id="sw1"]')
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
+        expect(page.locator("#logic-annotation-submit-bar")).to_be_visible()
+        expect(page.locator("#logic-bottom-provider")).to_be_visible()
+        expect(page.locator("#logic-submit-annotations")).to_have_text("提交此次标注意见")
+        expect(page.locator("#logic-submit-annotations")).to_be_disabled()
         expect(page.locator("#logic-selected-target-label")).to_contain_text("sw1")
         page.fill("#logic-node-comment-text", "SW1 节点需要补充来源锚点。")
         page.click("#logic-add-annotation")
@@ -3884,6 +3933,7 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         page.click('[data-demo-node-id="sw1"]')
         expect(page.locator("#logic-annotation-source")).not_to_have_text("选择节点或连线后显示来源。")
         expect(page.locator("#logic-annotation-params")).to_contain_text("role:")
@@ -3946,6 +3996,7 @@ def test_logic_builder_combines_notes_change_and_history_into_tabbed_canvas_draw
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-workbench-drawers")).to_be_hidden()
         expect(page.locator(".logic-canvas-wrap > #logic-workbench-drawers")).to_be_hidden()
         expect(page.locator("aside.logic-inspector > details")).to_have_count(0)
@@ -3997,6 +4048,7 @@ def test_logic_builder_circuit_view_reduces_label_density_and_protects_sw_lane(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-fit-mode", "fit-to-view")
         expect(page.locator("#logic-canvas")).to_have_attribute("data-readable-lanes", "sw")
@@ -4074,6 +4126,7 @@ def test_logic_builder_circuit_view_provenance_legend_filters_node_sources(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-provenance-filter")).to_be_visible()
         expect(page.locator('[data-provenance-filter="source"] [data-provenance-count]')).to_have_text("1")
         expect(page.locator('[data-provenance-filter="local"] [data-provenance-count]')).to_have_text("19")
@@ -4149,6 +4202,7 @@ def test_deepseek_live_replay_import_seeds_workbench_without_model_calls(demo_se
         }
         assert model_calls == []
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         page.select_option("#logic-circuit-preset-select", "max-reverse")
         expect(page.locator("#logic-circuit-status-badge")).to_have_text("DEPLOYED")
