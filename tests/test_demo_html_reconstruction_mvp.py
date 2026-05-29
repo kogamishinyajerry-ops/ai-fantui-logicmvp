@@ -292,6 +292,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'data-proof-path-lane-mode="blueprint"' in html
     assert 'data-proof-path-lane-mode="all"' in html
     assert 'id="demo-reconstruction-proof-path-lane-mode-status"' in html
+    assert 'data-proof-path-review-strip="first-screen"' in html
+    assert 'id="demo-reconstruction-proof-path-review-lane"' in html
+    assert 'id="demo-reconstruction-proof-path-review-step"' in html
+    assert 'id="demo-reconstruction-proof-path-review-object"' in html
+    assert 'id="demo-reconstruction-proof-path-review-link-state"' in html
     assert 'data-proof-path="first-screen"' in html
     assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-scenario-comparator-status"' in html
@@ -368,6 +373,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "writeReviewHashState" in script
     assert "applyReviewHashState" in script
     assert "updateReviewLink" in script
+    assert "updateProofPathReviewStrip" in script
     assert 'params.get("lane")' in script
     assert 'params.set("lane", proofPathLaneMode)' in script
     assert 'setProofPathLaneMode(state.lane || "blueprint", {writeHash: false})' in script
@@ -551,6 +557,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-proof-path-list" in stylesheet
     assert ".demo-reconstruction-proof-path-focus-list" in stylesheet
     assert ".demo-reconstruction-proof-path-lane-switcher" in stylesheet
+    assert ".demo-reconstruction-proof-path-review-strip" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector-metrics" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector-neighbors" in stylesheet
@@ -1000,6 +1007,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_deep_link"]["restoredLaneActiveModes"] == ["matrix"]
     assert payload["review_deep_link"]["restoredLaneVisibleMatrix"] is True
     assert payload["review_deep_link"]["restoredLaneVisibleSource"] is False
+    assert payload["review_deep_link"]["restoredStripLane"] == "矩阵"
+    assert payload["review_deep_link"]["restoredStripStep"] == "P035-S05"
+    assert "wire_logic4_thr_lock" in payload["review_deep_link"]["restoredStripObject"]
+    assert payload["review_deep_link"]["restoredStripLinkState"] == "链接已同步"
     assert payload["review_deep_link"]["restoredVisibleNodeCount"] == 1
     assert payload["review_deep_link"]["restoredVisibleWireCount"] == 3
     assert payload["review_deep_link"]["restoredFocusedWireCount"] == 1
@@ -1245,10 +1256,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["proof_path_lane_default_review"]["visibleBlueprint"] is True
     assert payload["proof_path_lane_default_review"]["visibleOutput"] is True
     assert payload["proof_path_lane_default_review"]["visibleSource"] is False
+    assert payload["proof_path_lane_default_review"]["stripLaneText"] == "蓝图"
+    assert payload["proof_path_lane_default_review"]["stripLinkStateText"] in {"默认视图", "链接已同步"}
     assert payload["proof_path_lane_all_review"]["activeModes"] == ["all"]
     assert payload["proof_path_lane_all_review"]["hiddenLanes"] == 0
     assert payload["proof_path_lane_all_review"]["visibleSource"] is True
     assert payload["proof_path_lane_all_review"]["visibleMatrix"] is True
+    assert payload["proof_path_lane_all_review"]["stripLaneText"] == "全部"
     assert payload["proof_path_output_map_review"]["targetCount"] == 5
     assert payload["proof_path_output_map_review"]["activeTargets"] == ["thr_lock"]
     assert "5/5" in payload["proof_path_output_map_review"]["statusText"]
@@ -1311,6 +1325,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_hash_link": "pass",
         "review_hash_restore": "pass",
         "review_hash_lane_restore": "pass",
+        "proof_path_review_strip": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
