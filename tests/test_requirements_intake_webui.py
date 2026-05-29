@@ -6914,6 +6914,10 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
     html = (STATIC_ROOT / "logic_builder" / "index.html").read_text(encoding="utf-8")
     stylesheet = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
     script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    surface_gate = (REPO_ROOT / "scripts" / "verify_logic_builder_surface_gate.py").read_text(
+        encoding="utf-8"
+    )
 
     assert 'data-ui-skin="codex-minimal"' in html
     assert 'data-logic-experience="cockpit-annotation-stream"' in html
@@ -6928,6 +6932,12 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
     assert "DeepSeek 绘图" not in html
     assert "模型" not in html
     assert "模型" not in script
+    assert "logic-builder-surface-gate" in makefile
+    assert "scripts/verify_logic_builder_surface_gate.py --format json" in makefile
+    assert "BANNED_VISIBLE_TEXT" in surface_gate
+    assert '"模型"' in surface_gate
+    assert "EXPECTED_VISIBLE_TEXT" in surface_gate
+    assert "EXPECTED_DOM_TEXT" in surface_gate
     assert 'id="logic-annotation-popover"' in html
     assert 'id="logic-selected-target-label"' in html
     assert 'id="logic-node-comment-text"' in html
