@@ -721,13 +721,13 @@
     <h1 id="home-hero-title">反推逻辑演示舱</h1>
     <p>
       默认只暴露 <strong>画布 / 运行 / 参数 / 证据 / 报告</strong> 五个入口。
-      需求解析、逻辑绘制、故障准备和沙盒审查仍保留在链路中，所有输出保持 sandbox candidate，不修改 controller truth。
+      需求解析、逻辑绘制、故障准备和沙盒审查仍保留在链路中，所有输出保持候选只读，不改动控制逻辑基准。
     </p>
     <div class="home-shell-state" aria-label="候选态边界">
-      <span class="home-shell-pill">truth_effect:none</span>
-      <span class="home-shell-pill">candidate_state:sandbox_candidate</span>
-      <span class="home-shell-pill">certification_claim:none</span>
-      <span class="home-shell-pill">controller_truth_modified:false</span>
+      <span class="home-shell-pill">只读演示</span>
+      <span class="home-shell-pill">候选输出</span>
+      <span class="home-shell-pill">无认证声明</span>
+      <span class="home-shell-pill">控制逻辑未改动</span>
     </div>
   </section>
 
@@ -860,7 +860,7 @@
       <span class="home-card-kind">需求入口</span>
       <h2 class="home-card-title" id="card-requirements-intake-title">需求理解工作台</h2>
       <p class="home-card-subtitle">/requirements-intake</p>
-      <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，默认通过 DeepSeek V4 Pro 输出澄清问题、概念节点、逻辑连线与参数候选；不写入 controller truth。</p>
+      <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，默认通过 DeepSeek V4 Pro 输出澄清问题、概念节点、逻辑连线与参数候选；不写入控制逻辑基准。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
