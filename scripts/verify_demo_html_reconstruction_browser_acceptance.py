@@ -171,7 +171,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                 const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
                 if (snapshot) snapshot.open = true;
-                if (drawer) drawer.open = true;
+                if (drawer) {
+                    drawer.hidden = false;
+                    drawer.dataset.reviewDetailDrawer = "visible";
+                    drawer.open = true;
+                }
             }"""
         )
         page.wait_for_function(
@@ -258,7 +262,6 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             ".demo-reconstruction-hero",
                             "#demo-reconstruction-circuit-snapshot",
                             "#demo-reconstruction-compact-runway",
-                            "#demo-reconstruction-detail-drawer > summary",
                         ].map((selector) => document.querySelector(selector)?.innerText?.trim() || "").join("\\n")"""
                     ),
                     "detail_drawer_closed": page.locator(
@@ -267,6 +270,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "snapshot_details_closed": page.locator(
                         "#demo-reconstruction-circuit-snapshot-details"
                     ).evaluate("element => !element.open"),
+                    "detail_drawer_control_visible": page.locator(
+                        "#demo-reconstruction-detail-drawer"
+                    ).evaluate(
+                        """element => {
+                            const summary = element.querySelector("summary");
+                            return !element.hidden
+                                && element.dataset.reviewDetailDrawer !== "hidden"
+                                && !!(summary && summary.offsetParent);
+                        }"""
+                    ),
                     "review_index_visible": page.locator(
                         "#demo-reconstruction-review-index"
                     ).is_visible(timeout=5000),
@@ -4099,6 +4112,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             first_screen_review["detail_drawer_closed"]
             and first_screen_review["snapshot_details_closed"]
+            and not first_screen_review["detail_drawer_control_visible"]
             and first_screen_review["circuit_snapshot_visible"]
             and first_screen_review["circuit_snapshot_preview_visible"]
             and first_screen_review["circuit_snapshot_preview_count"] == 7
@@ -4115,6 +4129,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "20/20 节点" not in first_screen_review["visible_text"]
             and "23/23 连线" not in first_screen_review["visible_text"]
             and "62 条源记录" not in first_screen_review["visible_text"]
+            and "查看验收详情" not in first_screen_review["visible_text"]
         )
         else "fail",
         "compact_runway": "pass"

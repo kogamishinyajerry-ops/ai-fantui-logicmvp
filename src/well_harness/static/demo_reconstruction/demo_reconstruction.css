@@ -289,6 +289,9 @@ h2 { margin-bottom: 0; font-size: 18px; }
   margin-top: 16px;
   box-shadow: var(--demo-shadow);
 }
+.demo-reconstruction-detail-drawer[data-review-detail-drawer="hidden"] {
+  display: none;
+}
 .demo-reconstruction-circuit-snapshot-details > summary,
 .demo-reconstruction-detail-drawer > summary {
   min-height: 40px;
