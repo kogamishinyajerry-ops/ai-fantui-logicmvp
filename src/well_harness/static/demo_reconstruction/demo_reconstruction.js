@@ -272,6 +272,9 @@
   const proofPathSourceRailStatus = $("demo-reconstruction-proof-path-source-rail-status");
   const proofPathSourceRailList = $("demo-reconstruction-proof-path-source-rail-list");
   const proofPathSourceRailReadback = $("demo-reconstruction-proof-path-source-rail-readback");
+  const proofPathSentenceMatrixStatus = $("demo-reconstruction-proof-path-sentence-matrix-status");
+  const proofPathSentenceMatrixList = $("demo-reconstruction-proof-path-sentence-matrix-list");
+  const proofPathSentenceMatrixReadback = $("demo-reconstruction-proof-path-sentence-matrix-readback");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -312,6 +315,7 @@
   let proofPathCoverageAnchor = "";
   let proofPathDeltaAnchor = "";
   let proofPathSourceAnchor = "";
+  let proofPathSentenceMatrixAnchor = "";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -2698,6 +2702,154 @@
     updateProofPathSourceRailReadback(selectedStep);
   }
 
+  function proofPathSentenceMatrixRecord(step) {
+    const index = traceSteps.findIndex((item) => item && step && item.anchor === step.anchor);
+    const safeIndex = index >= 0 ? index : 0;
+    const contract = traceSteps.length ? cumulativeTraceContract(safeIndex) : {node_ids: [], wire_ids: []};
+    const sourceRecords = proofPathSourceRecords(step);
+    const outputs = ladderMilestonesForStep(step);
+    return {
+      contract,
+      sourceRecords,
+      outputText: assemblyOutputLabelForStep(step, contract),
+      outputs,
+    };
+  }
+
+  function setProofPathSentenceMatrixState(anchor) {
+    document.querySelectorAll("[data-proof-path-sentence-step]").forEach((button) => {
+      const selected = button.dataset.proofPathSentenceStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    proofPathSentenceMatrixAnchor = anchor || "";
+  }
+
+  function updateProofPathSentenceMatrixReadback(step, focus = null) {
+    if (!proofPathSentenceMatrixReadback || !step) return;
+    const record = proofPathSentenceMatrixRecord(step);
+    const sourceAnchor = record.sourceRecords[0] && record.sourceRecords[0].anchor
+      ? record.sourceRecords[0].anchor
+      : "无源锚点";
+    const focusText = focus && focus.id ? ` · ${focus.kind === "wire" ? "连线" : "节点"} · ${focus.id}` : "";
+    setText(
+      proofPathSentenceMatrixReadback,
+      `${step.anchor || "P035"} · 源 ${sourceAnchor} +${Math.max(0, record.sourceRecords.length - 1)} · ${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputText}${focusText}`,
+    );
+  }
+
+  function applyProofPathSentenceMatrixStep(anchor) {
+    const step = traceSteps.find((item) => item && item.anchor === anchor);
+    if (!step) return;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathSentenceMatrixState(anchor);
+    updateProofPathSentenceMatrixReadback(step);
+    writeReviewHashState();
+  }
+
+  function applyProofPathSentenceMatrixObject(anchor, kind, id) {
+    const step = traceSteps.find((item) => item && item.anchor === anchor);
+    if (!step || !kind || !id) return;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathSentenceMatrixState(anchor);
+    applyEmbeddedTraceFocus(kind, id);
+    updateProofPathSentenceMatrixReadback(step, {kind, id});
+  }
+
+  function appendProofPathSentenceMatrixChips(container, anchor, label, values, kind = "") {
+    const group = document.createElement("div");
+    group.className = "demo-reconstruction-proof-path-sentence-matrix-group";
+    const title = document.createElement("strong");
+    title.textContent = label;
+    const chips = document.createElement("div");
+    chips.className = "demo-reconstruction-proof-path-sentence-matrix-chips";
+    const list = Array.isArray(values) ? values : [];
+    if (!list.length) {
+      const empty = document.createElement("span");
+      empty.textContent = "无";
+      chips.appendChild(empty);
+    } else {
+      list.forEach((value) => {
+        const chip = kind ? document.createElement("button") : document.createElement("span");
+        chip.textContent = value;
+        if (kind) {
+          chip.type = "button";
+          chip.dataset.proofPathSentenceFocusKind = kind;
+          chip.dataset.proofPathSentenceFocusId = value;
+          chip.addEventListener("click", () => applyProofPathSentenceMatrixObject(anchor, kind, value));
+        }
+        chips.appendChild(chip);
+      });
+    }
+    group.append(title, chips);
+    container.appendChild(group);
+  }
+
+  function renderProofPathSentenceMatrix(steps) {
+    if (!proofPathSentenceMatrixList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    proofPathSentenceMatrixList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.proofPathSentenceStep = "empty";
+      empty.textContent = "等待逐句矩阵";
+      proofPathSentenceMatrixList.appendChild(empty);
+      setText(proofPathSentenceMatrixStatus, "等待逐句矩阵");
+      setText(proofPathSentenceMatrixReadback, "等待选择逐句矩阵。");
+      return;
+    }
+
+    const finalContract = cumulativeTraceContract(items.length - 1);
+    setText(
+      proofPathSentenceMatrixStatus,
+      `${items.length}/5 句 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+
+    items.forEach((step, index) => {
+      const record = proofPathSentenceMatrixRecord(step);
+      const source = record.sourceRecords[0] || {};
+      const row = document.createElement("div");
+      row.className = "demo-reconstruction-proof-path-sentence-matrix-row";
+      row.dataset.proofPathSentenceRow = step.anchor || "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-path-sentence-matrix-step";
+      button.dataset.proofPathSentenceStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyProofPathSentenceMatrixStep(step.anchor || ""));
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const metrics = document.createElement("small");
+      metrics.textContent = `${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · 源 ${source.anchor || "无"}`;
+      button.append(anchor, title, metrics);
+
+      const sourceText = document.createElement("p");
+      const sourceNeedle = proofPathSourceNeedle(step, source.text || step.source_text || "");
+      sourceText.textContent = proofPathSourceExcerpt(source.text || step.source_text || "", 130, sourceNeedle);
+
+      const output = document.createElement("p");
+      output.textContent = record.outputText;
+
+      const groups = document.createElement("div");
+      groups.className = "demo-reconstruction-proof-path-sentence-matrix-groups";
+      appendProofPathSentenceMatrixChips(groups, step.anchor || "", "节点", step.node_ids || [], "node");
+      appendProofPathSentenceMatrixChips(groups, step.anchor || "", "连线", step.wire_ids || [], "wire");
+      appendProofPathSentenceMatrixChips(groups, step.anchor || "", "输出", record.outputs);
+
+      row.append(button, sourceText, output, groups);
+      proofPathSentenceMatrixList.appendChild(row);
+    });
+
+    const selectedAnchor = proofPathSentenceMatrixAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedStep = items.find((step) => step && step.anchor === selectedAnchor) || items[0];
+    setProofPathSentenceMatrixState(selectedStep.anchor || "");
+    updateProofPathSentenceMatrixReadback(selectedStep);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -3426,19 +3578,21 @@
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind]")
       .forEach((button) => {
         const chipKind = button.dataset.traceFocusKind
           || button.dataset.sourceFocusKind
           || button.dataset.proofPathFocusKind
           || button.dataset.proofPathCoverageFocusKind
           || button.dataset.proofPathDeltaFocusKind
+          || button.dataset.proofPathSentenceFocusKind
           || "";
         const chipId = button.dataset.traceFocusId
           || button.dataset.sourceFocusId
           || button.dataset.proofPathFocusId
           || button.dataset.proofPathCoverageFocusId
           || button.dataset.proofPathDeltaFocusId
+          || button.dataset.proofPathSentenceFocusId
           || "";
         const isCurrent = chipKind === kind && chipId === id;
         button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
@@ -3456,7 +3610,7 @@
     setLogicEquationRowState("");
     renderObjectProvenance("", "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind]")
       .forEach((button) => {
         button.setAttribute("aria-pressed", "false");
         button.dataset.reviewObjectSelected = "false";
@@ -3663,11 +3817,13 @@
     setProofPathCoverageGridState(step.anchor || "");
     setProofPathDeltaRailState(step.anchor || "");
     setProofPathSourceRailState(step.anchor || "");
+    setProofPathSentenceMatrixState(step.anchor || "");
     if (selectedTraceIndex >= 0) {
       const contract = cumulativeTraceContract(selectedTraceIndex);
       updateProofPathCoverageGridReadback(step, contract);
       updateProofPathDeltaRailReadback(proofPathDeltaRecord(selectedTraceIndex));
       updateProofPathSourceRailReadback(step);
+      updateProofPathSentenceMatrixReadback(step);
     }
     if (options.writeHash !== false) writeReviewHashState();
   }
@@ -3891,6 +4047,7 @@
     renderProofPathCoverageGrid(steps);
     renderProofPathDeltaRail(steps);
     renderProofPathSourceRail(steps);
+    renderProofPathSentenceMatrix(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
