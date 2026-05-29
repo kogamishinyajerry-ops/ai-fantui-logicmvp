@@ -155,6 +155,8 @@
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
+  const reviewIndexHandoffSummary = $("demo-reconstruction-review-index-handoff-summary");
+  const reviewIndexHandoffList = $("demo-reconstruction-review-index-handoff-list");
   const reviewIndexTourSummary = $("demo-reconstruction-review-index-tour-summary");
   const reviewIndexTourList = $("demo-reconstruction-review-index-tour-list");
   const reviewIndexEvidenceSummary = $("demo-reconstruction-review-index-evidence-summary");
@@ -487,6 +489,103 @@
         }
       });
     });
+  }
+
+  function reviewIndexHandoffRecords() {
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    const ledgerItems = requirementLedgerItems();
+    const mappedCount = ledgerItems.filter((item) => item.status === "mapped").length;
+    return [
+      {
+        id: "source",
+        title: "01 · 源证据",
+        metric: `${ledgerItems.length} 条 · ${mappedCount} 映射`,
+        detail: "DOCX / 表格 / P035 汇入",
+      },
+      {
+        id: "build",
+        title: "02 · 逐句生成",
+        metric: `${traceSteps.length}/5 句 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`,
+        detail: "P035-S01 到 P035-S05",
+      },
+      {
+        id: "equation",
+        title: "03 · 逻辑方程",
+        metric: `${LOGIC_EQUATION_RECORDS.length}/4 方程 · L1-L4`,
+        detail: "条件到输出可聚焦",
+      },
+      {
+        id: "closure",
+        title: "04 · 闭环电路",
+        metric: `${reviewIndexClosureRecords().length}/5 闭环 · THR_LOCK`,
+        detail: "L1 到反推锁释放",
+      },
+      {
+        id: "output",
+        title: "05 · 最终输出",
+        metric: `${OUTPUT_PATH_TARGETS.length}/5 输出 · THR_LOCK`,
+        detail: "完整 demo 输出可读",
+      },
+      {
+        id: "scenario",
+        title: "06 · 场景校验",
+        metric: `${SCENARIO_COMPARATOR_IDS.length}/2 场景 · 最大/阻塞`,
+        detail: "DEPLOYED / FAULT 对照",
+      },
+    ];
+  }
+
+  function setReviewIndexHandoffState(recordId) {
+    if (!reviewIndexHandoffList) return;
+    reviewIndexHandoffList.querySelectorAll("[data-review-index-handoff]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexHandoff === recordId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexHandoff(recordId) {
+    if (!reviewIndexHandoffRecords().some((record) => record.id === recordId)) return;
+    if (recordId === "source") {
+      applyReviewIndexEvidence("docx-source");
+    } else if (recordId === "build") {
+      applyReviewIndexBuildStep("P035-S05");
+    } else if (recordId === "equation") {
+      applyReviewIndexEquation("logic4");
+    } else if (recordId === "closure") {
+      applyReviewIndexClosure("l4-thr-lock");
+    } else if (recordId === "output") {
+      applyReviewIndexOutputTarget("thr_lock");
+    } else if (recordId === "scenario") {
+      applyReviewIndexScenario("max-reverse");
+    }
+    setReviewIndexHandoffState(recordId);
+  }
+
+  function renderReviewIndexHandoffRail() {
+    if (!reviewIndexHandoffList) return;
+    reviewIndexHandoffList.innerHTML = "";
+    const records = reviewIndexHandoffRecords();
+    records.forEach((record) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexHandoff = record.id;
+      button.setAttribute("aria-pressed", "false");
+
+      const title = document.createElement("strong");
+      title.textContent = record.title;
+      const metric = document.createElement("span");
+      metric.textContent = record.metric;
+      const detail = document.createElement("small");
+      detail.textContent = record.detail;
+
+      button.append(title, metric, detail);
+      button.addEventListener("click", () => applyReviewIndexHandoff(record.id));
+      reviewIndexHandoffList.appendChild(button);
+    });
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    setText(
+      reviewIndexHandoffSummary,
+      `${records.length}/6 交付 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
   }
 
   function reviewIndexTourRecords() {
@@ -4032,6 +4131,7 @@
     renderReviewPacketGates(gates);
     renderReviewPacketDashboard(gates, reviewContext);
     updateReviewVerdictBoard(gates, reviewContext);
+    renderReviewIndexHandoffRail();
     renderReviewIndexTourRail();
     renderReviewIndexEvidenceRail();
     renderReviewIndexClosureRail();
