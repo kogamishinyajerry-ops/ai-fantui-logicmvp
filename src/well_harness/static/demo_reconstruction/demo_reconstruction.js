@@ -277,15 +277,6 @@
     frameDocument.head.appendChild(style);
   }
 
-  function updateWireEndpointMapFromWires(wires) {
-    wireEndpointMap = new Map();
-    if (!Array.isArray(wires)) return;
-    wires.forEach((wire) => {
-      if (!wire || !wire.id || !wire.source || !wire.target) return;
-      wireEndpointMap.set(wire.id, [wire.source, wire.target]);
-    });
-  }
-
   function updateNodeMetadataFromNodes(nodes) {
     nodeLabelMap = new Map();
     nodeKindMap = new Map();
@@ -294,6 +285,19 @@
       if (!node || !node.id) return;
       nodeLabelMap.set(node.id, itemLabel(node, node.id));
       if (node.node_kind) nodeKindMap.set(node.id, node.node_kind);
+    });
+  }
+
+  function hasRenderedNode(nodeId) {
+    return Boolean(nodeId && nodeLabelMap.has(nodeId));
+  }
+
+  function updateWireEndpointMapFromWires(wires) {
+    wireEndpointMap = new Map();
+    if (!Array.isArray(wires)) return;
+    wires.forEach((wire) => {
+      if (!wire || !wire.id || !hasRenderedNode(wire.source) || !hasRenderedNode(wire.target)) return;
+      wireEndpointMap.set(wire.id, [wire.source, wire.target]);
     });
   }
 

@@ -277,6 +277,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
+    assert "hasRenderedNode" in script
+    assert "hasRenderedNode(wire.source)" in script
+    assert "hasRenderedNode(wire.target)" in script
     assert "nodeKindMap" in script
     assert '"P035-S03": ["EEC", "PLS", "PDU"]' not in script
     assert "updateReviewPacketFromState" in script
