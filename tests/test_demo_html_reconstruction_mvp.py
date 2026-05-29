@@ -154,8 +154,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-complete-mode-banner"' in html
+    assert 'id="demo-reconstruction-complete-mode-link"' in html
+    assert 'href="/demo-reconstruction#complete=1"' in html
     assert "完整交付态已启用" in html
     assert "P035-S05 · THR_LOCK · 最大反推 · 5/5 gate" in html
+    assert "固定链接" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
     assert 'id="demo-reconstruction-review-index-complete-action"' in html
@@ -875,6 +878,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["completeActionText"] == "完整交付态"
     assert payload["review_index_review"]["completeBannerInitiallyHidden"] is True
     assert "完整交付态已启用" in payload["review_index_review"]["completeBannerInitialText"]
+    assert payload["review_index_review"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
+    assert payload["review_index_review"]["completeModeLinkText"] == "固定链接"
     assert "6/6 模块" in payload["review_index_review"]["tourSummaryText"]
     assert "4/4 证据" in payload["review_index_review"]["evidenceSummaryText"]
     assert "67 条" in payload["review_index_review"]["evidenceSourceText"]
@@ -940,6 +945,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "完整交付态已启用" in payload["review_index_complete_action"]["completeBannerText"]
     assert "P035-S05" in payload["review_index_complete_action"]["completeBannerText"]
     assert payload["review_index_complete_action"]["completeBannerHidden"] is False
+    assert payload["review_index_complete_action"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
+    assert payload["review_index_complete_action"]["completeModeLinkText"] == "固定链接"
     assert payload["review_index_complete_action"]["scrollY"] > 0
     assert payload["review_index_complete_link"]["hash"] == "#complete=1"
     assert payload["review_index_complete_link"]["selectedAnchor"] == "P035-S05"
@@ -955,6 +962,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "完整交付态已启用" in payload["review_index_complete_link"]["completeBannerText"]
     assert "P035-S05" in payload["review_index_complete_link"]["completeBannerText"]
     assert payload["review_index_complete_link"]["completeBannerHidden"] is False
+    assert payload["review_index_complete_link"]["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
+    assert payload["review_index_complete_link"]["completeModeLinkText"] == "固定链接"
     assert payload["review_index_gate_rail_action"]["selectedAnchor"] == "P035-S05"
     assert payload["review_index_gate_rail_action"]["activeGate"] == ["object-review"]
     assert payload["review_index_gate_rail_action"]["activeTargets"] == [

@@ -429,6 +429,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             completeActionText: text("#demo-reconstruction-review-index-complete-action"),
                             completeBannerInitiallyHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                             completeBannerInitialText: text("#demo-reconstruction-complete-mode-banner"),
+                            completeModeLinkHref: document.querySelector("#demo-reconstruction-complete-mode-link")?.getAttribute("href") || "",
+                            completeModeLinkText: text("#demo-reconstruction-complete-mode-link"),
                             stepText: text("#demo-reconstruction-review-index-step"),
                             objectText: text("#demo-reconstruction-review-index-object"),
                             outputText: text("#demo-reconstruction-review-index-output"),
@@ -539,6 +541,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
                         completeBannerText: document.querySelector("#demo-reconstruction-complete-mode-banner")?.textContent?.trim() || "",
                         completeBannerHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
+                        completeModeLinkHref: document.querySelector("#demo-reconstruction-complete-mode-link")?.getAttribute("href") || "",
+                        completeModeLinkText: document.querySelector("#demo-reconstruction-complete-mode-link")?.textContent?.trim() || "",
                         hash: window.location.hash,
                         scrollY: window.scrollY,
                     })"""
@@ -587,6 +591,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
                         completeBannerText: document.querySelector("#demo-reconstruction-complete-mode-banner")?.textContent?.trim() || "",
                         completeBannerHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
+                        completeModeLinkHref: document.querySelector("#demo-reconstruction-complete-mode-link")?.getAttribute("href") || "",
+                        completeModeLinkText: document.querySelector("#demo-reconstruction-complete-mode-link")?.textContent?.trim() || "",
                     })"""
                 )
                 page.locator("#demo-reconstruction-complete-mode-banner").screenshot(
@@ -3736,6 +3742,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_review["completeActionText"] == "完整交付态"
             and review_index_review["completeBannerInitiallyHidden"] is True
             and "完整交付态已启用" in review_index_review["completeBannerInitialText"]
+            and review_index_review["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
+            and review_index_review["completeModeLinkText"] == "固定链接"
             and review_index_review["activeHandoff"] == []
             and review_index_review["activeGate"] == []
             and review_index_review["activeTour"] == []
@@ -3793,6 +3801,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "完整交付态已启用" in review_index_complete_action["completeBannerText"]
             and "P035-S05" in review_index_complete_action["completeBannerText"]
             and review_index_complete_action["completeBannerHidden"] is False
+            and review_index_complete_action["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
+            and review_index_complete_action["completeModeLinkText"] == "固定链接"
             and "wire_logic4_thr_lock" in review_index_complete_action["hash"]
             and review_index_complete_action["scrollY"] > 0
         )
@@ -3811,6 +3821,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "完整交付态已启用" in review_index_complete_link["completeBannerText"]
             and "P035-S05" in review_index_complete_link["completeBannerText"]
             and review_index_complete_link["completeBannerHidden"] is False
+            and review_index_complete_link["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
+            and review_index_complete_link["completeModeLinkText"] == "固定链接"
         )
         else "fail",
         "review_index_gate_rail": "pass"
