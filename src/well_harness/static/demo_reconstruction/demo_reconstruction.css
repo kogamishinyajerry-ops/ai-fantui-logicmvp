@@ -3193,6 +3193,103 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   color: #475467;
   padding: 0;
 }
+.demo-reconstruction-proof-path-blueprint-summary {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+}
+.demo-reconstruction-proof-path-blueprint-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-blueprint-summary-head span {
+  color: #475467;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-blueprint-summary-head strong {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.demo-reconstruction-proof-path-blueprint-summary-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-blueprint-chain {
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  padding: 7px;
+}
+.demo-reconstruction-proof-path-blueprint-step {
+  display: grid;
+  grid-template-columns: minmax(58px, auto) 1fr;
+  gap: 3px 8px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  padding: 7px;
+  text-align: left;
+}
+.demo-reconstruction-proof-path-blueprint-step:hover,
+.demo-reconstruction-proof-path-blueprint-step:focus-visible,
+.demo-reconstruction-proof-path-blueprint-step[aria-pressed="true"] {
+  border-color: #4f46e5;
+  outline: none;
+}
+.demo-reconstruction-proof-path-blueprint-step[aria-pressed="true"] {
+  background: #eef2ff;
+}
+.demo-reconstruction-proof-path-blueprint-step strong,
+.demo-reconstruction-proof-path-blueprint-step span,
+.demo-reconstruction-proof-path-blueprint-step small,
+.demo-reconstruction-proof-path-blueprint-step em {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path-blueprint-step strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-blueprint-step span {
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.demo-reconstruction-proof-path-blueprint-step small,
+.demo-reconstruction-proof-path-blueprint-step em {
+  grid-column: 1 / -1;
+  color: #667085;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.35;
+}
+.demo-reconstruction-proof-path-blueprint-summary > p {
+  border: 0;
+  background: transparent;
+  color: #475467;
+  padding: 0;
+}
 .demo-reconstruction-proof-path-object-inspector {
   display: grid;
   gap: 8px;
