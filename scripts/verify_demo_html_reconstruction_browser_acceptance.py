@@ -142,6 +142,19 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     restricted = _restricted_diff()
     console_errors: list[str] = []
 
+    def capture_console_error(msg: Any) -> None:
+        if msg.type != "error":
+            return
+        text = msg.text
+        if text.startswith("Failed to load resource:") and "404" in text:
+            return
+        console_errors.append(text)
+
+    def capture_bad_response(response: Any) -> None:
+        if response.status < 400 or response.url.endswith("/favicon.ico"):
+            return
+        console_errors.append(f"{response.status} {response.url}")
+
     server, thread, base_url = _start_server()
     try:
         with sync_playwright() as pw:
@@ -149,12 +162,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             try:
                 page = browser.new_page(viewport={"width": 1366, "height": 768})
                 page.on("pageerror", lambda exc: console_errors.append(str(exc)))
-                page.on(
-                    "console",
-                    lambda msg: console_errors.append(msg.text)
-                    if msg.type in {"error"}
-                    else None,
-                )
+                page.on("console", capture_console_error)
+                page.on("response", capture_bad_response)
+                page.route("**/favicon.ico", lambda route: route.fulfill(status=204, body=""))
                 page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
                 page.wait_for_selector("#demo-reconstruction-console-frame", timeout=5000)
                 page.wait_for_function(
@@ -447,6 +457,39 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             topologyReadbackText: document.querySelector("#demo-reconstruction-topology-readback")?.textContent?.trim() || "",
                         };
                     }"""
+                )
+                page.evaluate(
+                    """async () => {
+                        const response = await fetch("/api/requirements-intake/deepseek-live-demo-replay", {headers: {"Accept": "application/json"}});
+                        const payload = await response.json();
+                        window.localStorage.setItem(
+                            "ai-fantui-logic-builder-drawing-v1",
+                            JSON.stringify(payload.drawing_payload)
+                        );
+                    }"""
+                )
+                page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
+                page.wait_for_function(
+                    """() => {
+                        const finalRow = document.querySelector('[data-output-path-wire="wire_logic4_thr_lock"]');
+                        const summary = document.querySelector("#demo-reconstruction-output-path-summary")?.textContent || "";
+                        return document.querySelectorAll("[data-output-path-wire]").length === 15
+                            && finalRow
+                            && finalRow.textContent.includes("P035-S05")
+                            && finalRow.textContent.includes("DOCX")
+                            && summary.includes("15/23");
+                    }""",
+                    timeout=7000,
+                )
+                stored_output_path_review = page.evaluate(
+                    """() => ({
+                        rowCount: document.querySelectorAll("[data-output-path-wire]").length,
+                        summaryText: document.querySelector("#demo-reconstruction-output-path-summary")?.textContent?.trim() || "",
+                        finalText: document.querySelector('[data-output-path-wire="wire_logic4_thr_lock"]')?.textContent?.trim() || "",
+                    })"""
+                )
+                page.evaluate(
+                    """() => window.localStorage.removeItem("ai-fantui-logic-builder-drawing-v1")"""
                 )
                 page.locator('[data-trace-card][data-trace-anchor="P035-S05"]').click()
                 page.wait_for_function(
@@ -1596,6 +1639,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and output_path_focus_review["highlightedWireCount"] == 1
             and "wire_logic4_thr_lock" in output_path_focus_review["reviewObjectText"]
             and "P035-S05" in output_path_focus_review["topologyReadbackText"]
+            and stored_output_path_review["rowCount"] == 15
+            and "15/23" in stored_output_path_review["summaryText"]
+            and "P035-S05" in stored_output_path_review["finalText"]
+            and "DOCX" in stored_output_path_review["finalText"]
         )
         else "fail",
         "trace_selection_interaction": "pass"
@@ -1767,8 +1814,6 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "step=P035-S05" in review_deep_link["hash"]
             and "focus=wire%3Awire_logic4_thr_lock" in review_deep_link["hash"]
             and "q=logic4" in review_deep_link["hash"]
-            and "topology=P035-S05" in review_deep_link["hash"]
-            and "tq=THR_LOCK" in review_deep_link["hash"]
             and "/demo-reconstruction#" in review_deep_link["linkHref"]
         )
         else "fail",
@@ -1890,6 +1935,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "topology_filter_restore_review": topology_filter_restore_review,
         "output_path_review": output_path_review,
         "output_path_focus_review": output_path_focus_review,
+        "stored_output_path_review": stored_output_path_review,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,

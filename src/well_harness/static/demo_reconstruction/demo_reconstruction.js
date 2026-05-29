@@ -2124,6 +2124,7 @@
     renderCoverageMatrix(payload);
     renderSourceEntries(payload && payload.source_entries);
     renderSequenceSteps(payload && payload.sequence_steps);
+    renderTopologyMatrix();
     applyReviewHashState();
     updateReviewPacketFromState();
     updateReviewIndexStatus();

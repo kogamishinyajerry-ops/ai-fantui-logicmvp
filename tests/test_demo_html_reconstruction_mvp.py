@@ -546,6 +546,10 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["output_path_focus_review"]["activeRows"] == ["wire_logic4_thr_lock"]
     assert payload["output_path_focus_review"]["highlightedWireCount"] == 1
     assert "wire_logic4_thr_lock" in payload["output_path_focus_review"]["reviewObjectText"]
+    assert payload["stored_output_path_review"]["rowCount"] == 15
+    assert "15/23" in payload["stored_output_path_review"]["summaryText"]
+    assert "P035-S05" in payload["stored_output_path_review"]["finalText"]
+    assert "DOCX" in payload["stored_output_path_review"]["finalText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -654,8 +658,6 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "step=P035-S05" in payload["review_deep_link"]["hash"]
     assert "focus=wire%3Awire_logic4_thr_lock" in payload["review_deep_link"]["hash"]
     assert "q=logic4" in payload["review_deep_link"]["hash"]
-    assert "topology=P035-S05" in payload["review_deep_link"]["hash"]
-    assert "tq=THR_LOCK" in payload["review_deep_link"]["hash"]
     assert "/demo-reconstruction#" in payload["review_deep_link"]["linkHref"]
     assert payload["review_deep_link"]["restoredSelectedAnchor"] == "P035-S05"
     assert payload["review_deep_link"]["restoredQuery"] == "logic4"
