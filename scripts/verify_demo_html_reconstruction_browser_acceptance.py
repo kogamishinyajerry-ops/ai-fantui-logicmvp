@@ -1850,6 +1850,57 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                proof_path_lane_default_review = page.evaluate(
+                    """() => {
+                        const visible = (selector) => {
+                            const element = document.querySelector(selector);
+                            return Boolean(element && !element.hidden);
+                        };
+                        return {
+                            activeModes: Array.from(
+                                document.querySelectorAll("[data-proof-path-lane-mode][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-lane-mode")),
+                            statusText: document.querySelector("#demo-reconstruction-proof-path-lane-mode-status")?.textContent?.trim() || "",
+                            hiddenLanes: Array.from(document.querySelectorAll("[data-proof-path-lane]"))
+                                .filter((element) => element.hidden).length,
+                            visibleBlueprint: visible("#demo-reconstruction-proof-path-blueprint-summary"),
+                            visibleOutput: visible("#demo-reconstruction-proof-path-output-map"),
+                            visibleSource: visible("#demo-reconstruction-proof-path-source-rail"),
+                            visibleMatrix: visible("#demo-reconstruction-proof-path-coverage-grid"),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-lane-mode="all"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-proof-path-lane-mode="all"]');
+                        return active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && Array.from(document.querySelectorAll("[data-proof-path-lane]"))
+                                .every((element) => !element.hidden);
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_lane_all_review = page.evaluate(
+                    """() => {
+                        const visible = (selector) => {
+                            const element = document.querySelector(selector);
+                            return Boolean(element && !element.hidden);
+                        };
+                        return {
+                            activeModes: Array.from(
+                                document.querySelectorAll("[data-proof-path-lane-mode][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-lane-mode")),
+                            statusText: document.querySelector("#demo-reconstruction-proof-path-lane-mode-status")?.textContent?.trim() || "",
+                            hiddenLanes: Array.from(document.querySelectorAll("[data-proof-path-lane]"))
+                                .filter((element) => element.hidden).length,
+                            visibleBlueprint: visible("#demo-reconstruction-proof-path-blueprint-summary"),
+                            visibleSource: visible("#demo-reconstruction-proof-path-source-rail"),
+                            visibleMatrix: visible("#demo-reconstruction-proof-path-coverage-grid"),
+                            visibleObject: visible("#demo-reconstruction-proof-path-object-inspector"),
+                        };
+                    }"""
+                )
                 page.locator('[data-proof-path-step="P035-S05"]').click()
                 page.wait_for_function(
                     """() => {
@@ -3697,6 +3748,22 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "完整 demo 电路闭合" in proof_path_blueprint_summary_final_review["readbackText"]
         )
         else "fail",
+        "proof_path_lane_density": "pass"
+        if (
+            proof_path_lane_default_review["activeModes"] == ["blueprint"]
+            and proof_path_lane_default_review["statusText"] == "蓝图"
+            and proof_path_lane_default_review["hiddenLanes"] >= 4
+            and proof_path_lane_default_review["visibleBlueprint"]
+            and proof_path_lane_default_review["visibleOutput"]
+            and not proof_path_lane_default_review["visibleSource"]
+            and proof_path_lane_all_review["activeModes"] == ["all"]
+            and proof_path_lane_all_review["statusText"] == "全部"
+            and proof_path_lane_all_review["hiddenLanes"] == 0
+            and proof_path_lane_all_review["visibleSource"]
+            and proof_path_lane_all_review["visibleMatrix"]
+            and proof_path_lane_all_review["visibleObject"]
+        )
+        else "fail",
         "proof_path_output_map": "pass"
         if (
             proof_path_output_map_review["targetCount"] == 5
@@ -3858,6 +3925,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_predicate_matrix_focus_review": proof_path_predicate_matrix_focus_review,
         "proof_path_blueprint_summary_review": proof_path_blueprint_summary_review,
         "proof_path_blueprint_summary_final_review": proof_path_blueprint_summary_final_review,
+        "proof_path_lane_default_review": proof_path_lane_default_review,
+        "proof_path_lane_all_review": proof_path_lane_all_review,
         "proof_path_output_map_review": proof_path_output_map_review,
         "proof_path_output_map_tls_review": proof_path_output_map_tls_review,
         "scenario_comparator_review": scenario_comparator_review,

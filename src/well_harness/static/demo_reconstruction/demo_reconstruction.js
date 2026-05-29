@@ -281,6 +281,8 @@
   const proofPathBlueprintSummaryStatus = $("demo-reconstruction-proof-path-blueprint-summary-status");
   const proofPathBlueprintSummaryList = $("demo-reconstruction-proof-path-blueprint-summary-list");
   const proofPathBlueprintSummaryReadback = $("demo-reconstruction-proof-path-blueprint-summary-readback");
+  const proofPathLaneModeStatus = $("demo-reconstruction-proof-path-lane-mode-status");
+  const proofPathLaneModeButtons = Array.from(document.querySelectorAll("[data-proof-path-lane-mode]"));
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -324,6 +326,7 @@
   let proofPathSentenceMatrixAnchor = "";
   let proofPathPredicateMatrixAnchor = "";
   let proofPathBlueprintSummaryAnchor = "";
+  let proofPathLaneMode = "blueprint";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -349,6 +352,38 @@
 
   function setText(element, value) {
     if (element) element.textContent = value;
+  }
+
+  function proofPathLaneGroupsForMode(mode) {
+    if (mode === "source") return new Set(["timeline", "source"]);
+    if (mode === "matrix") return new Set(["timeline", "matrix"]);
+    if (mode === "object") return new Set(["timeline", "object", "output"]);
+    if (mode === "all") return new Set(["timeline", "source", "matrix", "blueprint", "object", "output"]);
+    return new Set(["timeline", "blueprint", "output"]);
+  }
+
+  function proofPathLaneModeLabel(mode) {
+    if (mode === "source") return "源句";
+    if (mode === "matrix") return "矩阵";
+    if (mode === "object") return "对象";
+    if (mode === "all") return "全部";
+    return "蓝图";
+  }
+
+  function setProofPathLaneMode(mode) {
+    const nextMode = ["blueprint", "source", "matrix", "object", "all"].includes(mode) ? mode : "blueprint";
+    const visibleGroups = proofPathLaneGroupsForMode(nextMode);
+    proofPathLaneMode = nextMode;
+    proofPathLaneModeButtons.forEach((button) => {
+      const selected = button.dataset.proofPathLaneMode === nextMode;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    document.querySelectorAll("[data-proof-path-lane]").forEach((element) => {
+      const groups = (element.getAttribute("data-proof-path-lane") || "").split(/\s+/).filter(Boolean);
+      const visible = groups.some((group) => visibleGroups.has(group));
+      element.hidden = !visible;
+    });
+    setText(proofPathLaneModeStatus, proofPathLaneModeLabel(nextMode));
   }
 
   function itemLabel(item, fallback) {
@@ -4330,6 +4365,7 @@
     renderProofPathSentenceMatrix(steps);
     renderProofPathPredicateMatrix(steps);
     renderProofPathBlueprintSummary(steps);
+    setProofPathLaneMode(proofPathLaneMode);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
@@ -4510,6 +4546,10 @@
   installReviewIndexNavigation();
   installControlStripActions();
   installScenarioComparatorActions();
+  proofPathLaneModeButtons.forEach((button) => {
+    button.addEventListener("click", () => setProofPathLaneMode(button.dataset.proofPathLaneMode || "blueprint"));
+  });
+  setProofPathLaneMode(proofPathLaneMode);
   updateReviewIndexStatus();
   updateControlStripStatus();
   updateScenarioComparatorStatus("");

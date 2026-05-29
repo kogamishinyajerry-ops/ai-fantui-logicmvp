@@ -2423,6 +2423,42 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   display: grid;
   gap: 7px;
 }
+.demo-reconstruction-proof-path-lane-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.demo-reconstruction-proof-path-lane-switcher button {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 6px 9px;
+}
+.demo-reconstruction-proof-path-lane-switcher button:hover,
+.demo-reconstruction-proof-path-lane-switcher button:focus-visible,
+.demo-reconstruction-proof-path-lane-switcher button[aria-pressed="true"] {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #3730a3;
+  outline: none;
+}
+.demo-reconstruction-proof-path-lane-switcher strong {
+  margin-left: auto;
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
 .demo-reconstruction-proof-path-row {
   display: grid;
   gap: 6px;

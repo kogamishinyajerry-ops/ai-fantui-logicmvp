@@ -288,6 +288,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-proof-path-blueprint-summary-status"' in html
     assert 'id="demo-reconstruction-proof-path-blueprint-summary-list"' in html
     assert 'id="demo-reconstruction-proof-path-blueprint-summary-readback"' in html
+    assert 'data-proof-path-lane-switcher="first-screen"' in html
+    assert 'data-proof-path-lane-mode="blueprint"' in html
+    assert 'data-proof-path-lane-mode="all"' in html
+    assert 'id="demo-reconstruction-proof-path-lane-mode-status"' in html
     assert 'data-proof-path="first-screen"' in html
     assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-scenario-comparator-status"' in html
@@ -465,6 +469,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "renderProofPathBlueprintSummary" in script
     assert "applyProofPathBlueprintSummaryStep" in script
     assert "proofPathBlueprintSummaryAnchor" in script
+    assert "setProofPathLaneMode" in script
+    assert "proofPathLaneMode" in script
+    assert "proofPathLaneGroupsForMode" in script
     assert "renderProofPathOutputMap" in script
     assert "applyProofPathOutputTarget" in script
     assert "proofPathOutputTarget" in script
@@ -538,6 +545,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-proof-path" in stylesheet
     assert ".demo-reconstruction-proof-path-list" in stylesheet
     assert ".demo-reconstruction-proof-path-focus-list" in stylesheet
+    assert ".demo-reconstruction-proof-path-lane-switcher" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector-metrics" in stylesheet
     assert ".demo-reconstruction-proof-path-object-inspector-neighbors" in stylesheet
@@ -1222,6 +1230,15 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["proof_path_blueprint_summary_final_review"]["activeSteps"] == ["P035-S05"]
     assert payload["proof_path_blueprint_summary_final_review"]["selectedAnchor"] == "P035-S05"
     assert "完整 demo 电路闭合" in payload["proof_path_blueprint_summary_final_review"]["readbackText"]
+    assert payload["proof_path_lane_default_review"]["activeModes"] == ["blueprint"]
+    assert payload["proof_path_lane_default_review"]["hiddenLanes"] >= 4
+    assert payload["proof_path_lane_default_review"]["visibleBlueprint"] is True
+    assert payload["proof_path_lane_default_review"]["visibleOutput"] is True
+    assert payload["proof_path_lane_default_review"]["visibleSource"] is False
+    assert payload["proof_path_lane_all_review"]["activeModes"] == ["all"]
+    assert payload["proof_path_lane_all_review"]["hiddenLanes"] == 0
+    assert payload["proof_path_lane_all_review"]["visibleSource"] is True
+    assert payload["proof_path_lane_all_review"]["visibleMatrix"] is True
     assert payload["proof_path_output_map_review"]["targetCount"] == 5
     assert payload["proof_path_output_map_review"]["activeTargets"] == ["thr_lock"]
     assert "5/5" in payload["proof_path_output_map_review"]["statusText"]
@@ -1302,6 +1319,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "proof_path_sentence_matrix": "pass",
         "proof_path_predicate_matrix": "pass",
         "proof_path_blueprint_summary": "pass",
+        "proof_path_lane_density": "pass",
         "proof_path_output_map": "pass",
         "scenario_comparator_readback": "pass",
         "review_verdict_readback": "pass",
