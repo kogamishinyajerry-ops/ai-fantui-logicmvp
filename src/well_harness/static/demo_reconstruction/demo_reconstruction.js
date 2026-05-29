@@ -53,6 +53,9 @@
   const coverageWireList = $("demo-reconstruction-coverage-wire-list");
   const topologySummary = $("demo-reconstruction-topology-summary");
   const topologyReadback = $("demo-reconstruction-topology-readback");
+  const topologySearch = $("demo-reconstruction-topology-search");
+  const topologyStepFilter = $("demo-reconstruction-topology-step-filter");
+  const topologyFilterStatus = $("demo-reconstruction-topology-filter-status");
   const topologyList = $("demo-reconstruction-topology-list");
   const reviewAnchor = $("demo-reconstruction-review-anchor");
   const reviewObject = $("demo-reconstruction-review-object");
@@ -107,6 +110,7 @@
   let selectedTraceIndex = -1;
   let currentCircuitFocus = {kind: "", id: ""};
   let activePlaybackIndex = -1;
+  let topologyStepFilterAnchor = "all";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -342,6 +346,83 @@
     return anchors.slice(0, 4);
   }
 
+  function topologyStepForAnchor(anchor) {
+    if (!anchor || anchor === "all") return null;
+    return traceSteps.find((step) => step && step.anchor === anchor) || null;
+  }
+
+  function setTopologyStepFilterState(anchor) {
+    document.querySelectorAll("[data-topology-step-filter]").forEach((button) => {
+      const selected = button.dataset.topologyStepFilter === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function topologyWireSearchText(wireId, endpoints, step, anchors) {
+    return [
+      wireId,
+      ...(Array.isArray(endpoints) ? endpoints : []),
+      ...(Array.isArray(endpoints) ? endpoints.map(nodeDisplayLabel) : []),
+      step && step.anchor ? step.anchor : "",
+      step && step.title ? step.title : "",
+      ...(Array.isArray(anchors) ? anchors : []),
+    ].join(" ").toLowerCase();
+  }
+
+  function updateTopologyFilter() {
+    if (!topologyList) return;
+    const query = (topologySearch && topologySearch.value ? topologySearch.value : "").trim().toLowerCase();
+    const selectedStep = topologyStepForAnchor(topologyStepFilterAnchor);
+    const rows = Array.from(topologyList.querySelectorAll("[data-topology-wire]"));
+    let visibleCount = 0;
+    rows.forEach((row) => {
+      const wireId = row.dataset.topologyWire || "";
+      const endpoints = wireEndpointsForId(wireId);
+      const firstStep = firstTraceStepForWire(wireId);
+      const anchors = sourceAnchorsForWire(wireId, endpoints);
+      const matchesStep = !selectedStep
+        || (Array.isArray(selectedStep.wire_ids) && selectedStep.wire_ids.includes(wireId));
+      const matchesQuery = !query || topologyWireSearchText(wireId, endpoints, firstStep, anchors).includes(query);
+      const visible = matchesStep && matchesQuery;
+      row.hidden = !visible;
+      if (visible) visibleCount += 1;
+    });
+    const stepLabel = selectedStep ? selectedStep.anchor : "全部步骤";
+    const queryLabel = query ? ` · ${query}` : "";
+    setText(topologyFilterStatus, `${visibleCount}/${rows.length} 连线 · ${stepLabel}${queryLabel}`);
+    setTopologyStepFilterState(topologyStepFilterAnchor);
+  }
+
+  function renderTopologyStepFilter(steps) {
+    if (!topologyStepFilter) return;
+    topologyStepFilter.innerHTML = "";
+    const allButton = document.createElement("button");
+    allButton.type = "button";
+    allButton.dataset.topologyStepFilter = "all";
+    allButton.setAttribute("aria-pressed", topologyStepFilterAnchor === "all" ? "true" : "false");
+    allButton.textContent = "全部";
+    allButton.addEventListener("click", () => {
+      topologyStepFilterAnchor = "all";
+      updateTopologyFilter();
+      writeReviewHashState();
+    });
+    topologyStepFilter.appendChild(allButton);
+    (Array.isArray(steps) ? steps : []).forEach((step) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.topologyStepFilter = step.anchor || "";
+      button.setAttribute("aria-pressed", topologyStepFilterAnchor === step.anchor ? "true" : "false");
+      button.textContent = `${step.anchor || "步骤"} · ${(step.wire_ids || []).length} 线`;
+      button.addEventListener("click", () => {
+        topologyStepFilterAnchor = step.anchor || "all";
+        setSelectedTrace(step, {writeHash: false});
+        updateTopologyFilter();
+        writeReviewHashState();
+      });
+      topologyStepFilter.appendChild(button);
+    });
+  }
+
   function setTopologyRowState(wireId) {
     document.querySelectorAll("[data-topology-wire-row]").forEach((button) => {
       const selected = button.dataset.topologyWireRow === wireId;
@@ -377,6 +458,7 @@
       empty.textContent = "完整电路拓扑暂无数据";
       topologyList.appendChild(empty);
       setText(topologySummary, `${wireEndpointMap.size}/${EXPECTED_WIRE_COUNT} 连线 · 等待端点`);
+      setText(topologyFilterStatus, `0/${EXPECTED_WIRE_COUNT} 连线`);
       updateTopologyReadback("");
       return;
     }
@@ -390,6 +472,7 @@
       const li = document.createElement("li");
       li.className = "demo-reconstruction-topology-item";
       li.dataset.topologyWire = wireId;
+      li.dataset.topologyStep = step ? step.anchor : "";
 
       const button = document.createElement("button");
       button.type = "button";
@@ -435,6 +518,7 @@
       setText(topologyReadback, `${wireIds.length}/${EXPECTED_WIRE_COUNT} 条 demo.html 连线可聚焦`);
       setTopologyRowState("");
     }
+    updateTopologyFilter();
   }
 
   function refreshEmbeddedReviewFromCircuit() {
@@ -489,6 +573,8 @@
       focusKind: focusParts.length === 2 ? focusParts[0] : "",
       focusId: focusParts.length === 2 ? focusParts[1] : "",
       query: params.get("q") || "",
+      topologyStep: params.get("topology") || "",
+      topologyQuery: params.get("tq") || "",
     };
   }
 
@@ -500,6 +586,11 @@
     }
     const query = coverageSearch && coverageSearch.value ? coverageSearch.value.trim() : "";
     if (query) params.set("q", query);
+    if (topologyStepFilterAnchor && topologyStepFilterAnchor !== "all") {
+      params.set("topology", topologyStepFilterAnchor);
+    }
+    const topologyQuery = topologySearch && topologySearch.value ? topologySearch.value.trim() : "";
+    if (topologyQuery) params.set("tq", topologyQuery);
     return params.toString();
   }
 
@@ -1445,7 +1536,13 @@
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;
       }
+      const nextTopologyStep = topologyStepForAnchor(state.topologyStep) ? state.topologyStep : "all";
+      topologyStepFilterAnchor = nextTopologyStep;
+      if (topologySearch && topologySearch.value !== state.topologyQuery) {
+        topologySearch.value = state.topologyQuery;
+      }
       updateCoverageFilter();
+      updateTopologyFilter();
       if (state.step) {
         const step = traceSteps.find((item) => item && item.anchor === state.step);
         if (step) setSelectedTrace(step, {writeHash: false});
@@ -1794,6 +1891,7 @@
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
     renderCustodyMatrix(steps);
+    renderTopologyStepFilter(steps);
     renderTopologyMatrix();
   }
 
@@ -1963,6 +2061,12 @@
   if (coverageSearch) {
     coverageSearch.addEventListener("input", () => {
       updateCoverageFilter();
+      writeReviewHashState();
+    });
+  }
+  if (topologySearch) {
+    topologySearch.addEventListener("input", () => {
+      updateTopologyFilter();
       writeReviewHashState();
     });
   }
