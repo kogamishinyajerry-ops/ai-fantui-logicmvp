@@ -271,6 +271,9 @@
   const proofPathObjectInspectorCoverage = $("demo-reconstruction-proof-path-object-inspector-coverage");
   const proofPathObjectInspectorSummary = $("demo-reconstruction-proof-path-object-inspector-summary");
   const proofPathObjectInspectorNeighbors = $("demo-reconstruction-proof-path-object-inspector-neighbors");
+  const proofPathOutputMapStatus = $("demo-reconstruction-proof-path-output-map-status");
+  const proofPathOutputMapList = $("demo-reconstruction-proof-path-output-map-list");
+  const proofPathOutputMapReadback = $("demo-reconstruction-proof-path-output-map-readback");
   const scenarioComparatorStatus = $("demo-reconstruction-scenario-comparator-status");
   const scenarioComparatorReadback = $("demo-reconstruction-scenario-comparator-readback");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
@@ -638,6 +641,76 @@
     };
   }
 
+  function proofPathOutputRecord(target) {
+    const path = upstreamPathForTarget(target.id);
+    const terminalWire = path.wire_ids[path.wire_ids.length - 1] || "";
+    const terminalStep = terminalWire ? firstTraceStepForWire(terminalWire) : null;
+    return {
+      target,
+      path,
+      terminalWire,
+      terminalStep,
+    };
+  }
+
+  function setProofPathOutputMapState(targetId) {
+    document.querySelectorAll("[data-proof-path-output-target]").forEach((button) => {
+      const selected = button.dataset.proofPathOutputTarget === targetId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function applyProofPathOutputTarget(targetId) {
+    const target = OUTPUT_PATH_TARGETS.find((item) => item.id === targetId);
+    if (!target) return;
+    const record = proofPathOutputRecord(target);
+    outputPathTargetId = targetId;
+    renderOutputPathLane();
+    setProofPathOutputMapState(targetId);
+    if (record.terminalWire) {
+      applyEmbeddedTraceFocus("wire", record.terminalWire);
+    } else {
+      applyEmbeddedTraceFocus("node", targetId);
+    }
+    const wireText = record.terminalWire || targetId;
+    const stepText = record.terminalStep ? record.terminalStep.anchor : "待匹配";
+    setText(
+      proofPathOutputMapReadback,
+      `${target.label} · ${record.path.wire_ids.length} 条上游连线 · ${stepText} · ${wireText}`,
+    );
+  }
+
+  function renderProofPathOutputMap() {
+    if (!proofPathOutputMapList) return;
+    proofPathOutputMapList.innerHTML = "";
+    const records = OUTPUT_PATH_TARGETS.map((target) => proofPathOutputRecord(target));
+    const readyCount = records.filter((record) => record.path.wire_ids.length > 0).length;
+    setText(proofPathOutputMapStatus, `${readyCount}/${OUTPUT_PATH_TARGETS.length} 输出`);
+    records.forEach((record) => {
+      const {target, path, terminalWire, terminalStep} = record;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.proofPathOutputTarget = target.id;
+      button.setAttribute("aria-pressed", outputPathTargetId === target.id ? "true" : "false");
+      const title = document.createElement("strong");
+      title.textContent = target.label;
+      const metric = document.createElement("span");
+      metric.textContent = `${path.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${path.node_ids.length}/${EXPECTED_NODE_COUNT} 节点`;
+      const meta = document.createElement("small");
+      meta.textContent = `${terminalStep ? terminalStep.anchor : "待匹配"} · ${terminalWire || target.id}`;
+      button.append(title, metric, meta);
+      button.addEventListener("click", () => applyProofPathOutputTarget(target.id));
+      proofPathOutputMapList.appendChild(button);
+    });
+    const selectedRecord = records.find((record) => record.target.id === outputPathTargetId) || records[0];
+    if (selectedRecord) {
+      setText(
+        proofPathOutputMapReadback,
+        `${selectedRecord.target.label} · ${selectedRecord.path.wire_ids.length} 条上游连线 · ${selectedRecord.terminalWire || selectedRecord.target.id}`,
+      );
+    }
+  }
+
   function setOutputPathTargetState(targetId) {
     document.querySelectorAll("[data-output-path-target]").forEach((button) => {
       const selected = button.dataset.outputPathTarget === targetId;
@@ -684,6 +757,7 @@
       setText(outputPathReadback, "等待输出路径");
       setOutputPathTargetState(outputPathTargetId);
       setOutputPathWireState("");
+      renderProofPathOutputMap();
       return;
     }
     path.wire_ids.forEach((wireId, index) => {
@@ -723,6 +797,7 @@
     setText(outputPathReadback, `${label} 上游路径 · ${path.wire_ids.length} 条连线可逐条聚焦`);
     setOutputPathTargetState(outputPathTargetId);
     setOutputPathWireState(currentCircuitFocus.kind === "wire" ? currentCircuitFocus.id : "");
+    renderProofPathOutputMap();
   }
 
   function setOutputMaturityCellState(stepAnchor, targetId) {

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p27">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p27" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p28">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p28" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -523,6 +523,16 @@
           <ol id="demo-reconstruction-proof-path-object-inspector-neighbors" class="demo-reconstruction-proof-path-object-inspector-neighbors">
             <li>等待对象邻接</li>
           </ol>
+        </div>
+        <div id="demo-reconstruction-proof-path-output-map" class="demo-reconstruction-proof-path-output-map" data-proof-path-output-map="first-screen" aria-label="证明路径输出图">
+          <div class="demo-reconstruction-proof-path-output-map-head">
+            <span>输出证明</span>
+            <strong id="demo-reconstruction-proof-path-output-map-status">等待输出路径</strong>
+          </div>
+          <div id="demo-reconstruction-proof-path-output-map-list" class="demo-reconstruction-proof-path-output-map-list">
+            <button type="button" data-proof-path-output-target="empty">等待输出映射</button>
+          </div>
+          <p id="demo-reconstruction-proof-path-output-map-readback">等待选择输出。</p>
         </div>
       </section>
       <section id="demo-reconstruction-scenario-comparator" class="demo-reconstruction-scenario-comparator" data-scenario-comparator="first-screen" aria-label="demo.html 场景对照板">
