@@ -249,6 +249,9 @@
   const controlStripObject = $("demo-reconstruction-control-strip-object");
   const controlStripOutput = $("demo-reconstruction-control-strip-output");
   const controlStripPath = $("demo-reconstruction-control-strip-path");
+  const sentenceRunnerStatus = $("demo-reconstruction-sentence-runner-status");
+  const sentenceRunnerList = $("demo-reconstruction-sentence-runner-list");
+  const sentenceRunnerReadback = $("demo-reconstruction-sentence-runner-readback");
   const scenarioLedgerStatus = $("demo-reconstruction-scenario-ledger-status");
   const scenarioLedgerList = $("demo-reconstruction-scenario-ledger-list");
   const scenarioTruthStatus = $("demo-reconstruction-scenario-truth-status");
@@ -260,6 +263,7 @@
   const proofTranscriptList = $("demo-reconstruction-proof-transcript-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
   const controlStripButtons = Array.from(document.querySelectorAll("[data-control-strip-action]"));
+  const sentenceRunnerButtons = () => Array.from(document.querySelectorAll("[data-sentence-runner-step]"));
   let latestDocxPayload = null;
   let sourceEntries = [];
   let traceSteps = [];
@@ -1859,6 +1863,88 @@
     });
   }
 
+  function sentenceRunnerOutputLabel(step, contract) {
+    const anchor = step && step.anchor ? step.anchor : "";
+    if (
+      contract
+      && contract.node_ids.length === EXPECTED_NODE_COUNT
+      && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+    ) {
+      return "完整电路闭合";
+    }
+    if (anchor === "P035-S04") return "VDT90 反馈接入";
+    if (anchor === "P035-S03") return "展开指令接入";
+    if (anchor === "P035-S02") return "ETRAC 供电接入";
+    if (anchor === "P035-S01") return "TLS 解锁接入";
+    return "等待输出";
+  }
+
+  function setSentenceRunnerState(anchor) {
+    sentenceRunnerButtons().forEach((button) => {
+      const selected = button.dataset.sentenceRunnerStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function updateSentenceRunnerStatus(step = currentTraceStep) {
+    if (!sentenceRunnerStatus || !sentenceRunnerReadback) return;
+    if (!step || !traceSteps.length) {
+      setText(sentenceRunnerStatus, "等待 DOCX");
+      setText(sentenceRunnerReadback, "等待逐句生成");
+      setSentenceRunnerState("");
+      return;
+    }
+    const index = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
+    const safeIndex = index >= 0 ? index : 0;
+    const contract = cumulativeTraceContract(safeIndex);
+    const outputLabel = sentenceRunnerOutputLabel(step, contract);
+    setText(sentenceRunnerStatus, `${safeIndex + 1}/${traceSteps.length} · ${outputLabel}`);
+    setText(
+      sentenceRunnerReadback,
+      `${step.anchor || "P035"} · ${step.title || "工作过程片段"} · 累计 ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    setSentenceRunnerState(step.anchor || "");
+  }
+
+  function applySentenceRunnerStep(anchor) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0) return;
+    applyStepPlayback(index);
+    updateSentenceRunnerStatus(traceSteps[index]);
+  }
+
+  function renderSentenceRunner(steps) {
+    if (!sentenceRunnerList) return;
+    sentenceRunnerList.innerHTML = "";
+    if (!Array.isArray(steps) || !steps.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.sentenceRunnerStep = "empty";
+      button.textContent = "等待 P035 拆解";
+      sentenceRunnerList.appendChild(button);
+      updateSentenceRunnerStatus(null);
+      return;
+    }
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.sentenceRunnerStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const meta = document.createElement("small");
+      meta.textContent = `${sentenceRunnerOutputLabel(step, contract)} · ${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      button.append(anchor, title, meta);
+      button.addEventListener("click", () => applySentenceRunnerStep(step.anchor || ""));
+      sentenceRunnerList.appendChild(button);
+    });
+    updateSentenceRunnerStatus(currentTraceStep || steps[0]);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -2737,6 +2823,7 @@
     applyEmbeddedTraceHighlight(step);
     updateCustodyActiveReadback();
     updateControlStripStatus();
+    updateSentenceRunnerStatus(step);
     if (options.writeHash !== false) writeReviewHashState();
   }
 
@@ -2954,6 +3041,7 @@
       traceCardList.appendChild(card);
     });
     setSelectedTrace(steps[0], {writeHash: false});
+    renderSentenceRunner(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
