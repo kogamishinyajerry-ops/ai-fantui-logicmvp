@@ -5867,24 +5867,39 @@ def test_landing_page_has_deepseek_live_replay_import_entry():
     assert 'id="deepseek-live-replay-meta"' in html
     assert 'id="deepseek-live-replay-counts"' in html
     assert "/api/requirements-intake/deepseek-live-demo-replay" in html
-    assert "导入真实 DeepSeek 回放" in html
+    assert "真实需求链路回放" in html
+    assert "导入最近回放" in html
+    assert "打开本地回放页" in html
     assert "最近回放" in html
-    assert "不重新调用模型" in html
+    assert "不重新调用生成服务" in html
     assert "renderReplaySummary" in html
+    assert "localizeReplayStageSummary" in html
+    assert ".replace(/\\bcircuit nodes\\b/g, \"电路节点\")" in html
     assert "stage_counts" in html
     assert "generated_at" in html
     assert 'id="deepseek-live-replay-http-link"' in html
     assert "http://127.0.0.1:8002/index.html" in html
     assert "renderFileModeReplayHelp" in html
     assert 'window.location.protocol === "file:"' in html
-    assert "file:// 无法读取回放 API" in html
-    assert "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002" in html
+    assert "来源：真实回放" in html
+    assert "状态：${summary.ok ? \"可导入\" : \"未确认\"}" in html
+    assert "请从本地演示页导入" in html
+    assert "请先打开本地演示服务" in html
     assert "ai-fantui-requirements-intake-ready-v1" in html
     assert "ai-fantui-logic-builder-drawing-v1" in html
     assert "ai-fantui-logic-builder-change-history-v1" in html
     assert "ai-fantui-fault-injection-preparation-v1" in html
     assert "ai-fantui-fault-injection-sandbox-plan-v1" in html
     assert 'window.location.href = "/fault-injection-sandbox?replay=deepseek-live"' in html
+    for operator_hidden_token in [
+        "导入真实 DeepSeek 回放",
+        "HTTP 入口 :8002",
+        "file:// 无法读取回放 API",
+        "PYTHONPATH=src:. python3",
+        "模型：",
+        "状态：ok",
+    ]:
+        assert operator_hidden_token not in html
 
 
 def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline():
@@ -5896,6 +5911,8 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert 'aria-label="默认五入口"' in html
     for label in ["画布", "运行", "参数", "证据", "报告"]:
         assert f"<strong>{label}</strong>" in html
+    for label in ["01 画布", "02 运行", "03 参数", "04 证据", "05 报告"]:
+        assert f"<span>{label}</span>" in html
     for entry in [
         'data-default-entry="canvas"',
         'data-default-entry="run"',
@@ -5927,14 +5944,30 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert "更多模块" in html
     assert "反推逻辑演示舱" in html
     assert "画布 / 运行 / 参数 / 证据 / 报告" in html
+    assert "需求到电路的审查工作台" in html
+    assert "候选审查态" in html
+    assert "试运行" in html
     assert 'href="/workbench"' not in html
     assert 'href="/workbench/start"' not in html
     assert "控制逻辑画布工作台" not in html
     assert "Sandbox Draft Canvas" not in html
     default_html = html.split('id="home-default-mode-grid"', 1)[1].split('class="home-command-palette-hint"', 1)[0]
     assert default_html.count('class="home-mode-entry"') == 5
+    for raw_label in ["CANVAS", "RUN", "PARAM", "TRACE", "REPORT"]:
+        assert raw_label not in default_html
     primary_html = html.split('id="home-primary-flow-grid"', 1)[1].split('id="home-advanced-modules"', 1)[0]
     assert primary_html.count('class="home-card"') == 4
+    for operator_hidden_token in [
+        "raw JSON",
+        "dry-run",
+        "concept/sandbox-only",
+        "DeepSeek V4 Pro",
+        "真实 DeepSeek 全链路回放",
+        "DeepSeek V4 Pro UI 工作台",
+        "artifacts/deepseek-live-full-chain",
+        "已澄清 JSON",
+    ]:
+        assert operator_hidden_token not in html
     assert 'href="/requirements-intake"' in primary_html
     assert 'href="/logic-builder"' in primary_html
     assert 'href="/fault-injection-prepare"' in primary_html
