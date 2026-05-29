@@ -156,6 +156,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-complete-mode-banner"' in html
     assert 'id="demo-reconstruction-complete-mode-link"' in html
     assert 'href="/demo-reconstruction#complete=1"' in html
+    assert "演示面板" in html
+    assert "当前演示：需求到可运行完整电路" in html
     assert "完整交付态已启用" in html
     assert "第 5 步 · 反推锁 · 最大反推 · 5/5 验收" in html
     assert "5/5 gate" not in html
@@ -177,7 +179,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-chain"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
-    assert "需求到可运行完整逻辑电路" in html
+    assert "需求到可执行反推链路" in html
     assert "查看链路" in html
     assert 'id="demo-reconstruction-compact-runway"' in html
     assert 'data-compact-runway-preset="max-reverse"' in html
@@ -427,7 +429,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "demo-reconstruction-comparison-table" not in html
     assert "demo-reconstruction-compare-grid" not in html
     assert "DeepSeek live replay" not in script
-    assert "基准控制台已读取" in script
+    assert "基准画面已读取" in script
+    assert "演示就绪 · 可运行电路" in script
     assert "DOCX_SENTENCE_CIRCUIT_ENDPOINT" in script
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "renderTraceBoard" in script

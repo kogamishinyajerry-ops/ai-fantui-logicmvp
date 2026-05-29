@@ -6070,8 +6070,8 @@
     setText(
       fidelity,
       nodes.length === EXPECTED_NODE_COUNT && wires.length === EXPECTED_WIRE_COUNT
-        ? "复刻完成 · 可运行电路"
-        : "复刻进行中",
+        ? "演示就绪 · 可运行电路"
+        : "演示准备中",
     );
     setText(nodeCount, nodeText);
     setText(wireCount, wireText);
@@ -6174,7 +6174,7 @@
     try {
       const replay = await loadReplayCircuit();
       if (replay) {
-        renderCircuit(replay, "基准控制台已读取");
+        renderCircuit(replay, "基准画面已读取");
         return;
       }
     } catch (error) {
