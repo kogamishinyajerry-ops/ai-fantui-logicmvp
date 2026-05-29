@@ -204,14 +204,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
                     const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                     return drawer
-                        && !drawer.hidden
-                        && drawer.dataset.reviewDetailDrawer === "visible"
-                        && drawer.open
+                        && drawer.hidden
+                        && drawer.dataset.reviewDetailDrawer === "hidden"
+                        && !drawer.open
                         && snapshot
-                        && !snapshot.hidden
-                        && snapshot.dataset.circuitSnapshotDetails === "visible"
-                        && snapshot.open
-                        && document.querySelector("#demo-reconstruction-review-index")?.offsetParent;
+                        && snapshot.hidden
+                        && snapshot.dataset.circuitSnapshotDetails === "hidden"
+                        && !snapshot.open;
                 }""",
                 timeout=5000,
             )
@@ -228,6 +227,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         snapshotOpen: snapshot?.open ?? false,
                         snapshotState: snapshot?.dataset.circuitSnapshotDetails || "",
                         reviewIndexVisible: !!document.querySelector("#demo-reconstruction-review-index")?.offsetParent,
+                        completeBannerHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                     };
                 }"""
             )
@@ -878,8 +878,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && outputText.includes("THR ON")
                             && readiness.includes("5/5 验收")
                             && completeBanner
-                            && !completeBanner.hidden
-                            && completeBanner.textContent.includes("完整交付态已启用")
+                            && completeBanner.hidden
                             && window.scrollY > 0;
                     }""",
                     timeout=5000,
@@ -909,57 +908,39 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     })"""
                 )
                 page.goto(f"{base_url}/demo-reconstruction#complete=1", wait_until="networkidle")
-                open_detail_drawers(page)
                 page.wait_for_function(
                     """() => {
-                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
-                        const proofTarget = document.querySelector('[data-review-index-target="demo-reconstruction-proof-path"][aria-pressed="true"]');
-                        const activeScenario = document.querySelector('[data-review-index-scenario="max-reverse"][aria-pressed="true"]');
-                        const activeGate = document.querySelector('[data-review-index-gate="object-review"][aria-pressed="true"]');
-                        const objectText = document.querySelector("#demo-reconstruction-review-index-object")?.textContent || "";
-                        const outputText = document.querySelector("#demo-reconstruction-review-index-output")?.textContent || "";
-                        const readiness = document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent || "";
+                        const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                        const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                         const completeBanner = document.querySelector("#demo-reconstruction-complete-mode-banner");
-                        return selected
-                            && selected.textContent.trim() === "P035-S05"
-                            && proofTarget
-                            && activeScenario
-                            && activeGate
-                            && objectText.includes("wire_logic4_thr_lock")
-                            && outputText.includes("THR ON")
-                            && readiness.includes("5/5 验收")
+                        return drawer
+                            && drawer.hidden
+                            && !drawer.open
+                            && snapshot
+                            && snapshot.hidden
+                            && !snapshot.open
                             && completeBanner
-                            && !completeBanner.hidden
-                            && completeBanner.textContent.includes("完整交付态已启用");
+                            && completeBanner.hidden;
                     }""",
                     timeout=7000,
                 )
                 review_index_complete_link = page.evaluate(
                     """() => ({
                         hash: window.location.hash,
-                        selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
-                        activeScenarios: Array.from(
-                            document.querySelectorAll("[data-review-index-scenario][aria-pressed='true']")
-                        ).map((button) => button.getAttribute("data-review-index-scenario")),
-                        activeTargets: Array.from(
-                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
-                        ).map((button) => button.getAttribute("data-review-index-target")),
-                        activeGate: Array.from(
-                            document.querySelectorAll("[data-review-index-gate][aria-pressed='true']")
-                        ).map((button) => button.getAttribute("data-review-index-gate")),
-                        readinessText: document.querySelector("#demo-reconstruction-review-index-readiness")?.textContent?.trim() || "",
-                        objectText: document.querySelector("#demo-reconstruction-review-index-object")?.textContent?.trim() || "",
-                        outputText: document.querySelector("#demo-reconstruction-review-index-output")?.textContent?.trim() || "",
-                        proofPathText: document.querySelector("#demo-reconstruction-review-index-proof-path")?.textContent?.trim() || "",
-                        completeBannerText: document.querySelector("#demo-reconstruction-complete-mode-banner")?.textContent?.trim() || "",
+                        drawerHidden: document.querySelector("#demo-reconstruction-detail-drawer")?.hidden ?? false,
+                        drawerOpen: document.querySelector("#demo-reconstruction-detail-drawer")?.open ?? true,
+                        snapshotHidden: document.querySelector("#demo-reconstruction-circuit-snapshot-details")?.hidden ?? false,
+                        snapshotOpen: document.querySelector("#demo-reconstruction-circuit-snapshot-details")?.open ?? true,
+                        reviewIndexVisible: !!document.querySelector("#demo-reconstruction-review-index")?.offsetParent,
                         completeBannerHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                         completeModeLinkHref: document.querySelector("#demo-reconstruction-complete-mode-link")?.getAttribute("href") || "",
                         completeModeLinkText: document.querySelector("#demo-reconstruction-complete-mode-link")?.textContent?.trim() || "",
                     })"""
                 )
-                page.locator("#demo-reconstruction-complete-mode-banner").screenshot(
+                page.locator("#demo-reconstruction-circuit-snapshot").screenshot(
                     path=str(complete_mode_banner_path)
                 )
+                open_detail_drawers(page)
                 page.locator('[data-review-index-gate="object-review"]').click()
                 page.wait_for_function(
                     """() => {
@@ -4192,6 +4173,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "62 条源记录" not in first_screen_review["visible_text"]
             and "查看链路" not in first_screen_review["visible_text"]
             and "查看验收详情" not in first_screen_review["visible_text"]
+            and "P035-S01" not in first_screen_review["visible_text"]
+            and "TLS 已通电" not in first_screen_review["visible_text"]
+            and "ETRAC 已供电" not in first_screen_review["visible_text"]
             and "source" not in first_screen_review["visible_text"]
             and "ON / BLOCK" not in first_screen_review["visible_text"]
             and "TLS\nON" not in first_screen_review["visible_text"]
@@ -4214,29 +4198,30 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "作动器供电" in first_screen_review["visible_text"]
             and "反推锁释放" in first_screen_review["visible_text"]
             and "->" not in first_screen_review["visible_text"]
+            and "P035-S01" not in first_screen_review["circuit_snapshot_preview_readback"]
+            and "TLS 已通电" not in first_screen_review["circuit_snapshot_preview_readback"]
         )
         else "fail",
         "review_drawer_deep_link": "pass"
         if (
-            review_drawer_deep_link["hash"] == "#review=1"
-            and not review_drawer_deep_link["drawerHidden"]
-            and review_drawer_deep_link["drawerOpen"]
-            and review_drawer_deep_link["drawerState"] == "visible"
-            and not review_drawer_deep_link["snapshotHidden"]
-            and review_drawer_deep_link["snapshotOpen"]
-            and review_drawer_deep_link["snapshotState"] == "visible"
-            and review_drawer_deep_link["reviewIndexVisible"]
-            and (
-                complete_drawer_deep_link["hash"] == "#complete=1"
-                or "review=1" in complete_drawer_deep_link["hash"]
-            )
-            and not complete_drawer_deep_link["drawerHidden"]
-            and complete_drawer_deep_link["drawerOpen"]
-            and complete_drawer_deep_link["drawerState"] == "visible"
-            and not complete_drawer_deep_link["snapshotHidden"]
-            and complete_drawer_deep_link["snapshotOpen"]
-            and complete_drawer_deep_link["snapshotState"] == "visible"
-            and complete_drawer_deep_link["reviewIndexVisible"]
+            review_drawer_deep_link["hash"] == ""
+            and review_drawer_deep_link["drawerHidden"]
+            and not review_drawer_deep_link["drawerOpen"]
+            and review_drawer_deep_link["drawerState"] == "hidden"
+            and review_drawer_deep_link["snapshotHidden"]
+            and not review_drawer_deep_link["snapshotOpen"]
+            and review_drawer_deep_link["snapshotState"] == "hidden"
+            and not review_drawer_deep_link["reviewIndexVisible"]
+            and review_drawer_deep_link["completeBannerHidden"]
+            and complete_drawer_deep_link["hash"] == ""
+            and complete_drawer_deep_link["drawerHidden"]
+            and not complete_drawer_deep_link["drawerOpen"]
+            and complete_drawer_deep_link["drawerState"] == "hidden"
+            and complete_drawer_deep_link["snapshotHidden"]
+            and not complete_drawer_deep_link["snapshotOpen"]
+            and complete_drawer_deep_link["snapshotState"] == "hidden"
+            and not complete_drawer_deep_link["reviewIndexVisible"]
+            and complete_drawer_deep_link["completeBannerHidden"]
         )
         else "fail",
         "compact_runway": "pass"
@@ -4328,10 +4313,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["circuitSnapshotPreviewCount"] == 7
             and source_map_review["circuitSnapshotPreviewActive"] == ["runway-l1-unlock"]
             and "低空解锁" in source_map_review["circuitSnapshotPreviewReadback"]
+            and "P035-S01" not in source_map_review["circuitSnapshotPreviewReadback"]
+            and "TLS 已通电" not in source_map_review["circuitSnapshotPreviewReadback"]
             and source_map_review["circuitSnapshotMiniCount"] == 7
             and source_map_review["circuitSnapshotMiniActive"] == ["runway-l1-unlock"]
             and "低空解锁" in source_map_review["circuitSnapshotMiniText"]
             and "作动器供电" in source_map_review["circuitSnapshotMiniText"]
+            and "解锁电源已通电" in source_map_review["circuitSnapshotMiniText"]
+            and "作动器已供电" in source_map_review["circuitSnapshotMiniText"]
+            and "TLS 已通电" not in source_map_review["circuitSnapshotMiniText"]
+            and "ETRAC 已供电" not in source_map_review["circuitSnapshotMiniText"]
             and "反推锁释放" in source_map_review["circuitSnapshotMiniText"]
             and "THR" not in source_map_review["circuitSnapshotMiniText"]
             and "P035-S05" in source_map_review["circuitSnapshotFinalText"]
@@ -4417,9 +4408,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_review["completeActionText"] == "完整交付态"
             and review_index_review["completeBannerInitiallyHidden"] is True
             and "完整交付态已启用" in review_index_review["completeBannerInitialText"]
-            and "review=1" in review_index_review["reviewLinkHref"]
-            and review_index_review["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
-            and review_index_review["completeModeLinkText"] == "固定链接"
+            and "review=1" not in review_index_review["reviewLinkHref"]
+            and review_index_review["completeModeLinkHref"] == "/demo-reconstruction"
+            and review_index_review["completeModeLinkText"] == "短演示"
             and review_index_review["activeHandoff"] == []
             and review_index_review["activeGate"] == []
             and review_index_review["activeTour"] == []
@@ -4477,30 +4468,24 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "完整交付态已启用" in review_index_complete_action["completeBannerText"]
             and "第 5 步" in review_index_complete_action["completeBannerText"]
             and "反推锁" in review_index_complete_action["completeBannerText"]
-            and review_index_complete_action["completeBannerHidden"] is False
-            and review_index_complete_action["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
-            and review_index_complete_action["completeModeLinkText"] == "固定链接"
-            and "wire_logic4_thr_lock" in review_index_complete_action["hash"]
+            and review_index_complete_action["completeBannerHidden"] is True
+            and review_index_complete_action["completeModeLinkHref"] == "/demo-reconstruction"
+            and review_index_complete_action["completeModeLinkText"] == "短演示"
+            and "review=1" not in review_index_complete_action["hash"]
             and review_index_complete_action["scrollY"] > 0
         )
         else "fail",
         "review_index_complete_link": "pass"
         if (
-            review_index_complete_link["hash"] == "#complete=1"
-            and review_index_complete_link["selectedAnchor"] == "P035-S05"
-            and review_index_complete_link["activeScenarios"] == ["max-reverse"]
-            and review_index_complete_link["activeTargets"] == ["demo-reconstruction-proof-path"]
-            and review_index_complete_link["activeGate"] == ["object-review"]
-            and "5/5 验收" in review_index_complete_link["readinessText"]
-            and "wire_logic4_thr_lock" in review_index_complete_link["objectText"]
-            and "THR ON" in review_index_complete_link["outputText"]
-            and "对象" in review_index_complete_link["proofPathText"]
-            and "完整交付态已启用" in review_index_complete_link["completeBannerText"]
-            and "第 5 步" in review_index_complete_link["completeBannerText"]
-            and "反推锁" in review_index_complete_link["completeBannerText"]
-            and review_index_complete_link["completeBannerHidden"] is False
-            and review_index_complete_link["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
-            and review_index_complete_link["completeModeLinkText"] == "固定链接"
+            review_index_complete_link["hash"] == ""
+            and review_index_complete_link["drawerHidden"]
+            and not review_index_complete_link["drawerOpen"]
+            and review_index_complete_link["snapshotHidden"]
+            and not review_index_complete_link["snapshotOpen"]
+            and not review_index_complete_link["reviewIndexVisible"]
+            and review_index_complete_link["completeBannerHidden"] is True
+            and review_index_complete_link["completeModeLinkHref"] == "/demo-reconstruction"
+            and review_index_complete_link["completeModeLinkText"] == "短演示"
         )
         else "fail",
         "review_index_gate_rail": "pass"

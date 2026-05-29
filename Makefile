@@ -81,7 +81,7 @@ help:
 	@echo "  make dev                            — start /workbench dev server (delegates to scripts/dev-serve.sh)"
 	@echo "  make demo-html-reconstruction-mvp   — verify old demo.html cockpit reconstruction MVP"
 	@echo "  make demo-html-reconstruction-browser-acceptance — capture browser screenshots and interaction evidence for /demo-reconstruction"
-	@echo "  make demo-html-reconstruction-complete-link — print the local complete-state /demo-reconstruction URL"
+	@echo "  make demo-html-reconstruction-complete-link — print the local compact /demo-reconstruction URL"
 	@echo "  make phase1-demo-mvp-review-package — generate JSON + Markdown package for the Phase 1 demo MVP"
 	@echo "  make phase1-demo-mvp-ci-artifact — generate a local Phase 1 demo MVP CI artifact directory"
 	@echo "  make verify-phase1-demo-mvp-ci-artifact — validate the downloaded Phase 1 demo MVP CI artifact directory"
@@ -193,8 +193,8 @@ demo-html-reconstruction-browser-acceptance:
 demo-html-reconstruction-complete-link:
 	@echo "Start the local demo server:"
 	@echo "  make dev"
-	@echo "Open the complete handoff state:"
-	@echo "  http://127.0.0.1:$${PORT:-8780}/demo-reconstruction#complete=1"
+	@echo "Open the compact demo state:"
+	@echo "  http://127.0.0.1:$${PORT:-8780}/demo-reconstruction"
 
 phase1-demo-mvp-review-package:
 	@PYTHONPATH=src:. python3 scripts/run_phase1_demo_mvp_review_package.py --format json --artifact-dir "$(PHASE1_DEMO_MVP_REVIEW_PACKAGE_ARTIFACT_DIR)"
