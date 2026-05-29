@@ -751,29 +751,29 @@
 
   <section id="home-default-mode-grid" class="home-default-mode-grid" aria-label="默认五入口">
     <a class="home-mode-entry" href="/logic-builder" data-default-entry="canvas">
-      <span>01 CANVAS</span>
+      <span>01 画布</span>
       <strong>画布</strong>
       <p>进入逻辑图主画布，左右面板默认收起，节点、连线和来源锚点保持可读。</p>
     </a>
     <a class="home-mode-entry" href="/logic-builder#run-drawer" data-default-entry="run">
-      <span>02 RUN</span>
+      <span>02 运行</span>
       <strong>运行</strong>
       <p>打开底部运行抽屉，执行 run / pause / step / reset 和仿真时间线。</p>
     </a>
     <a class="home-mode-entry" href="/logic-builder#parameter-drawer" data-default-entry="parameters">
-      <span>03 PARAM</span>
+      <span>03 参数</span>
       <strong>参数</strong>
       <p>调整 RA、SW1/SW2、VDT、TRA、采样率、步长和预设场景。</p>
     </a>
     <a class="home-mode-entry" href="/logic-builder#evidence" data-default-entry="evidence">
-      <span>04 TRACE</span>
+      <span>04 证据</span>
       <strong>证据</strong>
-      <p>查看节点、原文、运行和审查之间的追溯关系，不把 raw JSON 作为主工作流。</p>
+      <p>查看节点、原文、运行和审查之间的追溯关系，不把原始数据作为主操作入口。</p>
     </a>
     <a class="home-mode-entry" href="/logic-builder#report" data-default-entry="report">
-      <span>05 REPORT</span>
+      <span>05 报告</span>
       <strong>报告</strong>
-      <p>预览回放与审查报告，明确候选态、dry-run 和无认证声明边界。</p>
+      <p>预览回放与审查报告，明确候选态、试运行和无认证声明边界。</p>
     </a>
   </section>
 
@@ -784,10 +784,10 @@
 
   <section class="home-replay" aria-labelledby="deepseek-live-replay-title">
     <div>
-      <h2 id="deepseek-live-replay-title">真实 DeepSeek 全链路回放</h2>
+      <h2 id="deepseek-live-replay-title">真实需求链路回放</h2>
       <p>
-        从 <code>artifacts/deepseek-live-full-chain</code> 导入最近一次真实 DeepSeek V4 Pro 产物：
-        需求理解、逻辑图、故障准备和沙盒计划会写入本地工作台草稿；不重新调用模型。
+        导入最近一次真实回放产物：
+        需求理解、逻辑图、故障准备和沙盒计划会写入本地工作台草稿；不重新调用生成服务。
       </p>
       <div id="deepseek-live-replay-meta" class="home-replay-meta" aria-label="最近回放摘要">
         <span class="home-replay-pill">最近回放：读取中</span>
@@ -795,8 +795,8 @@
       <div id="deepseek-live-replay-counts" class="home-replay-counts" aria-label="四阶段计数"></div>
     </div>
     <div class="home-replay-actions">
-      <button id="deepseek-live-replay-import" type="button">导入真实 DeepSeek 回放</button>
-      <a id="deepseek-live-replay-http-link" class="home-replay-http-link" href="http://127.0.0.1:8002/index.html">HTTP 入口 :8002</a>
+      <button id="deepseek-live-replay-import" type="button">导入最近回放</button>
+      <a id="deepseek-live-replay-http-link" class="home-replay-http-link" href="http://127.0.0.1:8002/index.html">打开本地回放页</a>
       <span id="deepseek-live-replay-status" class="home-replay-status" role="status">等待导入</span>
     </div>
   </section>
@@ -806,16 +806,16 @@
     <div class="home-brief-block">
       <h2>这是什么</h2>
       <p>
-        这是一个 <strong>DeepSeek V4 Pro 驱动的 UI 工作台</strong>：
-        工程师上传或粘贴需求，模型先提出澄清问题，再生成初版逻辑图、理解批注意图，
-        最后给出故障注入准备和沙盒 dry-run 建议。旧画布只保留为备选模块，不参与首页主流程。
+        这是一个 <strong>需求到电路的审查工作台</strong>：
+        工程师上传或粘贴需求，系统先提出澄清问题，再生成初版逻辑图、理解批注意图，
+        最后给出故障注入准备和沙盒试运行建议。旧画布只保留为备选模块，不参与首页主流程。
       </p>
     </div>
     <div class="home-brief-block">
       <h2>解决什么问题</h2>
       <p>
-        当前演示要证明的是 <strong>大模型能把需求文档转成可审查的工程候选链路</strong>，
-        而不是把用户带进一个手工画布编辑器。所有模型产物都保持 concept/sandbox-only，
+        当前演示要证明的是 <strong>系统能把需求文档转成可审查的工程候选链路</strong>，
+        而不是把用户带进一个手工画布编辑器。所有生成产物都保持候选审查态，
         只作为工程复核输入，不构成适航合规声明。
       </p>
     </div>
@@ -824,8 +824,8 @@
   <!-- Metrics strip -->
   <div class="home-metrics" role="region" aria-label="验证基线指标">
     <div class="home-metric">
-      <span class="home-metric-value">DeepSeek</span>
-      <span class="home-metric-label">V4 Pro 主模型</span>
+      <span class="home-metric-value">候选链路</span>
+      <span class="home-metric-label">真实回放主线</span>
     </div>
     <div class="home-metric">
       <span class="home-metric-value">4</span>
@@ -836,11 +836,11 @@
       <span class="home-metric-label">控制真值修改</span>
     </div>
     <div class="home-metric">
-      <span class="home-metric-value">dry-run</span>
+      <span class="home-metric-value">试运行</span>
       <span class="home-metric-label">沙盒注入建议</span>
     </div>
     <div class="home-metric">
-      <span class="home-metric-value">backup</span>
+      <span class="home-metric-value">备选</span>
       <span class="home-metric-label">旧画布已降级</span>
     </div>
   </div>
@@ -860,7 +860,7 @@
       <span class="home-card-kind">需求入口</span>
       <h2 class="home-card-title" id="card-requirements-intake-title">需求理解工作台</h2>
       <p class="home-card-subtitle">/requirements-intake</p>
-      <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，默认通过 DeepSeek V4 Pro 输出澄清问题、概念节点、逻辑连线与参数候选；不写入控制逻辑基准。</p>
+      <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，默认输出澄清问题、概念节点、逻辑连线与参数候选；不写入控制逻辑基准。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -868,7 +868,7 @@
       <span class="home-card-kind">模型绘制</span>
       <h2 class="home-card-title" id="card-logic-builder-title">逻辑链路绘制</h2>
       <p class="home-card-subtitle">/logic-builder</p>
-      <p class="home-card-desc">读取需求理解页的已澄清 JSON，由大模型独立生成节点坐标、正交连线路径和参数小面板；前端只负责渲染模型输出。</p>
+      <p class="home-card-desc">读取需求理解页的已澄清需求包，自动生成节点坐标、正交连线路径和参数小面板；页面只负责渲染候选输出。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -876,7 +876,7 @@
       <span class="home-card-kind">故障准备</span>
       <h2 class="home-card-title" id="card-fault-prep-title">故障注入准备</h2>
       <p class="home-card-subtitle">/fault-injection-prepare</p>
-      <p class="home-card-desc">读取模型生成的逻辑图纸，由大模型提出故障场景候选、建议注入点和进入沙盒注入前必须确认的安全边界；不执行仿真。</p>
+      <p class="home-card-desc">读取生成的逻辑图纸，提出故障场景候选、建议注入点和进入沙盒注入前必须确认的安全边界；不执行仿真。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -884,7 +884,7 @@
       <span class="home-card-kind">沙盒建议</span>
       <h2 class="home-card-title" id="card-fault-sandbox-title">沙盒故障注入</h2>
       <p class="home-card-subtitle">/fault-injection-sandbox</p>
-      <p class="home-card-desc">读取已确认边界的故障准备草稿，由模型生成 dry-run 注入配置、预期观测点和人工审查清单；不调用仿真接口。</p>
+      <p class="home-card-desc">读取已确认边界的故障准备草稿，生成试运行注入配置、预期观测点和人工审查清单；不调用仿真接口。</p>
       <span class="home-card-arrow">→</span>
     </a>
   </section>
@@ -968,34 +968,34 @@
 
   <!-- Demo guide for evaluators -->
   <nav class="home-guide" aria-labelledby="home-guide-title">
-    <h2 id="home-guide-title">DeepSeek V4 Pro UI 工作台 · 演示顺序</h2>
+    <h2 id="home-guide-title">需求到电路工作台 · 演示顺序</h2>
     <ol class="home-guide-steps">
       <li>
         <span class="home-guide-step-num">1</span>
         <span>
-          进入 <strong>需求理解工作台</strong>，选择 DeepSeek V4 Pro，上传或粘贴需求文本。
-          <em>（展示：模型先澄清需求，而不是直接让用户画图）</em>
+          进入 <strong>需求理解工作台</strong>，上传或粘贴需求文本。
+          <em>（展示：系统先澄清需求，而不是直接让用户画图）</em>
         </span>
       </li>
       <li>
         <span class="home-guide-step-num">2</span>
         <span>
-          完成澄清后进入 <strong>逻辑链路绘制</strong>，查看模型生成的候选节点、正交连线和参数面板。
-          <em>（展示：初版逻辑来自模型输出，不是旧画布主入口）</em>
+          完成澄清后进入 <strong>逻辑链路绘制</strong>，查看生成的候选节点、正交连线和参数面板。
+          <em>（展示：初版逻辑来自候选输出，不是旧画布主入口）</em>
         </span>
       </li>
       <li>
         <span class="home-guide-step-num">3</span>
         <span>
-          在图纸上选择节点并提交批注，让模型理解修改意图后更新候选图纸。
-          <em>（展示：DeepSeek 驱动的批注修订闭环）</em>
+          在图纸上选择节点并提交批注，让系统理解修改意图后更新候选图纸。
+          <em>（展示：批注修订闭环）</em>
         </span>
       </li>
       <li>
         <span class="home-guide-step-num">4</span>
         <span>
-          进入 <strong>故障注入准备</strong> 和 <strong>沙盒故障注入</strong>，检查 dry-run 配置、观测点和人工审查清单。
-          <em>（展示：候选输出仍保持 sandbox-only）</em>
+          进入 <strong>故障注入准备</strong> 和 <strong>沙盒故障注入</strong>，检查试运行配置、观测点和人工审查清单。
+          <em>（展示：候选输出仍保持审查态）</em>
         </span>
       </li>
     </ol>
@@ -1003,9 +1003,9 @@
 
   <footer class="home-footer">
     <p>
-      <strong style="color:var(--home-text)">真值源</strong>：<code>src/well_harness/adapters/*.py</code> ·
-      <strong style="color:var(--home-text)">启动服务</strong>：<code>python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002</code> ·
-      <strong style="color:var(--home-text)">验证覆盖</strong>：726 passed · 主分支 CI 全绿
+      <strong style="color:var(--home-text)">边界</strong>：控制逻辑基准未改动 ·
+      <strong style="color:var(--home-text)">启动</strong>：本地演示服务 ·
+      <strong style="color:var(--home-text)">验证</strong>：自动验收通过
     </p>
   </footer>
 </main>
@@ -1015,8 +1015,6 @@
   "use strict";
 
   const REPLAY_ENDPOINT = "/api/requirements-intake/deepseek-live-demo-replay";
-  const LOCAL_SERVER_COMMAND = "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002";
-  const LOCAL_SERVER_URL = "http://127.0.0.1:8002/index.html";
   const REQUIREMENTS_KEY = "ai-fantui-requirements-intake-ready-v1";
   const DRAWING_KEY = "ai-fantui-logic-builder-drawing-v1";
   const HISTORY_KEY = "ai-fantui-logic-builder-change-history-v1";
@@ -1052,21 +1050,34 @@
     return date.toISOString().slice(0, 16).replace("T", " ");
   }
 
+  function localizeReplayStageSummary(value) {
+    return String(value == null ? "" : value)
+      .replace(/\bcircuit nodes\b/g, "电路节点")
+      .replace(/\bconcepts\b/g, "概念")
+      .replace(/\bedges\b/g, "关系")
+      .replace(/\bwires\b/g, "连线")
+      .replace(/\bscenarios\b/g, "场景")
+      .replace(/\bpoints\b/g, "观测点")
+      .replace(/\bquestions\b/g, "问题")
+      .replace(/\bplans\b/g, "计划")
+      .replace(/\bobservations\b/g, "观测")
+      .replace(/\breviews\b/g, "审查");
+  }
+
   function renderReplaySummary(payload) {
     const summary = payload && payload.replay_summary;
     if (!summary || !replayMeta || !replayCounts) return;
-    const model = summary.model || "deepseek-v4-pro";
     const generatedAt = formatReplayTime(summary.generated_at);
     replayMeta.innerHTML = `
       <span class="home-replay-pill">最近回放：${escapeText(generatedAt)}</span>
-      <span class="home-replay-pill">模型：${escapeText(model)}</span>
-      <span class="home-replay-pill">状态：${summary.ok ? "ok" : "未确认"}</span>
+      <span class="home-replay-pill">来源：真实回放</span>
+      <span class="home-replay-pill">状态：${summary.ok ? "可导入" : "未确认"}</span>
     `;
     const stages = Array.isArray(summary.stage_counts) ? summary.stage_counts : [];
     replayCounts.innerHTML = stages.map((stage) => `
       <div class="home-replay-count" data-replay-stage="${escapeText(stage.id || "")}">
         <strong>${escapeText(stage.label_zh || stage.id || "阶段")}</strong>
-        <span>${escapeText(stage.summary_zh || "")}</span>
+        <span>${escapeText(localizeReplayStageSummary(stage.summary_zh || ""))}</span>
       </div>
     `).join("");
   }
@@ -1075,22 +1086,22 @@
     if (replayMeta) {
       replayMeta.innerHTML = `
         <span class="home-replay-pill">最近回放：需启动本地服务</span>
-        <span class="home-replay-pill">HTTP：${escapeText(LOCAL_SERVER_URL)}</span>
+        <span class="home-replay-pill">打开方式：本地演示页</span>
       `;
     }
     if (replayCounts) {
       replayCounts.innerHTML = `
         <div class="home-replay-count" data-replay-stage="local-server">
           <strong>本地服务</strong>
-          <span>${escapeText(LOCAL_SERVER_COMMAND)}</span>
+          <span>请从本地演示服务打开首页后再导入回放</span>
         </div>
         <div class="home-replay-count" data-replay-stage="why-http">
           <strong>导入方式</strong>
-          <span>file:// 无法读取回放 API，需通过 HTTP 页面导入</span>
+          <span>当前打开方式不能导入回放，请切换到本地演示页</span>
         </div>
       `;
     }
-    setReplayStatus("file:// 无法读取回放 API");
+    setReplayStatus("请从本地演示页导入");
   }
 
   function assertReplayPayload(payload) {
@@ -1126,7 +1137,7 @@
     if (!importButton) return;
     if (isFileMode()) {
       renderFileModeReplayHelp();
-      setReplayStatus(`请先启动服务：${LOCAL_SERVER_COMMAND}`);
+      setReplayStatus("请先打开本地演示服务");
       return;
     }
     importButton.disabled = true;
