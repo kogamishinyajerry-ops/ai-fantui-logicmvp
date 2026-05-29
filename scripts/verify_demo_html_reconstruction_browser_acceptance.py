@@ -141,6 +141,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     proof_transcript_path = artifact_dir / f"demo-reconstruction-proof-transcript-{stamp}.png"
     control_strip_path = artifact_dir / f"demo-reconstruction-control-strip-{stamp}.png"
     sentence_runner_path = artifact_dir / f"demo-reconstruction-sentence-runner-{stamp}.png"
+    proof_path_path = artifact_dir / f"demo-reconstruction-proof-path-{stamp}.png"
     scenario_comparator_path = artifact_dir / f"demo-reconstruction-scenario-comparator-{stamp}.png"
     review_verdict_path = artifact_dir / f"demo-reconstruction-review-verdict-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
@@ -185,6 +186,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-transcript-row]").length >= 6
                             && document.querySelectorAll("[data-control-strip-action]").length === 3
                             && document.querySelectorAll("[data-sentence-runner-step]").length === 5
+                            && document.querySelectorAll("[data-proof-path-step]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
                             && document.querySelectorAll("[data-review-verdict-card]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
@@ -227,6 +229,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "sentence_runner_visible": page.locator(
                         "#demo-reconstruction-sentence-runner"
+                    ).is_visible(timeout=5000),
+                    "proof_path_visible": page.locator(
+                        "#demo-reconstruction-proof-path"
                     ).is_visible(timeout=5000),
                     "scenario_comparator_visible": page.locator(
                         "#demo-reconstruction-scenario-comparator"
@@ -1789,6 +1794,62 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-sentence-runner").screenshot(
                     path=str(sentence_runner_path)
                 )
+                page.locator("#demo-reconstruction-proof-path").evaluate(
+                    """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
+                )
+                page.locator("#demo-reconstruction-proof-path").screenshot(
+                    path=str(proof_path_path)
+                )
+                proof_path_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            stepCount: document.querySelectorAll("[data-proof-path-step]").length,
+                            finalCount: document.querySelectorAll("[data-proof-path-final='true']").length,
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-step")),
+                            statusText: text("#demo-reconstruction-proof-path-status"),
+                            readbackText: text("#demo-reconstruction-proof-path-readback"),
+                            firstText: text('[data-proof-path-step="P035-S01"]'),
+                            finalText: text('[data-proof-path-step="P035-S05"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-step="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const button = document.querySelector('[data-proof-path-step="P035-S05"]');
+                        const status = document.querySelector("#demo-reconstruction-proof-path-status");
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-readback");
+                        const object = document.querySelector("#demo-reconstruction-review-object");
+                        return button
+                            && button.getAttribute("aria-pressed") === "true"
+                            && status
+                            && status.textContent.includes("5/5")
+                            && readback
+                            && readback.textContent.includes("20/20")
+                            && readback.textContent.includes("23/23")
+                            && object
+                            && object.textContent.includes("wire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_final_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-step")),
+                            statusText: text("#demo-reconstruction-proof-path-status"),
+                            readbackText: text("#demo-reconstruction-proof-path-readback"),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            reviewObjectText: text("#demo-reconstruction-review-object"),
+                            reviewSyncText: text("#demo-reconstruction-review-sync"),
+                        };
+                    }"""
+                )
                 page.locator("#demo-reconstruction-scenario-comparator").evaluate(
                     """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
                 )
@@ -2340,6 +2401,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 proof_transcript_path,
                 control_strip_path,
                 sentence_runner_path,
+                proof_path_path,
                 scenario_comparator_path,
                 review_verdict_path,
                 max_reverse_path,
@@ -2874,6 +2936,23 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "P035-S05" in sentence_runner_s05_review["controlStep"]
         )
         else "fail",
+        "proof_path_timeline": "pass"
+        if (
+            proof_path_review["stepCount"] == 5
+            and proof_path_review["finalCount"] == 1
+            and "P035-S01" in proof_path_review["firstText"]
+            and "P035-S05" in proof_path_review["finalText"]
+            and "20/20 节点" in proof_path_review["finalText"]
+            and "23/23 连线" in proof_path_review["finalText"]
+            and proof_path_final_review["activeSteps"] == ["P035-S05"]
+            and "5/5" in proof_path_final_review["statusText"]
+            and "20/20 节点" in proof_path_final_review["readbackText"]
+            and "23/23 连线" in proof_path_final_review["readbackText"]
+            and proof_path_final_review["selectedAnchor"] == "P035-S05"
+            and "wire_logic4_thr_lock" in proof_path_final_review["reviewObjectText"]
+            and "聚焦连线" in proof_path_final_review["reviewSyncText"]
+        )
+        else "fail",
         "scenario_comparator_readback": "pass"
         if (
             scenario_comparator_review["buttonCount"] == 2
@@ -2937,6 +3016,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "proof_transcript": str(proof_transcript_path),
             "control_strip": str(control_strip_path),
             "sentence_runner": str(sentence_runner_path),
+            "proof_path": str(proof_path_path),
             "scenario_comparator": str(scenario_comparator_path),
             "review_verdict": str(review_verdict_path),
             "max_reverse": str(max_reverse_path),
@@ -3000,6 +3080,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "sentence_runner_review": sentence_runner_review,
         "sentence_runner_s03_review": sentence_runner_s03_review,
         "sentence_runner_s05_review": sentence_runner_s05_review,
+        "proof_path_review": proof_path_review,
+        "proof_path_final_review": proof_path_final_review,
         "scenario_comparator_review": scenario_comparator_review,
         "scenario_comparator_max_review": scenario_comparator_max_review,
         "scenario_comparator_inhibit_review": scenario_comparator_inhibit_review,

@@ -250,6 +250,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-sentence-runner-list"' in html
     assert 'id="demo-reconstruction-sentence-runner-readback"' in html
     assert 'data-sentence-runner="first-screen"' in html
+    assert 'id="demo-reconstruction-proof-path"' in html
+    assert 'id="demo-reconstruction-proof-path-status"' in html
+    assert 'id="demo-reconstruction-proof-path-list"' in html
+    assert 'id="demo-reconstruction-proof-path-readback"' in html
+    assert 'data-proof-path="first-screen"' in html
     assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-scenario-comparator-status"' in html
     assert 'id="demo-reconstruction-scenario-comparator-readback"' in html
@@ -288,6 +293,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "场景读回记录" in html
     assert "演示导览轨" in html
     assert "逐句讲解稿" in html
+    assert "证明路径图" in html
     assert "完整电路拓扑矩阵" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
@@ -393,6 +399,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applySentenceRunnerStep" in script
     assert "updateSentenceRunnerStatus" in script
     assert "sentenceRunnerOutputLabel" in script
+    assert "renderProofPathTimeline" in script
+    assert "applyProofPathStep" in script
+    assert "proofPathFocusTarget" in script
     assert "installScenarioComparatorActions" in script
     assert "updateScenarioComparatorStatus" in script
     assert "scenarioComparatorSummary" in script
@@ -458,6 +467,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-control-strip-actions" in stylesheet
     assert ".demo-reconstruction-sentence-runner" in stylesheet
     assert ".demo-reconstruction-sentence-runner-list" in stylesheet
+    assert ".demo-reconstruction-proof-path" in stylesheet
+    assert ".demo-reconstruction-proof-path-list" in stylesheet
     assert ".demo-reconstruction-scenario-comparator" in stylesheet
     assert ".demo-reconstruction-scenario-comparator-list" in stylesheet
     assert ".demo-reconstruction-scenario-ledger" in stylesheet
@@ -592,6 +603,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["screenshots"]["proof_transcript"].endswith(".png")
     assert payload["screenshots"]["control_strip"].endswith(".png")
     assert payload["screenshots"]["sentence_runner"].endswith(".png")
+    assert payload["screenshots"]["proof_path"].endswith(".png")
     assert payload["screenshots"]["scenario_comparator"].endswith(".png")
     assert payload["screenshots"]["review_verdict"].endswith(".png")
     assert payload["screenshots"]["max_reverse_outputs"].endswith(".png")
@@ -611,6 +623,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "output_mirror_visible": True,
         "control_strip_visible": True,
         "sentence_runner_visible": True,
+        "proof_path_visible": True,
         "scenario_comparator_visible": True,
         "review_verdict_visible": True,
         "scenario_ledger_visible": True,
@@ -993,6 +1006,19 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "23/23 连线" in payload["sentence_runner_s05_review"]["readbackText"]
     assert "P035-S05" in payload["sentence_runner_s05_review"]["selectedAnchor"]
     assert "P035-S05" in payload["sentence_runner_s05_review"]["controlStep"]
+    assert payload["proof_path_review"]["stepCount"] == 5
+    assert payload["proof_path_review"]["finalCount"] == 1
+    assert "P035-S01" in payload["proof_path_review"]["firstText"]
+    assert "P035-S05" in payload["proof_path_review"]["finalText"]
+    assert "20/20 节点" in payload["proof_path_review"]["finalText"]
+    assert "23/23 连线" in payload["proof_path_review"]["finalText"]
+    assert payload["proof_path_final_review"]["activeSteps"] == ["P035-S05"]
+    assert "5/5" in payload["proof_path_final_review"]["statusText"]
+    assert "20/20 节点" in payload["proof_path_final_review"]["readbackText"]
+    assert "23/23 连线" in payload["proof_path_final_review"]["readbackText"]
+    assert payload["proof_path_final_review"]["selectedAnchor"] == "P035-S05"
+    assert "wire_logic4_thr_lock" in payload["proof_path_final_review"]["reviewObjectText"]
+    assert "聚焦连线" in payload["proof_path_final_review"]["reviewSyncText"]
     assert payload["scenario_comparator_review"]["buttonCount"] == 2
     assert "最大反推" in payload["scenario_comparator_review"]["maxText"]
     assert "抑制阻塞" in payload["scenario_comparator_review"]["inhibitText"]
@@ -1057,6 +1083,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "proof_transcript_readback": "pass",
         "control_strip_readback": "pass",
         "sentence_runner_readback": "pass",
+        "proof_path_timeline": "pass",
         "scenario_comparator_readback": "pass",
         "review_verdict_readback": "pass",
         "boundary": "pass",

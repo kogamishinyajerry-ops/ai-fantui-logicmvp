@@ -2389,6 +2389,95 @@ button.demo-reconstruction-chip[data-keyboard-selected="true"],
   line-height: 1.45;
   padding: 8px;
 }
+.demo-reconstruction-proof-path {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+.demo-reconstruction-proof-path-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.demo-reconstruction-proof-path-head h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+}
+.demo-reconstruction-proof-path-head strong {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.demo-reconstruction-proof-path-list {
+  display: grid;
+  gap: 7px;
+}
+.demo-reconstruction-proof-path-list button {
+  display: grid;
+  grid-template-columns: minmax(52px, auto) 1fr;
+  gap: 4px 8px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  padding: 8px;
+  text-align: left;
+}
+.demo-reconstruction-proof-path-list button:hover,
+.demo-reconstruction-proof-path-list button:focus-visible {
+  border-color: #4f46e5;
+  outline: none;
+}
+.demo-reconstruction-proof-path-list button[aria-pressed="true"] {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+.demo-reconstruction-proof-path-list button[data-proof-path-final="true"] {
+  border-color: #a7f3d0;
+}
+.demo-reconstruction-proof-path-list strong {
+  color: #111827;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-proof-path-list span {
+  min-width: 0;
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path-list small {
+  grid-column: 1 / -1;
+  color: #667085;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-proof-path p {
+  margin: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 8px;
+}
 .demo-reconstruction-scenario-comparator {
   display: grid;
   gap: 9px;
