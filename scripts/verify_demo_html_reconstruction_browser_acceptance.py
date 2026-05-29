@@ -458,6 +458,129 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                output_maturity_review = page.evaluate(
+                    """() => ({
+                        visible: !!document.querySelector("#demo-reconstruction-output-maturity-matrix"),
+                        summaryText: document.querySelector("#demo-reconstruction-output-maturity-summary")?.textContent?.trim() || "",
+                        stepCount: document.querySelectorAll("[data-output-maturity-step-label]").length,
+                        cellCount: document.querySelectorAll("[data-output-maturity-step][data-output-maturity-target]").length,
+                        activeCellCount: document.querySelectorAll("[data-output-maturity-active='true']").length,
+                        s01TlsActive: document
+                            .querySelector('[data-output-maturity-step="P035-S01"][data-output-maturity-target="tls115"]')
+                            ?.getAttribute("data-output-maturity-active") || "",
+                        s02EtracActive: document
+                            .querySelector('[data-output-maturity-step="P035-S02"][data-output-maturity-target="etrac_540v"]')
+                            ?.getAttribute("data-output-maturity-active") || "",
+                        s03EecActive: document
+                            .querySelector('[data-output-maturity-step="P035-S03"][data-output-maturity-target="eec_deploy"]')
+                            ?.getAttribute("data-output-maturity-active") || "",
+                        s03PduActive: document
+                            .querySelector('[data-output-maturity-step="P035-S03"][data-output-maturity-target="pdu_motor"]')
+                            ?.getAttribute("data-output-maturity-active") || "",
+                        s05ThrActive: document
+                            .querySelector('[data-output-maturity-step="P035-S05"][data-output-maturity-target="thr_lock"]')
+                            ?.getAttribute("data-output-maturity-active") || "",
+                    })"""
+                )
+                page.locator('[data-output-maturity-step="P035-S05"][data-output-maturity-target="thr_lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const cell = document.querySelector(
+                            '[data-output-maturity-step="P035-S05"][data-output-maturity-target="thr_lock"]'
+                        );
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        return cell
+                            && cell.getAttribute("aria-pressed") === "true"
+                            && selected.includes("P035-S05")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg [data-node='thr_lock'][data-docx-trace-selected='true']").length === 1;
+                    }""",
+                    timeout=5000,
+                )
+                output_maturity_focus_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            selectedCells: Array.from(
+                                document.querySelectorAll("[data-output-maturity-step][data-output-maturity-target][aria-pressed='true']")
+                            ).map((cell) => `${cell.getAttribute("data-output-maturity-step")}:${cell.getAttribute("data-output-maturity-target")}`),
+                            selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                            selectedOutputTarget: Array.from(
+                                document.querySelectorAll("[data-output-path-target][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-output-path-target")),
+                            highlightedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-node='thr_lock'][data-docx-trace-selected='true']").length
+                                : 0,
+                            reviewObjectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
+                output_maturity_hash = page.evaluate("() => window.location.hash || ''")
+                page.goto(f"{base_url}/demo-reconstruction{output_maturity_hash}", wait_until="networkidle")
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const cell = document.querySelector(
+                            '[data-output-maturity-step="P035-S05"][data-output-maturity-target="thr_lock"]'
+                        );
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        return cell
+                            && cell.getAttribute("aria-pressed") === "true"
+                            && selected.includes("P035-S05")
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg [data-node='thr_lock'][data-docx-trace-selected='true']").length === 1;
+                    }""",
+                    timeout=5000,
+                )
+                output_maturity_restore_review = page.evaluate(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        return {
+                            hash: window.location.hash || "",
+                            selectedCells: Array.from(
+                                document.querySelectorAll("[data-output-maturity-step][data-output-maturity-target][aria-pressed='true']")
+                            ).map((cell) => `${cell.getAttribute("data-output-maturity-step")}:${cell.getAttribute("data-output-maturity-target")}`),
+                            selectedAnchor: document.querySelector("#demo-reconstruction-selected-anchor")?.textContent?.trim() || "",
+                            highlightedNodeCount: doc
+                                ? doc.querySelectorAll("#fan-chain-svg [data-node='thr_lock'][data-docx-trace-selected='true']").length
+                                : 0,
+                            reviewObjectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                        };
+                    }"""
+                )
+                page.locator('[data-output-path-wire-row="wire_logic4_thr_lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const frame = document.querySelector("#demo-reconstruction-console-frame");
+                        const doc = frame && frame.contentDocument;
+                        const row = document.querySelector('[data-output-path-wire-row="wire_logic4_thr_lock"]');
+                        const selectedCells = document.querySelectorAll(
+                            "[data-output-maturity-step][data-output-maturity-target][aria-pressed='true']"
+                        );
+                        return row
+                            && row.getAttribute("aria-pressed") === "true"
+                            && selectedCells.length === 0
+                            && doc
+                            && doc.querySelectorAll("#fan-chain-svg .chain-wire[data-docx-trace-selected='true']").length === 1;
+                    }""",
+                    timeout=5000,
+                )
+                output_maturity_clear_review = page.evaluate(
+                    """() => ({
+                        selectedCells: Array.from(
+                            document.querySelectorAll("[data-output-maturity-step][data-output-maturity-target][aria-pressed='true']")
+                        ).map((cell) => `${cell.getAttribute("data-output-maturity-step")}:${cell.getAttribute("data-output-maturity-target")}`),
+                        activeRows: Array.from(
+                            document.querySelectorAll("[data-output-path-wire-row][aria-pressed='true']")
+                        ).map((row) => row.getAttribute("data-output-path-wire-row")),
+                        reviewObjectText: document.querySelector("#demo-reconstruction-review-object")?.textContent?.trim() || "",
+                    })"""
+                )
                 page.evaluate(
                     """async () => {
                         const response = await fetch("/api/requirements-intake/deepseek-live-demo-replay", {headers: {"Accept": "application/json"}});
@@ -1645,6 +1768,32 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "DOCX" in stored_output_path_review["finalText"]
         )
         else "fail",
+        "output_maturity_matrix_readback": "pass"
+        if (
+            output_maturity_review["visible"]
+            and output_maturity_review["stepCount"] == 5
+            and output_maturity_review["cellCount"] == 25
+            and output_maturity_review["activeCellCount"] >= 9
+            and "最终 5/5" in output_maturity_review["summaryText"]
+            and output_maturity_review["s01TlsActive"] == "true"
+            and output_maturity_review["s02EtracActive"] == "true"
+            and output_maturity_review["s03EecActive"] == "true"
+            and output_maturity_review["s03PduActive"] == "true"
+            and output_maturity_review["s05ThrActive"] == "true"
+            and output_maturity_focus_review["selectedCells"] == ["P035-S05:thr_lock"]
+            and output_maturity_focus_review["selectedOutputTarget"] == ["thr_lock"]
+            and output_maturity_focus_review["highlightedNodeCount"] == 1
+            and "thr_lock" in output_maturity_focus_review["reviewObjectText"]
+            and output_maturity_restore_review["selectedCells"] == ["P035-S05:thr_lock"]
+            and "step=P035-S05" in output_maturity_restore_review["hash"]
+            and "focus=node%3Athr_lock" in output_maturity_restore_review["hash"]
+            and output_maturity_restore_review["highlightedNodeCount"] == 1
+            and "thr_lock" in output_maturity_restore_review["reviewObjectText"]
+            and output_maturity_clear_review["selectedCells"] == []
+            and output_maturity_clear_review["activeRows"] == ["wire_logic4_thr_lock"]
+            and "wire_logic4_thr_lock" in output_maturity_clear_review["reviewObjectText"]
+        )
+        else "fail",
         "trace_selection_interaction": "pass"
         if (
             trace_selection_review["selectedAnchorAfterClick"] == "P035-S05"
@@ -1936,6 +2085,10 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "output_path_review": output_path_review,
         "output_path_focus_review": output_path_focus_review,
         "stored_output_path_review": stored_output_path_review,
+        "output_maturity_review": output_maturity_review,
+        "output_maturity_focus_review": output_maturity_focus_review,
+        "output_maturity_restore_review": output_maturity_restore_review,
+        "output_maturity_clear_review": output_maturity_clear_review,
         "trace_selection_review": trace_selection_review,
         "embedded_trace_highlight_review": embedded_trace_highlight_review,
         "embedded_trace_chip_focus_review": embedded_trace_chip_focus_review,

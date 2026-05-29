@@ -178,6 +178,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-output-path-targets"' in html
     assert 'id="demo-reconstruction-output-path-readback"' in html
     assert 'id="demo-reconstruction-output-path-list"' in html
+    assert 'id="demo-reconstruction-output-maturity-matrix"' in html
+    assert 'id="demo-reconstruction-output-maturity-summary"' in html
+    assert 'id="demo-reconstruction-output-maturity-grid"' in html
     assert 'id="demo-reconstruction-topology-list"' in html
     assert 'id="demo-reconstruction-keyboard-review"' in html
     assert 'id="demo-reconstruction-review-anchor"' in html
@@ -289,6 +292,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'params.set("tq"' in script
     assert "renderOutputPathLane" in script
     assert "upstreamPathForTarget" in script
+    assert "renderOutputMaturityMatrix" in script
+    assert "setOutputMaturityCellState" in script
+    assert "outputMaturityTargetForFocus" in script
+    assert "keepOutputMaturitySelection" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -325,6 +332,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-topology-step-filter" in stylesheet
     assert ".demo-reconstruction-output-path-lane" in stylesheet
     assert ".demo-reconstruction-output-path-row" in stylesheet
+    assert ".demo-reconstruction-output-maturity-matrix" in stylesheet
+    assert ".demo-reconstruction-output-maturity-cell" in stylesheet
     assert ".demo-reconstruction-topology-list" in stylesheet
     assert ".demo-reconstruction-topology-row" in stylesheet
     assert ".demo-reconstruction-keyboard-review" in stylesheet
@@ -550,6 +559,25 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "15/23" in payload["stored_output_path_review"]["summaryText"]
     assert "P035-S05" in payload["stored_output_path_review"]["finalText"]
     assert "DOCX" in payload["stored_output_path_review"]["finalText"]
+    assert payload["output_maturity_review"]["visible"] is True
+    assert payload["output_maturity_review"]["stepCount"] == 5
+    assert payload["output_maturity_review"]["cellCount"] == 25
+    assert payload["output_maturity_review"]["s01TlsActive"] == "true"
+    assert payload["output_maturity_review"]["s02EtracActive"] == "true"
+    assert payload["output_maturity_review"]["s03EecActive"] == "true"
+    assert payload["output_maturity_review"]["s03PduActive"] == "true"
+    assert payload["output_maturity_review"]["s05ThrActive"] == "true"
+    assert payload["output_maturity_focus_review"]["selectedCells"] == ["P035-S05:thr_lock"]
+    assert payload["output_maturity_focus_review"]["highlightedNodeCount"] == 1
+    assert "thr_lock" in payload["output_maturity_focus_review"]["reviewObjectText"]
+    assert payload["output_maturity_restore_review"]["selectedCells"] == ["P035-S05:thr_lock"]
+    assert "step=P035-S05" in payload["output_maturity_restore_review"]["hash"]
+    assert "focus=node%3Athr_lock" in payload["output_maturity_restore_review"]["hash"]
+    assert payload["output_maturity_restore_review"]["highlightedNodeCount"] == 1
+    assert "thr_lock" in payload["output_maturity_restore_review"]["reviewObjectText"]
+    assert payload["output_maturity_clear_review"]["selectedCells"] == []
+    assert payload["output_maturity_clear_review"]["activeRows"] == ["wire_logic4_thr_lock"]
+    assert "wire_logic4_thr_lock" in payload["output_maturity_clear_review"]["reviewObjectText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,
@@ -712,6 +740,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "topology_matrix_readback": "pass",
         "topology_filter_workbench": "pass",
         "output_path_lane_readback": "pass",
+        "output_maturity_matrix_readback": "pass",
         "trace_selection_interaction": "pass",
         "embedded_trace_highlight": "pass",
         "embedded_trace_chip_focus": "pass",
