@@ -233,6 +233,13 @@
   const reviewPacketDashboardSummary = $("demo-reconstruction-review-packet-dashboard-summary");
   const reviewPacketDashboardMetrics = $("demo-reconstruction-review-packet-dashboard-metrics");
   const reviewPacketDashboardChecklist = $("demo-reconstruction-review-packet-dashboard-checklist");
+  const reviewVerdictStatus = $("demo-reconstruction-review-verdict-status");
+  const reviewVerdictSource = $("demo-reconstruction-review-verdict-source");
+  const reviewVerdictCircuit = $("demo-reconstruction-review-verdict-circuit");
+  const reviewVerdictOutputs = $("demo-reconstruction-review-verdict-outputs");
+  const reviewVerdictFocus = $("demo-reconstruction-review-verdict-focus");
+  const reviewVerdictBoundary = $("demo-reconstruction-review-verdict-boundary");
+  const reviewVerdictReadback = $("demo-reconstruction-review-verdict-readback");
   const custodySummary = $("demo-reconstruction-custody-summary");
   const custodyActive = $("demo-reconstruction-custody-active");
   const custodyOutput = $("demo-reconstruction-custody-output");
@@ -1643,6 +1650,35 @@
     }
   }
 
+  function updateReviewVerdictBoard(gates, context) {
+    if (!reviewVerdictStatus) return;
+    const gateList = Array.isArray(gates) ? gates : [];
+    const gateCount = gateList.length;
+    const passCount = gateList.filter((gate) => gate.pass).length;
+    const expectedNodes = context.expectedNodes || EXPECTED_NODE_COUNT;
+    const expectedWires = context.expectedWires || EXPECTED_WIRE_COUNT;
+    const coveredNodes = context.coveredNodes || 0;
+    const coveredWires = context.coveredWires || 0;
+    const outputReadyCount = finalOutputReadinessCount(context.finalContract);
+    const boundaryGate = gateList.find((gate) => gate.id === "read-only-boundary");
+
+    setText(reviewVerdictStatus, `${passCount}/${gateCount} gate`);
+    setText(reviewVerdictSource, `${context.sourceCount} 源记录 · ${context.stepCount}/5 步`);
+    setText(reviewVerdictCircuit, `${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线`);
+    setText(reviewVerdictOutputs, `${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`);
+    setText(reviewVerdictFocus, context.focusedObject || "等待聚焦");
+    setText(
+      reviewVerdictBoundary,
+      boundaryGate && boundaryGate.pass ? "只读边界 · 控制逻辑未改动" : "边界待确认",
+    );
+    setText(
+      reviewVerdictReadback,
+      passCount === gateCount
+        ? `证据可审 · ${coveredNodes}/${expectedNodes} 节点 · ${coveredWires}/${expectedWires} 连线 · ${outputReadyCount}/${OUTPUT_PATH_TARGETS.length} 输出`
+        : `继续补齐审阅点 · ${passCount}/${gateCount} gate`,
+    );
+  }
+
   function frameText(frameDocument, selector, fallback) {
     const element = frameDocument ? frameDocument.querySelector(selector) : null;
     const value = element && element.textContent ? element.textContent.trim() : "";
@@ -2315,9 +2351,7 @@
       },
     ];
     const passed = gates.filter((gate) => gate.pass).length;
-    setText(reviewPacketReadiness, `${passed}/${gates.length} gate`);
-    renderReviewPacketGates(gates);
-    renderReviewPacketDashboard(gates, {
+    const reviewContext = {
       sourceCount,
       stepCount,
       expectedNodes,
@@ -2327,7 +2361,11 @@
       finalContract,
       focusedObject,
       hasFocusedObject: Boolean(currentCircuitFocus.kind && currentCircuitFocus.id),
-    });
+    };
+    setText(reviewPacketReadiness, `${passed}/${gates.length} gate`);
+    renderReviewPacketGates(gates);
+    renderReviewPacketDashboard(gates, reviewContext);
+    updateReviewVerdictBoard(gates, reviewContext);
     updateReviewIndexStatus();
   }
 

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p22">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p22" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p23">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p23" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -458,6 +458,20 @@
         <div><span>预设场景</span><strong id="demo-reconstruction-preset-count">5/5</strong></div>
         <div><span>状态输出</span><strong id="demo-reconstruction-status-count">6/6</strong></div>
       </div>
+      <section id="demo-reconstruction-review-verdict" class="demo-reconstruction-review-verdict" data-review-verdict="first-screen" aria-label="demo.html 审阅结论">
+        <div class="demo-reconstruction-review-verdict-head">
+          <h3>审阅结论</h3>
+          <strong id="demo-reconstruction-review-verdict-status">等待 gate</strong>
+        </div>
+        <div class="demo-reconstruction-review-verdict-grid">
+          <div data-review-verdict-card="source"><span>来源覆盖</span><strong id="demo-reconstruction-review-verdict-source">等待 DOCX</strong></div>
+          <div data-review-verdict-card="circuit"><span>完整电路</span><strong id="demo-reconstruction-review-verdict-circuit">等待电路</strong></div>
+          <div data-review-verdict-card="outputs"><span>输出成熟度</span><strong id="demo-reconstruction-review-verdict-outputs">等待输出</strong></div>
+          <div data-review-verdict-card="focus"><span>当前审阅点</span><strong id="demo-reconstruction-review-verdict-focus">等待聚焦</strong></div>
+          <div data-review-verdict-card="boundary"><span>边界</span><strong id="demo-reconstruction-review-verdict-boundary">只读</strong></div>
+        </div>
+        <p id="demo-reconstruction-review-verdict-readback">等待审阅证据同步</p>
+      </section>
       <section id="demo-reconstruction-control-strip" class="demo-reconstruction-control-strip" data-demo-control-strip="first-screen" aria-label="demo.html 演示控制条">
         <div class="demo-reconstruction-control-strip-head">
           <h3>演示控制条</h3>
