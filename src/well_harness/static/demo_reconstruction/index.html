@@ -663,7 +663,7 @@
         <div class="demo-reconstruction-control-strip-grid">
           <div><span>当前步骤</span><strong id="demo-reconstruction-control-strip-step">等待 P035</strong></div>
           <div><span>当前对象</span><strong id="demo-reconstruction-control-strip-object">等待聚焦</strong></div>
-          <div><span>THR_LOCK</span><strong id="demo-reconstruction-control-strip-output">等待输出</strong></div>
+          <div><span>反推锁输出</span><strong id="demo-reconstruction-control-strip-output">等待输出</strong></div>
           <div><span>证明路径</span><strong id="demo-reconstruction-control-strip-path">等待导览</strong></div>
         </div>
         <div class="demo-reconstruction-control-strip-actions">
@@ -818,14 +818,14 @@
         </div>
         <div class="demo-reconstruction-output-mirror-grid">
           <div><span>逻辑状态</span><strong id="demo-reconstruction-output-mirror-logic">等待 HUD</strong></div>
-          <div><span>锁定状态</span><strong id="demo-reconstruction-output-mirror-thr">等待 THR_LOCK</strong></div>
+          <div><span>反推锁状态</span><strong id="demo-reconstruction-output-mirror-thr">等待反推锁</strong></div>
           <div><span>状态摘要</span><strong id="demo-reconstruction-output-mirror-summary">等待摘要</strong></div>
         </div>
         <div class="demo-reconstruction-output-mirror-values">
-          <div><span>TLS</span><strong id="demo-reconstruction-output-mirror-tls">--</strong></div>
-          <div><span>ETRAC</span><strong id="demo-reconstruction-output-mirror-etrac">--</strong></div>
-          <div><span>EEC</span><strong id="demo-reconstruction-output-mirror-eec">--</strong></div>
-          <div><span>THR_LOCK</span><strong id="demo-reconstruction-output-mirror-thr-output">--</strong></div>
+          <div><span>解锁电源</span><strong id="demo-reconstruction-output-mirror-tls">--</strong></div>
+          <div><span>作动器供电</span><strong id="demo-reconstruction-output-mirror-etrac">--</strong></div>
+          <div><span>展开指令</span><strong id="demo-reconstruction-output-mirror-eec">--</strong></div>
+          <div><span>反推锁输出</span><strong id="demo-reconstruction-output-mirror-thr-output">--</strong></div>
         </div>
       </section>
       <section id="demo-reconstruction-scenario-ledger" class="demo-reconstruction-scenario-ledger" data-scenario-ledger="demo-html-presets" aria-label="demo.html 场景读回记录">
@@ -879,7 +879,7 @@
         <div class="demo-reconstruction-guide-step">
           <span>03</span>
           <strong>核对输出</strong>
-          <p>下滑到输出卡片，核对 TLS115、ETRAC、EEC 与 THR_LOCK。</p>
+          <p>下滑到输出卡片，核对解锁电源、作动器供电、展开指令与反推锁。</p>
         </div>
       </section>
       <section class="demo-reconstruction-evidence-block">
@@ -912,12 +912,12 @@
       <section class="demo-reconstruction-evidence-block">
         <h3>状态输出</h3>
         <ul id="demo-reconstruction-status-list" class="demo-reconstruction-list">
-        <li>SW1</li>
-        <li>SW2</li>
-        <li>TLS</li>
-        <li>VDT90</li>
-        <li>L1-L4</li>
-        <li>THR_LOCK</li>
+        <li>微动开关 1</li>
+        <li>微动开关 2</li>
+        <li>解锁电源</li>
+        <li>展开到位反馈</li>
+        <li>反推链路分段</li>
+        <li>反推锁输出</li>
         </ul>
       </section>
     </aside>
