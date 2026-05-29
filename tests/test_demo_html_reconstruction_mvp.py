@@ -168,6 +168,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-equation-rail"' in html
     assert 'id="demo-reconstruction-review-index-equation-summary"' in html
     assert 'id="demo-reconstruction-review-index-equation-list"' in html
+    assert 'id="demo-reconstruction-review-index-closure-rail"' in html
+    assert 'id="demo-reconstruction-review-index-closure-summary"' in html
+    assert 'id="demo-reconstruction-review-index-closure-list"' in html
     assert 'id="demo-reconstruction-review-index-output-rail"' in html
     assert 'id="demo-reconstruction-review-index-output-summary"' in html
     assert 'id="demo-reconstruction-review-index-output-list"' in html
@@ -527,6 +530,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-review-index-build-list" in stylesheet
     assert ".demo-reconstruction-review-index-equation-rail" in stylesheet
     assert ".demo-reconstruction-review-index-equation-list" in stylesheet
+    assert ".demo-reconstruction-review-index-closure-rail" in stylesheet
+    assert ".demo-reconstruction-review-index-closure-list" in stylesheet
     assert ".demo-reconstruction-review-index-output-rail" in stylesheet
     assert ".demo-reconstruction-review-index-output-list" in stylesheet
     assert ".demo-reconstruction-review-index-scenario-rail" in stylesheet
@@ -813,6 +818,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["review_index_review"]["evidenceCount"] == 4
     assert payload["review_index_review"]["buildStepCount"] == 5
     assert payload["review_index_review"]["equationCount"] == 4
+    assert payload["review_index_review"]["closureCount"] == 5
     assert payload["review_index_review"]["outputTargetCount"] == 5
     assert payload["review_index_review"]["scenarioCount"] == 2
     assert payload["review_index_review"]["activeBuildSteps"] == ["P035-S01"]
@@ -826,6 +832,8 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "4/4 方程" in payload["review_index_review"]["equationSummaryText"]
     assert "RA < 6 ft" in payload["review_index_review"]["equationL1Text"]
     assert "VDT90" in payload["review_index_review"]["equationL4Text"]
+    assert "5/5 闭环" in payload["review_index_review"]["closureSummaryText"]
+    assert "L4 -> THR_LOCK" in payload["review_index_review"]["closureFinalText"]
     assert "5/5 输出" in payload["review_index_review"]["outputSummaryText"]
     assert "THR_LOCK" in payload["review_index_review"]["outputThrText"]
     assert "P035-S05" in payload["review_index_review"]["outputThrText"]
@@ -894,6 +902,13 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     ]
     assert "wire_logic4_thr_lock" in payload["review_index_equation_rail_action"]["objectText"]
     assert "L1-L4" in payload["review_index_equation_rail_action"]["equationSummaryText"]
+    assert payload["review_index_closure_rail_action"]["selectedAnchor"] == "P035-S05"
+    assert payload["review_index_closure_rail_action"]["activeClosure"] == ["l4-thr-lock"]
+    assert payload["review_index_closure_rail_action"]["activeTargets"] == [
+        "demo-reconstruction-proof-path"
+    ]
+    assert "wire_logic4_thr_lock" in payload["review_index_closure_rail_action"]["objectText"]
+    assert "对象" in payload["review_index_closure_rail_action"]["proofPathText"]
     assert payload["logic_equation_review"]["visible"] is True
     assert payload["logic_equation_review"]["rowCount"] == 4
     assert payload["logic_equation_review"]["passCount"] == 4
@@ -1440,6 +1455,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "review_index_build_ladder": "pass",
         "review_index_evidence_rail": "pass",
         "review_index_equation_rail": "pass",
+        "review_index_closure_rail": "pass",
         "source_chip_focus": "pass",
         "responsive_geometry": "pass",
         "embedded_codex_light_palette": "pass",
