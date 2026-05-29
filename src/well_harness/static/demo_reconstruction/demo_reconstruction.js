@@ -155,6 +155,8 @@
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
+  const reviewIndexBuildSummary = $("demo-reconstruction-review-index-build-summary");
+  const reviewIndexBuildList = $("demo-reconstruction-review-index-build-list");
   const reviewIndexList = $("demo-reconstruction-review-index-list");
   const nodeList = $("demo-reconstruction-node-list");
   const wireList = $("demo-reconstruction-wire-list");
@@ -470,6 +472,73 @@
         }
       });
     });
+  }
+
+  function setReviewIndexBuildState(anchor) {
+    if (!reviewIndexBuildList) return;
+    reviewIndexBuildList.querySelectorAll("[data-review-index-build-step]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexBuildStep === anchor ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexBuildStep(anchor) {
+    const index = traceSteps.findIndex((step) => step && step.anchor === anchor);
+    if (index < 0) return;
+    setProofPathLaneMode("blueprint", {writeHash: false});
+    applyProofPathStep(anchor);
+    setReviewIndexTarget("demo-reconstruction-proof-path");
+    setReviewIndexBuildState(anchor);
+    const target = $("demo-reconstruction-proof-path");
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexBuildLadder(steps) {
+    if (!reviewIndexBuildList) return;
+    reviewIndexBuildList.innerHTML = "";
+    if (!Array.isArray(steps) || !steps.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexBuildStep = "empty";
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = "等待逐句构建";
+      reviewIndexBuildList.appendChild(button);
+      setText(reviewIndexBuildSummary, "等待 P035 构建");
+      return;
+    }
+    steps.forEach((step, index) => {
+      const contract = cumulativeTraceContract(index);
+      const focus = proofPathFocusTarget(step, contract);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexBuildStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("span");
+      title.textContent = step.title || "工作过程片段";
+      const meta = document.createElement("small");
+      meta.textContent = `${contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`;
+      const output = document.createElement("em");
+      const outputLabel = contract.node_ids.length === EXPECTED_NODE_COUNT
+        && contract.wire_ids.length === EXPECTED_WIRE_COUNT
+        && focus.id === "wire_logic4_thr_lock"
+        ? "完整电路闭合 · THR_LOCK 输出可读"
+        : sentenceRunnerOutputLabel(step, contract);
+      output.textContent = `${outputLabel} · ${focus.id ? reviewObjectLabel(focus.kind, focus.id) : "等待聚焦"}`;
+
+      button.append(anchor, title, meta, output);
+      button.addEventListener("click", () => applyReviewIndexBuildStep(step.anchor || ""));
+      reviewIndexBuildList.appendChild(button);
+    });
+    const finalContract = cumulativeTraceContract(steps.length - 1);
+    setText(
+      reviewIndexBuildSummary,
+      `${steps.length}/5 句 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+    setReviewIndexBuildState(currentTraceStep && currentTraceStep.anchor ? currentTraceStep.anchor : steps[0].anchor || "");
   }
 
   function appendChipGroup(container, label, values, className, highlightKind) {
@@ -4149,6 +4218,7 @@
       card.setAttribute("aria-pressed", card.dataset.traceAnchor === step.anchor ? "true" : "false");
     });
     setTraceCardTabStops(step.anchor);
+    setReviewIndexBuildState(step.anchor || "");
     setCustodyButtonState(step.anchor);
     setText(selectedAnchor, step.anchor || "P035");
     setText(selectedTitle, step.title || "工作过程片段");
@@ -4393,6 +4463,7 @@
       traceCardList.appendChild(card);
     });
     setSelectedTrace(steps[0], {writeHash: false});
+    renderReviewIndexBuildLadder(steps);
     renderSentenceRunner(steps);
     renderProofPathTimeline(steps);
     renderProofPathCoverageGrid(steps);
