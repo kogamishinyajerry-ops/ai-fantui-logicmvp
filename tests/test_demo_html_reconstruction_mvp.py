@@ -158,7 +158,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-review-index-step"' in html
     assert 'id="demo-reconstruction-review-index-object"' in html
     assert 'id="demo-reconstruction-review-index-output"' in html
+    assert 'id="demo-reconstruction-review-index-proof-path"' in html
     assert 'id="demo-reconstruction-review-index-list"' in html
+    assert 'data-review-index-target="demo-reconstruction-proof-path"' in html
     assert 'id="demo-reconstruction-docx-circuit-map"' in html
     assert 'id="demo-reconstruction-requirement-ledger"' in html
     assert 'id="demo-reconstruction-requirement-ledger-search"' in html
@@ -378,6 +380,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'params.set("lane", proofPathLaneMode)' in script
     assert 'setProofPathLaneMode(state.lane || "blueprint", {writeHash: false})' in script
     assert "updateReviewIndexStatus" in script
+    assert "reviewIndexProofPath" in script
     assert "installReviewIndexNavigation" in script
     assert "setReviewIndexTarget" in script
     assert "renderStepPlaybackRail" in script
@@ -747,7 +750,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "evidence_rail_visible": True,
     }
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
-    assert payload["source_map_review"]["reviewIndexButtonCount"] == 11
+    assert payload["source_map_review"]["reviewIndexButtonCount"] == 12
     assert payload["source_map_review"]["requirementLedgerRowCount"] == 67
     assert payload["source_map_review"]["requirementLedgerMappedCount"] == 44
     assert payload["source_map_review"]["requirementLedgerContextCount"] == 18
@@ -777,17 +780,23 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["nodeCoverage"] == "20/20"
     assert payload["source_map_review"]["wireCoverage"] == "23/23"
     assert payload["review_index_review"]["visible"] is True
-    assert payload["review_index_review"]["buttonCount"] == 11
+    assert payload["review_index_review"]["buttonCount"] == 12
     assert payload["review_index_review"]["activeTargets"] == [
         "demo-reconstruction-docx-circuit-map"
     ]
     assert "P035-S01" in payload["review_index_review"]["stepText"]
+    assert "蓝图" in payload["review_index_review"]["proofPathText"]
     assert payload["review_index_navigation"]["activeTargets"] == [
         "demo-reconstruction-scenario-ledger"
     ]
     assert payload["review_index_navigation"]["scrollY"] > 0
+    assert payload["review_index_proof_path_navigation"]["activeTargets"] == [
+        "demo-reconstruction-proof-path"
+    ]
+    assert payload["review_index_proof_path_navigation"]["scrollY"] > 0
     assert "P035-S05" in payload["review_index_after_trace"]["stepText"]
     assert "等待聚焦" in payload["review_index_after_trace"]["objectText"]
+    assert "链接已同步" in payload["review_index_after_trace"]["proofPathText"]
     assert payload["logic_equation_review"]["visible"] is True
     assert payload["logic_equation_review"]["rowCount"] == 4
     assert payload["logic_equation_review"]["passCount"] == 4
@@ -1301,6 +1310,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "docx_sentence_circuit_map": "pass",
         "requirement_coverage_ledger": "pass",
         "review_index_navigation": "pass",
+        "review_index_proof_path_context": "pass",
         "logic_equation_board_readback": "pass",
         "assembly_map_readback": "pass",
         "topology_matrix_readback": "pass",

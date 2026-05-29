@@ -401,6 +401,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             stepText: text("#demo-reconstruction-review-index-step"),
                             objectText: text("#demo-reconstruction-review-index-object"),
                             outputText: text("#demo-reconstruction-review-index-output"),
+                            proofPathText: text("#demo-reconstruction-review-index-proof-path"),
                             activeTargets: Array.from(
                                 document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
                             ).map((button) => button.getAttribute("data-review-index-target")),
@@ -419,6 +420,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     timeout=5000,
                 )
                 review_index_navigation = page.evaluate(
+                    """() => ({
+                        activeTargets: Array.from(
+                            document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
+                        ).map((button) => button.getAttribute("data-review-index-target")),
+                        scrollY: window.scrollY,
+                    })"""
+                )
+                page.locator('[data-review-index-target="demo-reconstruction-proof-path"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector(
+                            '[data-review-index-target="demo-reconstruction-proof-path"][aria-pressed="true"]'
+                        );
+                        const target = document.querySelector("#demo-reconstruction-proof-path");
+                        return !!active && !!target && window.scrollY > 0;
+                    }""",
+                    timeout=5000,
+                )
+                review_index_proof_path_navigation = page.evaluate(
                     """() => ({
                         activeTargets: Array.from(
                             document.querySelectorAll("[data-review-index-target][aria-pressed='true']")
@@ -854,6 +874,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             ?.textContent?.trim() || "",
                         objectText: document
                             .querySelector("#demo-reconstruction-review-index-object")
+                            ?.textContent?.trim() || "",
+                        proofPathText: document
+                            .querySelector("#demo-reconstruction-review-index-proof-path")
                             ?.textContent?.trim() || "",
                     })"""
                 )
@@ -3164,7 +3187,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "docx_sentence_circuit_map": "pass"
         if (
             source_map_review["sourceEntryCount"] >= 10
-            and source_map_review["reviewIndexButtonCount"] == 11
+            and source_map_review["reviewIndexButtonCount"] == 12
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
             and source_map_review["playbackStepCount"] == 5
@@ -3202,13 +3225,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "review_index_navigation": "pass"
         if (
             review_index_review["visible"]
-            and review_index_review["buttonCount"] == 11
+            and review_index_review["buttonCount"] == 12
             and review_index_review["activeTargets"] == ["demo-reconstruction-docx-circuit-map"]
             and "P035-S01" in review_index_review["stepText"]
+            and "蓝图" in review_index_review["proofPathText"]
             and review_index_navigation["activeTargets"] == ["demo-reconstruction-scenario-ledger"]
             and review_index_navigation["scrollY"] > 0
+            and review_index_proof_path_navigation["activeTargets"] == ["demo-reconstruction-proof-path"]
+            and review_index_proof_path_navigation["scrollY"] > 0
             and "P035-S05" in review_index_after_trace["stepText"]
             and "等待聚焦" in review_index_after_trace["objectText"]
+            and "链接已同步" in review_index_after_trace["proofPathText"]
+        )
+        else "fail",
+        "review_index_proof_path_context": "pass"
+        if (
+            "蓝图" in review_index_review["proofPathText"]
+            and review_index_proof_path_navigation["activeTargets"] == ["demo-reconstruction-proof-path"]
+            and "P035-S05" in review_index_after_trace["stepText"]
+            and "链接已同步" in review_index_after_trace["proofPathText"]
         )
         else "fail",
         "logic_equation_board_readback": "pass"
@@ -3968,6 +4003,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "requirement_ledger_action_review": requirement_ledger_action_review,
         "review_index_review": review_index_review,
         "review_index_navigation": review_index_navigation,
+        "review_index_proof_path_navigation": review_index_proof_path_navigation,
         "review_index_after_trace": review_index_after_trace,
         "logic_equation_review": logic_equation_review,
         "logic_equation_focus_review": logic_equation_focus_review,
@@ -4117,6 +4153,7 @@ def main(argv: list[str] | None = None) -> int:
                 "docx_sentence_circuit_map": "fail",
                 "requirement_coverage_ledger": "fail",
                 "review_index_navigation": "fail",
+                "review_index_proof_path_context": "fail",
                 "logic_equation_board_readback": "fail",
                 "assembly_map_readback": "fail",
                 "topology_matrix_readback": "fail",
