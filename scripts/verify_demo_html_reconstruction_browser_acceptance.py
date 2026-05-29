@@ -140,6 +140,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
     operator_runway_path = artifact_dir / f"demo-reconstruction-operator-runway-{stamp}.png"
     proof_transcript_path = artifact_dir / f"demo-reconstruction-proof-transcript-{stamp}.png"
     control_strip_path = artifact_dir / f"demo-reconstruction-control-strip-{stamp}.png"
+    sentence_runner_path = artifact_dir / f"demo-reconstruction-sentence-runner-{stamp}.png"
     max_reverse_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-{stamp}.png"
     max_reverse_outputs_path = artifact_dir / f"demo-reconstruction-mvp-max-reverse-outputs-{stamp}.png"
     inhibit_path = artifact_dir / f"demo-reconstruction-mvp-inhibit-block-{stamp}.png"
@@ -181,6 +182,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-operator-runway-row]").length >= 6
                             && document.querySelectorAll("[data-proof-transcript-row]").length >= 6
                             && document.querySelectorAll("[data-control-strip-action]").length === 3
+                            && document.querySelectorAll("[data-sentence-runner-step]").length === 5
                             && document.querySelectorAll("[data-circuit-coverage-kind='node']").length === 20
                             && document.querySelectorAll("[data-circuit-coverage-kind='wire']").length === 23
                             && document.querySelectorAll("[data-topology-wire]").length === 23;
@@ -218,6 +220,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     ).is_visible(timeout=5000),
                     "control_strip_visible": page.locator(
                         "#demo-reconstruction-control-strip"
+                    ).is_visible(timeout=5000),
+                    "sentence_runner_visible": page.locator(
+                        "#demo-reconstruction-sentence-runner"
                     ).is_visible(timeout=5000),
                     "scenario_ledger_visible": page.locator(
                         "#demo-reconstruction-scenario-ledger"
@@ -1768,6 +1773,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.locator("#demo-reconstruction-control-strip").screenshot(
                     path=str(control_strip_path)
                 )
+                page.locator("#demo-reconstruction-sentence-runner").evaluate(
+                    """(element) => element.scrollIntoView({block: "center", inline: "nearest"})"""
+                )
+                page.locator("#demo-reconstruction-sentence-runner").screenshot(
+                    path=str(sentence_runner_path)
+                )
                 scenario_ledger_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -1836,6 +1847,90 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             objectText: text("#demo-reconstruction-control-strip-object"),
                             outputText: text("#demo-reconstruction-control-strip-output"),
                             pathText: text("#demo-reconstruction-control-strip-path"),
+                        };
+                    }"""
+                )
+                sentence_runner_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            buttonCount: document.querySelectorAll("[data-sentence-runner-step]").length,
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-sentence-runner-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-sentence-runner-step")),
+                            statusText: text("#demo-reconstruction-sentence-runner-status"),
+                            readbackText: text("#demo-reconstruction-sentence-runner-readback"),
+                            firstText: text('[data-sentence-runner-step="P035-S01"]'),
+                            finalText: text('[data-sentence-runner-step="P035-S05"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-sentence-runner-step="P035-S03"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const button = document.querySelector('[data-sentence-runner-step="P035-S03"]');
+                        const anchor = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const status = document.querySelector("#demo-reconstruction-sentence-runner-status");
+                        const sync = document.querySelector("#demo-reconstruction-review-sync");
+                        return button
+                            && button.getAttribute("aria-pressed") === "true"
+                            && anchor
+                            && anchor.textContent.includes("P035-S03")
+                            && status
+                            && status.textContent.includes("3/5")
+                            && sync
+                            && sync.textContent.includes("17/20");
+                    }""",
+                    timeout=5000,
+                )
+                sentence_runner_s03_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-sentence-runner-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-sentence-runner-step")),
+                            statusText: text("#demo-reconstruction-sentence-runner-status"),
+                            readbackText: text("#demo-reconstruction-sentence-runner-readback"),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            reviewSync: text("#demo-reconstruction-review-sync"),
+                        };
+                    }"""
+                )
+                page.locator('[data-sentence-runner-step="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const button = document.querySelector('[data-sentence-runner-step="P035-S05"]');
+                        const anchor = document.querySelector("#demo-reconstruction-selected-anchor");
+                        const status = document.querySelector("#demo-reconstruction-sentence-runner-status");
+                        const sync = document.querySelector("#demo-reconstruction-review-sync");
+                        const controlStep = document.querySelector("#demo-reconstruction-control-strip-step");
+                        return button
+                            && button.getAttribute("aria-pressed") === "true"
+                            && anchor
+                            && anchor.textContent.includes("P035-S05")
+                            && status
+                            && status.textContent.includes("5/5")
+                            && sync
+                            && sync.textContent.includes("20/20")
+                            && sync.textContent.includes("23/23")
+                            && controlStep
+                            && controlStep.textContent.includes("P035-S05");
+                    }""",
+                    timeout=5000,
+                )
+                sentence_runner_s05_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-sentence-runner-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-sentence-runner-step")),
+                            statusText: text("#demo-reconstruction-sentence-runner-status"),
+                            readbackText: text("#demo-reconstruction-sentence-runner-readback"),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            reviewSync: text("#demo-reconstruction-review-sync"),
+                            controlStep: text("#demo-reconstruction-control-strip-step"),
                         };
                     }"""
                 )
@@ -2114,6 +2209,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 operator_runway_path,
                 proof_transcript_path,
                 control_strip_path,
+                sentence_runner_path,
                 max_reverse_path,
                 max_reverse_outputs_path,
                 inhibit_path,
@@ -2627,6 +2723,25 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and control_strip_inhibit_review["transcriptActiveRows"] == ["runway-inhibit"]
         )
         else "fail",
+        "sentence_runner_readback": "pass"
+        if (
+            sentence_runner_review["buttonCount"] == 5
+            and "P035-S01" in sentence_runner_review["firstText"]
+            and "20/20 节点" in sentence_runner_review["finalText"]
+            and "23/23 连线" in sentence_runner_review["finalText"]
+            and sentence_runner_s03_review["activeSteps"] == ["P035-S03"]
+            and "3/5" in sentence_runner_s03_review["statusText"]
+            and "P035-S03" in sentence_runner_s03_review["selectedAnchor"]
+            and "17/20" in sentence_runner_s03_review["reviewSync"]
+            and sentence_runner_s05_review["activeSteps"] == ["P035-S05"]
+            and "5/5" in sentence_runner_s05_review["statusText"]
+            and "完整电路闭合" in sentence_runner_s05_review["statusText"]
+            and "20/20 节点" in sentence_runner_s05_review["readbackText"]
+            and "23/23 连线" in sentence_runner_s05_review["readbackText"]
+            and "P035-S05" in sentence_runner_s05_review["selectedAnchor"]
+            and "P035-S05" in sentence_runner_s05_review["controlStep"]
+        )
+        else "fail",
         "boundary": "pass" if not restricted else "fail",
     }
     status = "pass" if all(value == "pass" for value in gates.values()) else "fail"
@@ -2658,6 +2773,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             "operator_runway": str(operator_runway_path),
             "proof_transcript": str(proof_transcript_path),
             "control_strip": str(control_strip_path),
+            "sentence_runner": str(sentence_runner_path),
             "max_reverse": str(max_reverse_path),
             "max_reverse_outputs": str(max_reverse_outputs_path),
             "inhibit_block": str(inhibit_path),
@@ -2716,6 +2832,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "control_strip_review": control_strip_review,
         "control_strip_l4_review": control_strip_l4_review,
         "control_strip_inhibit_review": control_strip_inhibit_review,
+        "sentence_runner_review": sentence_runner_review,
+        "sentence_runner_s03_review": sentence_runner_s03_review,
+        "sentence_runner_s05_review": sentence_runner_s05_review,
         "review_deep_link": review_deep_link,
         "source_chip_focus_review": source_chip_focus_review,
         "responsive_geometry": {
