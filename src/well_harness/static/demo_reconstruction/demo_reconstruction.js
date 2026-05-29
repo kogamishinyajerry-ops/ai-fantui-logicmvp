@@ -132,6 +132,7 @@
       focusKind: "node",
       focusId: "reverser_inhibited",
       readback: "抑制位为真时，展开链路保持阻塞。",
+      proofText: "抑制位为真时，展开链路保持阻塞，反推锁不释放。",
       output: "THR_LOCK -> BLOCKED",
     },
   ];
@@ -250,6 +251,8 @@
   const operatorRunwayStatus = $("demo-reconstruction-operator-runway-status");
   const operatorRunwayReadback = $("demo-reconstruction-operator-runway-readback");
   const operatorRunwayList = $("demo-reconstruction-operator-runway-list");
+  const proofTranscriptSummary = $("demo-reconstruction-proof-transcript-summary");
+  const proofTranscriptList = $("demo-reconstruction-proof-transcript-list");
   const consoleFrame = $("demo-reconstruction-console-frame");
   let latestDocxPayload = null;
   let sourceEntries = [];
@@ -1815,6 +1818,12 @@
         button.dataset.operatorRunwayRow === activeOperatorRunwayId ? "true" : "false",
       );
     });
+    document.querySelectorAll("[data-proof-transcript-row]").forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.proofTranscriptRow === activeOperatorRunwayId ? "true" : "false",
+      );
+    });
     if (record) {
       setText(operatorRunwayStatus, `${record.order}/${String(OPERATOR_RUNWAY_RECORDS.length).padStart(2, "0")} · ${record.presetLabel}`);
       refreshOperatorRunwayReadback(record);
@@ -1895,6 +1904,69 @@
       setText(operatorRunwayStatus, `${readyCount}/${OPERATOR_RUNWAY_RECORDS.length} 可演示`);
       refreshOperatorRunwayReadback(null);
     }
+  }
+
+  function proofTranscriptSourceText(record, step) {
+    const sourceText = record.proofText || (step && step.source_text ? step.source_text : record.readback);
+    return sourceText.length > 96 ? `${sourceText.slice(0, 96)}...` : sourceText;
+  }
+
+  function renderProofTranscript() {
+    if (!proofTranscriptList) return;
+    proofTranscriptList.innerHTML = "";
+    const readyCount = OPERATOR_RUNWAY_RECORDS.filter((record) => traceStepByAnchor(record.anchor)).length;
+    if (!OPERATOR_RUNWAY_RECORDS.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "demo-reconstruction-proof-transcript-row";
+      empty.dataset.proofTranscriptRow = "empty";
+      empty.textContent = "讲解稿暂无数据";
+      proofTranscriptList.appendChild(empty);
+      setText(proofTranscriptSummary, "等待讲解");
+      return;
+    }
+
+    OPERATOR_RUNWAY_RECORDS.forEach((record) => {
+      const step = traceStepByAnchor(record.anchor);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-transcript-row";
+      button.dataset.proofTranscriptRow = record.id;
+      button.dataset.proofTranscriptAnchor = record.anchor;
+      button.dataset.proofTranscriptPreset = record.presetId;
+      button.dataset.proofTranscriptReady = step ? "true" : "false";
+      button.setAttribute("aria-pressed", record.id === activeOperatorRunwayId ? "true" : "false");
+      button.addEventListener("click", () => activateOperatorRunwayRecord(record));
+
+      const head = document.createElement("div");
+      head.className = "demo-reconstruction-proof-transcript-row-head";
+      const order = document.createElement("span");
+      order.textContent = record.order;
+      const title = document.createElement("strong");
+      title.textContent = record.title;
+      const anchor = document.createElement("em");
+      anchor.textContent = record.anchor;
+      head.append(order, title, anchor);
+
+      const quote = document.createElement("p");
+      quote.textContent = proofTranscriptSourceText(record, step);
+
+      const facts = document.createElement("div");
+      facts.className = "demo-reconstruction-proof-transcript-facts";
+      [
+        `操作：${record.presetLabel}`,
+        `输出：${record.output}`,
+        `覆盖：${step ? (step.node_ids || []).length : 0} 节点 / ${step ? (step.wire_ids || []).length : 0} 连线`,
+      ].forEach((value) => {
+        const fact = document.createElement("span");
+        fact.textContent = value;
+        facts.appendChild(fact);
+      });
+
+      button.append(head, quote, facts);
+      proofTranscriptList.appendChild(button);
+    });
+    setText(proofTranscriptSummary, `${readyCount}/${OPERATOR_RUNWAY_RECORDS.length} 段`);
   }
 
   function updateScenarioLedgerFromFrame() {
@@ -2822,6 +2894,7 @@
     renderTopologyMatrix();
     renderOutputMaturityMatrix(steps);
     renderOperatorRunway();
+    renderProofTranscript();
   }
 
   function renderSourceEntries(entries) {
