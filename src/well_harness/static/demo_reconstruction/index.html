@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p34">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p34" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p35">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p35" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -504,11 +504,19 @@
           <h3>证明路径图</h3>
           <strong id="demo-reconstruction-proof-path-status">等待 P035</strong>
         </div>
-        <div id="demo-reconstruction-proof-path-list" class="demo-reconstruction-proof-path-list">
+        <div id="demo-reconstruction-proof-path-list" class="demo-reconstruction-proof-path-list" data-proof-path-lane="timeline">
           <button type="button" data-proof-path-step="empty">等待逐句证明路径</button>
         </div>
         <p id="demo-reconstruction-proof-path-readback">等待完整电路证明</p>
-        <div id="demo-reconstruction-proof-path-coverage-grid" class="demo-reconstruction-proof-path-coverage-grid" data-proof-path-coverage-grid="first-screen" aria-label="证明路径逐句覆盖矩阵">
+        <div class="demo-reconstruction-proof-path-lane-switcher" data-proof-path-lane-switcher="first-screen" aria-label="证明路径密度模式">
+          <button type="button" data-proof-path-lane-mode="blueprint" aria-pressed="true">蓝图</button>
+          <button type="button" data-proof-path-lane-mode="source" aria-pressed="false">源句</button>
+          <button type="button" data-proof-path-lane-mode="matrix" aria-pressed="false">矩阵</button>
+          <button type="button" data-proof-path-lane-mode="object" aria-pressed="false">对象</button>
+          <button type="button" data-proof-path-lane-mode="all" aria-pressed="false">全部</button>
+          <strong id="demo-reconstruction-proof-path-lane-mode-status">蓝图</strong>
+        </div>
+        <div id="demo-reconstruction-proof-path-coverage-grid" class="demo-reconstruction-proof-path-coverage-grid" data-proof-path-lane="matrix" data-proof-path-coverage-grid="first-screen" aria-label="证明路径逐句覆盖矩阵">
           <div class="demo-reconstruction-proof-path-coverage-grid-head">
             <span>逐句覆盖</span>
             <strong id="demo-reconstruction-proof-path-coverage-grid-status">等待覆盖矩阵</strong>
@@ -518,7 +526,7 @@
           </div>
           <p id="demo-reconstruction-proof-path-coverage-grid-readback">等待选择逐句覆盖。</p>
         </div>
-        <div id="demo-reconstruction-proof-path-delta-rail" class="demo-reconstruction-proof-path-delta-rail" data-proof-path-delta-rail="first-screen" aria-label="证明路径逐句增量闭合轨道">
+        <div id="demo-reconstruction-proof-path-delta-rail" class="demo-reconstruction-proof-path-delta-rail" data-proof-path-lane="matrix" data-proof-path-delta-rail="first-screen" aria-label="证明路径逐句增量闭合轨道">
           <div class="demo-reconstruction-proof-path-delta-rail-head">
             <span>增量闭合</span>
             <strong id="demo-reconstruction-proof-path-delta-rail-status">等待增量轨道</strong>
@@ -528,7 +536,7 @@
           </div>
           <p id="demo-reconstruction-proof-path-delta-rail-readback">等待选择增量轨道。</p>
         </div>
-        <div id="demo-reconstruction-proof-path-source-rail" class="demo-reconstruction-proof-path-source-rail" data-proof-path-source-rail="first-screen" aria-label="证明路径源句核验轨">
+        <div id="demo-reconstruction-proof-path-source-rail" class="demo-reconstruction-proof-path-source-rail" data-proof-path-lane="source" data-proof-path-source-rail="first-screen" aria-label="证明路径源句核验轨">
           <div class="demo-reconstruction-proof-path-source-rail-head">
             <span>源句核验</span>
             <strong id="demo-reconstruction-proof-path-source-rail-status">等待源句核验</strong>
@@ -538,7 +546,7 @@
           </div>
           <p id="demo-reconstruction-proof-path-source-rail-readback">等待选择源句。</p>
         </div>
-        <div id="demo-reconstruction-proof-path-sentence-matrix" class="demo-reconstruction-proof-path-sentence-matrix" data-proof-path-sentence-matrix="first-screen" aria-label="证明路径逐句电路矩阵">
+        <div id="demo-reconstruction-proof-path-sentence-matrix" class="demo-reconstruction-proof-path-sentence-matrix" data-proof-path-lane="source matrix" data-proof-path-sentence-matrix="first-screen" aria-label="证明路径逐句电路矩阵">
           <div class="demo-reconstruction-proof-path-sentence-matrix-head">
             <span>逐句矩阵</span>
             <strong id="demo-reconstruction-proof-path-sentence-matrix-status">等待逐句矩阵</strong>
@@ -548,7 +556,7 @@
           </div>
           <p id="demo-reconstruction-proof-path-sentence-matrix-readback">等待选择逐句矩阵。</p>
         </div>
-        <div id="demo-reconstruction-proof-path-predicate-matrix" class="demo-reconstruction-proof-path-predicate-matrix" data-proof-path-predicate-matrix="first-screen" aria-label="证明路径判据矩阵">
+        <div id="demo-reconstruction-proof-path-predicate-matrix" class="demo-reconstruction-proof-path-predicate-matrix" data-proof-path-lane="matrix" data-proof-path-predicate-matrix="first-screen" aria-label="证明路径判据矩阵">
           <div class="demo-reconstruction-proof-path-predicate-matrix-head">
             <span>判据矩阵</span>
             <strong id="demo-reconstruction-proof-path-predicate-matrix-status">等待判据矩阵</strong>
@@ -558,7 +566,7 @@
           </div>
           <p id="demo-reconstruction-proof-path-predicate-matrix-readback">等待选择判据矩阵。</p>
         </div>
-        <div id="demo-reconstruction-proof-path-blueprint-summary" class="demo-reconstruction-proof-path-blueprint-summary" data-proof-path-blueprint-summary="first-screen" aria-label="证明路径完整电路蓝图摘要">
+        <div id="demo-reconstruction-proof-path-blueprint-summary" class="demo-reconstruction-proof-path-blueprint-summary" data-proof-path-lane="blueprint" data-proof-path-blueprint-summary="first-screen" aria-label="证明路径完整电路蓝图摘要">
           <div class="demo-reconstruction-proof-path-blueprint-summary-head">
             <span>完整蓝图</span>
             <strong id="demo-reconstruction-proof-path-blueprint-summary-status">等待蓝图摘要</strong>
@@ -568,7 +576,7 @@
           </div>
           <p id="demo-reconstruction-proof-path-blueprint-summary-readback">等待选择蓝图摘要。</p>
         </div>
-        <div id="demo-reconstruction-proof-path-object-inspector" class="demo-reconstruction-proof-path-object-inspector" data-proof-path-object-inspector="first-screen" aria-label="证明路径对象审阅">
+        <div id="demo-reconstruction-proof-path-object-inspector" class="demo-reconstruction-proof-path-object-inspector" data-proof-path-lane="object" data-proof-path-object-inspector="first-screen" aria-label="证明路径对象审阅">
           <div class="demo-reconstruction-proof-path-object-inspector-head">
             <span>对象审阅</span>
             <strong id="demo-reconstruction-proof-path-object-inspector-object">等待对象</strong>
@@ -584,7 +592,7 @@
             <li>等待对象邻接</li>
           </ol>
         </div>
-        <div id="demo-reconstruction-proof-path-output-map" class="demo-reconstruction-proof-path-output-map" data-proof-path-output-map="first-screen" aria-label="证明路径输出图">
+        <div id="demo-reconstruction-proof-path-output-map" class="demo-reconstruction-proof-path-output-map" data-proof-path-lane="blueprint object" data-proof-path-output-map="first-screen" aria-label="证明路径输出图">
           <div class="demo-reconstruction-proof-path-output-map-head">
             <span>输出证明</span>
             <strong id="demo-reconstruction-proof-path-output-map-status">等待输出路径</strong>
