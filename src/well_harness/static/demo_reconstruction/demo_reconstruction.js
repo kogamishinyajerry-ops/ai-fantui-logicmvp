@@ -278,6 +278,9 @@
   const proofPathPredicateMatrixStatus = $("demo-reconstruction-proof-path-predicate-matrix-status");
   const proofPathPredicateMatrixList = $("demo-reconstruction-proof-path-predicate-matrix-list");
   const proofPathPredicateMatrixReadback = $("demo-reconstruction-proof-path-predicate-matrix-readback");
+  const proofPathBlueprintSummaryStatus = $("demo-reconstruction-proof-path-blueprint-summary-status");
+  const proofPathBlueprintSummaryList = $("demo-reconstruction-proof-path-blueprint-summary-list");
+  const proofPathBlueprintSummaryReadback = $("demo-reconstruction-proof-path-blueprint-summary-readback");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -320,6 +323,7 @@
   let proofPathSourceAnchor = "";
   let proofPathSentenceMatrixAnchor = "";
   let proofPathPredicateMatrixAnchor = "";
+  let proofPathBlueprintSummaryAnchor = "";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -3022,6 +3026,104 @@
     updateProofPathPredicateMatrixReadback(selectedStep);
   }
 
+  function proofPathBlueprintRecord(step, index) {
+    const predicate = proofPathPredicateRecord(step);
+    const contract = cumulativeTraceContract(index);
+    const source = proofPathSourceRecords(step)[0] || {};
+    const outputs = ladderMilestonesForStep(step);
+    return {
+      predicate,
+      contract,
+      sourceAnchor: source.anchor || "source",
+      outputLabel: assemblyOutputLabelForStep(step, contract),
+      outputs,
+    };
+  }
+
+  function setProofPathBlueprintSummaryState(anchor) {
+    document.querySelectorAll("[data-proof-path-blueprint-step]").forEach((button) => {
+      const selected = button.dataset.proofPathBlueprintStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    proofPathBlueprintSummaryAnchor = anchor || "";
+  }
+
+  function updateProofPathBlueprintSummaryReadback(step) {
+    if (!proofPathBlueprintSummaryReadback || !step) return;
+    const index = traceSteps.findIndex((item) => item && item.anchor === step.anchor);
+    const safeIndex = index >= 0 ? index : 0;
+    const record = proofPathBlueprintRecord(step, safeIndex);
+    setText(
+      proofPathBlueprintSummaryReadback,
+      `${step.anchor || "P035"} · ${record.predicate.gate} · ${record.sourceAnchor} -> ${record.predicate.output} · ${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputLabel}`,
+    );
+  }
+
+  function applyProofPathBlueprintSummaryStep(anchor) {
+    const step = traceSteps.find((item) => item && item.anchor === anchor);
+    if (!step) return;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathBlueprintSummaryState(anchor);
+    updateProofPathBlueprintSummaryReadback(step);
+    writeReviewHashState();
+  }
+
+  function renderProofPathBlueprintSummary(steps) {
+    if (!proofPathBlueprintSummaryList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    proofPathBlueprintSummaryList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.proofPathBlueprintStep = "empty";
+      empty.textContent = "等待蓝图摘要";
+      proofPathBlueprintSummaryList.appendChild(empty);
+      setText(proofPathBlueprintSummaryStatus, "等待蓝图摘要");
+      setText(proofPathBlueprintSummaryReadback, "等待选择蓝图摘要。");
+      return;
+    }
+
+    const finalContract = cumulativeTraceContract(items.length - 1);
+    setText(
+      proofPathBlueprintSummaryStatus,
+      `P035 -> demo.html · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+
+    const chain = document.createElement("div");
+    chain.className = "demo-reconstruction-proof-path-blueprint-chain";
+    chain.dataset.proofPathBlueprintChain = "complete";
+    chain.textContent = "L1 TLS -> L2 ETRAC -> L3 EEC/PLS/PDU -> VDT90 -> L4 THR_LOCK";
+    proofPathBlueprintSummaryList.appendChild(chain);
+
+    items.forEach((step, index) => {
+      const record = proofPathBlueprintRecord(step, index);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-path-blueprint-step";
+      button.dataset.proofPathBlueprintStep = step.anchor || "";
+      button.dataset.proofPathBlueprintFinal = index === items.length - 1 ? "true" : "false";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyProofPathBlueprintSummaryStep(step.anchor || ""));
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const path = document.createElement("span");
+      path.textContent = `${record.sourceAnchor} -> ${record.predicate.gate} -> ${record.predicate.output}`;
+      const counts = document.createElement("small");
+      counts.textContent = `${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputLabel}`;
+      const outputs = document.createElement("em");
+      outputs.textContent = record.outputs.length ? record.outputs.join(" / ") : record.predicate.output;
+
+      button.append(anchor, path, counts, outputs);
+      proofPathBlueprintSummaryList.appendChild(button);
+    });
+
+    const selectedAnchor = proofPathBlueprintSummaryAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedStep = items.find((step) => step && step.anchor === selectedAnchor) || items[0];
+    setProofPathBlueprintSummaryState(selectedStep.anchor || "");
+    updateProofPathBlueprintSummaryReadback(selectedStep);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -3993,6 +4095,7 @@
     setProofPathSourceRailState(step.anchor || "");
     setProofPathSentenceMatrixState(step.anchor || "");
     setProofPathPredicateMatrixState(step.anchor || "");
+    setProofPathBlueprintSummaryState(step.anchor || "");
     if (selectedTraceIndex >= 0) {
       const contract = cumulativeTraceContract(selectedTraceIndex);
       updateProofPathCoverageGridReadback(step, contract);
@@ -4000,6 +4103,7 @@
       updateProofPathSourceRailReadback(step);
       updateProofPathSentenceMatrixReadback(step);
       updateProofPathPredicateMatrixReadback(step);
+      updateProofPathBlueprintSummaryReadback(step);
     }
     if (options.writeHash !== false) writeReviewHashState();
   }
@@ -4225,6 +4329,7 @@
     renderProofPathSourceRail(steps);
     renderProofPathSentenceMatrix(steps);
     renderProofPathPredicateMatrix(steps);
+    renderProofPathBlueprintSummary(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);

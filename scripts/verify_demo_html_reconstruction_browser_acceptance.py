@@ -198,6 +198,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             && document.querySelectorAll("[data-proof-path-sentence-focus-id]").length >= 40
                             && document.querySelectorAll("[data-proof-path-predicate-step]").length === 5
                             && document.querySelectorAll("[data-proof-path-predicate-focus-id]").length >= 5
+                            && document.querySelectorAll("[data-proof-path-blueprint-step]").length === 5
+                            && document.querySelector("[data-proof-path-blueprint-chain='complete']")
                             && document.querySelector("[data-proof-path-object-inspector]")
                             && document.querySelectorAll("[data-proof-path-output-target]").length === 5
                             && document.querySelectorAll("[data-scenario-comparator-action]").length === 2
@@ -2370,6 +2372,49 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                proof_path_blueprint_summary_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            stepCount: document.querySelectorAll("[data-proof-path-blueprint-step]").length,
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-blueprint-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-blueprint-step")),
+                            statusText: text("#demo-reconstruction-proof-path-blueprint-summary-status"),
+                            readbackText: text("#demo-reconstruction-proof-path-blueprint-summary-readback"),
+                            chainText: text("[data-proof-path-blueprint-chain='complete']"),
+                            firstText: text('[data-proof-path-blueprint-step="P035-S01"]'),
+                            finalText: text('[data-proof-path-blueprint-step="P035-S05"]'),
+                        };
+                    }"""
+                )
+                page.locator('[data-proof-path-blueprint-step="P035-S05"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const active = document.querySelector('[data-proof-path-blueprint-step="P035-S05"]');
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor")?.textContent || "";
+                        const readback = document.querySelector("#demo-reconstruction-proof-path-blueprint-summary-readback")?.textContent || "";
+                        return active
+                            && active.getAttribute("aria-pressed") === "true"
+                            && selected.includes("P035-S05")
+                            && readback.includes("20/20 节点")
+                            && readback.includes("23/23 连线")
+                            && readback.includes("完整 demo 电路闭合");
+                    }""",
+                    timeout=5000,
+                )
+                proof_path_blueprint_summary_final_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            activeSteps: Array.from(
+                                document.querySelectorAll("[data-proof-path-blueprint-step][aria-pressed='true']")
+                            ).map((button) => button.getAttribute("data-proof-path-blueprint-step")),
+                            selectedAnchor: text("#demo-reconstruction-selected-anchor"),
+                            readbackText: text("#demo-reconstruction-proof-path-blueprint-summary-readback"),
+                        };
+                    }"""
+                )
                 proof_path_output_map_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -3638,6 +3683,20 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "wire_logic4_thr_lock" in proof_path_predicate_matrix_focus_review["inspectorObjectText"]
         )
         else "fail",
+        "proof_path_blueprint_summary": "pass"
+        if (
+            proof_path_blueprint_summary_review["stepCount"] == 5
+            and "P035 -> demo.html" in proof_path_blueprint_summary_review["statusText"]
+            and "L1 TLS" in proof_path_blueprint_summary_review["chainText"]
+            and "L4 THR_LOCK" in proof_path_blueprint_summary_review["chainText"]
+            and "20/20 节点" in proof_path_blueprint_summary_review["finalText"]
+            and "23/23 连线" in proof_path_blueprint_summary_review["finalText"]
+            and "THR_LOCK" in proof_path_blueprint_summary_review["finalText"]
+            and proof_path_blueprint_summary_final_review["activeSteps"] == ["P035-S05"]
+            and proof_path_blueprint_summary_final_review["selectedAnchor"] == "P035-S05"
+            and "完整 demo 电路闭合" in proof_path_blueprint_summary_final_review["readbackText"]
+        )
+        else "fail",
         "proof_path_output_map": "pass"
         if (
             proof_path_output_map_review["targetCount"] == 5
@@ -3797,6 +3856,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "proof_path_sentence_matrix_focus_review": proof_path_sentence_matrix_focus_review,
         "proof_path_predicate_matrix_review": proof_path_predicate_matrix_review,
         "proof_path_predicate_matrix_focus_review": proof_path_predicate_matrix_focus_review,
+        "proof_path_blueprint_summary_review": proof_path_blueprint_summary_review,
+        "proof_path_blueprint_summary_final_review": proof_path_blueprint_summary_final_review,
         "proof_path_output_map_review": proof_path_output_map_review,
         "proof_path_output_map_tls_review": proof_path_output_map_tls_review,
         "scenario_comparator_review": scenario_comparator_review,
