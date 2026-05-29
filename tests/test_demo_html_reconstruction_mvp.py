@@ -280,6 +280,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-proof-path-sentence-matrix-status"' in html
     assert 'id="demo-reconstruction-proof-path-sentence-matrix-list"' in html
     assert 'id="demo-reconstruction-proof-path-sentence-matrix-readback"' in html
+    assert 'id="demo-reconstruction-proof-path-predicate-matrix"' in html
+    assert 'id="demo-reconstruction-proof-path-predicate-matrix-status"' in html
+    assert 'id="demo-reconstruction-proof-path-predicate-matrix-list"' in html
+    assert 'id="demo-reconstruction-proof-path-predicate-matrix-readback"' in html
     assert 'data-proof-path="first-screen"' in html
     assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-scenario-comparator-status"' in html
@@ -450,6 +454,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyProofPathSentenceMatrixStep" in script
     assert "applyProofPathSentenceMatrixObject" in script
     assert "proofPathSentenceMatrixAnchor" in script
+    assert "renderProofPathPredicateMatrix" in script
+    assert "applyProofPathPredicateMatrixStep" in script
+    assert "applyProofPathPredicateMatrixFocus" in script
+    assert "proofPathPredicateMatrixAnchor" in script
     assert "renderProofPathOutputMap" in script
     assert "applyProofPathOutputTarget" in script
     assert "proofPathOutputTarget" in script
@@ -538,6 +546,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-proof-path-sentence-matrix" in stylesheet
     assert ".demo-reconstruction-proof-path-sentence-matrix-step" in stylesheet
     assert ".demo-reconstruction-proof-path-sentence-matrix-chips" in stylesheet
+    assert ".demo-reconstruction-proof-path-predicate-matrix" in stylesheet
+    assert ".demo-reconstruction-proof-path-predicate-matrix-step" in stylesheet
+    assert ".demo-reconstruction-proof-path-predicate-matrix-chips" in stylesheet
     assert ".demo-reconstruction-proof-path-output-map" in stylesheet
     assert ".demo-reconstruction-proof-path-output-map-list" in stylesheet
     assert ".demo-reconstruction-proof-path-step em" in stylesheet
@@ -1180,6 +1191,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["proof_path_sentence_matrix_focus_review"]["readbackText"]
     assert "wire_logic4_thr_lock" in payload["proof_path_sentence_matrix_focus_review"]["reviewObjectText"]
     assert "wire_logic4_thr_lock" in payload["proof_path_sentence_matrix_focus_review"]["inspectorObjectText"]
+    assert payload["proof_path_predicate_matrix_review"]["stepCount"] == 5
+    assert payload["proof_path_predicate_matrix_review"]["focusCount"] >= 5
+    assert "5/5 判据" in payload["proof_path_predicate_matrix_review"]["statusText"]
+    assert "VDT90 AND L3" in payload["proof_path_predicate_matrix_review"]["finalText"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_predicate_matrix_review"]["finalText"]
+    assert payload["proof_path_predicate_matrix_focus_review"]["activeSteps"] == ["P035-S05"]
+    assert payload["proof_path_predicate_matrix_focus_review"]["selectedAnchor"] == "P035-S05"
+    assert "wire_logic4_thr_lock" in payload["proof_path_predicate_matrix_focus_review"]["activeFocusIds"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_predicate_matrix_focus_review"]["readbackText"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_predicate_matrix_focus_review"]["reviewObjectText"]
+    assert "wire_logic4_thr_lock" in payload["proof_path_predicate_matrix_focus_review"]["inspectorObjectText"]
     assert payload["proof_path_output_map_review"]["targetCount"] == 5
     assert payload["proof_path_output_map_review"]["activeTargets"] == ["thr_lock"]
     assert "5/5" in payload["proof_path_output_map_review"]["statusText"]
@@ -1258,6 +1280,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "proof_path_delta_rail": "pass",
         "proof_path_source_rail": "pass",
         "proof_path_sentence_matrix": "pass",
+        "proof_path_predicate_matrix": "pass",
         "proof_path_output_map": "pass",
         "scenario_comparator_readback": "pass",
         "review_verdict_readback": "pass",
