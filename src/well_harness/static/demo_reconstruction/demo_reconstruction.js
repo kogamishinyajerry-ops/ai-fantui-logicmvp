@@ -4411,7 +4411,7 @@
     }
     setText(
       circuitSnapshotPreviewReadback,
-      `${record.order} · ${record.label} · ${record.anchor} · ${record.output}`,
+      `${record.order} · ${record.label} · ${record.anchor} · ${circuitSnapshotOperatorOutput(record)}`,
     );
   }
 
@@ -4436,9 +4436,21 @@
 
   function circuitSnapshotMiniStatus(record) {
     if (!record) return "";
-    if (record.id === "docx-source") return "已接入";
-    if (record.id === "demo-output") return "可读";
-    return record.output || record.anchor || "";
+    return circuitSnapshotOperatorOutput(record) || record.anchor || "";
+  }
+
+  function circuitSnapshotOperatorOutput(record) {
+    if (!record) return "";
+    const labels = {
+      "docx-source": "已接入",
+      "runway-l1-unlock": "TLS 已通电",
+      "runway-l2-power": "ETRAC 已供电",
+      "runway-l3-deploy": "展开指令已发出",
+      "runway-vdt90": "展开反馈到位",
+      "runway-l4-thr-lock": "反推锁已释放",
+      "demo-output": "可读",
+    };
+    return labels[record.id] || record.output || "";
   }
 
   function setCircuitSnapshotMiniState(recordId) {
@@ -4486,7 +4498,7 @@
       button.type = "button";
       button.dataset.circuitSnapshotPreviewStep = record.id;
       button.setAttribute("aria-pressed", "false");
-      button.title = `${record.label} · ${record.output}`;
+      button.title = `${record.label} · ${circuitSnapshotOperatorOutput(record)}`;
       button.addEventListener("click", () => applyCircuitSnapshotChainStep(record.id));
 
       const order = document.createElement("span");
@@ -4525,7 +4537,7 @@
       button.dataset.circuitSnapshotMiniStep = record.id;
       button.dataset.circuitSnapshotMiniVariant = record.variant;
       button.setAttribute("aria-pressed", "false");
-      button.title = `${record.label} · ${record.output}`;
+      button.title = `${record.label} · ${circuitSnapshotOperatorOutput(record)}`;
       button.addEventListener("click", () => applyCircuitSnapshotChainStep(record.id));
 
       const label = document.createElement("strong");
@@ -4579,7 +4591,7 @@
       const detail = document.createElement("small");
       detail.textContent = record.detail;
       const output = document.createElement("em");
-      output.textContent = record.output;
+      output.textContent = circuitSnapshotOperatorOutput(record);
       button.append(order, label, detail, output);
       circuitSnapshotChain.appendChild(button);
 

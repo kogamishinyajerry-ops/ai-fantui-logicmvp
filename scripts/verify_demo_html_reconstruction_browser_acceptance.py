@@ -4194,6 +4194,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "查看验收详情" not in first_screen_review["visible_text"]
             and "source" not in first_screen_review["visible_text"]
             and "ON / BLOCK" not in first_screen_review["visible_text"]
+            and "->" not in first_screen_review["visible_text"]
         )
         else "fail",
         "review_drawer_deep_link": "pass"
@@ -4316,9 +4317,9 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and source_map_review["circuitSnapshotChainCount"] == 7
             and "62 条源记录" in source_map_review["circuitSnapshotChainSourceText"]
             and "反推锁释放" in source_map_review["circuitSnapshotChainL4Text"]
-            and "THR_LOCK -> RELEASED" in source_map_review["circuitSnapshotChainL4Text"]
+            and "反推锁已释放" in source_map_review["circuitSnapshotChainL4Text"]
             and "demo 输出" in source_map_review["circuitSnapshotChainOutputText"]
-            and "THR_LOCK / HUD" in source_map_review["circuitSnapshotChainOutputText"]
+            and "可读" in source_map_review["circuitSnapshotChainOutputText"]
             and source_map_review["circuitSnapshotChainActive"] == ["runway-l1-unlock"]
             and source_map_review["sequenceStepCount"] == 5
             and source_map_review["traceCardCount"] == 5
@@ -4352,6 +4353,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and circuit_snapshot_mini_action["activeChain"] == ["demo-output"]
             and circuit_snapshot_mini_action["selectedAnchor"] == "P035-S05"
             and "demo 输出" in circuit_snapshot_mini_action["readbackText"]
+            and "可读" in circuit_snapshot_mini_action["readbackText"]
             and "wire_logic4_thr_lock" in circuit_snapshot_mini_action["objectText"]
             and "focus=wire%3Awire_logic4_thr_lock" in circuit_snapshot_mini_action["hash"]
         )
