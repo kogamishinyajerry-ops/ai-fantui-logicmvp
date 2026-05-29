@@ -192,6 +192,7 @@
   const circuitSnapshotReview = $("demo-reconstruction-circuit-snapshot-review");
   const circuitSnapshotPreview = $("demo-reconstruction-circuit-snapshot-preview");
   const circuitSnapshotPreviewReadback = $("demo-reconstruction-circuit-snapshot-preview-readback");
+  const circuitSnapshotMini = $("demo-reconstruction-circuit-snapshot-mini");
   const circuitSnapshotChain = $("demo-reconstruction-circuit-snapshot-chain");
   const circuitSnapshotList = $("demo-reconstruction-circuit-snapshot-list");
   const circuitSnapshotReadback = $("demo-reconstruction-circuit-snapshot-readback");
@@ -4322,6 +4323,7 @@
     });
     circuitSnapshotChainAnchor = recordId || "";
     setCircuitSnapshotPreviewState(recordId);
+    setCircuitSnapshotMiniState(recordId);
     const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
     const record = circuitSnapshotChainRecords(finalContract).find((item) => item.id === recordId);
     updateCircuitSnapshotPreviewReadback(record || null);
@@ -4354,6 +4356,32 @@
   function setCircuitSnapshotPreviewState(recordId) {
     document.querySelectorAll("[data-circuit-snapshot-preview-step]").forEach((button) => {
       const selected = button.dataset.circuitSnapshotPreviewStep === recordId;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function circuitSnapshotMiniLabel(record) {
+    if (!record) return "电路";
+    if (record.id === "docx-source") return "DOCX";
+    if (record.id === "runway-l1-unlock") return "L1";
+    if (record.id === "runway-l2-power") return "L2";
+    if (record.id === "runway-l3-deploy") return "L3";
+    if (record.id === "runway-vdt90") return "VDT90";
+    if (record.id === "runway-l4-thr-lock") return "L4";
+    if (record.id === "demo-output") return "THR";
+    return record.label || "电路";
+  }
+
+  function circuitSnapshotMiniStatus(record) {
+    if (!record) return "";
+    if (record.id === "docx-source") return "source";
+    if (record.id === "demo-output") return "ON / BLOCK";
+    return record.output || record.anchor || "";
+  }
+
+  function setCircuitSnapshotMiniState(recordId) {
+    document.querySelectorAll("[data-circuit-snapshot-mini-step]").forEach((button) => {
+      const selected = button.dataset.circuitSnapshotMiniStep === recordId;
       button.setAttribute("aria-pressed", selected ? "true" : "false");
     });
   }
@@ -4413,6 +4441,50 @@
     const selectedRecord = records.find((record) => record.id === selectedRecordId) || records[1];
     setCircuitSnapshotPreviewState(selectedRecord.id);
     updateCircuitSnapshotPreviewReadback(selectedRecord);
+  }
+
+  function renderCircuitSnapshotMini(finalContract) {
+    if (!circuitSnapshotMini) return;
+    circuitSnapshotMini.innerHTML = "";
+    if (!traceSteps.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.circuitSnapshotMiniStep = "empty";
+      empty.setAttribute("aria-pressed", "false");
+      empty.textContent = "等待电路";
+      circuitSnapshotMini.appendChild(empty);
+      return;
+    }
+
+    const records = circuitSnapshotChainRecords(finalContract);
+    records.forEach((record, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.circuitSnapshotMiniStep = record.id;
+      button.dataset.circuitSnapshotMiniVariant = record.variant;
+      button.setAttribute("aria-pressed", "false");
+      button.title = `${record.label} · ${record.output}`;
+      button.addEventListener("click", () => applyCircuitSnapshotChainStep(record.id));
+
+      const label = document.createElement("strong");
+      label.textContent = circuitSnapshotMiniLabel(record);
+      const status = document.createElement("span");
+      status.textContent = circuitSnapshotMiniStatus(record);
+      button.append(label, status);
+      circuitSnapshotMini.appendChild(button);
+
+      if (index < records.length - 1) {
+        const connector = document.createElement("i");
+        connector.className = "demo-reconstruction-circuit-snapshot-mini-connector";
+        connector.setAttribute("aria-hidden", "true");
+        circuitSnapshotMini.appendChild(connector);
+      }
+    });
+
+    const selectedRecordId = circuitSnapshotChainAnchor
+      || circuitSnapshotChainIdForStep(currentTraceStep)
+      || records[1].id;
+    setCircuitSnapshotMiniState(selectedRecordId);
   }
 
   function renderCircuitSnapshotChain(finalContract) {
@@ -4503,6 +4575,7 @@
       setText(circuitSnapshotReview, "等待运行");
       setText(circuitSnapshotReadback, "等待生成完整电路。");
       renderCircuitSnapshotPreview({node_ids: [], wire_ids: []});
+      renderCircuitSnapshotMini({node_ids: [], wire_ids: []});
       renderCircuitSnapshotChain({node_ids: [], wire_ids: []});
       return;
     }
@@ -4517,6 +4590,7 @@
     setText(circuitSnapshotCircuit, "链路已闭合");
     setText(circuitSnapshotOutput, outputStatus.includes("反推锁可读") ? "反推锁可读" : "等待反推锁");
     renderCircuitSnapshotPreview(finalContract);
+    renderCircuitSnapshotMini(finalContract);
     renderCircuitSnapshotChain(finalContract);
 
     items.forEach((step, index) => {

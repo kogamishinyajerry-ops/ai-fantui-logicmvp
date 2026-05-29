@@ -223,6 +223,57 @@ h2 { margin-bottom: 0; font-size: 18px; }
   font-size: 12px;
   line-height: 1.45;
 }
+.demo-reconstruction-circuit-snapshot-mini {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr) 18px) minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+}
+.demo-reconstruction-circuit-snapshot-mini button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px;
+  text-align: left;
+}
+.demo-reconstruction-circuit-snapshot-mini button:hover,
+.demo-reconstruction-circuit-snapshot-mini button:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-circuit-snapshot-mini button[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
+}
+.demo-reconstruction-circuit-snapshot-mini button[data-circuit-snapshot-mini-variant="output"] {
+  border-color: #99f6e4;
+}
+.demo-reconstruction-circuit-snapshot-mini strong {
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-circuit-snapshot-mini span {
+  color: #667085;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.demo-reconstruction-circuit-snapshot-mini-connector {
+  display: block;
+  height: 2px;
+  min-width: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
 .demo-reconstruction-circuit-snapshot-details,
 .demo-reconstruction-detail-drawer {
   display: grid;
@@ -5470,6 +5521,12 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
   .demo-reconstruction-circuit-snapshot-preview {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+  .demo-reconstruction-circuit-snapshot-mini {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .demo-reconstruction-circuit-snapshot-mini-connector {
+    display: none;
+  }
   .demo-reconstruction-circuit-snapshot-chain {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -5552,6 +5609,9 @@ button.demo-reconstruction-proof-path-delta-chip[aria-pressed="true"] {
     grid-template-columns: 1fr;
   }
   .demo-reconstruction-circuit-snapshot-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .demo-reconstruction-circuit-snapshot-mini {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .demo-reconstruction-trace-card-list,
