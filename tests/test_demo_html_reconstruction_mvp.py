@@ -168,10 +168,14 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-circuit-snapshot-circuit"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-output"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-review"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-details"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-chain"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
     assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
     assert "原始需求到 demo.html 完整逻辑电路" in html
+    assert "查看逐句链路" in html
+    assert 'id="demo-reconstruction-detail-drawer"' in html
+    assert "打开详细审查区" in html
     assert "等待闭环链路" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
@@ -565,9 +569,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-metrics" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-details" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-chain" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-list" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-step" in stylesheet
+    assert ".demo-reconstruction-detail-drawer" in stylesheet
     assert ".demo-reconstruction-review-index" in stylesheet
     assert ".demo-reconstruction-review-index-actions" in stylesheet
     assert ".demo-reconstruction-review-index-handoff-rail" in stylesheet
@@ -811,28 +817,30 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["pixel_visibility"]["chain_svg"]["node_count"] == 20
     assert payload["pixel_visibility"]["chain_svg"]["wire_count"] == 23
     assert payload["first_screen_review"] == {
-        "review_index_visible": True,
+        "detail_drawer_closed": True,
+        "snapshot_details_closed": True,
+        "review_index_visible": False,
         "circuit_snapshot_visible": True,
-        "assembly_map_visible": True,
-        "topology_matrix_visible": True,
-        "source_map_visible": True,
-        "requirement_ledger_visible": True,
-        "trace_board_visible": True,
-        "logic_equation_board_visible": True,
-        "operator_guide_visible": True,
-        "output_mirror_visible": True,
-        "control_strip_visible": True,
-        "sentence_runner_visible": True,
-        "proof_path_visible": True,
-        "proof_path_review_strip_visible": True,
-        "scenario_comparator_visible": True,
-        "review_verdict_visible": True,
-        "scenario_ledger_visible": True,
-        "scenario_truth_table_visible": True,
-        "operator_runway_visible": True,
-        "proof_transcript_visible": True,
-        "console_frame_visible": True,
-        "evidence_rail_visible": True,
+        "assembly_map_visible": False,
+        "topology_matrix_visible": False,
+        "source_map_visible": False,
+        "requirement_ledger_visible": False,
+        "trace_board_visible": False,
+        "logic_equation_board_visible": False,
+        "operator_guide_visible": False,
+        "output_mirror_visible": False,
+        "control_strip_visible": False,
+        "sentence_runner_visible": False,
+        "proof_path_visible": False,
+        "proof_path_review_strip_visible": False,
+        "scenario_comparator_visible": False,
+        "review_verdict_visible": False,
+        "scenario_ledger_visible": False,
+        "scenario_truth_table_visible": False,
+        "operator_runway_visible": False,
+        "proof_transcript_visible": False,
+        "console_frame_visible": False,
+        "evidence_rail_visible": False,
     }
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["reviewIndexButtonCount"] == 13

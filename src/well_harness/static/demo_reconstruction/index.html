@@ -78,15 +78,20 @@
       <div><span>demo 输出</span><strong id="demo-reconstruction-circuit-snapshot-output">等待输出</strong></div>
       <div><span>审查入口</span><strong id="demo-reconstruction-circuit-snapshot-review">等待选择</strong></div>
     </div>
-    <div id="demo-reconstruction-circuit-snapshot-chain" class="demo-reconstruction-circuit-snapshot-chain" aria-label="DOCX 到 demo 输出完整电路链路">
-      <button type="button" data-circuit-snapshot-chain-step="empty" aria-pressed="false">等待闭环链路</button>
-    </div>
-    <div id="demo-reconstruction-circuit-snapshot-list" class="demo-reconstruction-circuit-snapshot-list" aria-label="P035 逐句电路快照">
-      <button type="button" data-circuit-snapshot-step="empty" aria-pressed="false">等待逐句电路</button>
-    </div>
-    <p id="demo-reconstruction-circuit-snapshot-readback" class="demo-reconstruction-circuit-snapshot-readback">等待逐句生成完整电路。</p>
+    <details id="demo-reconstruction-circuit-snapshot-details" class="demo-reconstruction-circuit-snapshot-details">
+      <summary>查看逐句链路</summary>
+      <div id="demo-reconstruction-circuit-snapshot-chain" class="demo-reconstruction-circuit-snapshot-chain" aria-label="DOCX 到 demo 输出完整电路链路">
+        <button type="button" data-circuit-snapshot-chain-step="empty" aria-pressed="false">等待闭环链路</button>
+      </div>
+      <div id="demo-reconstruction-circuit-snapshot-list" class="demo-reconstruction-circuit-snapshot-list" aria-label="P035 逐句电路快照">
+        <button type="button" data-circuit-snapshot-step="empty" aria-pressed="false">等待逐句电路</button>
+      </div>
+      <p id="demo-reconstruction-circuit-snapshot-readback" class="demo-reconstruction-circuit-snapshot-readback">等待逐句生成完整电路。</p>
+    </details>
   </section>
 
+  <details id="demo-reconstruction-detail-drawer" class="demo-reconstruction-detail-drawer">
+    <summary>打开详细审查区</summary>
   <section id="demo-reconstruction-review-index" class="demo-reconstruction-review-index" data-review-index="demo-reconstruction" aria-label="审阅路径索引">
     <div class="demo-reconstruction-review-index-head">
       <div>
@@ -853,6 +858,7 @@
       </section>
     </aside>
   </section>
+  </details>
 </main>
 </body>
 </html>

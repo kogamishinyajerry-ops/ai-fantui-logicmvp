@@ -165,6 +165,24 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             return
         console_errors.append(f"{response.status} {response.url}")
 
+    def open_detail_drawers(page: Any) -> None:
+        page.evaluate(
+            """() => {
+                const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
+                const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                if (snapshot) snapshot.open = true;
+                if (drawer) drawer.open = true;
+            }"""
+        )
+        page.wait_for_function(
+            """() => {
+                return document.querySelector("#demo-reconstruction-review-index")?.offsetParent
+                    && document.querySelector("#demo-reconstruction-docx-circuit-map")?.offsetParent
+                    && document.querySelector("#demo-reconstruction-console-frame")?.offsetParent;
+            }""",
+            timeout=5000,
+        )
+
     server, thread, base_url = _start_server()
     try:
         with sync_playwright() as pw:
@@ -176,7 +194,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 page.on("response", capture_bad_response)
                 page.route("**/favicon.ico", lambda route: route.fulfill(status=204, body=""))
                 page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
-                page.wait_for_selector("#demo-reconstruction-console-frame", timeout=5000)
+                page.wait_for_selector("#demo-reconstruction-console-frame", state="attached", timeout=5000)
                 page.wait_for_function(
                     """() => {
                         return document.querySelectorAll("[data-trace-card]").length >= 5
@@ -222,6 +240,12 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.screenshot(path=str(first_screen_path), full_page=True)
                 first_screen_review = {
+                    "detail_drawer_closed": page.locator(
+                        "#demo-reconstruction-detail-drawer"
+                    ).evaluate("element => !element.open"),
+                    "snapshot_details_closed": page.locator(
+                        "#demo-reconstruction-circuit-snapshot-details"
+                    ).evaluate("element => !element.open"),
                     "review_index_visible": page.locator(
                         "#demo-reconstruction-review-index"
                     ).is_visible(timeout=5000),
@@ -289,6 +313,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         "#demo-reconstruction-browser-evidence"
                     ).is_visible(timeout=5000),
                 }
+                open_detail_drawers(page)
                 source_map_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -568,6 +593,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     })"""
                 )
                 page.goto(f"{base_url}/demo-reconstruction#complete=1", wait_until="networkidle")
+                open_detail_drawers(page)
                 page.wait_for_function(
                     """() => {
                         const selected = document.querySelector("#demo-reconstruction-selected-anchor");
@@ -1111,6 +1137,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     })"""
                 )
                 page.goto(f"{base_url}/demo-reconstruction{topology_filter_review['hash']}", wait_until="networkidle")
+                open_detail_drawers(page)
                 page.wait_for_function(
                     """() => {
                         return document.querySelectorAll("[data-trace-card]").length >= 5
@@ -1255,6 +1282,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 )
                 output_maturity_hash = page.evaluate("() => window.location.hash || ''")
                 page.goto(f"{base_url}/demo-reconstruction{output_maturity_hash}", wait_until="networkidle")
+                open_detail_drawers(page)
                 page.wait_for_function(
                     """() => {
                         const frame = document.querySelector("#demo-reconstruction-console-frame");
@@ -1327,6 +1355,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     }"""
                 )
                 page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
+                open_detail_drawers(page)
                 page.wait_for_function(
                     """() => {
                         const finalRow = document.querySelector('[data-output-path-wire="wire_logic4_thr_lock"]');
@@ -1984,6 +2013,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         f"{base_url}/demo-reconstruction{review_deep_link['hash']}",
                         wait_until="networkidle",
                     )
+                    open_detail_drawers(restored_page)
                     restored_page.wait_for_function(
                         """() => {
                             const frame = document.querySelector("#demo-reconstruction-console-frame");
@@ -2290,7 +2320,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 mobile_page = browser.new_page(viewport={"width": 390, "height": 844})
                 try:
                     mobile_page.goto(f"{base_url}/demo-reconstruction", wait_until="networkidle")
-                    mobile_page.wait_for_selector("#demo-reconstruction-docx-trace-board", timeout=5000)
+                    mobile_page.wait_for_selector("#demo-reconstruction-circuit-snapshot", timeout=5000)
                     mobile_page.wait_for_function(
                         """() => document.querySelectorAll("[data-trace-card]").length >= 5""",
                         timeout=7000,
@@ -2303,7 +2333,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
                             traceCardCount: document.querySelectorAll("[data-trace-card]").length,
                             playbackStepCount: document.querySelectorAll("[data-playback-step]").length,
-                            sourceMapVisible: !!document.querySelector("#demo-reconstruction-docx-circuit-map"),
+                            detailDrawerClosed: !(document.querySelector("#demo-reconstruction-detail-drawer")?.open),
+                            snapshotDetailsClosed: !(document.querySelector("#demo-reconstruction-circuit-snapshot-details")?.open),
                         })"""
                     )
                 finally:
@@ -3698,7 +3729,15 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         )
         else "fail",
         "first_screen_operator_guide": "pass"
-        if all(first_screen_review.values())
+        if (
+            first_screen_review["detail_drawer_closed"]
+            and first_screen_review["snapshot_details_closed"]
+            and first_screen_review["circuit_snapshot_visible"]
+            and not first_screen_review["review_index_visible"]
+            and not first_screen_review["source_map_visible"]
+            and not first_screen_review["console_frame_visible"]
+            and not first_screen_review["evidence_rail_visible"]
+        )
         else "fail",
         "docx_sentence_circuit_map": "pass"
         if (
@@ -4312,7 +4351,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         else "fail",
         "proof_path_review_strip": "pass"
         if (
-            first_screen_review["proof_path_review_strip_visible"]
+            not first_screen_review["proof_path_review_strip_visible"]
             and proof_path_lane_default_review["stripLaneText"] == "蓝图"
             and proof_path_lane_default_review["stripStepText"].startswith("P035-")
             and proof_path_lane_default_review["stripLinkStateText"] in {"默认视图", "链接已同步"}
@@ -4338,6 +4377,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and mobile_geometry["noHorizontalOverflow"]
             and mobile_geometry["traceCardCount"] == 5
             and mobile_geometry["playbackStepCount"] == 5
+            and mobile_geometry["detailDrawerClosed"]
+            and mobile_geometry["snapshotDetailsClosed"]
         )
         else "fail",
         "embedded_codex_light_palette": "pass"
