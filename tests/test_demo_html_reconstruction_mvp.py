@@ -294,6 +294,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "upstreamPathForTarget" in script
     assert "renderOutputMaturityMatrix" in script
     assert "setOutputMaturityCellState" in script
+    assert "outputMaturityTargetForFocus" in script
+    assert "keepOutputMaturitySelection" in script
     assert "renderCircuitCompletionLadder" in script
     assert "ladderMilestonesForStep" in script
     assert "updateNodeMetadataFromNodes" in script
@@ -568,6 +570,14 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["output_maturity_focus_review"]["selectedCells"] == ["P035-S05:thr_lock"]
     assert payload["output_maturity_focus_review"]["highlightedNodeCount"] == 1
     assert "thr_lock" in payload["output_maturity_focus_review"]["reviewObjectText"]
+    assert payload["output_maturity_restore_review"]["selectedCells"] == ["P035-S05:thr_lock"]
+    assert "step=P035-S05" in payload["output_maturity_restore_review"]["hash"]
+    assert "focus=node%3Athr_lock" in payload["output_maturity_restore_review"]["hash"]
+    assert payload["output_maturity_restore_review"]["highlightedNodeCount"] == 1
+    assert "thr_lock" in payload["output_maturity_restore_review"]["reviewObjectText"]
+    assert payload["output_maturity_clear_review"]["selectedCells"] == []
+    assert payload["output_maturity_clear_review"]["activeRows"] == ["wire_logic4_thr_lock"]
+    assert "wire_logic4_thr_lock" in payload["output_maturity_clear_review"]["reviewObjectText"]
     assert payload["trace_selection_review"] == {
         "selectedAnchorAfterClick": "P035-S05",
         "selectedLastPressed": True,

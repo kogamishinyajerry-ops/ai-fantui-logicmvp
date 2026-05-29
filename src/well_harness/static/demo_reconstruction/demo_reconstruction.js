@@ -560,6 +560,12 @@
     });
   }
 
+  function outputMaturityTargetForFocus(kind, id) {
+    if (kind !== "node" || !id) return "";
+    const target = OUTPUT_PATH_TARGETS.find((item) => item.id === id);
+    return target ? target.id : "";
+  }
+
   function renderOutputMaturityMatrix(steps) {
     if (!outputMaturityGrid) return;
     const items = Array.isArray(steps) ? steps : [];
@@ -608,7 +614,7 @@
           outputPathTargetId = target.id;
           setSelectedTrace(step, {writeHash: false});
           renderOutputPathLane();
-          if (active) applyEmbeddedTraceFocus("node", target.id);
+          if (active) applyEmbeddedTraceFocus("node", target.id, {keepOutputMaturitySelection: true});
           setOutputMaturityCellState(step.anchor || "", target.id);
         });
         outputMaturityGrid.appendChild(button);
@@ -1753,6 +1759,10 @@
       if (state.focusKind && state.focusId) {
         applyEmbeddedTraceFocus(state.focusKind, state.focusId);
       }
+      const outputMaturityTarget = outputMaturityTargetForFocus(state.focusKind, state.focusId);
+      if (state.step && outputMaturityTarget) {
+        setOutputMaturityCellState(state.step, outputMaturityTarget);
+      }
       updateReviewLink();
     } finally {
       applyingReviewHashState = false;
@@ -1844,6 +1854,7 @@
     setCoverageButtonTabStops("", "");
     updateTopologyReadback("");
     setOutputPathWireState("");
+    setOutputMaturityCellState("", "");
     renderObjectProvenance("", "");
     document
       .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind]")
@@ -1917,9 +1928,10 @@
     return { nodeCount, wireCount, ready: true };
   }
 
-  function applyEmbeddedTraceFocus(kind, id) {
+  function applyEmbeddedTraceFocus(kind, id, options = {}) {
     if (!consoleFrame || !id) return { matchCount: 0, ready: false };
     activePlaybackIndex = -1;
+    if (!options.keepOutputMaturitySelection) setOutputMaturityCellState("", "");
     markCircuitObjectFocus(kind, id);
     const frameDocument = consoleFrame.contentDocument;
     if (!frameDocument || !frameDocument.querySelector("#fan-chain-svg")) {
