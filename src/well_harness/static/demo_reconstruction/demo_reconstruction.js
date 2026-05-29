@@ -155,6 +155,8 @@
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
   const reviewIndexProofPath = $("demo-reconstruction-review-index-proof-path");
+  const reviewIndexEvidenceSummary = $("demo-reconstruction-review-index-evidence-summary");
+  const reviewIndexEvidenceList = $("demo-reconstruction-review-index-evidence-list");
   const reviewIndexBuildSummary = $("demo-reconstruction-review-index-build-summary");
   const reviewIndexBuildList = $("demo-reconstruction-review-index-build-list");
   const reviewIndexEquationSummary = $("demo-reconstruction-review-index-equation-summary");
@@ -481,6 +483,102 @@
         }
       });
     });
+  }
+
+  function reviewIndexEvidenceRecords() {
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    const ledgerItems = requirementLedgerItems();
+    const mappedCount = ledgerItems.filter((item) => item.status === "mapped").length;
+    const p035Count = ledgerItems.filter((item) => item.status === "p035").length;
+    const readiness = reviewPacketReadiness && reviewPacketReadiness.textContent
+      ? reviewPacketReadiness.textContent.trim()
+      : "等待 gate";
+    return [
+      {
+        id: "docx-source",
+        title: "DOCX 源记录",
+        targetId: "demo-reconstruction-requirement-ledger",
+        metric: `${ledgerItems.length} 条 · ${mappedCount} 已映射`,
+        detail: "段落 / 表格 / P035 可查",
+      },
+      {
+        id: "p035-chain",
+        title: "P035 逐句",
+        targetId: "demo-reconstruction-docx-trace-board",
+        metric: `${traceSteps.length}/5 句 · ${p035Count}/5 步`,
+        detail: `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+      },
+      {
+        id: "object-coverage",
+        title: "对象覆盖",
+        targetId: "demo-reconstruction-coverage-matrix",
+        metric: `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+        detail: "节点 / 连线可聚焦",
+      },
+      {
+        id: "custody-chain",
+        title: "交付链路",
+        targetId: "demo-reconstruction-custody-matrix",
+        metric: readiness,
+        detail: "证据与边界可审",
+      },
+    ];
+  }
+
+  function setReviewIndexEvidenceState(recordId) {
+    if (!reviewIndexEvidenceList) return;
+    reviewIndexEvidenceList.querySelectorAll("[data-review-index-evidence]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexEvidence === recordId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexEvidence(recordId) {
+    const record = reviewIndexEvidenceRecords().find((item) => item.id === recordId);
+    if (!record) return;
+    const target = record.targetId ? document.getElementById(record.targetId) : null;
+    setReviewIndexTarget(record.targetId);
+    setReviewIndexEvidenceState(record.id);
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexEvidenceRail() {
+    if (!reviewIndexEvidenceList) return;
+    reviewIndexEvidenceList.innerHTML = "";
+    const records = reviewIndexEvidenceRecords();
+    if (!records.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexEvidence = "empty";
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = "等待证据";
+      reviewIndexEvidenceList.appendChild(button);
+      setText(reviewIndexEvidenceSummary, "等待证据接入");
+      return;
+    }
+    records.forEach((record) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexEvidence = record.id;
+      button.setAttribute("aria-pressed", "false");
+
+      const title = document.createElement("strong");
+      title.textContent = record.title;
+      const metric = document.createElement("span");
+      metric.textContent = record.metric;
+      const detail = document.createElement("small");
+      detail.textContent = record.detail;
+
+      button.append(title, metric, detail);
+      button.addEventListener("click", () => applyReviewIndexEvidence(record.id));
+      reviewIndexEvidenceList.appendChild(button);
+    });
+    const finalContract = traceSteps.length ? cumulativeTraceContract(traceSteps.length - 1) : {node_ids: [], wire_ids: []};
+    setText(
+      reviewIndexEvidenceSummary,
+      `${records.length}/4 证据 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
   }
 
   function setReviewIndexBuildState(anchor) {
@@ -3787,6 +3885,7 @@
     renderReviewPacketGates(gates);
     renderReviewPacketDashboard(gates, reviewContext);
     updateReviewVerdictBoard(gates, reviewContext);
+    renderReviewIndexEvidenceRail();
     updateReviewIndexStatus();
   }
 
