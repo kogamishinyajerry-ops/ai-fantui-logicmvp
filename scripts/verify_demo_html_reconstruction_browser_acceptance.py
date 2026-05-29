@@ -171,7 +171,11 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                 const snapshot = document.querySelector("#demo-reconstruction-circuit-snapshot-details");
                 const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
                 if (snapshot) snapshot.open = true;
-                if (drawer) drawer.open = true;
+                if (drawer) {
+                    drawer.hidden = false;
+                    drawer.dataset.reviewDetailDrawer = "visible";
+                    drawer.open = true;
+                }
             }"""
         )
         page.wait_for_function(
@@ -182,6 +186,40 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             }""",
             timeout=5000,
         )
+
+    def capture_review_drawer_deep_link(browser: Any, hash_value: str) -> dict[str, Any]:
+        review_page = browser.new_page(viewport={"width": 1366, "height": 768})
+        try:
+            review_page.on("pageerror", lambda exc: console_errors.append(str(exc)))
+            review_page.on("console", capture_console_error)
+            review_page.on("response", capture_bad_response)
+            review_page.route("**/favicon.ico", lambda route: route.fulfill(status=204, body=""))
+            review_page.goto(f"{base_url}/demo-reconstruction{hash_value}", wait_until="networkidle")
+            review_page.wait_for_function(
+                """() => {
+                    const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                    return drawer
+                        && !drawer.hidden
+                        && drawer.dataset.reviewDetailDrawer === "visible"
+                        && drawer.open
+                        && document.querySelector("#demo-reconstruction-review-index")?.offsetParent;
+                }""",
+                timeout=5000,
+            )
+            return review_page.evaluate(
+                """() => {
+                    const drawer = document.querySelector("#demo-reconstruction-detail-drawer");
+                    return {
+                        hash: window.location.hash,
+                        drawerHidden: drawer?.hidden ?? true,
+                        drawerOpen: drawer?.open ?? false,
+                        drawerState: drawer?.dataset.reviewDetailDrawer || "",
+                        reviewIndexVisible: !!document.querySelector("#demo-reconstruction-review-index")?.offsetParent,
+                    };
+                }"""
+            )
+        finally:
+            review_page.close()
 
     server, thread, base_url = _start_server()
     try:
@@ -258,7 +296,6 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             ".demo-reconstruction-hero",
                             "#demo-reconstruction-circuit-snapshot",
                             "#demo-reconstruction-compact-runway",
-                            "#demo-reconstruction-detail-drawer > summary",
                         ].map((selector) => document.querySelector(selector)?.innerText?.trim() || "").join("\\n")"""
                     ),
                     "detail_drawer_closed": page.locator(
@@ -267,6 +304,16 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "snapshot_details_closed": page.locator(
                         "#demo-reconstruction-circuit-snapshot-details"
                     ).evaluate("element => !element.open"),
+                    "detail_drawer_control_visible": page.locator(
+                        "#demo-reconstruction-detail-drawer"
+                    ).evaluate(
+                        """element => {
+                            const summary = element.querySelector("summary");
+                            return !element.hidden
+                                && element.dataset.reviewDetailDrawer !== "hidden"
+                                && !!(summary && summary.offsetParent);
+                        }"""
+                    ),
                     "review_index_visible": page.locator(
                         "#demo-reconstruction-review-index"
                     ).is_visible(timeout=5000),
@@ -358,6 +405,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         "#demo-reconstruction-browser-evidence"
                     ).is_visible(timeout=5000),
                 }
+                review_drawer_deep_link = capture_review_drawer_deep_link(browser, "#review=1")
+                complete_drawer_deep_link = capture_review_drawer_deep_link(browser, "#complete=1")
                 compact_runway_initial_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -717,6 +766,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             completeActionText: text("#demo-reconstruction-review-index-complete-action"),
                             completeBannerInitiallyHidden: document.querySelector("#demo-reconstruction-complete-mode-banner")?.hidden ?? true,
                             completeBannerInitialText: text("#demo-reconstruction-complete-mode-banner"),
+                            reviewLinkHref: document.querySelector("#demo-reconstruction-review-link")?.getAttribute("href") || "",
                             completeModeLinkHref: document.querySelector("#demo-reconstruction-complete-mode-link")?.getAttribute("href") || "",
                             completeModeLinkText: text("#demo-reconstruction-complete-mode-link"),
                             stepText: text("#demo-reconstruction-review-index-step"),
@@ -4099,6 +4149,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         if (
             first_screen_review["detail_drawer_closed"]
             and first_screen_review["snapshot_details_closed"]
+            and not first_screen_review["detail_drawer_control_visible"]
             and first_screen_review["circuit_snapshot_visible"]
             and first_screen_review["circuit_snapshot_preview_visible"]
             and first_screen_review["circuit_snapshot_preview_count"] == 7
@@ -4115,6 +4166,24 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and "20/20 节点" not in first_screen_review["visible_text"]
             and "23/23 连线" not in first_screen_review["visible_text"]
             and "62 条源记录" not in first_screen_review["visible_text"]
+            and "查看验收详情" not in first_screen_review["visible_text"]
+        )
+        else "fail",
+        "review_drawer_deep_link": "pass"
+        if (
+            review_drawer_deep_link["hash"] == "#review=1"
+            and not review_drawer_deep_link["drawerHidden"]
+            and review_drawer_deep_link["drawerOpen"]
+            and review_drawer_deep_link["drawerState"] == "visible"
+            and review_drawer_deep_link["reviewIndexVisible"]
+            and (
+                complete_drawer_deep_link["hash"] == "#complete=1"
+                or "review=1" in complete_drawer_deep_link["hash"]
+            )
+            and not complete_drawer_deep_link["drawerHidden"]
+            and complete_drawer_deep_link["drawerOpen"]
+            and complete_drawer_deep_link["drawerState"] == "visible"
+            and complete_drawer_deep_link["reviewIndexVisible"]
         )
         else "fail",
         "compact_runway": "pass"
@@ -4291,6 +4360,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and review_index_review["completeActionText"] == "完整交付态"
             and review_index_review["completeBannerInitiallyHidden"] is True
             and "完整交付态已启用" in review_index_review["completeBannerInitialText"]
+            and "review=1" in review_index_review["reviewLinkHref"]
             and review_index_review["completeModeLinkHref"] == "/demo-reconstruction#complete=1"
             and review_index_review["completeModeLinkText"] == "固定链接"
             and review_index_review["activeHandoff"] == []
@@ -5249,6 +5319,8 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         },
         "embedded_palette": embedded_palette,
         "first_screen_review": first_screen_review,
+        "review_drawer_deep_link": review_drawer_deep_link,
+        "complete_drawer_deep_link": complete_drawer_deep_link,
         "compact_runway_initial_review": compact_runway_initial_review,
         "compact_runway_max_review": compact_runway_max_review,
         "compact_runway_output_focus_review": compact_runway_output_focus_review,

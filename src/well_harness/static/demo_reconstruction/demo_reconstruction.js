@@ -153,6 +153,7 @@
   const reviewIndexReadiness = $("demo-reconstruction-review-index-readiness");
   const reviewIndexCompleteAction = $("demo-reconstruction-review-index-complete-action");
   const completeModeBanner = $("demo-reconstruction-complete-mode-banner");
+  const detailDrawer = $("demo-reconstruction-detail-drawer");
   const reviewIndexStep = $("demo-reconstruction-review-index-step");
   const reviewIndexObject = $("demo-reconstruction-review-index-object");
   const reviewIndexOutput = $("demo-reconstruction-review-index-output");
@@ -662,8 +663,16 @@
     completeModeBanner.hidden = !active;
   }
 
+  function setReviewDetailDrawerVisible(active) {
+    if (!detailDrawer) return;
+    detailDrawer.hidden = !active;
+    detailDrawer.dataset.reviewDetailDrawer = active ? "visible" : "hidden";
+    detailDrawer.open = !!active;
+  }
+
   function applyReviewIndexCompleteState() {
     setCompleteModeBanner(true);
+    setReviewDetailDrawerVisible(true);
     applyReviewIndexScenario("max-reverse");
     applyReviewIndexOutputTarget("thr_lock");
     setReviewIndexGateState("object-review");
@@ -1954,6 +1963,7 @@
     const focusParts = focus.split(":");
     return {
       complete: params.get("complete") === "1",
+      review: params.get("review") === "1",
       step: params.get("step") || "",
       focusKind: focusParts.length === 2 ? focusParts[0] : "",
       focusId: focusParts.length === 2 ? focusParts[1] : "",
@@ -1966,6 +1976,9 @@
 
   function reviewHashForState() {
     const params = new URLSearchParams();
+    if (detailDrawer && !detailDrawer.hidden && detailDrawer.dataset.reviewDetailDrawer !== "hidden") {
+      params.set("review", "1");
+    }
     if (currentTraceStep && currentTraceStep.anchor) params.set("step", currentTraceStep.anchor);
     if (currentCircuitFocus.kind && currentCircuitFocus.id) {
       params.set("focus", `${currentCircuitFocus.kind}:${currentCircuitFocus.id}`);
@@ -5310,9 +5323,10 @@
 
   function applyReviewHashState() {
     const state = readReviewHashState();
-    if (!state.complete && !state.step && !state.focusId && !state.query && !state.topologyStep && !state.topologyQuery && !state.lane) {
+    if (!state.complete && !state.review && !state.step && !state.focusId && !state.query && !state.topologyStep && !state.topologyQuery && !state.lane) {
       setProofPathLaneMode("blueprint", {writeHash: false});
       setCompleteModeBanner(false);
+      setReviewDetailDrawerVisible(false);
       updateReviewLink();
       return false;
     }
@@ -5324,6 +5338,7 @@
         return true;
       }
       setCompleteModeBanner(false);
+      setReviewDetailDrawerVisible(state.review);
       setProofPathLaneMode(state.lane || "blueprint", {writeHash: false});
       if (coverageSearch && coverageSearch.value !== state.query) {
         coverageSearch.value = state.query;
