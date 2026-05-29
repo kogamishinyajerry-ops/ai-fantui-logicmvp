@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
-<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p32">
-<script src="/demo_reconstruction/demo_reconstruction.js?v=p32" defer></script>
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p33">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p33" defer></script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="demo-html-mvp-cockpit" data-canvas-status="golden-demo-backed" data-ux-page-role="demo-mvp-console">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
@@ -547,6 +547,16 @@
             <button type="button" data-proof-path-sentence-step="empty">等待逐句矩阵</button>
           </div>
           <p id="demo-reconstruction-proof-path-sentence-matrix-readback">等待选择逐句矩阵。</p>
+        </div>
+        <div id="demo-reconstruction-proof-path-predicate-matrix" class="demo-reconstruction-proof-path-predicate-matrix" data-proof-path-predicate-matrix="first-screen" aria-label="证明路径判据矩阵">
+          <div class="demo-reconstruction-proof-path-predicate-matrix-head">
+            <span>判据矩阵</span>
+            <strong id="demo-reconstruction-proof-path-predicate-matrix-status">等待判据矩阵</strong>
+          </div>
+          <div id="demo-reconstruction-proof-path-predicate-matrix-list" class="demo-reconstruction-proof-path-predicate-matrix-list">
+            <button type="button" data-proof-path-predicate-step="empty">等待判据矩阵</button>
+          </div>
+          <p id="demo-reconstruction-proof-path-predicate-matrix-readback">等待选择判据矩阵。</p>
         </div>
         <div id="demo-reconstruction-proof-path-object-inspector" class="demo-reconstruction-proof-path-object-inspector" data-proof-path-object-inspector="first-screen" aria-label="证明路径对象审阅">
           <div class="demo-reconstruction-proof-path-object-inspector-head">

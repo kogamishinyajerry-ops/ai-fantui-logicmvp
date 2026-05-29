@@ -275,6 +275,9 @@
   const proofPathSentenceMatrixStatus = $("demo-reconstruction-proof-path-sentence-matrix-status");
   const proofPathSentenceMatrixList = $("demo-reconstruction-proof-path-sentence-matrix-list");
   const proofPathSentenceMatrixReadback = $("demo-reconstruction-proof-path-sentence-matrix-readback");
+  const proofPathPredicateMatrixStatus = $("demo-reconstruction-proof-path-predicate-matrix-status");
+  const proofPathPredicateMatrixList = $("demo-reconstruction-proof-path-predicate-matrix-list");
+  const proofPathPredicateMatrixReadback = $("demo-reconstruction-proof-path-predicate-matrix-readback");
   const proofPathObjectInspector = $("demo-reconstruction-proof-path-object-inspector");
   const proofPathObjectInspectorObject = $("demo-reconstruction-proof-path-object-inspector-object");
   const proofPathObjectInspectorSourceCount = $("demo-reconstruction-proof-path-object-inspector-source-count");
@@ -316,6 +319,7 @@
   let proofPathDeltaAnchor = "";
   let proofPathSourceAnchor = "";
   let proofPathSentenceMatrixAnchor = "";
+  let proofPathPredicateMatrixAnchor = "";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
   let nodeLabelMap = new Map();
@@ -2850,6 +2854,174 @@
     updateProofPathSentenceMatrixReadback(selectedStep);
   }
 
+  function proofPathPredicateRecord(step) {
+    const anchor = step && step.anchor ? step.anchor : "";
+    if (anchor === "P035-S04") {
+      return {
+        gate: "VDT90",
+        expression: "PDU motor energized -> VDT90 >= 90% feedback",
+        output: "VDT90 feedback",
+        focusKind: "wire",
+        focusId: "wire_pdu_vdt90",
+        sourceNodes: ["pdu_motor"],
+        outputNodes: ["vdt90"],
+      };
+    }
+    const equation = LOGIC_EQUATION_RECORDS.find((record) => record.anchor === anchor);
+    if (equation) {
+      return {
+        gate: equation.id.toUpperCase(),
+        expression: equation.expression,
+        output: equation.output,
+        focusKind: equation.focusKind,
+        focusId: equation.focusId,
+        sourceNodes: equation.sourceNodes || [],
+        outputNodes: equation.outputNodes || [],
+      };
+    }
+    return {
+      gate: anchor || "P035",
+      expression: step && step.source_text ? step.source_text : "等待判据",
+      output: assemblyOutputLabelForStep(step || {}, {node_ids: [], wire_ids: []}),
+      focusKind: "",
+      focusId: "",
+      sourceNodes: [],
+      outputNodes: [],
+    };
+  }
+
+  function setProofPathPredicateMatrixState(anchor) {
+    document.querySelectorAll("[data-proof-path-predicate-step]").forEach((button) => {
+      const selected = button.dataset.proofPathPredicateStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    proofPathPredicateMatrixAnchor = anchor || "";
+  }
+
+  function updateProofPathPredicateMatrixReadback(step, focus = null) {
+    if (!proofPathPredicateMatrixReadback || !step) return;
+    const record = proofPathPredicateRecord(step);
+    const focusText = focus && focus.id ? ` · ${focus.kind === "wire" ? "连线" : "节点"} · ${focus.id}` : "";
+    setText(
+      proofPathPredicateMatrixReadback,
+      `${step.anchor || "P035"} · ${record.gate} · ${record.expression} · 输出 ${record.output}${focusText}`,
+    );
+  }
+
+  function applyProofPathPredicateMatrixStep(anchor) {
+    const step = traceSteps.find((item) => item && item.anchor === anchor);
+    if (!step) return;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathPredicateMatrixState(anchor);
+    updateProofPathPredicateMatrixReadback(step);
+    writeReviewHashState();
+  }
+
+  function applyProofPathPredicateMatrixFocus(anchor, kind, id) {
+    const step = traceSteps.find((item) => item && item.anchor === anchor);
+    if (!step || !kind || !id) return;
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathPredicateMatrixState(anchor);
+    applyEmbeddedTraceFocus(kind, id);
+    updateProofPathPredicateMatrixReadback(step, {kind, id});
+  }
+
+  function appendProofPathPredicateMatrixChips(container, anchor, label, values, kind = "") {
+    const group = document.createElement("div");
+    group.className = "demo-reconstruction-proof-path-predicate-matrix-group";
+    const title = document.createElement("strong");
+    title.textContent = label;
+    const chips = document.createElement("div");
+    chips.className = "demo-reconstruction-proof-path-predicate-matrix-chips";
+    const list = Array.isArray(values) ? values : [];
+    if (!list.length) {
+      const empty = document.createElement("span");
+      empty.textContent = "无";
+      chips.appendChild(empty);
+    } else {
+      list.forEach((value) => {
+        const chip = kind ? document.createElement("button") : document.createElement("span");
+        chip.textContent = value;
+        if (kind) {
+          chip.type = "button";
+          chip.dataset.proofPathPredicateFocusKind = kind;
+          chip.dataset.proofPathPredicateFocusId = value;
+          chip.addEventListener("click", () => applyProofPathPredicateMatrixFocus(anchor, kind, value));
+        }
+        chips.appendChild(chip);
+      });
+    }
+    group.append(title, chips);
+    container.appendChild(group);
+  }
+
+  function renderProofPathPredicateMatrix(steps) {
+    if (!proofPathPredicateMatrixList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    proofPathPredicateMatrixList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.proofPathPredicateStep = "empty";
+      empty.textContent = "等待判据矩阵";
+      proofPathPredicateMatrixList.appendChild(empty);
+      setText(proofPathPredicateMatrixStatus, "等待判据矩阵");
+      setText(proofPathPredicateMatrixReadback, "等待选择判据矩阵。");
+      return;
+    }
+
+    const finalContract = cumulativeTraceContract(items.length - 1);
+    setText(
+      proofPathPredicateMatrixStatus,
+      `${items.length}/5 判据 · ${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`,
+    );
+
+    items.forEach((step, index) => {
+      const record = proofPathPredicateRecord(step);
+      const row = document.createElement("div");
+      row.className = "demo-reconstruction-proof-path-predicate-matrix-row";
+      row.dataset.proofPathPredicateRow = step.anchor || "";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-proof-path-predicate-matrix-step";
+      button.dataset.proofPathPredicateStep = step.anchor || "";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyProofPathPredicateMatrixStep(step.anchor || ""));
+
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const gate = document.createElement("span");
+      gate.textContent = `${record.gate} · ${record.output}`;
+      const expression = document.createElement("small");
+      expression.textContent = record.expression;
+      button.append(anchor, gate, expression);
+
+      const focus = document.createElement("button");
+      focus.type = "button";
+      focus.className = "demo-reconstruction-proof-path-predicate-matrix-focus";
+      focus.dataset.proofPathPredicateFocusKind = record.focusKind || "";
+      focus.dataset.proofPathPredicateFocusId = record.focusId || "";
+      focus.textContent = record.focusId || "等待焦点";
+      focus.disabled = !record.focusKind || !record.focusId;
+      focus.addEventListener("click", () => applyProofPathPredicateMatrixFocus(step.anchor || "", record.focusKind, record.focusId));
+
+      const groups = document.createElement("div");
+      groups.className = "demo-reconstruction-proof-path-predicate-matrix-groups";
+      appendProofPathPredicateMatrixChips(groups, step.anchor || "", "输入", record.sourceNodes, "node");
+      appendProofPathPredicateMatrixChips(groups, step.anchor || "", "输出", record.outputNodes, "node");
+      appendProofPathPredicateMatrixChips(groups, step.anchor || "", "关键连线", record.focusId ? [record.focusId] : [], record.focusKind);
+
+      row.append(button, focus, groups);
+      proofPathPredicateMatrixList.appendChild(row);
+    });
+
+    const selectedAnchor = proofPathPredicateMatrixAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedStep = items.find((step) => step && step.anchor === selectedAnchor) || items[0];
+    setProofPathPredicateMatrixState(selectedStep.anchor || "");
+    updateProofPathPredicateMatrixReadback(selectedStep);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -3578,7 +3750,7 @@
     const equation = LOGIC_EQUATION_RECORDS.find((record) => record.focusKind === kind && record.focusId === id);
     setLogicEquationRowState(equation ? equation.id : "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
       .forEach((button) => {
         const chipKind = button.dataset.traceFocusKind
           || button.dataset.sourceFocusKind
@@ -3586,6 +3758,7 @@
           || button.dataset.proofPathCoverageFocusKind
           || button.dataset.proofPathDeltaFocusKind
           || button.dataset.proofPathSentenceFocusKind
+          || button.dataset.proofPathPredicateFocusKind
           || "";
         const chipId = button.dataset.traceFocusId
           || button.dataset.sourceFocusId
@@ -3593,6 +3766,7 @@
           || button.dataset.proofPathCoverageFocusId
           || button.dataset.proofPathDeltaFocusId
           || button.dataset.proofPathSentenceFocusId
+          || button.dataset.proofPathPredicateFocusId
           || "";
         const isCurrent = chipKind === kind && chipId === id;
         button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
@@ -3610,7 +3784,7 @@
     setLogicEquationRowState("");
     renderObjectProvenance("", "");
     document
-      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind]")
+      .querySelectorAll("[data-trace-focus-kind], [data-source-focus-kind], [data-proof-path-focus-kind], [data-proof-path-coverage-focus-kind], [data-proof-path-delta-focus-kind], [data-proof-path-sentence-focus-kind], [data-proof-path-predicate-focus-kind]")
       .forEach((button) => {
         button.setAttribute("aria-pressed", "false");
         button.dataset.reviewObjectSelected = "false";
@@ -3818,12 +3992,14 @@
     setProofPathDeltaRailState(step.anchor || "");
     setProofPathSourceRailState(step.anchor || "");
     setProofPathSentenceMatrixState(step.anchor || "");
+    setProofPathPredicateMatrixState(step.anchor || "");
     if (selectedTraceIndex >= 0) {
       const contract = cumulativeTraceContract(selectedTraceIndex);
       updateProofPathCoverageGridReadback(step, contract);
       updateProofPathDeltaRailReadback(proofPathDeltaRecord(selectedTraceIndex));
       updateProofPathSourceRailReadback(step);
       updateProofPathSentenceMatrixReadback(step);
+      updateProofPathPredicateMatrixReadback(step);
     }
     if (options.writeHash !== false) writeReviewHashState();
   }
@@ -4048,6 +4224,7 @@
     renderProofPathDeltaRail(steps);
     renderProofPathSourceRail(steps);
     renderProofPathSentenceMatrix(steps);
+    renderProofPathPredicateMatrix(steps);
     renderStepPlaybackRail(steps);
     renderAssemblyMap(steps);
     renderCircuitCompletionLadder(steps);
