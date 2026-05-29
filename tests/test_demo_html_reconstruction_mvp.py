@@ -161,6 +161,16 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "5/5 gate" not in html
     assert "等待 gate" not in html
     assert "固定链接" in html
+    assert 'id="demo-reconstruction-circuit-snapshot"' in html
+    assert 'data-circuit-snapshot="docx-to-demo-complete"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-status"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-source"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-circuit"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-output"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-review"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-list"' in html
+    assert 'id="demo-reconstruction-circuit-snapshot-readback"' in html
+    assert "原始需求到 demo.html 完整逻辑电路" in html
     assert 'id="demo-reconstruction-review-index"' in html
     assert 'id="demo-reconstruction-review-index-readiness"' in html
     assert 'id="demo-reconstruction-review-index-complete-action"' in html
@@ -359,6 +369,7 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'data-source-docx-circuit-map="true"' in html
     assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
     assert "demo.html 复刻 MVP 控制台" in html
+    assert "逐句蓝图" in html
     assert "审阅路径索引" in html
     assert "原始 DOCX 逐句到完整电路" in html
     assert "需求覆盖账本" in html
@@ -387,6 +398,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "renderTraceBoard" in script
     assert "setSelectedTrace" in script
+    assert "renderCircuitSnapshot" in script
+    assert "applyCircuitSnapshotStep" in script
+    assert "circuitSnapshotRecord" in script
+    assert "data-circuit-snapshot-step" in script
     assert "TRACE_WIRE_ENDPOINTS" not in script
     assert "updateWireEndpointMapFromWires" in script
     assert "wireEndpointsForId" in script
@@ -542,6 +557,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "sourceFocusKind" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-metrics" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-list" in stylesheet
+    assert ".demo-reconstruction-circuit-snapshot-step" in stylesheet
     assert ".demo-reconstruction-review-index" in stylesheet
     assert ".demo-reconstruction-review-index-actions" in stylesheet
     assert ".demo-reconstruction-review-index-handoff-rail" in stylesheet
@@ -786,6 +805,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["pixel_visibility"]["chain_svg"]["wire_count"] == 23
     assert payload["first_screen_review"] == {
         "review_index_visible": True,
+        "circuit_snapshot_visible": True,
         "assembly_map_visible": True,
         "topology_matrix_visible": True,
         "source_map_visible": True,
@@ -797,6 +817,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "control_strip_visible": True,
         "sentence_runner_visible": True,
         "proof_path_visible": True,
+        "proof_path_review_strip_visible": True,
         "scenario_comparator_visible": True,
         "review_verdict_visible": True,
         "scenario_ledger_visible": True,
@@ -818,6 +839,16 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["source_map_review"]["reviewIndexBuildStepCount"] == 5
     assert payload["source_map_review"]["reviewIndexOutputTargetCount"] == 5
     assert payload["source_map_review"]["reviewIndexScenarioCount"] == 2
+    assert payload["source_map_review"]["circuitSnapshotStepCount"] == 5
+    assert "5/5 句" in payload["source_map_review"]["circuitSnapshotStatus"]
+    assert "62 条源记录" in payload["source_map_review"]["circuitSnapshotSource"]
+    assert "20/20 节点" in payload["source_map_review"]["circuitSnapshotCircuit"]
+    assert "23/23 连线" in payload["source_map_review"]["circuitSnapshotCircuit"]
+    assert "完整 demo 电路闭合" in payload["source_map_review"]["circuitSnapshotOutput"]
+    assert "P035-S01" in payload["source_map_review"]["circuitSnapshotReview"]
+    assert "P035-S01" in payload["source_map_review"]["circuitSnapshotReadback"]
+    assert "P035-S05" in payload["source_map_review"]["circuitSnapshotFinalText"]
+    assert "THR_LOCK" in payload["source_map_review"]["circuitSnapshotFinalText"]
     assert payload["requirement_ledger_context_review"]["selectedFilters"] == ["context"]
     assert payload["requirement_ledger_context_review"]["visibleRows"] == 18
     assert "18/67" in payload["requirement_ledger_context_review"]["statusText"]

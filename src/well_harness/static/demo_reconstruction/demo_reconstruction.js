@@ -185,6 +185,13 @@
   const docxWireCoverage = $("demo-reconstruction-docx-wire-coverage");
   const docxEntryCount = $("demo-reconstruction-docx-entry-count");
   const docxSequenceCount = $("demo-reconstruction-docx-sequence-count");
+  const circuitSnapshotStatus = $("demo-reconstruction-circuit-snapshot-status");
+  const circuitSnapshotSource = $("demo-reconstruction-circuit-snapshot-source");
+  const circuitSnapshotCircuit = $("demo-reconstruction-circuit-snapshot-circuit");
+  const circuitSnapshotOutput = $("demo-reconstruction-circuit-snapshot-output");
+  const circuitSnapshotReview = $("demo-reconstruction-circuit-snapshot-review");
+  const circuitSnapshotList = $("demo-reconstruction-circuit-snapshot-list");
+  const circuitSnapshotReadback = $("demo-reconstruction-circuit-snapshot-readback");
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
   const requirementLedgerSummary = $("demo-reconstruction-requirement-ledger-summary");
@@ -351,6 +358,7 @@
   let proofPathSentenceMatrixAnchor = "";
   let proofPathPredicateMatrixAnchor = "";
   let proofPathBlueprintSummaryAnchor = "";
+  let circuitSnapshotAnchor = "";
   let proofPathLaneMode = "blueprint";
   let applyingReviewHashState = false;
   let wireEndpointMap = new Map();
@@ -3892,6 +3900,121 @@
     updateProofPathBlueprintSummaryReadback(selectedStep);
   }
 
+  function circuitSnapshotRecord(step, index) {
+    const safeIndex = Math.max(0, index);
+    const contract = traceSteps.length ? cumulativeTraceContract(safeIndex) : {node_ids: [], wire_ids: []};
+    const predicate = proofPathPredicateRecord(step);
+    const source = proofPathSourceRecords(step)[0] || {};
+    const outputs = ladderMilestonesForStep(step);
+    const sourceAnchor = source.anchor || step.anchor || "P035";
+    return {
+      contract,
+      predicate,
+      sourceAnchor,
+      sourceText: source.text || step.source_text || "",
+      outputLabel: assemblyOutputLabelForStep(step, contract),
+      outputs,
+    };
+  }
+
+  function setCircuitSnapshotState(anchor) {
+    document.querySelectorAll("[data-circuit-snapshot-step]").forEach((button) => {
+      const selected = button.dataset.circuitSnapshotStep === anchor;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    circuitSnapshotAnchor = anchor || "";
+  }
+
+  function updateCircuitSnapshotReadback(step, index = -1) {
+    if (!circuitSnapshotReadback || !step) return;
+    const safeIndex = index >= 0 ? index : traceSteps.findIndex((item) => item && item.anchor === step.anchor);
+    const record = circuitSnapshotRecord(step, safeIndex >= 0 ? safeIndex : 0);
+    setText(
+      circuitSnapshotReadback,
+      `${step.anchor || "P035"} · ${record.sourceAnchor} -> ${record.predicate.gate} -> ${record.predicate.output} · ${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputLabel}`,
+    );
+    setText(circuitSnapshotReview, `${step.anchor || "P035"} · 蓝图可审`);
+  }
+
+  function applyCircuitSnapshotStep(anchor) {
+    const index = traceSteps.findIndex((item) => item && item.anchor === anchor);
+    if (index < 0) return;
+    const step = traceSteps[index];
+    setSelectedTrace(step, {writeHash: false});
+    setProofPathLaneMode("blueprint", {writeHash: false});
+    setCircuitSnapshotState(anchor);
+    updateCircuitSnapshotReadback(step, index);
+    writeReviewHashState();
+  }
+
+  function renderCircuitSnapshot(steps) {
+    if (!circuitSnapshotList) return;
+    const items = Array.isArray(steps) ? steps : [];
+    circuitSnapshotList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.dataset.circuitSnapshotStep = "empty";
+      empty.setAttribute("aria-pressed", "false");
+      empty.textContent = "等待逐句电路";
+      circuitSnapshotList.appendChild(empty);
+      setText(circuitSnapshotStatus, "等待逐句电路");
+      setText(circuitSnapshotSource, "等待 DOCX");
+      setText(circuitSnapshotCircuit, "等待电路");
+      setText(circuitSnapshotOutput, "等待输出");
+      setText(circuitSnapshotReview, "等待选择");
+      setText(circuitSnapshotReadback, "等待逐句生成完整电路。");
+      return;
+    }
+
+    const finalStep = items[items.length - 1] || {};
+    const finalContract = cumulativeTraceContract(items.length - 1);
+    setText(circuitSnapshotStatus, `${items.length}/5 句 · 完整电路闭合`);
+    setText(circuitSnapshotSource, `${sourceEntries.length} 条源记录 · ${items.length}/5 句`);
+    setText(circuitSnapshotCircuit, `${finalContract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${finalContract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线`);
+    setText(circuitSnapshotOutput, `${OUTPUT_PATH_TARGETS.length}/5 输出 · ${assemblyOutputLabelForStep(finalStep, finalContract)}`);
+
+    items.forEach((step, index) => {
+      const record = circuitSnapshotRecord(step, index);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "demo-reconstruction-circuit-snapshot-step";
+      button.dataset.circuitSnapshotStep = step.anchor || "";
+      button.dataset.circuitSnapshotFinal = index === items.length - 1 ? "true" : "false";
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", () => applyCircuitSnapshotStep(step.anchor || ""));
+
+      const head = document.createElement("span");
+      head.className = "demo-reconstruction-circuit-snapshot-step-head";
+      const anchor = document.createElement("strong");
+      anchor.textContent = step.anchor || `P035-S${String(index + 1).padStart(2, "0")}`;
+      const title = document.createElement("em");
+      title.textContent = step.title || "工作过程片段";
+      head.append(anchor, title);
+
+      const source = document.createElement("small");
+      source.textContent = proofPathSourceExcerpt(record.sourceText || step.source_text || "", 86, proofPathSourceNeedle(step, record.sourceText));
+
+      const path = document.createElement("span");
+      path.textContent = `${record.sourceAnchor} -> ${record.predicate.gate} -> ${record.predicate.output}`;
+
+      const counts = document.createElement("small");
+      counts.textContent = `${record.contract.node_ids.length}/${EXPECTED_NODE_COUNT} 节点 · ${record.contract.wire_ids.length}/${EXPECTED_WIRE_COUNT} 连线 · ${record.outputLabel}`;
+
+      const outputs = document.createElement("em");
+      outputs.textContent = record.outputs.length ? record.outputs.join(" / ") : record.predicate.output;
+
+      button.append(head, source, path, counts, outputs);
+      circuitSnapshotList.appendChild(button);
+    });
+
+    const selectedAnchor = circuitSnapshotAnchor || (currentTraceStep && currentTraceStep.anchor) || items[0].anchor || "";
+    const selectedIndex = items.findIndex((step) => step && step.anchor === selectedAnchor);
+    const safeIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    setCircuitSnapshotState(items[safeIndex].anchor || "");
+    updateCircuitSnapshotReadback(items[safeIndex], safeIndex);
+  }
+
   function refreshOperatorRunwayReadback(record) {
     if (!operatorRunwayReadback) return;
     if (!record) {
@@ -4884,6 +5007,7 @@
     setProofPathSentenceMatrixState(step.anchor || "");
     setProofPathPredicateMatrixState(step.anchor || "");
     setProofPathBlueprintSummaryState(step.anchor || "");
+    setCircuitSnapshotState(step.anchor || "");
     if (selectedTraceIndex >= 0) {
       const contract = cumulativeTraceContract(selectedTraceIndex);
       updateProofPathCoverageGridReadback(step, contract);
@@ -4892,6 +5016,7 @@
       updateProofPathSentenceMatrixReadback(step);
       updateProofPathPredicateMatrixReadback(step);
       updateProofPathBlueprintSummaryReadback(step);
+      updateCircuitSnapshotReadback(step, selectedTraceIndex);
     }
     if (options.writeHash !== false) writeReviewHashState();
   }
@@ -5110,6 +5235,7 @@
       traceCardList.appendChild(card);
     });
     setSelectedTrace(steps[0], {writeHash: false});
+    renderCircuitSnapshot(steps);
     renderReviewIndexBuildLadder(steps);
     renderSentenceRunner(steps);
     renderProofPathTimeline(steps);
