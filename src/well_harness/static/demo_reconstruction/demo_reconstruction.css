@@ -328,7 +328,7 @@ h2 { margin-bottom: 0; font-size: 18px; }
   outline: none;
 }
 .demo-reconstruction-compact-runway-readout div,
-.demo-reconstruction-compact-runway-outputs div {
+.demo-reconstruction-compact-runway-output {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -336,6 +336,21 @@ h2 { margin-bottom: 0; font-size: 18px; }
   border-radius: 8px;
   background: #f9fafb;
   padding: 9px;
+  text-align: left;
+}
+.demo-reconstruction-compact-runway-output {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.demo-reconstruction-compact-runway-output:hover,
+.demo-reconstruction-compact-runway-output:focus-visible {
+  border-color: #2563eb;
+  outline: none;
+}
+.demo-reconstruction-compact-runway-output[aria-pressed="true"] {
+  border-color: #0f766e;
+  background: #ecfdf3;
 }
 .demo-reconstruction-compact-runway-readout span,
 .demo-reconstruction-compact-runway-outputs span {
@@ -350,13 +365,13 @@ h2 { margin-bottom: 0; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.demo-reconstruction-compact-runway-outputs div[data-state="on"] strong {
+.demo-reconstruction-compact-runway-output[data-state="on"] strong {
   color: #047857;
 }
-.demo-reconstruction-compact-runway-outputs div[data-state="blocked"] strong {
+.demo-reconstruction-compact-runway-output[data-state="blocked"] strong {
   color: #b42318;
 }
-.demo-reconstruction-compact-runway-outputs div[data-state="off"] strong {
+.demo-reconstruction-compact-runway-output[data-state="off"] strong {
   color: #475467;
 }
 .demo-reconstruction-circuit-snapshot-chain {

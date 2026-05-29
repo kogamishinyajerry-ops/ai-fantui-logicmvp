@@ -351,6 +351,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                             buttonCount: document.querySelectorAll("[data-compact-runway-preset]").length,
                             controlCount: document.querySelectorAll(".demo-reconstruction-compact-runway-control").length,
                             outputCount: document.querySelectorAll(".demo-reconstruction-compact-runway-outputs strong").length,
+                            outputTargets: Array.from(document.querySelectorAll("[data-compact-runway-output-target]")).map((button) => button.getAttribute("data-compact-runway-output-target")),
                             pressed: Array.from(document.querySelectorAll("[data-compact-runway-preset][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-preset")),
                             statusText: text("#demo-reconstruction-compact-runway-status"),
                             stateText: text("#demo-reconstruction-compact-runway-state"),
@@ -387,6 +388,27 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                         };
                     }"""
                 )
+                page.locator('[data-compact-runway-output-target="thr_lock"]').click()
+                page.wait_for_function(
+                    """() => {
+                        return window.location.hash.includes("step=P035-S05")
+                            && window.location.hash.includes("focus=wire%3Awire_logic4_thr_lock");
+                    }""",
+                    timeout=5000,
+                )
+                compact_runway_output_focus_review = page.evaluate(
+                    """() => {
+                        const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
+                        return {
+                            pressedOutputs: Array.from(document.querySelectorAll("[data-compact-runway-output-target][aria-pressed='true']")).map((button) => button.getAttribute("data-compact-runway-output-target")),
+                            reviewObjectText: text("#demo-reconstruction-review-index-object"),
+                            proofPathText: text("#demo-reconstruction-review-index-proof-path"),
+                            outputMapReadback: text("#demo-reconstruction-proof-path-output-map-readback"),
+                            statusText: text("#demo-reconstruction-embedded-highlight-status"),
+                            hash: window.location.hash,
+                        };
+                    }"""
+                )
                 page.locator('[data-compact-runway-preset="inhibit-block"]').click()
                 page.wait_for_function(
                     """() => {
@@ -415,6 +437,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     }"""
                 )
                 open_detail_drawers(page)
+                page.locator('[data-trace-card][data-trace-anchor="P035-S01"]').click()
+                page.wait_for_function(
+                    """() => {
+                        const selected = document.querySelector("#demo-reconstruction-selected-anchor");
+                        return selected && selected.textContent.trim() === "P035-S01";
+                    }""",
+                    timeout=5000,
+                )
                 source_map_review = page.evaluate(
                     """() => {
                         const text = (selector) => document.querySelector(selector)?.textContent?.trim() || "";
@@ -3951,6 +3981,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_initial_review["buttonCount"] == 2
             and compact_runway_initial_review["controlCount"] == 3
             and compact_runway_initial_review["outputCount"] == 4
+            and compact_runway_initial_review["outputTargets"] == ["tls115", "etrac_540v", "eec_deploy", "thr_lock"]
             and compact_runway_initial_review["pressed"] == ["max-reverse"]
             and compact_runway_initial_review["statusText"] == "最大反推"
             and compact_runway_initial_review["stateText"] == "可用"
@@ -3988,6 +4019,13 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
             and compact_runway_operator_fault_review["faultCountText"] == "0 故障"
             and compact_runway_operator_fault_review["activeFaultText"] == ""
             and compact_runway_operator_fault_review["checkedFaultCount"] == 0
+            and compact_runway_output_focus_review["pressedOutputs"] == ["thr_lock"]
+            and "wire_logic4_thr_lock" in compact_runway_output_focus_review["reviewObjectText"]
+            and compact_runway_output_focus_review["proofPathText"].startswith("蓝图")
+            and "THR_LOCK" in compact_runway_output_focus_review["outputMapReadback"]
+            and "wire_logic4_thr_lock" in compact_runway_output_focus_review["statusText"]
+            and "step=P035-S05" in compact_runway_output_focus_review["hash"]
+            and "focus=wire%3Awire_logic4_thr_lock" in compact_runway_output_focus_review["hash"]
         )
         else "fail",
         "docx_sentence_circuit_map": "pass"
@@ -5028,6 +5066,7 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
         "first_screen_review": first_screen_review,
         "compact_runway_initial_review": compact_runway_initial_review,
         "compact_runway_max_review": compact_runway_max_review,
+        "compact_runway_output_focus_review": compact_runway_output_focus_review,
         "compact_runway_inhibit_review": compact_runway_inhibit_review,
         "compact_runway_frame_sync_review": compact_runway_frame_sync_review,
         "compact_runway_operator_input_review": compact_runway_operator_input_review,
