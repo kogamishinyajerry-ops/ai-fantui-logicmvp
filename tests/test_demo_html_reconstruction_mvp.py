@@ -272,6 +272,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-proof-path-delta-rail-status"' in html
     assert 'id="demo-reconstruction-proof-path-delta-rail-list"' in html
     assert 'id="demo-reconstruction-proof-path-delta-rail-readback"' in html
+    assert 'id="demo-reconstruction-proof-path-source-rail"' in html
+    assert 'id="demo-reconstruction-proof-path-source-rail-status"' in html
+    assert 'id="demo-reconstruction-proof-path-source-rail-list"' in html
+    assert 'id="demo-reconstruction-proof-path-source-rail-readback"' in html
     assert 'data-proof-path="first-screen"' in html
     assert 'id="demo-reconstruction-scenario-comparator"' in html
     assert 'id="demo-reconstruction-scenario-comparator-status"' in html
@@ -434,6 +438,10 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert "applyProofPathDeltaStep" in script
     assert "applyProofPathDeltaObject" in script
     assert "proofPathDeltaFocusId" in script
+    assert "renderProofPathSourceRail" in script
+    assert "applyProofPathSourceStep" in script
+    assert "applyProofPathSourceAnchor" in script
+    assert "proofPathSourceAnchor" in script
     assert "renderProofPathOutputMap" in script
     assert "applyProofPathOutputTarget" in script
     assert "proofPathOutputTarget" in script
@@ -516,6 +524,9 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-proof-path-delta-rail" in stylesheet
     assert ".demo-reconstruction-proof-path-delta-step" in stylesheet
     assert ".demo-reconstruction-proof-path-delta-chip" in stylesheet
+    assert ".demo-reconstruction-proof-path-source-rail" in stylesheet
+    assert ".demo-reconstruction-proof-path-source-step" in stylesheet
+    assert ".demo-reconstruction-proof-path-source-anchors" in stylesheet
     assert ".demo-reconstruction-proof-path-output-map" in stylesheet
     assert ".demo-reconstruction-proof-path-output-map-list" in stylesheet
     assert ".demo-reconstruction-proof-path-step em" in stylesheet
@@ -1136,6 +1147,17 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert "wire_logic4_thr_lock" in payload["proof_path_delta_rail_focus_review"]["readbackText"]
     assert "wire_logic4_thr_lock" in payload["proof_path_delta_rail_focus_review"]["reviewObjectText"]
     assert "wire_logic4_thr_lock" in payload["proof_path_delta_rail_focus_review"]["inspectorObjectText"]
+    assert payload["proof_path_source_rail_review"]["stepCount"] == 5
+    assert payload["proof_path_source_rail_review"]["anchorChipCount"] >= 20
+    assert "5/5 步" in payload["proof_path_source_rail_review"]["statusText"]
+    assert "源句命中" in payload["proof_path_source_rail_review"]["statusText"]
+    assert "飞机离地小于6ft" in payload["proof_path_source_rail_review"]["firstText"]
+    assert "油门台反推电子锁" in payload["proof_path_source_rail_review"]["finalText"]
+    assert "P035" in payload["proof_path_source_rail_review"]["finalAnchors"]
+    assert payload["proof_path_source_rail_anchor_review"]["activeSteps"] == ["P035-S05"]
+    assert payload["proof_path_source_rail_anchor_review"]["selectedAnchor"] == "P035-S05"
+    assert "P035" in payload["proof_path_source_rail_anchor_review"]["readbackText"]
+    assert "油门台反推电子锁" in payload["proof_path_source_rail_anchor_review"]["readbackText"]
     assert payload["proof_path_output_map_review"]["targetCount"] == 5
     assert payload["proof_path_output_map_review"]["activeTargets"] == ["thr_lock"]
     assert "5/5" in payload["proof_path_output_map_review"]["statusText"]
@@ -1212,6 +1234,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
         "proof_path_timeline": "pass",
         "proof_path_coverage_grid": "pass",
         "proof_path_delta_rail": "pass",
+        "proof_path_source_rail": "pass",
         "proof_path_output_map": "pass",
         "scenario_comparator_readback": "pass",
         "review_verdict_readback": "pass",
