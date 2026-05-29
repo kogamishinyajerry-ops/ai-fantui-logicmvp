@@ -159,6 +159,8 @@
   const reviewIndexBuildList = $("demo-reconstruction-review-index-build-list");
   const reviewIndexOutputSummary = $("demo-reconstruction-review-index-output-summary");
   const reviewIndexOutputList = $("demo-reconstruction-review-index-output-list");
+  const reviewIndexScenarioSummary = $("demo-reconstruction-review-index-scenario-summary");
+  const reviewIndexScenarioList = $("demo-reconstruction-review-index-scenario-list");
   const reviewIndexList = $("demo-reconstruction-review-index-list");
   const nodeList = $("demo-reconstruction-node-list");
   const wireList = $("demo-reconstruction-wire-list");
@@ -445,7 +447,10 @@
     const thr = outputMirrorThrOutput && outputMirrorThrOutput.textContent
       ? outputMirrorThrOutput.textContent.trim()
       : "";
-    const outputText = [status, thr].filter((value) => value && !value.startsWith("等待") && value !== "--").join(" · ");
+    const thrText = thr && !thr.startsWith("THR ") && (thr === "ON" || thr === "BLOCKED")
+      ? `THR ${thr}`
+      : thr;
+    const outputText = [status, thrText].filter((value) => value && !value.startsWith("等待") && value !== "--").join(" · ");
     setText(reviewIndexReadiness, reviewPacketReadiness && reviewPacketReadiness.textContent
       ? reviewPacketReadiness.textContent.trim()
       : "等待交付读回");
@@ -602,6 +607,71 @@
     });
     setText(reviewIndexOutputSummary, `${readyCount}/${OUTPUT_PATH_TARGETS.length} 输出 · THR_LOCK 可审`);
     setReviewIndexOutputState(outputPathTargetId);
+  }
+
+  function reviewIndexScenarioRecords() {
+    return [
+      {
+        presetId: "max-reverse",
+        recordId: "runway-l4-thr-lock",
+        title: "最大反推",
+        expected: "DEPLOYED · THR ON",
+      },
+      {
+        presetId: "inhibit-block",
+        recordId: "runway-inhibit",
+        title: "抑制阻塞",
+        expected: "FAULT · THR BLOCKED",
+      },
+    ];
+  }
+
+  function setReviewIndexScenarioState(presetId) {
+    if (!reviewIndexScenarioList) return;
+    reviewIndexScenarioList.querySelectorAll("[data-review-index-scenario]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.reviewIndexScenario === presetId ? "true" : "false");
+    });
+  }
+
+  function applyReviewIndexScenario(presetId) {
+    const item = reviewIndexScenarioRecords().find((record) => record.presetId === presetId);
+    const runwayRecord = item ? operatorRunwayRecordById(item.recordId) : null;
+    if (!runwayRecord) return;
+    activateOperatorRunwayRecord(runwayRecord);
+    setReviewIndexTarget("demo-reconstruction-operator-runway");
+    setReviewIndexScenarioState(presetId);
+    const target = $("demo-reconstruction-operator-runway");
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  }
+
+  function renderReviewIndexScenarioRail() {
+    if (!reviewIndexScenarioList) return;
+    reviewIndexScenarioList.innerHTML = "";
+    reviewIndexScenarioRecords().forEach((item) => {
+      const runwayRecord = operatorRunwayRecordById(item.recordId);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.reviewIndexScenario = item.presetId;
+      button.setAttribute("aria-pressed", runwayRecord && runwayRecord.id === activeOperatorRunwayId ? "true" : "false");
+
+      const title = document.createElement("strong");
+      title.textContent = item.title;
+      const expected = document.createElement("span");
+      expected.textContent = item.expected;
+      const meta = document.createElement("small");
+      meta.textContent = runwayRecord
+        ? `${runwayRecord.order}/06 · ${runwayRecord.anchor} · ${runwayRecord.output}`
+        : "等待场景";
+
+      button.append(title, expected, meta);
+      button.addEventListener("click", () => applyReviewIndexScenario(item.presetId));
+      reviewIndexScenarioList.appendChild(button);
+    });
+    setText(reviewIndexScenarioSummary, `${SCENARIO_COMPARATOR_IDS.length}/2 场景 · THR_LOCK 对照`);
+    const activeRecord = operatorRunwayRecordById(activeOperatorRunwayId);
+    setReviewIndexScenarioState(activeRecord ? activeRecord.presetId : "");
   }
 
   function appendChipGroup(container, label, values, className, highlightKind) {
@@ -2072,6 +2142,7 @@
     } else {
       setText(scenarioComparatorReadback, "运行最大反推和抑制阻塞，核对 THR_LOCK 输出差异");
     }
+    renderReviewIndexScenarioRail();
   }
 
   function installScenarioComparatorActions() {
@@ -2261,6 +2332,7 @@
     setText(controlStripPath, pathText);
     setText(controlStripStatus, activeRecord ? `${activeRecord.order}/06 · ${activeRecord.presetLabel}` : "等待选择");
     setControlStripActionState(activeRecord ? activeRecord.id : "");
+    setReviewIndexScenarioState(activeRecord ? activeRecord.presetId : "");
   }
 
   function activateControlStripAction(action) {
@@ -4546,6 +4618,7 @@
     renderTopologyMatrix();
     renderOutputMaturityMatrix(steps);
     renderOperatorRunway();
+    renderReviewIndexScenarioRail();
     renderProofTranscript();
   }
 
