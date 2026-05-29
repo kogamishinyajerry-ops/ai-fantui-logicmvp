@@ -198,6 +198,13 @@
   const compactRunwayLock = $("demo-reconstruction-compact-runway-lock");
   const compactRunwaySummary = $("demo-reconstruction-compact-runway-summary");
   const compactRunwayButtons = Array.from(document.querySelectorAll("[data-compact-runway-preset]"));
+  const compactRunwayTra = $("demo-reconstruction-compact-runway-tra");
+  const compactRunwayTraValue = $("demo-reconstruction-compact-runway-tra-value");
+  const compactRunwayVdt = $("demo-reconstruction-compact-runway-vdt");
+  const compactRunwayVdtValue = $("demo-reconstruction-compact-runway-vdt-value");
+  const compactRunwayInhibit = $("demo-reconstruction-compact-runway-inhibit");
+  const compactRunwayInhibitValue = $("demo-reconstruction-compact-runway-inhibit-value");
+  const compactRunwayApply = $("demo-reconstruction-compact-runway-apply");
   const sourceEntryList = $("demo-reconstruction-source-entry-list");
   const sequenceStepList = $("demo-reconstruction-sequence-step-list");
   const requirementLedgerSummary = $("demo-reconstruction-requirement-ledger-summary");
@@ -374,6 +381,7 @@
   let outputMirrorObserver = null;
   let scenarioLedgerRecords = new Map();
   let activeOperatorRunwayId = "";
+  let compactRunwayMode = "";
   const PROOF_PATH_LANE_MODES = ["blueprint", "source", "matrix", "object", "all"];
 
   function readJson(value) {
@@ -2576,6 +2584,35 @@
     return value || fallback;
   }
 
+  function frameNumber(frameDocument, selector, fallback) {
+    const element = frameDocument ? frameDocument.querySelector(selector) : null;
+    const value = element ? Number(element.value) : Number.NaN;
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function frameChecked(frameDocument, selector, fallback = false) {
+    const element = frameDocument ? frameDocument.querySelector(selector) : null;
+    return element ? !!element.checked : fallback;
+  }
+
+  function dispatchFrameEvent(frameDocument, element, type) {
+    if (!frameDocument || !element) return;
+    const EventCtor = frameDocument.defaultView ? frameDocument.defaultView.Event : Event;
+    element.dispatchEvent(new EventCtor(type, {bubbles: true}));
+  }
+
+  function setFrameValue(frameDocument, selector, value) {
+    const element = frameDocument ? frameDocument.querySelector(selector) : null;
+    if (element) element.value = String(value);
+    return element;
+  }
+
+  function setFrameChecked(frameDocument, selector, value) {
+    const element = frameDocument ? frameDocument.querySelector(selector) : null;
+    if (element) element.checked = !!value;
+    return element;
+  }
+
   function activeScenarioFromFrame(frameDocument) {
     const button = frameDocument ? frameDocument.querySelector(".fan-preset-btn[aria-pressed='true']") : null;
     if (!button || !button.dataset.preset) return null;
@@ -2597,6 +2634,15 @@
     };
   }
 
+  function clearFramePresetState(frameDocument) {
+    if (!frameDocument) return;
+    frameDocument.querySelectorAll(".fan-preset-btn").forEach((button) => {
+      button.setAttribute("aria-pressed", "false");
+    });
+    const status = frameDocument.querySelector("#fan-preset-status");
+    if (status) status.textContent = "当前场景：手动输入";
+  }
+
   function applyScenarioPreset(presetId) {
     if (!consoleFrame || !presetId) return;
     const frameDocument = consoleFrame.contentDocument;
@@ -2609,6 +2655,7 @@
   function compactScenarioLabel(presetId) {
     if (presetId === "max-reverse") return "最大反推";
     if (presetId === "inhibit-block") return "抑制阻塞";
+    if (presetId === "operator") return "当前输入";
     return "等待运行";
   }
 
@@ -2639,6 +2686,42 @@
     return snapshot.summary || "等待输出";
   }
 
+  function compactOperatorSummary(snapshot) {
+    if (!snapshot) return "运行当前输入";
+    const state = compactStatusLabel(snapshot.status);
+    const lock = compactLockLabel(snapshot.thr);
+    if (state === "可用" && lock === "释放") return "当前输入允许反推锁释放";
+    if (state === "阻塞" || lock === "阻塞") return "当前输入保持安全阻塞";
+    if (lock === "未释放") return "当前输入未释放反推锁";
+    return snapshot.summary || "当前输入等待结果";
+  }
+
+  function compactAngleLabel(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return "0°";
+    return `${Number.isInteger(numeric) ? numeric.toFixed(0) : numeric.toFixed(1)}°`;
+  }
+
+  function updateCompactOperatorInputLabels() {
+    if (compactRunwayTra && compactRunwayTraValue) {
+      setText(compactRunwayTraValue, compactAngleLabel(compactRunwayTra.value));
+    }
+    if (compactRunwayVdt && compactRunwayVdtValue) {
+      setText(compactRunwayVdtValue, `${Math.round(Number(compactRunwayVdt.value) || 0)}%`);
+    }
+    if (compactRunwayInhibit && compactRunwayInhibitValue) {
+      setText(compactRunwayInhibitValue, compactRunwayInhibit.checked ? "开启" : "关闭");
+    }
+  }
+
+  function syncCompactOperatorInputsFromFrame(frameDocument) {
+    if (!frameDocument) return;
+    if (compactRunwayTra) compactRunwayTra.value = String(frameNumber(frameDocument, "#fan-tra-lever", Number(compactRunwayTra.value) || 0));
+    if (compactRunwayVdt) compactRunwayVdt.value = String(frameNumber(frameDocument, "#fan-vdt", Number(compactRunwayVdt.value) || 0));
+    if (compactRunwayInhibit) compactRunwayInhibit.checked = frameChecked(frameDocument, "#fan-reverser-inhibited", compactRunwayInhibit.checked);
+    updateCompactOperatorInputLabels();
+  }
+
   function setCompactRunwayButtonState(activeId = "") {
     compactRunwayButtons.forEach((button) => {
       button.setAttribute(
@@ -2651,6 +2734,17 @@
   function updateCompactRunwayFromFrame(frameDocument) {
     if (!compactRunwayStatus || !compactRunwayState || !compactRunwayLock || !compactRunwaySummary) return;
     const active = activeScenarioFromFrame(frameDocument);
+    const snapshot = scenarioOutputSnapshot(frameDocument);
+    syncCompactOperatorInputsFromFrame(frameDocument);
+    if (active) compactRunwayMode = active.id;
+    if (!active && compactRunwayMode === "operator") {
+      setCompactRunwayButtonState("");
+      setText(compactRunwayStatus, compactScenarioLabel("operator"));
+      setText(compactRunwayState, compactStatusLabel(snapshot.status));
+      setText(compactRunwayLock, compactLockLabel(snapshot.thr));
+      setText(compactRunwaySummary, compactOperatorSummary(snapshot));
+      return;
+    }
     if (!active) {
       setCompactRunwayButtonState("");
       setText(compactRunwayStatus, "等待运行");
@@ -2659,7 +2753,6 @@
       setText(compactRunwaySummary, "选择演示状态");
       return;
     }
-    const snapshot = scenarioOutputSnapshot(frameDocument);
     setCompactRunwayButtonState(active.id);
     setText(compactRunwayStatus, compactScenarioLabel(active.id));
     setText(compactRunwayState, compactStatusLabel(snapshot.status));
@@ -2668,9 +2761,11 @@
   }
 
   function installCompactRunwayActions() {
+    updateCompactOperatorInputLabels();
     compactRunwayButtons.forEach((button) => {
       const presetId = button.dataset.compactRunwayPreset || "";
       button.addEventListener("click", () => {
+        compactRunwayMode = presetId;
         setCompactRunwayButtonState(presetId);
         setText(compactRunwayStatus, compactScenarioLabel(presetId));
         setText(compactRunwayState, "运行中");
@@ -2680,6 +2775,44 @@
         requestAnimationFrame(updateOutputMirrorFromFrame);
       });
     });
+    [compactRunwayTra, compactRunwayVdt].forEach((input) => {
+      if (input) input.addEventListener("input", updateCompactOperatorInputLabels);
+    });
+    if (compactRunwayInhibit) {
+      compactRunwayInhibit.addEventListener("change", updateCompactOperatorInputLabels);
+    }
+    if (compactRunwayApply) {
+      compactRunwayApply.addEventListener("click", applyCompactOperatorInputs);
+    }
+  }
+
+  function applyCompactOperatorInputs() {
+    if (!consoleFrame) return;
+    const frameDocument = consoleFrame.contentDocument;
+    if (!frameDocument) return;
+    const tra = compactRunwayTra ? Number(compactRunwayTra.value) || 0 : -32;
+    const vdt = compactRunwayVdt ? Number(compactRunwayVdt.value) || 0 : 100;
+    const inhibit = compactRunwayInhibit ? compactRunwayInhibit.checked : false;
+    compactRunwayMode = "operator";
+    clearFramePresetState(frameDocument);
+    frameDocument.querySelectorAll(".fan-fault-check").forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+    setFrameValue(frameDocument, "#fan-ra", 2);
+    setFrameValue(frameDocument, "#fan-n1k", inhibit ? 70 : 80);
+    setFrameChecked(frameDocument, "#fan-engine-running", true);
+    setFrameChecked(frameDocument, "#fan-aircraft-on-ground", true);
+    setFrameChecked(frameDocument, "#fan-eec-enable", true);
+    setFrameChecked(frameDocument, "#fan-reverser-inhibited", inhibit);
+    setFrameValue(frameDocument, "#fan-tra-lever", tra);
+    const vdtElement = setFrameValue(frameDocument, "#fan-vdt", vdt);
+    setCompactRunwayButtonState("");
+    setText(compactRunwayStatus, compactScenarioLabel("operator"));
+    setText(compactRunwayState, "运行中");
+    setText(compactRunwayLock, "等待输出");
+    setText(compactRunwaySummary, "正在读取结果");
+    dispatchFrameEvent(frameDocument, vdtElement, "input");
+    requestAnimationFrame(updateOutputMirrorFromFrame);
   }
 
   function scenarioComparatorLabel(presetId) {

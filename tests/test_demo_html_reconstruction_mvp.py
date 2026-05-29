@@ -177,7 +177,11 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert 'id="demo-reconstruction-compact-runway"' in html
     assert 'data-compact-runway-preset="max-reverse"' in html
     assert 'data-compact-runway-preset="inhibit-block"' in html
-    assert "验证两种典型状态" in html
+    assert 'id="demo-reconstruction-compact-runway-tra"' in html
+    assert 'id="demo-reconstruction-compact-runway-vdt"' in html
+    assert 'id="demo-reconstruction-compact-runway-inhibit"' in html
+    assert 'id="demo-reconstruction-compact-runway-apply"' in html
+    assert "操作者快速面板" in html
     assert 'id="demo-reconstruction-detail-drawer"' in html
     assert "查看验收详情" in html
     assert "等待闭环链路" in html
@@ -576,6 +580,8 @@ def test_demo_reconstruction_route_is_main_mvp_console_not_comparison_page() -> 
     assert ".demo-reconstruction-circuit-snapshot-metrics" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-details" in stylesheet
     assert ".demo-reconstruction-compact-runway" in stylesheet
+    assert ".demo-reconstruction-compact-runway-controls" in stylesheet
+    assert ".demo-reconstruction-compact-runway-apply" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-chain" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-list" in stylesheet
     assert ".demo-reconstruction-circuit-snapshot-step" in stylesheet
@@ -851,6 +857,7 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     }
     assert payload["compact_runway_initial_review"]["visible"] is True
     assert payload["compact_runway_initial_review"]["buttonCount"] == 2
+    assert payload["compact_runway_initial_review"]["controlCount"] == 3
     assert payload["compact_runway_max_review"]["pressed"] == ["max-reverse"]
     assert payload["compact_runway_max_review"]["statusText"] == "最大反推"
     assert payload["compact_runway_max_review"]["stateText"] == "可用"
@@ -863,6 +870,11 @@ def test_demo_html_reconstruction_browser_acceptance_script_captures_interaction
     assert payload["compact_runway_frame_sync_review"]["statusText"] == "抑制阻塞"
     assert payload["compact_runway_frame_sync_review"]["stateText"] == "阻塞"
     assert payload["compact_runway_frame_sync_review"]["lockText"] == "阻塞"
+    assert payload["compact_runway_operator_input_review"]["pressed"] == []
+    assert payload["compact_runway_operator_input_review"]["statusText"] == "当前输入"
+    assert payload["compact_runway_operator_input_review"]["stateText"] == "阻塞"
+    assert payload["compact_runway_operator_input_review"]["lockText"] == "阻塞"
+    assert payload["compact_runway_operator_input_review"]["inhibitChecked"] is True
     assert payload["source_map_review"]["sourceEntryCount"] >= 10
     assert payload["source_map_review"]["reviewIndexButtonCount"] == 13
     assert payload["source_map_review"]["requirementLedgerRowCount"] == 67
