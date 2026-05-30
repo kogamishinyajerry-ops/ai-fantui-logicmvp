@@ -976,7 +976,7 @@
       sourceTitle.textContent = isDocxTemplateDrawing() ? "DOCX L1-L4 模板候选" : "本地逻辑图纸";
       sourceSummary.textContent = isDocxTemplateDrawing()
         ? "来自逻辑绘制页的 DOCX L1-L4 本地候选；不会调用模型、tick 或控制器真值。"
-        : (drawing.summary_zh || "已读取本地保存的模型图纸；缺少需求 payload 时仅保持候选态展示。");
+        : (drawing.summary_zh || "已读取本地保存的模型图纸；缺少需求数据时仅保持候选态展示。");
       sourceMetrics.textContent = `${(drawing.nodes || []).length} nodes · ${(drawing.edges || []).length} edges · ${(drawing.parameter_panels || []).length} panels`;
       renderSourceDeferral();
       renderBurdenSummary(state.faultPayload);

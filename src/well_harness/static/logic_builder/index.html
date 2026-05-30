@@ -200,10 +200,10 @@
               </label>
             </div>
             <div class="logic-circuit-check-grid">
-              <label><input type="checkbox" id="logic-circuit-engine-running" checked> engine_running</label>
-              <label><input type="checkbox" id="logic-circuit-aircraft-on-ground"> aircraft_on_ground</label>
-              <label><input type="checkbox" id="logic-circuit-reverser-inhibited"> reverser_inhibited</label>
-              <label><input type="checkbox" id="logic-circuit-eec-enable" checked> eec_enable</label>
+              <label><input type="checkbox" id="logic-circuit-engine-running" checked> 发动机运行</label>
+              <label><input type="checkbox" id="logic-circuit-aircraft-on-ground"> 飞机在地</label>
+              <label><input type="checkbox" id="logic-circuit-reverser-inhibited"> 反推抑制</label>
+              <label><input type="checkbox" id="logic-circuit-eec-enable" checked> EEC 允许</label>
             </div>
             <details id="logic-circuit-status-details" class="logic-circuit-status-details">
               <summary>
@@ -316,7 +316,7 @@
       </details>
       <section id="logic-streamed-authoring-panel" class="logic-streamed-authoring-panel" data-streamed-authoring="m21" data-panel-visibility="collapsed" data-natural-language-step-confirmation="waiting" data-demo-html-aesthetic-reference="src/well_harness/static/demo.html#fan-chain-svg" aria-label="工程师在场流式建模" hidden>
         <div class="logic-stream-head">
-          <p class="logic-kicker">M21 STREAM</p>
+          <p class="logic-kicker">逐笔确认</p>
           <strong id="logic-streamed-status">等待候选图纸</strong>
         </div>
         <div id="logic-streamed-current" class="logic-streamed-current" data-candidate-edit="current">
@@ -505,8 +505,8 @@
             <label class="logic-drawer-preset"><span>预设场景</span><select id="logic-drawer-preset"><option value="">手动</option><option value="landing-deploy">着陆展开</option><option value="max-reverse">最大反推</option><option value="stow-return">收起回杆</option><option value="inhibit-block">抑制阻塞</option></select></label>
           </div>
           <div id="logic-drawer-run-mode" class="logic-drawer-mode-toggle" role="group" aria-label="仿真模式">
-            <button id="logic-drawer-run-mode-dry" type="button" data-drawer-run-mode="dry-run" aria-pressed="true">dry-run（不写入真值）</button>
-            <button id="logic-drawer-run-mode-real" type="button" data-drawer-run-mode="real-value" aria-pressed="false">real-value（写入）</button>
+            <button id="logic-drawer-run-mode-dry" type="button" data-drawer-run-mode="dry-run" aria-pressed="true">试运行（不写入真值）</button>
+            <button id="logic-drawer-run-mode-real" type="button" data-drawer-run-mode="real-value" aria-pressed="false">实值写入（写入）</button>
           </div>
         </section>
         <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="run" hidden>

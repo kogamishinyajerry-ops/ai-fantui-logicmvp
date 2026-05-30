@@ -57,10 +57,10 @@
   }
 
   function wireLabel(wire, index) {
-    if (!wire || typeof wire !== "object") return `wire_${index}`;
+    if (!wire || typeof wire !== "object") return `连线 ${index}`;
     const source = wire.source || "source";
     const target = wire.target || "target";
-    return `${wire.id || `wire_${index}`}：${source} -> ${target}`;
+    return `${source} → ${target}`;
   }
 
   function renderList(list, items, formatter) {

@@ -619,7 +619,7 @@
           <article class="clarification-card recovery-card">
             <div class="clarification-card-head">
               <strong>模型输出无效</strong>
-              <code>recovery</code>
+              <code>已回退重试</code>
             </div>
             <p>本轮没有新的问题，也没有可绘制节点或连线；缺失字段：${escapeText(missing)}。</p>
             <div class="clarification-actions recovery-actions">
@@ -777,7 +777,7 @@
   }
 
   function renderClarificationTrace() {
-    traceCount.textContent = `${state.analysisRounds.length} rounds`;
+    traceCount.textContent = `${state.analysisRounds.length} 轮`;
     traceList.innerHTML = "";
     if (!state.analysisRounds.length) {
       traceList.innerHTML = '<p class="muted">每轮模型分析完成后，会在这里记录问题、回答和下一步判断。</p>';
@@ -800,9 +800,9 @@
         </div>
         <p class="trace-reason">${escapeText(round.blocking_reason)}</p>
         <div class="trace-metrics">
-          <span>${escapeText(round.question_count)} questions</span>
-          <span>${escapeText(round.node_count)} nodes</span>
-          <span>${escapeText(round.edge_count)} edges</span>
+          <span>${escapeText(round.question_count)} 问题</span>
+          <span>${escapeText(round.node_count)} 节点</span>
+          <span>${escapeText(round.edge_count)} 连线</span>
         </div>
         <p class="trace-summary">${escapeText(round.summary_zh)}</p>
         <details>
