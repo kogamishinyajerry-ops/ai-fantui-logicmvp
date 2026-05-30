@@ -569,7 +569,8 @@
       streamedRevisionFeedback.textContent = feedbackText;
     }
     if (streamedRevisionBoundary) {
-      streamedRevisionBoundary.textContent = "candidate graph only · truth_effect:none";
+      streamedRevisionBoundary.dataset.boundaryToken = "truth_effect:none";
+      streamedRevisionBoundary.textContent = "候选图谱专用 · 真值影响：无";
     }
     if (isRevisedCandidate && streamedAuthoringPanel) {
       window.requestAnimationFrame(() => {
@@ -812,7 +813,7 @@
       if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = "流式建模完成";
       if (streamedAuthoringExplanation) streamedAuthoringExplanation.textContent = "所有候选节点和连线都已有工程师决策记录。";
       if (streamedAuthoringSource) streamedAuthoringSource.textContent = "未触发需求文档自动修改。";
-      if (streamedAuthoringNeighborhood) streamedAuthoringNeighborhood.textContent = "candidate graph only · truth_effect:none";
+      if (streamedAuthoringNeighborhood) { streamedAuthoringNeighborhood.dataset.boundaryToken = "truth_effect:none"; streamedAuthoringNeighborhood.textContent = "候选图谱专用 · 真值影响：无"; }
       if (streamedAuthoringConfirm) streamedAuthoringConfirm.disabled = true;
       if (streamedAuthoringRevise) streamedAuthoringRevise.disabled = true;
       syncStreamedRevisionReceipt(null);
