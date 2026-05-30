@@ -75,13 +75,13 @@
     </article>
     <article class="docx-circuit-compact-card" data-compact-review-card="logic">
       <span>逻辑</span>
-      <strong id="docx-circuit-compact-logic-title">wire_logic4_thr_lock</strong>
+      <strong id="docx-circuit-compact-logic-title">L4 → THR_LOCK</strong>
       <p id="docx-circuit-compact-logic-text">L4 · 等待映射。</p>
     </article>
     <article class="docx-circuit-compact-card" data-compact-review-card="circuit">
       <span>电路</span>
       <strong id="docx-circuit-compact-demo-title">最大反推（展开到位）</strong>
-      <p id="docx-circuit-compact-demo-text">20/20 节点 · 23/23 连线 · 等待 iframe 加载。</p>
+      <p id="docx-circuit-compact-demo-text">20/20 节点 · 23/23 连线 · 等待控制台加载。</p>
     </article>
   </section>
 
@@ -237,27 +237,27 @@
           <strong id="docx-circuit-trail-element">L4 → THR_LOCK</strong>
         </div>
         <div>
-          <span>demo</span>
+          <span>场景</span>
           <strong id="docx-circuit-trail-demo">最大反推（展开到位）</strong>
         </div>
       </section>
 
       <details id="docx-circuit-trace-details" class="docx-circuit-collapsible" data-default-collapsed="true">
         <summary>来源定位</summary>
-        <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="电路元素反查" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
+        <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="电路元素来源定位" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
           <div class="docx-circuit-trace-head">
             <h3>元素来源</h3>
-            <span id="docx-circuit-trace-selected-id">wire_logic4_thr_lock</span>
+            <span id="docx-circuit-trace-selected-id">L4 → THR_LOCK</span>
           </div>
           <dl class="docx-circuit-trace-summary">
-            <div><dt>类型</dt><dd id="docx-circuit-trace-type">线束</dd></div>
+            <div><dt>类型</dt><dd id="docx-circuit-trace-type">连线</dd></div>
             <div><dt>逻辑层</dt><dd id="docx-circuit-trace-logic-level">L4</dd></div>
-            <div><dt>折叠谓词</dt><dd id="docx-circuit-trace-folded">等待映射</dd></div>
+            <div><dt>合并条件</dt><dd id="docx-circuit-trace-folded">等待映射</dd></div>
           </dl>
           <div class="docx-circuit-trace-evidence">
             <strong>需求来源</strong>
             <ul id="docx-circuit-trace-evidence-list">
-              <li>等待读取元素反查映射</li>
+              <li>等待读取元素来源映射</li>
             </ul>
           </div>
         </section>
@@ -272,9 +272,9 @@
         </div>
       </section>
 
-      <section class="docx-circuit-svg-card" aria-label="P035 局部 SVG 子电路">
+      <section class="docx-circuit-svg-card" aria-label="P035 局部子电路">
         <div class="docx-circuit-svg-head">
-          <h3>局部 SVG 子电路</h3>
+          <h3>局部子电路</h3>
           <span id="docx-circuit-svg-summary">20 节点 · 23 连线</span>
         </div>
         <div class="docx-circuit-svg-frame">
@@ -305,7 +305,7 @@
       <div class="docx-circuit-demo-sync" aria-live="polite">
         <span>控制台同步场景</span>
         <strong id="docx-circuit-demo-scenario">最大反推（展开到位）</strong>
-        <em id="docx-circuit-demo-sync-status">等待 iframe 加载</em>
+        <em id="docx-circuit-demo-sync-status">等待控制台加载</em>
       </div>
       <iframe id="docx-circuit-demo-frame" src="/demo.html?embed=1&amp;palette=codex-light" title="完整反推逻辑电路"></iframe>
     </article>

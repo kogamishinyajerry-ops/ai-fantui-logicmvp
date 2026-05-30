@@ -30,7 +30,7 @@
   };
 
   const LOGIC_IDS = ["logic1", "logic2", "logic3", "logic4"];
-  const TRACE_KIND_LABELS = {node: "节点", wire: "线束"};
+  const TRACE_KIND_LABELS = {node: "节点", wire: "连线"};
   const WORKBENCH_SECTION_ANCHORS = [
     "docx-circuit-source-index-panel",
     "docx-circuit-review-panel",
@@ -264,7 +264,7 @@
       : "动作链路";
     const predicate = Array.isArray(folded) && folded.length > 0
       ? compactText(folded.join("；"), 96)
-      : "无折叠谓词";
+      : "无合并条件";
     setText(compactLogicTitle, elementDisplayLabel(kind, id));
     setText(compactLogicText, `${levels} · ${TRACE_KIND_LABELS[kind] || kind} · ${predicate}`);
   }
@@ -606,14 +606,14 @@
     setText(traceSelectedId, elementDisplayLabel(kind, id));
     setText(traceType, TRACE_KIND_LABELS[kind] || kind);
     setText(traceLogicLevel, logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
-    setText(traceFolded, folded.length > 0 ? folded.join("；") : "无折叠谓词");
+    setText(traceFolded, folded.length > 0 ? folded.join("；") : "无合并条件");
     renderCompactLogic(kind, id, logicLevels, folded);
     renderAcceptanceTrail(currentStep(), kind, id, logicLevels);
 
     if (!traceEvidenceList) return;
     traceEvidenceList.innerHTML = "";
     steps.forEach((step) => {
-      appendEvidenceItem(step.anchor || "P035", step.title || "P035 步骤", step.source_text || "", "sequence_step");
+      appendEvidenceItem(step.anchor || "P035", step.title || "工序步骤", step.source_text || "", "sequence_step");
     });
     entries.forEach((entry) => {
       appendEvidenceItem(entry.anchor || "DOCX", sourceEntryDisplayRole(entry), entry.text || "", "source_entry");
@@ -634,7 +634,7 @@
   function installElementInteraction(element, kind, id, label) {
     element.setAttribute("role", "button");
     element.setAttribute("tabindex", "0");
-    element.setAttribute("aria-label", `反查 ${TRACE_KIND_LABELS[kind] || kind} ${label || id}`);
+    element.setAttribute("aria-label", `查看 ${TRACE_KIND_LABELS[kind] || kind} ${label || id} 的来源`);
     element.addEventListener("click", () => selectCircuitElement(kind, id));
     element.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -789,8 +789,8 @@
     const scenario = DEMO_SCENARIOS[step.anchor] || DEMO_SCENARIOS[DEFAULT_STEP_ANCHOR];
     setText(demoScenario, scenario.label);
     if (!demoFrame || !demoFrame.contentDocument) {
-      setText(demoSyncStatus, "等待 iframe 加载");
-      renderCompactDemo(scenario, "等待 iframe 加载");
+      setText(demoSyncStatus, "等待控制台加载");
+      renderCompactDemo(scenario, "等待控制台加载");
       return;
     }
     const doc = demoFrame.contentDocument;
@@ -1035,7 +1035,7 @@
       : "未标注";
     const predicates = Array.isArray(element.folded_predicates) && element.folded_predicates.length > 0
       ? element.folded_predicates.join("；")
-      : "无折叠谓词";
+      : "无合并条件";
     return [
       "## DOCX 电路验收摘要",
       "",
@@ -1043,7 +1043,7 @@
       `- 需求句子: \`${source.anchor || ""}\` ${source.title || ""}`,
       `- 选中元素: ${element.display_label || element.label || ""}`,
       `- 逻辑层级: ${levels}`,
-      `- 折叠谓词: ${predicates}`,
+      `- 合并条件: ${predicates}`,
       `- 覆盖范围: \`${packet.evidence_scope || "unknown"}\``,
       "- 边界: `truth_effect=none`, `certification_claim=none`",
       "",
