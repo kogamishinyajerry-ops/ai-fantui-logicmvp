@@ -242,7 +242,7 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 rawReviewPacketHidden: Boolean(previewText && getComputedStyle(previewText).display === "none"),
                 reviewPacketPreviewVisible: Boolean(
                     previewText
-                    && previewText.textContent.includes("## DOCX 电路交付摘要")
+                    && previewText.textContent.includes("## DOCX 电路验收摘要")
                     && deliveryPanel
                     && deliveryPanel.getBoundingClientRect().height > 0
                     && getComputedStyle(previewText).display === "none"
@@ -546,7 +546,7 @@ def _capture_responsive_state(
             const text = document.querySelector("#docx-circuit-review-packet-preview-text");
             const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
             return preview?.open
-              && text?.textContent.includes("## DOCX 电路交付摘要")
+              && text?.textContent.includes("## DOCX 电路验收摘要")
               && deliveryPanel
               && deliveryPanel.getBoundingClientRect().height > 0
               && getComputedStyle(text).display === "none";
@@ -566,12 +566,12 @@ def _capture_responsive_state(
 
 def _review_packet_markdown_valid(value: str) -> bool:
     required = [
-        "## DOCX 电路交付摘要",
+        "## DOCX 电路验收摘要",
         "### 摘要",
         "- 需求句子: `P035-S01`",
         "- 选中元素: SW1",
-        "### P035 证据",
-        "### DOCX 证据",
+        "### 工序来源",
+        "### 需求来源",
         "### JSON",
         "```json",
         '"kind": "docx_circuit_review_packet"',
@@ -661,7 +661,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                         const text = document.querySelector("#docx-circuit-review-packet-preview-text");
                         const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
                         return preview?.open
-                          && text?.textContent.includes("## DOCX 电路交付摘要")
+                          && text?.textContent.includes("## DOCX 电路验收摘要")
                           && deliveryPanel
                           && deliveryPanel.getBoundingClientRect().height > 0
                           && getComputedStyle(text).display === "none";
@@ -676,7 +676,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.locator("#docx-circuit-copy-trace-packet").click()
                 page.wait_for_function(
-                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("交付摘要已复制")""",
+                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("验收摘要已复制")""",
                     timeout=7000,
                 )
                 copied_review_packet = page.evaluate("navigator.clipboard.readText()")

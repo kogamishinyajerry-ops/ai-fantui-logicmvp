@@ -538,7 +538,7 @@
     setText(trailSource, [step.anchor, step.title].filter(Boolean).join(" · "));
     setText(trailLogic, Array.isArray(logicLevels) && logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
     setText(trailElement, elementDisplayLabel(kind, id));
-    setText(trailDemo, scenario ? scenario.label : "demo.html 同步");
+    setText(trailDemo, scenario ? scenario.label : "控制台同步");
   }
 
   function setSelectedElementState(kind, id) {
@@ -619,7 +619,7 @@
       appendEvidenceItem(entry.anchor || "DOCX", sourceEntryDisplayRole(entry), entry.text || "", "source_entry");
     });
     if (traceEvidenceList.children.length === 0) {
-      appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前选择没有命中可展示证据。", "empty");
+      appendEvidenceItem("未命中", "暂无直接需求来源", "当前选择没有命中可展示来源。", "empty");
     }
     renderTracePacketPreview();
   }
@@ -976,7 +976,7 @@
   function markdownEvidenceList(items, fallback) {
     if (!Array.isArray(items) || items.length === 0) return `- ${fallback}`;
     return items
-      .map((item) => `- \`${item.anchor || "DOCX"}\` ${item.title || item.role || "证据"}: ${item.text || ""}`)
+      .map((item) => `- \`${item.anchor || "DOCX"}\` ${item.title || item.role || "来源"}: ${item.text || ""}`)
       .join("\n");
   }
 
@@ -1007,7 +1007,7 @@
       ? element.logic_levels.join(" / ")
       : "动作链路";
     const evidenceItems = [
-      ...listFrom(evidence.p035).slice(0, 2).map((item) => ({...item, role: item.title || "P035 证据"})),
+      ...listFrom(evidence.p035).slice(0, 2).map((item) => ({...item, role: item.title || "工序来源"})),
       ...listFrom(evidence.docx).slice(0, 2).map((item) => ({...item, role: sourceEntryDisplayRole(item)})),
     ];
     setText(deliveryAnchor, source.anchor || currentAnchor);
@@ -1015,13 +1015,13 @@
     setText(deliveryElement, element.display_label || element.label || "等待选择");
     setText(deliveryLevels, logicLevels);
     setText(deliveryScope, evidenceScopeLabel(packet.evidence_scope));
-    setText(deliveryBoundary, "不改控制逻辑 · 不作适航声明");
+    setText(deliveryBoundary, "只读复刻 · 人工复核");
     if (!deliveryEvidenceList) return;
     deliveryEvidenceList.innerHTML = "";
-    evidenceItems.forEach((item) => appendDeliveryEvidenceItem(item, "证据"));
+    evidenceItems.forEach((item) => appendDeliveryEvidenceItem(item, "来源"));
     if (deliveryEvidenceList.children.length === 0) {
       const row = document.createElement("li");
-      row.textContent = "当前选择没有命中可展示证据。";
+      row.textContent = "当前选择没有命中可展示来源。";
       deliveryEvidenceList.appendChild(row);
     }
   }
@@ -1037,21 +1037,21 @@
       ? element.folded_predicates.join("；")
       : "无折叠谓词";
     return [
-      "## DOCX 电路交付摘要",
+      "## DOCX 电路验收摘要",
       "",
       "### 摘要",
       `- 需求句子: \`${source.anchor || ""}\` ${source.title || ""}`,
       `- 选中元素: ${element.display_label || element.label || ""}`,
       `- 逻辑层级: ${levels}`,
       `- 折叠谓词: ${predicates}`,
-      `- 证据范围: \`${packet.evidence_scope || "unknown"}\``,
+      `- 覆盖范围: \`${packet.evidence_scope || "unknown"}\``,
       "- 边界: `truth_effect=none`, `certification_claim=none`",
       "",
-      "### P035 证据",
-      markdownEvidenceList(evidence.p035, "无 P035 证据"),
+      "### 工序来源",
+      markdownEvidenceList(evidence.p035, "无工序来源"),
       "",
-      "### DOCX 证据",
-      markdownEvidenceList(evidence.docx, "无 DOCX 证据"),
+      "### 需求来源",
+      markdownEvidenceList(evidence.docx, "无需求来源"),
       "",
       "### JSON",
       "```json",
@@ -1098,7 +1098,7 @@
       renderTracePacketPreview();
       await copyText(packet);
       copyTracePacketButton.dataset.copyState = "success";
-      setText(copyStatus, "交付摘要已复制");
+      setText(copyStatus, "验收摘要已复制");
     } catch (error) {
       copyTracePacketButton.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");

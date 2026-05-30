@@ -30,7 +30,7 @@
         <div class="unified-nav-advanced-group">
           <span class="unified-nav-advanced-group-label">电路图</span>
           <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
-          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">原版 demo.html</a>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">原版控制台</a>
         </div>
       </div>
     </details>
@@ -44,7 +44,7 @@
       <h1 id="docx-circuit-title">反推需求到可运行电路</h1>
       <p>
         以 <strong id="docx-circuit-source-path" data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx">已登记源文档</strong>
-        为需求源头，串联 L1-L4 逻辑复刻和 demo.html 电路验收。
+        为需求源头，串联 L1-L4 逻辑复刻和复刻控制台验收。
       </p>
     </div>
     <div class="docx-circuit-hero-actions">
@@ -61,10 +61,10 @@
   </section>
 
   <nav id="docx-circuit-workbench-bar" class="docx-circuit-workbench-bar" aria-label="核对工作台快速定位" data-docx-circuit-workbench-bar="true">
-    <a href="#docx-circuit-review-panel">句子核对</a>
-    <a href="#docx-circuit-demo-panel">电路核对</a>
+    <a href="#docx-circuit-review-panel">需求定位</a>
+    <a href="#docx-circuit-demo-panel">电路联动</a>
     <a href="#docx-circuit-source-index-panel">需求索引</a>
-    <a href="#docx-circuit-review-packet-preview">交付摘要</a>
+    <a href="#docx-circuit-review-packet-preview">验收摘要</a>
   </nav>
 
   <section id="docx-circuit-compact-review" class="docx-circuit-compact-review" aria-label="需求逻辑电路三块核对" data-docx-circuit-compact="true">
@@ -87,12 +87,12 @@
 
   <details id="docx-circuit-flow-details" class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">
     <summary>
-      <span>三步核对路径</span>
+      <span>三步工作路径</span>
       <strong>需求解析 → 逻辑复刻 → 电路验收</strong>
     </summary>
     <div class="docx-circuit-section-head">
       <p class="docx-circuit-kicker">主流程</p>
-      <h2 id="docx-circuit-flow-title">三步核对路径</h2>
+      <h2 id="docx-circuit-flow-title">三步工作路径</h2>
     </div>
     <ol id="docx-circuit-workflow-steps" class="docx-circuit-workflow">
       <li>
@@ -109,8 +109,8 @@
       </li>
       <li>
         <span>03</span>
-        <strong>demo.html 电路验收</strong>
-        <p>使用同一 demo.html 核对 20 个节点、23 条连线、5 个预设和 6 类状态输出。</p>
+        <strong>复刻控制台验收</strong>
+        <p>使用同一复刻控制台核对 20 个节点、23 条连线、5 个预设和 6 类状态输出。</p>
         <a id="docx-circuit-open-reconstruction" href="/demo-reconstruction">进入电路验收</a>
       </li>
     </ol>
@@ -165,8 +165,8 @@
 
     <article id="docx-circuit-review-panel" class="docx-circuit-review-panel" aria-labelledby="docx-circuit-review-title" data-active-anchor="P035-S05">
       <div class="docx-circuit-section-head">
-        <p class="docx-circuit-kicker">句子核对</p>
-        <h2 id="docx-circuit-review-title">逐句电路核对台</h2>
+        <p class="docx-circuit-kicker">需求定位</p>
+        <h2 id="docx-circuit-review-title">需求到电路定位</h2>
       </div>
       <div class="docx-circuit-review-toolbar" aria-label="逐句核对控制" data-docx-circuit-sentence-toolbar="true">
         <button id="docx-circuit-prev-step" type="button" class="docx-circuit-tool-button">上一句</button>
@@ -176,7 +176,7 @@
           <input id="docx-circuit-element-evidence-only" type="checkbox" checked>
           <span>仅当前元素</span>
         </label>
-        <button id="docx-circuit-copy-trace-packet" type="button" class="docx-circuit-tool-button">复制交付摘要</button>
+        <button id="docx-circuit-copy-trace-packet" type="button" class="docx-circuit-tool-button">复制验收摘要</button>
         <button id="docx-circuit-copy-review-link" type="button" class="docx-circuit-tool-button">复制链接</button>
         <span id="docx-circuit-copy-status" class="docx-circuit-copy-status" aria-live="polite">待复制</span>
       </div>
@@ -186,7 +186,7 @@
         <button id="docx-circuit-show-source-entry" type="button" class="docx-circuit-tool-button">定位需求</button>
       </div>
       <details id="docx-circuit-review-packet-preview" class="docx-circuit-review-packet-preview">
-        <summary>交付摘要</summary>
+        <summary>验收摘要</summary>
         <section id="docx-circuit-delivery-panel" class="docx-circuit-delivery-panel" data-docx-circuit-delivery-panel="true" aria-label="当前验收摘要">
           <div class="docx-circuit-delivery-head">
             <span id="docx-circuit-delivery-anchor">P035-S05</span>
@@ -202,19 +202,19 @@
               <strong id="docx-circuit-delivery-levels">等待映射</strong>
             </div>
             <div>
-              <span>证据范围</span>
+              <span>覆盖范围</span>
               <strong id="docx-circuit-delivery-scope">当前元素</strong>
             </div>
             <div>
               <span>边界</span>
-              <strong id="docx-circuit-delivery-boundary">不改控制逻辑 · 不作适航声明</strong>
+              <strong id="docx-circuit-delivery-boundary">只读复刻 · 人工复核</strong>
             </div>
           </div>
           <ul id="docx-circuit-delivery-evidence-list" class="docx-circuit-delivery-evidence-list">
-            <li>等待读取交付证据。</li>
+            <li>等待读取验收来源。</li>
           </ul>
         </section>
-        <pre id="docx-circuit-review-packet-preview-text" class="docx-circuit-review-packet-raw" aria-hidden="true">等待生成交付摘要。</pre>
+        <pre id="docx-circuit-review-packet-preview-text" class="docx-circuit-review-packet-raw" aria-hidden="true">等待生成验收摘要。</pre>
       </details>
 
       <section class="docx-circuit-source-card" aria-label="当前需求句子">
@@ -243,10 +243,10 @@
       </section>
 
       <details id="docx-circuit-trace-details" class="docx-circuit-collapsible" data-default-collapsed="true">
-        <summary>证据反查</summary>
+        <summary>来源定位</summary>
         <section id="docx-circuit-trace-panel" class="docx-circuit-trace-panel" aria-label="电路元素反查" data-selected-element-type="wire" data-selected-element-id="wire_logic4_thr_lock">
           <div class="docx-circuit-trace-head">
-            <h3>元素反查</h3>
+            <h3>元素来源</h3>
             <span id="docx-circuit-trace-selected-id">wire_logic4_thr_lock</span>
           </div>
           <dl class="docx-circuit-trace-summary">
@@ -255,7 +255,7 @@
             <div><dt>折叠谓词</dt><dd id="docx-circuit-trace-folded">等待映射</dd></div>
           </dl>
           <div class="docx-circuit-trace-evidence">
-            <strong>DOCX / P035 证据</strong>
+            <strong>需求来源</strong>
             <ul id="docx-circuit-trace-evidence-list">
               <li>等待读取元素反查映射</li>
             </ul>
@@ -303,19 +303,19 @@
         <h2>完整反推电路</h2>
       </div>
       <div class="docx-circuit-demo-sync" aria-live="polite">
-        <span>demo.html 同步场景</span>
+        <span>控制台同步场景</span>
         <strong id="docx-circuit-demo-scenario">最大反推（展开到位）</strong>
         <em id="docx-circuit-demo-sync-status">等待 iframe 加载</em>
       </div>
-      <iframe id="docx-circuit-demo-frame" src="/demo.html?embed=1&amp;palette=codex-light" title="demo.html 完整反推逻辑电路"></iframe>
+      <iframe id="docx-circuit-demo-frame" src="/demo.html?embed=1&amp;palette=codex-light" title="完整反推逻辑电路"></iframe>
     </article>
   </section>
 
   <section id="docx-circuit-boundary" class="docx-circuit-boundary" aria-label="边界声明">
-    <span data-boundary-token="truth_effect:none">不改控制逻辑</span>
-    <span data-boundary-token="candidate_state:sandbox_candidate">候选电路</span>
-    <span data-boundary-token="certification_claim:none">不作适航声明</span>
-    <span data-boundary-token="controller_truth_modified:false">只读验收</span>
+    <span data-boundary-token="truth_effect:none">只读复刻</span>
+    <span data-boundary-token="candidate_state:sandbox_candidate">待复核电路</span>
+    <span data-boundary-token="certification_claim:none">人工复核</span>
+    <span data-boundary-token="controller_truth_modified:false">不改真值</span>
   </section>
 </main>
 </body>

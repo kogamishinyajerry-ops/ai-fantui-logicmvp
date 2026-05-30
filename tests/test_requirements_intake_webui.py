@@ -6406,7 +6406,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-compact="true"' in html
     assert '<details id="docx-circuit-flow-details"' in html
     assert "docx-circuit-flow-details" in html
-    assert "三步核对路径" in html
+    assert "三步工作路径" in html
     assert '<details id="docx-circuit-flow-details" class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">' in html
     assert html.count('data-compact-review-card="') == 3
     assert 'id="docx-circuit-compact-demand-title"' in html
@@ -6469,8 +6469,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'data-boundary-token="truth_effect:none"' in html
     assert 'data-boundary-token="controller_truth_modified:false"' in html
-    assert "不改控制逻辑" in html
-    assert "只读验收" in html
+    assert "只读复刻" in html
+    assert "不改真值" in html
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "docx-circuit-sequence-list" in script
     assert "function activateStep" in script
@@ -6527,9 +6527,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "docx-circuit-svg-wire-hit" in script
     assert "data-wire-hit-id" in script
     assert "docx_circuit_review_packet" in script
-    assert "DOCX 电路交付摘要" in script
+    assert "DOCX 电路验收摘要" in script
     assert "```json" in script
-    assert "交付摘要已复制" in script
+    assert "验收摘要已复制" in script
     assert "CIRCUIT_NODES" in script
     assert "CIRCUIT_EDGES" in script
     assert "data-review-anchor" in script
