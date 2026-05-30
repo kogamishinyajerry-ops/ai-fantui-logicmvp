@@ -365,6 +365,35 @@ h2 { margin-bottom: 0; font-size: 18px; }
   color: var(--demo-accent);
   font-size: 13px;
 }
+.demo-reconstruction-evidence-details {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0;
+}
+.demo-reconstruction-evidence-details summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  cursor: pointer;
+  list-style: none;
+}
+.demo-reconstruction-evidence-details summary::-webkit-details-marker {
+  display: none;
+}
+.demo-reconstruction-evidence-details summary span {
+  color: var(--demo-accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+.demo-reconstruction-evidence-details summary strong {
+  color: var(--demo-ok);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.demo-reconstruction-evidence-details[open] summary {
+  margin-bottom: 8px;
+}
 .demo-reconstruction-list {
   display: grid;
   gap: 6px;

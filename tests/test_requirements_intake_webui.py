@@ -6666,6 +6666,11 @@ def test_demo_reconstruction_page_is_productized_main_mvp_console():
     assert 'id="demo-reconstruction-fidelity"' in html
     assert 'id="demo-reconstruction-node-list"' in html
     assert 'id="demo-reconstruction-wire-list"' in html
+    assert 'id="demo-reconstruction-node-details"' in html
+    assert 'id="demo-reconstruction-wire-details"' in html
+    assert 'id="demo-reconstruction-preset-details"' in html
+    assert 'id="demo-reconstruction-status-details"' in html
+    assert html.count('data-default-collapsed="true"') >= 4
     assert "demo.html 复刻 MVP 控制台" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
@@ -6687,6 +6692,7 @@ def test_demo_reconstruction_page_is_productized_main_mvp_console():
     assert ".demo-reconstruction-console-stage" in stylesheet
     assert ".demo-reconstruction-source-map > summary" in stylesheet
     assert ".demo-reconstruction-source-map:not([open]) .demo-reconstruction-source-layout" in stylesheet
+    assert ".demo-reconstruction-evidence-details summary" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert "--demo-bg: #f7f8fb" in stylesheet
     assert '.demo-reconstruction-shell[data-console-palette="codex-light"]' in stylesheet

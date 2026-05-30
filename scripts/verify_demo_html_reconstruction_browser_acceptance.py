@@ -155,6 +155,14 @@ def verify_browser_acceptance(artifact_dir: Path) -> dict[str, Any]:
                     "evidence_rail_visible": page.locator(
                         "#demo-reconstruction-browser-evidence"
                     ).is_visible(timeout=5000),
+                    "evidence_details_collapsed": page.evaluate(
+                        """() => [...document.querySelectorAll(
+                            "#demo-reconstruction-browser-evidence details[data-default-collapsed='true']"
+                        )].every((item) => !item.open)"""
+                    ),
+                    "node_list_hidden_by_default": not page.locator(
+                        "#demo-reconstruction-node-list"
+                    ).is_visible(timeout=5000),
                 }
 
                 frame_handle = page.locator("#demo-reconstruction-console-frame").element_handle()
