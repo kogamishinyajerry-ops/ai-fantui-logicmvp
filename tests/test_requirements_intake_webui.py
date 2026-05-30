@@ -6644,6 +6644,50 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "docx-circuit-demo-frame" in body
     assert "反推需求到可运行电路" in body
 
+    # Regression guard: the /docx-to-circuit user-visible surface must stay in
+    # acceptance/process language and must not drift back to internal backend
+    # jargon. These cover the de-jargon passes in PR #378 (visible copy only;
+    # contract tokens like data-boundary-token / packet boundary fields and the
+    # circuit element ids are asserted as PRESENT elsewhere and are untouched).
+    readable_present_html = [
+        "等待控制台加载",
+        ">连线</dd>",
+        ">合并条件</dt>",
+        ">局部子电路</h3>",
+        "L4 → THR_LOCK",
+        'aria-label="电路元素来源定位"',
+        ">场景</span>",
+        "等待读取元素来源映射",
+    ]
+    for token in readable_present_html:
+        assert token in html, f"readable copy missing from index.html: {token}"
+    readable_present_script = [
+        "等待控制台加载",
+        '"工序步骤"',
+        "无合并条件",
+        'wire: "连线"',
+        "- 合并条件:",
+    ]
+    for token in readable_present_script:
+        assert token in script, f"readable copy missing from docx_to_circuit.js: {token}"
+    # Backend jargon that must never resurface in the user-visible copy.
+    forbidden_visible = [
+        "交付摘要",
+        "等待 iframe 加载",
+        "折叠谓词",
+        "线束",
+        ">demo<",
+        "demo.html 同步",
+        "不作适航声明",
+        "不改控制逻辑",
+    ]
+    for token in forbidden_visible:
+        assert token not in html, f"backend jargon leaked back into index.html: {token}"
+        assert token not in script, f"backend jargon leaked back into docx_to_circuit.js: {token}"
+    # The raw wire id must not appear as visible text (it stays only in data-* and JS data).
+    assert "wire_logic4_thr_lock</strong>" not in html
+    assert "wire_logic4_thr_lock</span>" not in html
+
 
 def test_demo_reconstruction_page_is_productized_main_mvp_console():
     html_path = STATIC_ROOT / "demo_reconstruction" / "index.html"
