@@ -977,7 +977,7 @@
       sourceSummary.textContent = isDocxTemplateDrawing()
         ? "来自逻辑绘制页的 DOCX L1-L4 本地候选；不会调用模型、tick 或控制器真值。"
         : (drawing.summary_zh || "已读取本地保存的模型图纸；缺少需求数据时仅保持候选态展示。");
-      sourceMetrics.textContent = `${(drawing.nodes || []).length} nodes · ${(drawing.edges || []).length} edges · ${(drawing.parameter_panels || []).length} panels`;
+      sourceMetrics.textContent = `${(drawing.nodes || []).length} 节点 · ${(drawing.edges || []).length} 连线 · ${(drawing.parameter_panels || []).length} 面板`;
       renderSourceDeferral();
       renderBurdenSummary(state.faultPayload);
       return;
@@ -988,8 +988,8 @@
         ? "首次进入空态使用本地 candidate-only 预览；不会调用模型、tick 或控制器真值。"
         : "需要先从逻辑绘制页生成图纸。";
       sourceMetrics.textContent = state.faultPayload && state.faultPayload.first_visit_preview
-        ? "2 scenarios · 2 points · dry-run"
-        : "0 nodes · 0 edges · 0 panels";
+        ? "2 场景 · 2 注入点 · 试运行"
+        : "0 节点 · 0 连线 · 0 面板";
       renderSourceDeferral();
       renderBurdenSummary(state.faultPayload);
       return;
@@ -999,7 +999,7 @@
     const doc = req.source_document || {};
     sourceTitle.textContent = doc.name || "已载入逻辑图纸";
     sourceSummary.textContent = req.summary_zh || drawing.summary_zh || "已读取本地保存的模型图纸。";
-    sourceMetrics.textContent = `${(drawing.nodes || []).length} nodes · ${(drawing.edges || []).length} edges · ${(drawing.parameter_panels || []).length} panels`;
+    sourceMetrics.textContent = `${(drawing.nodes || []).length} 节点 · ${(drawing.edges || []).length} 连线 · ${(drawing.parameter_panels || []).length} 面板`;
     renderSourceDeferral();
     renderBurdenSummary(state.faultPayload);
   }
