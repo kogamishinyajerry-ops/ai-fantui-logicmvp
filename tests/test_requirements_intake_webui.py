@@ -5852,7 +5852,7 @@ def test_landing_page_links_requirements_intake_tool():
     html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
 
     assert "/docx-to-circuit" in html
-    assert "原始 DOCX 到完整电路" in html
+    assert "反推需求到可运行电路" in html
     assert "/requirements-intake" in html
     assert "需求理解工作台" in html
     assert "/fault-injection-prepare" in html
@@ -5869,7 +5869,7 @@ def test_landing_page_has_deepseek_live_replay_import_entry():
     assert 'id="deepseek-live-replay-meta"' in html
     assert 'id="deepseek-live-replay-counts"' in html
     assert "/api/requirements-intake/deepseek-live-demo-replay" in html
-    assert "导入真实 DeepSeek 回放" in html
+    assert "导入最近回放" in html
     assert "最近回放" in html
     assert "不重新调用模型" in html
     assert "renderReplaySummary" in html
@@ -5879,8 +5879,8 @@ def test_landing_page_has_deepseek_live_replay_import_entry():
     assert "http://127.0.0.1:8002/index.html" in html
     assert "renderFileModeReplayHelp" in html
     assert 'window.location.protocol === "file:"' in html
-    assert "file:// 无法读取回放 API" in html
-    assert "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002" in html
+    assert "浏览器文件模式不能读取本地回放" in html
+    assert "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002" not in html
     assert "ai-fantui-requirements-intake-ready-v1" in html
     assert "ai-fantui-logic-builder-drawing-v1" in html
     assert "ai-fantui-logic-builder-change-history-v1" in html
@@ -5911,8 +5911,10 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert 'href="/logic-builder#evidence"' in html
     assert 'href="/logic-builder#report"' in html
     assert "命令面板" in html
-    assert "truth_effect:none" in html
-    assert "candidate_state:sandbox_candidate" in html
+    assert 'data-boundary-token="truth_effect:none"' in html
+    assert 'data-boundary-token="candidate_state:sandbox_candidate"' in html
+    assert ">truth_effect:none<" not in html
+    assert ">candidate_state:sandbox_candidate<" not in html
     assert 'id="home-primary-flow-grid"' in html
     assert 'aria-label="DeepSeek 四步主流程"' in html
     assert 'id="home-advanced-modules"' in html
@@ -5953,12 +5955,16 @@ def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
     assert 'id="home-first-phase-demo-entry"' in html
     assert 'href="/demo-reconstruction"' in html
     assert 'data-home-priority="first-phase-mvp"' in html
-    assert "第一阶段可演示交付物" in html
-    assert "demo.html 复刻 MVP 控制台" in html
+    assert "复刻控制台交付物" in html
+    assert "反推控制台复刻" in html
     assert "20/20 节点" in html
     assert "23/23 连线" in html
-    assert "make demo-html-reconstruction-mvp" in html
-    assert "make demo-html-reconstruction-browser-acceptance" in html
+    assert 'data-validation-command="make demo-html-reconstruction-mvp"' in html
+    assert 'data-validation-command="make demo-html-reconstruction-browser-acceptance"' in html
+    assert "节点 20/20" in html
+    assert "浏览器验收通过" in html
+    assert ">make demo-html-reconstruction-mvp<" not in html
+    assert ">make demo-html-reconstruction-browser-acceptance<" not in html
     assert html.index('id="home-first-phase-mvp"') < html.index('id="home-default-mode-grid"')
 
 
@@ -5974,9 +5980,9 @@ def test_landing_page_promotes_docx_to_circuit_as_primary_main_entry():
     primary_next = html.split('id="home-primary-next"', 1)[1].split(">", 1)[0]
     assert 'href="/docx-to-circuit"' in primary_next
     assert 'data-primary-entry="docx-source-to-circuit"' in primary_next
-    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert "uploads/20260409-thrust-reverser-control-logic.docx" not in html
     assert "L1-L4 逻辑复刻" in html
-    assert "demo.html 完整电路" in html
+    assert "控制台验收" in html
     assert html.index('id="home-docx-to-circuit-mainline"') < html.index('id="home-first-phase-mvp"')
 
 
@@ -6009,7 +6015,12 @@ def test_deepseek_subproject_nav_collapses_legacy_modules_into_advanced_menu():
     for path in html_paths:
         html = path.read_text(encoding="utf-8")
         assert 'id="deepseek-nav-mainline"' in html, path
-        assert 'aria-label="DeepSeek 四步主线"' in html, path
+        expected_nav_label = (
+            'aria-label="四步主线"'
+            if path.name == "index.html" and path.parent.name == "logic_builder"
+            else 'aria-label="DeepSeek 四步主线"'
+        )
+        assert expected_nav_label in html, path
         assert 'id="deepseek-nav-advanced-modules"' in html, path
         assert "更多模块" in html, path
         mainline_html = html.split('id="deepseek-nav-mainline"', 1)[1].split('id="deepseek-nav-advanced-modules"', 1)[0]
@@ -6242,7 +6253,7 @@ def test_deepseek_four_page_generation_streams_are_visible_and_compact():
         (
             STATIC_ROOT / "logic_builder" / "index.html",
             "logic-generation-stream",
-            ["读取需求", "DeepSeek 绘图", "结构复核", "渲染电路"],
+            ["读取需求", "生成图纸", "结构复核", "渲染电路"],
         ),
         (
             STATIC_ROOT / "fault_injection_prepare" / "index.html",
@@ -6277,7 +6288,7 @@ def test_deepseek_workflow_exposes_progressive_stream_chunk_rails():
             STATIC_ROOT / "logic_builder" / "index.html",
             STATIC_ROOT / "logic_builder" / "logic_builder.js",
             "logic-stream-chunks",
-            ["已读取需求", "DeepSeek 正在绘制"],
+            ["已读取需求", "正在生成图纸"],
         ),
         (
             STATIC_ROOT / "fault_injection_prepare" / "index.html",
@@ -6391,8 +6402,19 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-docx-circuit-review-workbench="interactive"' in html
     assert 'id="docx-circuit-workbench-bar"' in html
     assert 'data-docx-circuit-workbench-bar="true"' in html
-    assert "原始 DOCX 到完整电路" in html
-    assert "uploads/20260409-thrust-reverser-control-logic.docx" in html
+    assert 'id="docx-circuit-compact-review"' in html
+    assert 'data-docx-circuit-compact="true"' in html
+    assert '<details id="docx-circuit-flow-details"' in html
+    assert "docx-circuit-flow-details" in html
+    assert "三步工作路径" in html
+    assert '<details id="docx-circuit-flow-details" class="docx-circuit-flow" aria-labelledby="docx-circuit-flow-title">' in html
+    assert html.count('data-compact-review-card="') == 3
+    assert 'id="docx-circuit-compact-demand-title"' in html
+    assert 'id="docx-circuit-compact-logic-title"' in html
+    assert 'id="docx-circuit-compact-demo-title"' in html
+    assert "反推需求到可运行电路" in html
+    assert "已登记源文档" in html
+    assert 'data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx"' in html
     assert 'href="/requirements-intake?source=official-docx"' in html
     assert 'href="/logic-builder?template=docx-l1-l4"' in html
     assert 'href="/demo-reconstruction"' in html
@@ -6410,6 +6432,16 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-show-source-entry"' in html
     assert 'id="docx-circuit-review-packet-preview"' in html
     assert 'id="docx-circuit-review-packet-preview-text"' in html
+    assert 'id="docx-circuit-delivery-panel"' in html
+    assert 'data-docx-circuit-delivery-panel="true"' in html
+    assert 'id="docx-circuit-delivery-evidence-list"' in html
+    assert 'class="docx-circuit-review-packet-raw"' in html
+    assert 'id="docx-circuit-acceptance-trail"' in html
+    assert 'data-docx-circuit-acceptance-trail="true"' in html
+    assert 'id="docx-circuit-trail-source"' in html
+    assert 'id="docx-circuit-trail-element"' in html
+    assert 'id="docx-circuit-sequence-details"' in html
+    assert 'id="docx-circuit-source-index-details"' in html
     assert 'data-docx-circuit-source-index="true"' in html
     assert 'id="docx-circuit-source-index-count"' in html
     assert 'id="docx-circuit-source-index-search"' in html
@@ -6417,6 +6449,8 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'id="docx-circuit-source-index-clear"' in html
     assert 'id="docx-circuit-source-index-list"' in html
     assert 'id="docx-circuit-source-anchor"' in html
+    assert 'id="docx-circuit-trace-details"' in html
+    assert 'data-default-collapsed="true"' in html
     assert 'id="docx-circuit-trace-panel"' in html
     assert 'data-selected-element-id="wire_logic4_thr_lock"' in html
     assert 'id="docx-circuit-trace-evidence-list"' in html
@@ -6427,13 +6461,16 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert 'data-wire-count="23"' in html
     assert 'id="docx-circuit-node-grid"' in html
     assert 'id="docx-circuit-wire-grid"' in html
+    assert 'id="docx-circuit-contract-details"' in html
     assert 'id="docx-circuit-demo-scenario"' in html
     assert 'id="docx-circuit-demo-panel"' in html
     assert 'data-docx-circuit-demo-column="true"' in html
     assert 'id="docx-circuit-demo-frame"' in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
-    assert "truth_effect:none" in html
-    assert "controller_truth_modified:false" in html
+    assert 'data-boundary-token="truth_effect:none"' in html
+    assert 'data-boundary-token="controller_truth_modified:false"' in html
+    assert "只读复刻" in html
+    assert "不改真值" in html
     assert "/api/demo-reconstruction/docx-sentence-circuit-map" in script
     assert "docx-circuit-sequence-list" in script
     assert "function activateStep" in script
@@ -6442,6 +6479,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function setSvgHighlights" in script
     assert "function selectCircuitElement" in script
     assert "function renderTracePanel" in script
+    assert "function renderCompactDemand" in script
+    assert "function renderCompactLogic" in script
+    assert "function renderCompactDemo" in script
     assert "function matchingSourceEntries" in script
     assert "function activateRelativeStep" in script
     assert "function renderSourceIndex" in script
@@ -6464,6 +6504,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "function copySourceEntryLink" in script
     assert "function renderActiveSourceEntryFocus" in script
     assert "function focusActiveSourceEntry" in script
+    assert "sourceIndexDetails" in script
     assert 'params.set("source"' in script
     assert 'params.set("section"' in script
     assert "sourceEntryLinkAnchor" in script
@@ -6472,6 +6513,10 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "history.replaceState" in script
     assert "function currentTracePacket" in script
     assert "function tracePacketMarkdown" in script
+    assert "function renderDeliverySummary" in script
+    assert "function evidenceScopeLabel" in script
+    assert "function renderAcceptanceTrail" in script
+    assert "function elementDisplayLabel" in script
     assert "function markdownEvidenceList" in script
     assert "function currentTraceMarkdown" in script
     assert "function renderTracePacketPreview" in script
@@ -6482,16 +6527,23 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "docx-circuit-svg-wire-hit" in script
     assert "data-wire-hit-id" in script
     assert "docx_circuit_review_packet" in script
-    assert "DOCX Circuit Review Packet" in script
+    assert "DOCX 电路验收摘要" in script
     assert "```json" in script
-    assert "审阅包 Markdown 已复制" in script
+    assert "验收摘要已复制" in script
     assert "CIRCUIT_NODES" in script
     assert "CIRCUIT_EDGES" in script
     assert "data-review-anchor" in script
     assert "aria-pressed" in script
     assert "wire_logic4_thr_lock" in html
     assert ".docx-circuit-stage" in stylesheet
+    assert ".docx-circuit-flow > summary" in stylesheet
+    assert ".docx-circuit-flow:not([open]) .docx-circuit-workflow" in stylesheet
     assert ".docx-circuit-workbench-bar" in stylesheet
+    assert ".docx-circuit-compact-review" in stylesheet
+    assert ".docx-circuit-compact-card" in stylesheet
+    assert ".docx-circuit-collapsible" in stylesheet
+    assert ".docx-circuit-collapsible .docx-circuit-source-index-panel" in stylesheet
+    assert ".docx-circuit-collapsible .docx-circuit-sequence-list" in stylesheet
     assert ".docx-circuit-review-panel" in stylesheet
     assert ".docx-circuit-review-toolbar" in stylesheet
     assert ".docx-circuit-source-index-panel" in stylesheet
@@ -6504,6 +6556,9 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "#docx-circuit-demo-frame" in stylesheet
     assert "height: 430px" in stylesheet
     assert ".docx-circuit-source-focus strong" in stylesheet
+    assert ".docx-circuit-delivery-panel" in stylesheet
+    assert ".docx-circuit-review-packet-raw" in stylesheet
+    assert ".docx-circuit-acceptance-trail" in stylesheet
     assert "scripts/verify_docx_to_circuit_review_links.py --format json" in makefile
     assert '"source_entry_link"' in review_link_gate
     assert '"review_packet_markdown_json"' in review_link_gate
@@ -6525,6 +6580,13 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "preview_matches_clipboard" in review_link_gate
     assert "workbenchThreeColumn" in review_link_gate
     assert "demoPanelInline" in review_link_gate
+    assert "flowDetailsOpen" in review_link_gate
+    assert "workflowHiddenByDefault" in review_link_gate
+    assert "firstScreenStageVisible" in review_link_gate
+    assert "deliveryPanelVisible" in review_link_gate
+    assert "rawReviewPacketHidden" in review_link_gate
+    assert "acceptanceTrailVisible" in review_link_gate
+    assert '"trailElement": "SW1"' in review_link_gate
     assert "RESPONSIVE_VIEWPORTS" in review_link_gate
     assert '"responsive_layout"' in review_link_gate
     assert "noHorizontalOverflow" in review_link_gate
@@ -6536,7 +6598,7 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
     assert "logic-template-query-link-" in review_link_gate
     assert '"source_entry_locator"' in review_link_gate
     assert '"activeSourceEntryAnchor": "P004"' in review_link_gate
-    assert '"activeSourceEntryLabel": "P004 · 源文档条目"' in review_link_gate
+    assert '"activeSourceEntryLabel": "P004 · 需求条目"' in review_link_gate
     assert '"section": "docx-circuit-demo-panel"' in review_link_gate
     assert '"workbench_anchor_reopen"' in review_link_gate
     requirements_script = (STATIC_ROOT / "requirements_intake" / "requirements_intake.js").read_text(encoding="utf-8")
@@ -6580,7 +6642,51 @@ def test_docx_to_circuit_main_entry_connects_source_logic_and_demo_routes():
 
     assert response.status == 200
     assert "docx-circuit-demo-frame" in body
-    assert "原始 DOCX 到完整电路" in body
+    assert "反推需求到可运行电路" in body
+
+    # Regression guard: the /docx-to-circuit user-visible surface must stay in
+    # acceptance/process language and must not drift back to internal backend
+    # jargon. These cover the de-jargon passes in PR #378 (visible copy only;
+    # contract tokens like data-boundary-token / packet boundary fields and the
+    # circuit element ids are asserted as PRESENT elsewhere and are untouched).
+    readable_present_html = [
+        "等待控制台加载",
+        ">连线</dd>",
+        ">合并条件</dt>",
+        ">局部子电路</h3>",
+        "L4 → THR_LOCK",
+        'aria-label="电路元素来源定位"',
+        ">场景</span>",
+        "等待读取元素来源映射",
+    ]
+    for token in readable_present_html:
+        assert token in html, f"readable copy missing from index.html: {token}"
+    readable_present_script = [
+        "等待控制台加载",
+        '"工序步骤"',
+        "无合并条件",
+        'wire: "连线"',
+        "- 合并条件:",
+    ]
+    for token in readable_present_script:
+        assert token in script, f"readable copy missing from docx_to_circuit.js: {token}"
+    # Backend jargon that must never resurface in the user-visible copy.
+    forbidden_visible = [
+        "交付摘要",
+        "等待 iframe 加载",
+        "折叠谓词",
+        "线束",
+        ">demo<",
+        "demo.html 同步",
+        "不作适航声明",
+        "不改控制逻辑",
+    ]
+    for token in forbidden_visible:
+        assert token not in html, f"backend jargon leaked back into index.html: {token}"
+        assert token not in script, f"backend jargon leaked back into docx_to_circuit.js: {token}"
+    # The raw wire id must not appear as visible text (it stays only in data-* and JS data).
+    assert "wire_logic4_thr_lock</strong>" not in html
+    assert "wire_logic4_thr_lock</span>" not in html
 
 
 def test_demo_reconstruction_page_is_productized_main_mvp_console():
@@ -6598,11 +6704,23 @@ def test_demo_reconstruction_page_is_productized_main_mvp_console():
     assert 'data-demo-mvp-console="true"' in html
     assert 'data-console-palette="codex-light"' in html
     assert 'id="demo-reconstruction-console-frame"' in html
+    assert '<details id="demo-reconstruction-docx-circuit-map"' in html
+    assert (
+        html.index('class="demo-reconstruction-console-stage"')
+        < html.index('id="demo-reconstruction-docx-circuit-map"')
+    )
+    assert 'data-source-document-path="uploads/20260409-thrust-reverser-control-logic.docx"' in html
+    assert "已登记源文档" in html
     assert 'src="/demo.html?embed=1&amp;palette=codex-light"' in html
     assert 'id="demo-reconstruction-browser-evidence"' in html
     assert 'id="demo-reconstruction-fidelity"' in html
     assert 'id="demo-reconstruction-node-list"' in html
     assert 'id="demo-reconstruction-wire-list"' in html
+    assert 'id="demo-reconstruction-node-details"' in html
+    assert 'id="demo-reconstruction-wire-details"' in html
+    assert 'id="demo-reconstruction-preset-details"' in html
+    assert 'id="demo-reconstruction-status-details"' in html
+    assert html.count('data-default-collapsed="true"') >= 4
     assert "demo.html 复刻 MVP 控制台" in html
     assert "<h2>原版 demo.html</h2>" not in html
     assert "<h2>当前复刻</h2>" not in html
@@ -6620,7 +6738,11 @@ def test_demo_reconstruction_page_is_productized_main_mvp_console():
     assert "/api/requirements-intake/deepseek-live-demo-replay" in script
     assert "20/20 节点" in script
     assert "23/23 连线" in script
+    assert "dataset.sourceDocumentPath" in script
     assert ".demo-reconstruction-console-stage" in stylesheet
+    assert ".demo-reconstruction-source-map > summary" in stylesheet
+    assert ".demo-reconstruction-source-map:not([open]) .demo-reconstruction-source-layout" in stylesheet
+    assert ".demo-reconstruction-evidence-details summary" in stylesheet
     assert "#demo-reconstruction-console-frame" in stylesheet
     assert "--demo-bg: #f7f8fb" in stylesheet
     assert '.demo-reconstruction-shell[data-console-palette="codex-light"]' in stylesheet
@@ -6888,12 +7010,30 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
     html = (STATIC_ROOT / "logic_builder" / "index.html").read_text(encoding="utf-8")
     stylesheet = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
     script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    surface_gate = (REPO_ROOT / "scripts" / "verify_logic_builder_surface_gate.py").read_text(
+        encoding="utf-8"
+    )
 
     assert 'data-ui-skin="codex-minimal"' in html
     assert 'data-logic-experience="cockpit-annotation-stream"' in html
     assert 'id="logic-drawing-stream-timeline"' in html
     assert 'data-ai-stream="logic-drawing-replay"' in html
-    assert "DeepSeek 绘图回放" in html
+    assert 'data-default-collapsed="true"' in html
+    assert "等待生成过程" in html
+    assert "生成图纸" in html
+    assert "DEEPSEEK STREAM" not in html
+    assert "DeepSeek V4 Pro" not in html
+    assert "MiniMax-M2.7-highspeed" not in html
+    assert "DeepSeek 绘图" not in html
+    assert "模型" not in html
+    assert "模型" not in script
+    assert "logic-builder-surface-gate" in makefile
+    assert "scripts/verify_logic_builder_surface_gate.py --format json" in makefile
+    assert "BANNED_VISIBLE_TEXT" in surface_gate
+    assert '"模型"' in surface_gate
+    assert "EXPECTED_VISIBLE_TEXT" in surface_gate
+    assert "EXPECTED_DOM_TEXT" in surface_gate
     assert 'id="logic-annotation-popover"' in html
     assert 'id="logic-selected-target-label"' in html
     assert 'id="logic-node-comment-text"' in html
@@ -6911,6 +7051,7 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
 
     for selector in [
         ".logic-drawing-stream-timeline",
+        ".logic-drawing-stream-timeline[open]",
         ".logic-stream-event",
         ".logic-annotation-popover",
         ".logic-annotation-submit-bar",
@@ -6996,7 +7137,11 @@ def test_logic_builder_exposes_five_entry_mode_dock_command_palette_and_bottom_d
     assert 'data-panel-toggle="right"' in html
     assert "注入故障" in html
     assert "打开失败路径" in html
-    assert "导出审查包" in html
+    assert "生成交付摘要" in html
+    assert "导出审查包" not in html
+    assert "raw JSON" not in html
+    assert "打开证据追溯" not in html
+    assert "打开报告预览" not in html
 
     assert 'id="logic-run-parameter-drawer"' in html
     assert 'data-active-tab="none"' in html

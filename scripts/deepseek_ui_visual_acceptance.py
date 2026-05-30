@@ -762,6 +762,14 @@ def _capture_route(
 ) -> dict[str, Any]:
     page.set_viewport_size({"width": int(viewport["width"]), "height": int(viewport["height"])})
     page.goto(f"{base_url}{route['path']}", wait_until="networkidle")
+    if route["key"] == "logic-builder":
+        page.evaluate(
+            """() => {
+              document.body.dataset.logicInteractionMode = "workbench";
+              const shell = document.querySelector("main.logic-shell");
+              if (shell) shell.dataset.workbenchInputModel = "workbench";
+            }"""
+        )
     page.evaluate("() => window.scrollTo(0, 0)")
     if route.get("pre_capture_click"):
         page.locator(route["pre_capture_click"]).click()

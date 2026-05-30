@@ -23,7 +23,7 @@ body.unified-nav-enabled { padding-top: 48px; }
 .docx-circuit-shell {
   max-width: 1500px;
   margin: 0 auto;
-  padding: 24px 28px 40px;
+  padding: 18px 28px 36px;
 }
 .docx-circuit-hero,
 .docx-circuit-flow,
@@ -40,7 +40,7 @@ body.unified-nav-enabled { padding-top: 48px; }
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
-  padding: 20px;
+  padding: 16px 18px;
 }
 .docx-circuit-kicker {
   margin: 0 0 6px;
@@ -105,7 +105,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .docx-circuit-metrics div {
   display: grid;
@@ -113,7 +113,7 @@ h2 {
   border: 1px solid var(--docx-border);
   border-radius: 8px;
   background: var(--docx-panel);
-  padding: 12px;
+  padding: 9px 11px;
   box-shadow: var(--docx-shadow);
 }
 .docx-circuit-metrics span {
@@ -127,14 +127,42 @@ h2 {
   overflow-wrap: anywhere;
 }
 .docx-circuit-flow {
-  margin-top: 14px;
-  padding: 16px;
+  margin-top: 12px;
+  padding: 11px 14px;
+}
+.docx-circuit-flow > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  cursor: pointer;
+  list-style: none;
+}
+.docx-circuit-flow > summary::-webkit-details-marker {
+  display: none;
+}
+.docx-circuit-flow > summary span {
+  color: var(--docx-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+.docx-circuit-flow > summary strong {
+  color: var(--docx-text);
+  font-size: 13px;
+}
+.docx-circuit-flow:not([open]) .docx-circuit-section-head,
+.docx-circuit-flow:not([open]) .docx-circuit-workflow {
+  display: none;
+}
+.docx-circuit-flow[open] > summary {
+  margin-bottom: 12px;
 }
 .docx-circuit-workbench-bar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .docx-circuit-workbench-bar a {
   display: inline-flex;
@@ -156,6 +184,40 @@ h2 {
   background: #eff6ff;
   color: var(--docx-accent);
   outline: none;
+}
+.docx-circuit-compact-review {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.docx-circuit-compact-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 92px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--docx-shadow);
+  padding: 12px;
+}
+.docx-circuit-compact-card span {
+  color: var(--docx-accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-compact-card strong {
+  color: var(--docx-text);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.docx-circuit-compact-card p {
+  margin: 0;
+  color: var(--docx-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 .docx-circuit-section-head {
   display: flex;
@@ -200,7 +262,7 @@ h2 {
   grid-template-columns: minmax(250px, 0.55fr) minmax(500px, 1fr) minmax(340px, 0.72fr);
   gap: 14px;
   align-items: start;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .docx-circuit-sequence-panel,
 .docx-circuit-review-panel,
@@ -476,6 +538,50 @@ h2 {
   font-size: 12px;
   line-height: 1.55;
 }
+.docx-circuit-acceptance-trail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.docx-circuit-acceptance-trail div {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+}
+.docx-circuit-acceptance-trail div:not(:last-child)::after {
+  content: ">";
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(30, 103, 255, 0.24);
+  border-radius: 999px;
+  background: #f7faff;
+  color: var(--docx-accent);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+  transform: translateY(-50%);
+}
+.docx-circuit-acceptance-trail span {
+  color: var(--docx-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-acceptance-trail strong {
+  color: var(--docx-text);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .docx-circuit-review-toolbar {
   display: flex;
   align-items: center;
@@ -533,17 +639,107 @@ h2 {
 .docx-circuit-review-packet-preview[open] summary {
   border-bottom: 1px solid var(--docx-border);
 }
-.docx-circuit-review-packet-preview pre {
-  max-height: 260px;
-  margin: 0;
-  overflow: auto;
-  background: #f8fafc;
-  color: var(--docx-text);
+.docx-circuit-delivery-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+.docx-circuit-delivery-head {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(30, 103, 255, 0.22);
+  border-radius: 8px;
+  background: #f7faff;
+  padding: 9px 10px;
+}
+.docx-circuit-delivery-head span {
+  color: var(--docx-accent);
   font-family: "Courier New", monospace;
   font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-delivery-head strong {
+  color: var(--docx-text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.docx-circuit-delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.docx-circuit-delivery-grid div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+}
+.docx-circuit-delivery-grid span {
+  color: var(--docx-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.docx-circuit-delivery-grid strong {
+  color: var(--docx-text);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.docx-circuit-delivery-evidence-list {
+  display: grid;
+  gap: 6px;
+  max-height: 150px;
+  margin: 0;
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+}
+.docx-circuit-delivery-evidence-list li {
+  display: grid;
+  gap: 3px;
+  border-left: 3px solid #cbd5e1;
+  background: #f8fafc;
+  color: var(--docx-muted);
+  font-size: 12px;
   line-height: 1.45;
-  padding: 10px;
-  white-space: pre-wrap;
+  padding: 7px 8px;
+}
+.docx-circuit-delivery-evidence-list strong {
+  color: var(--docx-text);
+  font-size: 12px;
+}
+.docx-circuit-review-packet-raw {
+  display: none;
+}
+.docx-circuit-collapsible {
+  margin-top: 10px;
+  border: 1px solid var(--docx-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.docx-circuit-collapsible summary {
+  cursor: pointer;
+  color: var(--docx-text);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 9px 10px;
+}
+.docx-circuit-collapsible[open] summary {
+  border-bottom: 1px solid var(--docx-border);
+}
+.docx-circuit-collapsible .docx-circuit-trace-panel,
+.docx-circuit-collapsible .docx-circuit-contract-map,
+.docx-circuit-collapsible .docx-circuit-source-index-panel {
+  margin-top: 0;
+  border: 0;
+  border-radius: 0 0 8px 8px;
+  box-shadow: none;
+}
+.docx-circuit-collapsible .docx-circuit-sequence-list {
+  max-height: 280px;
+  padding: 10px 10px 10px 28px;
 }
 .docx-circuit-tool-button {
   min-height: 32px;
@@ -890,15 +1086,16 @@ h2 {
   border: 1px solid rgba(30, 103, 255, 0.2);
   border-radius: 999px;
   color: var(--docx-muted);
-  font-family: "Courier New", monospace;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   padding: 5px 8px;
 }
 
 @media (max-width: 1180px) {
   .docx-circuit-hero,
   .docx-circuit-stage,
-  .docx-circuit-workflow {
+  .docx-circuit-workflow,
+  .docx-circuit-compact-review {
     grid-template-columns: 1fr;
   }
   .docx-circuit-demo-panel {
@@ -916,6 +1113,18 @@ h2 {
   }
   .docx-circuit-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .docx-circuit-delivery-grid {
+    grid-template-columns: 1fr;
+  }
+  .docx-circuit-acceptance-trail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .docx-circuit-acceptance-trail div:not(:last-child)::after {
+    display: none;
+  }
+  .docx-circuit-flow > summary {
+    grid-template-columns: 1fr;
   }
   .docx-circuit-logic-ladder {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -939,6 +1148,9 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .docx-circuit-source-focus {
+    grid-template-columns: 1fr;
+  }
+  .docx-circuit-acceptance-trail {
     grid-template-columns: 1fr;
   }
   .docx-circuit-source-focus strong {

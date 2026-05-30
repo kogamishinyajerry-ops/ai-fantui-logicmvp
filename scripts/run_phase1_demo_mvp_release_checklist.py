@@ -30,7 +30,7 @@ RELEASE_CHECKLIST_PATH = (
 )
 EXPECTED_DEMO_SURFACE = {
     "route": "/demo-reconstruction",
-    "title": "demo.html 复刻 MVP 控制台",
+    "title": "反推控制台复刻",
     "node_count": 20,
     "wire_count": 23,
     "preset_count": 5,

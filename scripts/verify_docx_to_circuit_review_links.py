@@ -141,6 +141,20 @@ def _page_state(page: Any) -> dict[str, Any]:
             focusedSourceEntryAnchor: document.activeElement?.dataset.sourceEntryAnchor || null,
             reviewPacketPreviewOpen: document.querySelector("#docx-circuit-review-packet-preview")?.open || false,
             reviewPacketPreviewFormat: document.querySelector("#docx-circuit-review-packet-preview")?.dataset.packetFormat || null,
+            compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
+            flowDetailsOpen: document.querySelector("#docx-circuit-flow-details")?.open || false,
+            acceptanceTrailVisible: (() => {
+                const trail = document.querySelector("#docx-circuit-acceptance-trail");
+                return Boolean(trail && trail.getBoundingClientRect().height > 0);
+            })(),
+            trailSource: document.querySelector("#docx-circuit-trail-source")?.textContent || null,
+            trailLogic: document.querySelector("#docx-circuit-trail-logic")?.textContent || null,
+            trailElement: document.querySelector("#docx-circuit-trail-element")?.textContent || null,
+            trailDemo: document.querySelector("#docx-circuit-trail-demo")?.textContent || null,
+            sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
+            sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
+            traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
+            contractDetailsOpen: document.querySelector("#docx-circuit-contract-details")?.open || false,
             workbenchNavCount: document.querySelectorAll("#docx-circuit-workbench-bar a").length,
             workbenchThreeColumn: (() => {
                 const stage = document.querySelector(".docx-circuit-stage");
@@ -182,12 +196,18 @@ def _responsive_state(page: Any) -> dict[str, Any]:
             const navTops = new Set(navLinks.map((link) => Math.round(link.getBoundingClientRect().top)));
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const previewText = document.querySelector("#docx-circuit-review-packet-preview-text");
+            const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
+            const acceptanceTrail = document.querySelector("#docx-circuit-acceptance-trail");
+            const compactReview = document.querySelector("#docx-circuit-compact-review");
             const sourceFocus = document.querySelector("#docx-circuit-source-focus");
             const review = document.querySelector("#docx-circuit-review-panel");
             const demo = document.querySelector("#docx-circuit-demo-panel");
+            const flow = document.querySelector("#docx-circuit-flow-details");
+            const workflow = document.querySelector("#docx-circuit-workflow-steps");
             const columns = stage
                 ? getComputedStyle(stage).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean)
                 : [];
+            const stageRect = stage?.getBoundingClientRect();
             const reviewRect = review?.getBoundingClientRect();
             const demoRect = demo?.getBoundingClientRect();
             return {
@@ -197,6 +217,16 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 2,
                 workbenchNavCount: navLinks.length,
                 workbenchNavRows: navTops.size,
+                compactCardCount: document.querySelectorAll("#docx-circuit-compact-review [data-compact-review-card]").length,
+                compactReviewVisible: Boolean(compactReview && compactReview.getBoundingClientRect().height > 0),
+                acceptanceTrailVisible: Boolean(acceptanceTrail && acceptanceTrail.getBoundingClientRect().height > 0),
+                flowDetailsOpen: Boolean(flow?.open),
+                workflowHiddenByDefault: Boolean(workflow && getComputedStyle(workflow).display === "none"),
+                firstScreenStageVisible: Boolean(stageRect && stageRect.top < window.innerHeight),
+                sequenceDetailsOpen: document.querySelector("#docx-circuit-sequence-details")?.open || false,
+                sourceIndexDetailsOpen: document.querySelector("#docx-circuit-source-index-details")?.open || false,
+                traceDetailsOpen: document.querySelector("#docx-circuit-trace-details")?.open || false,
+                contractDetailsOpen: document.querySelector("#docx-circuit-contract-details")?.open || false,
                 stageColumnCount: columns.length,
                 desktopDemoInline: Boolean(
                     reviewRect && demoRect && demoRect.left > reviewRect.left && demoRect.width > 320
@@ -208,10 +238,14 @@ def _responsive_state(page: Any) -> dict[str, Any]:
                 ),
                 sourceLocatorFocused: document.activeElement?.dataset.sourceEntryAnchor === "P004",
                 reviewPacketPreviewOpen: Boolean(preview?.open),
+                deliveryPanelVisible: Boolean(deliveryPanel && deliveryPanel.getBoundingClientRect().height > 0),
+                rawReviewPacketHidden: Boolean(previewText && getComputedStyle(previewText).display === "none"),
                 reviewPacketPreviewVisible: Boolean(
                     previewText
-                    && previewText.textContent.includes("## DOCX Circuit Review Packet")
-                    && previewText.getBoundingClientRect().height > 0
+                    && previewText.textContent.includes("## DOCX 电路验收摘要")
+                    && deliveryPanel
+                    && deliveryPanel.getBoundingClientRect().height > 0
+                    && getComputedStyle(previewText).display === "none"
                 ),
                 visibleNodeCount: document.querySelectorAll("#docx-circuit-svg [data-node-id]").length,
                 visibleWireCount: document.querySelectorAll("#docx-circuit-svg [data-wire-id]").length,
@@ -231,9 +265,21 @@ def _responsive_state_matches(state: dict[str, Any], expected_columns: str) -> b
             columns_match,
             state.get("noHorizontalOverflow") is True,
             state.get("workbenchNavCount") == 4,
+            state.get("compactCardCount") == 3,
+            state.get("compactReviewVisible") is True,
+            state.get("acceptanceTrailVisible") is True,
+            state.get("flowDetailsOpen") is False,
+            state.get("workflowHiddenByDefault") is True,
+            state.get("firstScreenStageVisible") is True,
+            state.get("sequenceDetailsOpen") is False,
+            state.get("sourceIndexDetailsOpen") is True,
+            state.get("traceDetailsOpen") is False,
+            state.get("contractDetailsOpen") is False,
             state.get("sourceFocusVisible") is True,
             state.get("sourceLocatorFocused") is True,
             state.get("reviewPacketPreviewOpen") is True,
+            state.get("deliveryPanelVisible") is True,
+            state.get("rawReviewPacketHidden") is True,
             state.get("reviewPacketPreviewVisible") is True,
             state.get("visibleNodeCount") == 20,
             state.get("visibleWireCount") == 23,
@@ -498,7 +544,12 @@ def _capture_responsive_state(
         """() => {
             const preview = document.querySelector("#docx-circuit-review-packet-preview");
             const text = document.querySelector("#docx-circuit-review-packet-preview-text");
-            return preview?.open && text?.textContent.includes("## DOCX Circuit Review Packet");
+            const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
+            return preview?.open
+              && text?.textContent.includes("## DOCX 电路验收摘要")
+              && deliveryPanel
+              && deliveryPanel.getBoundingClientRect().height > 0
+              && getComputedStyle(text).display === "none";
         }""",
         timeout=7000,
     )
@@ -515,16 +566,17 @@ def _capture_responsive_state(
 
 def _review_packet_markdown_valid(value: str) -> bool:
     required = [
-        "## DOCX Circuit Review Packet",
-        "### Summary",
-        "- Source: `P035-S01`",
-        "- Selected element: `node:sw1`",
-        "### P035 Evidence",
-        "### DOCX Evidence",
+        "## DOCX 电路验收摘要",
+        "### 摘要",
+        "- 需求句子: `P035-S01`",
+        "- 选中元素: SW1",
+        "### 工序来源",
+        "### 需求来源",
         "### JSON",
         "```json",
         '"kind": "docx_circuit_review_packet"',
         '"id": "sw1"',
+        '"display_label": "SW1"',
         '"truth_effect": "none"',
         '"certification_claim": "none"',
     ]
@@ -607,7 +659,12 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                     """() => {
                         const preview = document.querySelector("#docx-circuit-review-packet-preview");
                         const text = document.querySelector("#docx-circuit-review-packet-preview-text");
-                        return preview?.open && text?.textContent.includes("## DOCX Circuit Review Packet");
+                        const deliveryPanel = document.querySelector("#docx-circuit-delivery-panel");
+                        return preview?.open
+                          && text?.textContent.includes("## DOCX 电路验收摘要")
+                          && deliveryPanel
+                          && deliveryPanel.getBoundingClientRect().height > 0
+                          && getComputedStyle(text).display === "none";
                     }""",
                     timeout=7000,
                 )
@@ -619,7 +676,7 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 )
                 page.locator("#docx-circuit-copy-trace-packet").click()
                 page.wait_for_function(
-                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("审阅包 Markdown 已复制")""",
+                    """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("验收摘要已复制")""",
                     timeout=7000,
                 )
                 copied_review_packet = page.evaluate("navigator.clipboard.readText()")
@@ -634,6 +691,11 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
                 current_state = _page_state(current_page)
                 current_page.screenshot(path=str(current_review_path), full_page=True)
 
+                page.locator("#docx-circuit-source-index-details summary").click()
+                page.wait_for_function(
+                    """() => document.querySelector("#docx-circuit-source-index-details")?.open === true""",
+                    timeout=7000,
+                )
                 page.locator('[data-source-entry-link-anchor="P004"]').click()
                 page.wait_for_function(
                     """() => document.querySelector("#docx-circuit-copy-status")?.textContent.includes("P004 链接已复制")""",
@@ -684,6 +746,17 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
         "sourceFocusVisible": False,
         "sourceFocusButtonDisabled": True,
         "focusedSourceEntryAnchor": None,
+        "compactCardCount": 3,
+        "flowDetailsOpen": False,
+        "acceptanceTrailVisible": True,
+        "trailSource": "P035-S01 · RA < 6 ft 与 SW1 进入 L1，TLS 115VAC 通电并解锁",
+        "trailLogic": "L1",
+        "trailElement": "SW1",
+        "trailDemo": "L1 / TLS 解锁",
+        "sequenceDetailsOpen": False,
+        "sourceIndexDetailsOpen": False,
+        "traceDetailsOpen": False,
+        "contractDetailsOpen": False,
         "selectedElementId": "sw1",
         "selectedElementType": "node",
         "searchValue": "SW1",
@@ -700,13 +773,14 @@ def verify_review_links(artifact_dir: Path) -> dict[str, Any]:
     source_expected = {
         **current_expected,
         "activeSourceEntryAnchor": "P004",
-        "activeSourceEntryLabel": "P004 · 源文档条目",
+        "activeSourceEntryLabel": "P004 · 需求条目",
         "sourceFocusVisible": True,
         "sourceFocusButtonDisabled": False,
     }
     source_focus_expected = {
         **source_expected,
         "focusedSourceEntryAnchor": "P004",
+        "sourceIndexDetailsOpen": True,
     }
     current_params = _hash_params(copied_current)
     source_params = _hash_params(copied_source_entry)

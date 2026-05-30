@@ -73,7 +73,7 @@ def _demo_gate_valid(package: dict[str, Any], mismatches: list[str]) -> bool:
     valid = True
     if package.get("demo_surface") != {
         "route": "/demo-reconstruction",
-        "title": "demo.html 复刻 MVP 控制台",
+        "title": "反推控制台复刻",
         "node_count": 20,
         "wire_count": 23,
         "preset_count": 5,
@@ -161,7 +161,7 @@ def _markdown_report_valid(
         return False
     text = report_path.read_text(encoding="utf-8")
     valid = True
-    for fragment in ("demo.html 复刻 MVP 控制台", "非认证声明", "/demo-reconstruction", "embedded_codex_light_palette"):
+    for fragment in ("反推控制台复刻", "非认证声明", "/demo-reconstruction", "embedded_codex_light_palette"):
         if fragment not in text:
             mismatches.append(f"markdown_report must contain {fragment}")
             valid = False

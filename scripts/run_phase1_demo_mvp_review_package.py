@@ -186,7 +186,7 @@ def _demo_surface_from_gate(demo_payload: dict[str, Any]) -> dict[str, Any]:
     contract = demo_payload.get("contract", {})
     return {
         "route": "/demo-reconstruction",
-        "title": "demo.html 复刻 MVP 控制台",
+        "title": "反推控制台复刻",
         "node_count": int(contract.get("expected_node_count", 0)),
         "wire_count": int(contract.get("expected_wire_count", 0)),
         "preset_count": int(contract.get("expected_preset_count", 0)),
@@ -208,7 +208,7 @@ def _homepage_entry_from_gate(demo_payload: dict[str, Any]) -> dict[str, Any]:
         "route": "/demo-reconstruction",
         "element_id": "home-first-phase-demo-entry",
         "priority": "first_phase_mvp",
-        "label": "demo.html 复刻 MVP 控制台",
+        "label": "打开复刻控制台",
     }
 
 
@@ -217,7 +217,7 @@ def _residual_risks() -> list[dict[str, str]]:
         {
             "id": "PHASE1-RISK-001",
             "severity": "medium",
-            "summary": "当前交付包证明 demo.html 复刻控制台可演示和可回归，不证明认证级控制律正确性。",
+            "summary": "当前交付包证明反推控制台复刻可演示和可回归，不证明认证级控制律正确性。",
             "mitigation": "后续阶段继续通过 approved-task shell、Safety/Evidence gates 和人工审查推进。",
         }
     ]
@@ -256,7 +256,7 @@ def _markdown_report(package: dict[str, Any]) -> str:
     return (
         "# Phase 1 Demo MVP Review Package\n\n"
         "## 交付物\n\n"
-        "- demo.html 复刻 MVP 控制台\n"
+        "- 反推控制台复刻\n"
         "- 路由：`/demo-reconstruction`\n"
         "- 首页入口：`home-first-phase-demo-entry`\n\n"
         "## 机器验收\n\n"

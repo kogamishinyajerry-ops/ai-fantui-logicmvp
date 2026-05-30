@@ -68,9 +68,8 @@
     border: 1px solid rgba(0,200,245,0.24);
     border-radius: 999px;
     color: var(--home-text);
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    padding: 5px 8px;
+    font-size: 12px;
+    padding: 6px 10px;
   }
   .home-default-mode-grid {
     display: grid;
@@ -176,9 +175,8 @@
     border: 1px solid rgba(0,200,245,0.24);
     border-radius: 999px;
     color: var(--home-text);
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    padding: 5px 8px;
+    font-size: 12px;
+    padding: 6px 10px;
   }
   .home-first-phase-demo-link {
     display: inline-flex;
@@ -336,7 +334,6 @@
   }
   .home-replay-http-link {
     color: var(--home-accent);
-    font-family: 'Courier New', monospace;
     font-size: 11px;
     text-decoration: none;
   }
@@ -742,45 +739,46 @@
     <h1 id="home-hero-title">反推逻辑演示舱</h1>
     <p>
       默认只暴露 <strong>画布 / 运行 / 参数 / 证据 / 报告</strong> 五个入口。
-      需求解析、逻辑绘制、故障准备和沙盒审查仍保留在链路中，所有输出保持 sandbox candidate，不修改 controller truth。
+      需求解析、逻辑绘制、故障准备和沙盒审查保留为可选链路；首页不展示后台包、命令或原始状态。
     </p>
     <div class="home-shell-state" aria-label="候选态边界">
-      <span class="home-shell-pill">truth_effect:none</span>
-      <span class="home-shell-pill">candidate_state:sandbox_candidate</span>
-      <span class="home-shell-pill">certification_claim:none</span>
-      <span class="home-shell-pill">controller_truth_modified:false</span>
+      <span class="home-shell-pill" data-boundary-token="truth_effect:none">只读演示</span>
+      <span class="home-shell-pill" data-boundary-token="candidate_state:sandbox_candidate">候选输出</span>
+      <span class="home-shell-pill" data-boundary-token="human_review_required:true">人工复核</span>
+      <span class="home-shell-pill" data-boundary-token="certification_claim:none">不作认证声明</span>
     </div>
   </section>
 
   <section id="home-docx-to-circuit-mainline" class="home-docx-to-circuit-mainline" data-primary-docx-entry="original-docx-to-complete-circuit" aria-labelledby="home-docx-to-circuit-title">
     <div>
-      <h2 id="home-docx-to-circuit-title">原始 DOCX 到完整电路</h2>
+      <h2 id="home-docx-to-circuit-title">反推需求到可运行电路</h2>
       <p>
-        从 <strong>uploads/20260409-thrust-reverser-control-logic.docx</strong> 开始，
-        串联需求解析、L1-L4 逻辑复刻和 demo.html 20/23 完整电路验收。
+        从已登记的反推控制需求文档开始，
+        串联需求解析、L1-L4 逻辑复刻和控制台验收。
       </p>
-      <div class="home-docx-to-circuit-steps" aria-label="原始 DOCX 到电路三段路径">
-        <span>1 原始 DOCX</span>
+      <div class="home-docx-to-circuit-steps" aria-label="需求到电路三段路径">
+        <span>1 需求文档</span>
         <span>2 L1-L4 逻辑复刻</span>
-        <span>3 demo.html 完整电路</span>
+        <span>3 控制台验收</span>
       </div>
     </div>
-    <a id="home-docx-to-circuit-entry" class="home-primary-next" href="/docx-to-circuit" data-home-priority="source-to-circuit">打开原始 DOCX 到完整电路</a>
+    <a id="home-docx-to-circuit-entry" class="home-primary-next" href="/docx-to-circuit" data-home-priority="source-to-circuit">打开需求到电路入口</a>
   </section>
 
   <section id="home-first-phase-mvp" class="home-first-phase-mvp" data-first-phase-deliverable="demo-html-reconstruction-mvp" aria-labelledby="home-first-phase-title">
     <div>
-      <h2 id="home-first-phase-title">第一阶段可演示交付物</h2>
+      <h2 id="home-first-phase-title">复刻控制台交付物</h2>
       <p>
-        当前先交付 <strong>demo.html 复刻 MVP 控制台</strong>：
+        当前先交付 <strong>反推控制台复刻</strong>：
         复刻老版数字孪生反推控制台，稳定验证 20/20 节点、23/23 连线、5 个预设和 6 类状态输出。
       </p>
-      <div class="home-first-phase-evidence" aria-label="第一阶段验收命令">
-        <span>make demo-html-reconstruction-mvp</span>
-        <span>make demo-html-reconstruction-browser-acceptance</span>
+      <div class="home-first-phase-evidence" aria-label="第一阶段验收摘要">
+        <span data-validation-command="make demo-html-reconstruction-mvp">节点 20/20</span>
+        <span data-validation-command="make demo-html-reconstruction-browser-acceptance">浏览器验收通过</span>
+        <span>5 个预设可操作</span>
       </div>
     </div>
-    <a id="home-first-phase-demo-entry" class="home-first-phase-demo-link" href="/demo-reconstruction" data-home-priority="first-phase-mvp">打开 demo.html 复刻 MVP 控制台</a>
+    <a id="home-first-phase-demo-entry" class="home-first-phase-demo-link" href="/demo-reconstruction" data-home-priority="first-phase-mvp">打开复刻控制台</a>
   </section>
 
   <section id="home-default-mode-grid" class="home-default-mode-grid" aria-label="默认五入口">
@@ -802,12 +800,12 @@
     <a class="home-mode-entry" href="/logic-builder#evidence" data-default-entry="evidence">
       <span>04 TRACE</span>
       <strong>证据</strong>
-      <p>查看节点、原文、运行和审查之间的追溯关系，不把 raw JSON 作为主工作流。</p>
+      <p>查看节点、原文、运行和审查之间的追溯关系，不把原始数据作为主工作流。</p>
     </a>
     <a class="home-mode-entry" href="/logic-builder#report" data-default-entry="report">
       <span>05 REPORT</span>
       <strong>报告</strong>
-      <p>预览回放与审查报告，明确候选态、dry-run 和无认证声明边界。</p>
+      <p>预览回放与审查报告，明确候选态、试运行和无认证声明边界。</p>
     </a>
   </section>
 
@@ -818,10 +816,9 @@
 
   <section class="home-replay" aria-labelledby="deepseek-live-replay-title">
     <div>
-      <h2 id="deepseek-live-replay-title">真实 DeepSeek 全链路回放</h2>
+      <h2 id="deepseek-live-replay-title">最近一次全链路回放</h2>
       <p>
-        从 <code>artifacts/deepseek-live-full-chain</code> 导入最近一次真实 DeepSeek V4 Pro 产物：
-        需求理解、逻辑图、故障准备和沙盒计划会写入本地工作台草稿；不重新调用模型。
+        导入最近一次已完成回放：需求理解、逻辑图、故障准备和沙盒计划会写入本地工作台草稿；不重新调用模型。
       </p>
       <div id="deepseek-live-replay-meta" class="home-replay-meta" aria-label="最近回放摘要">
         <span class="home-replay-pill">最近回放：读取中</span>
@@ -829,8 +826,8 @@
       <div id="deepseek-live-replay-counts" class="home-replay-counts" aria-label="四阶段计数"></div>
     </div>
     <div class="home-replay-actions">
-      <button id="deepseek-live-replay-import" type="button">导入真实 DeepSeek 回放</button>
-      <a id="deepseek-live-replay-http-link" class="home-replay-http-link" href="http://127.0.0.1:8002/index.html">HTTP 入口 :8002</a>
+      <button id="deepseek-live-replay-import" type="button">导入最近回放</button>
+      <a id="deepseek-live-replay-http-link" class="home-replay-http-link" href="http://127.0.0.1:8002/index.html">本地服务入口</a>
       <span id="deepseek-live-replay-status" class="home-replay-status" role="status">等待导入</span>
     </div>
   </section>
@@ -840,16 +837,16 @@
     <div class="home-brief-block">
       <h2>这是什么</h2>
       <p>
-        这是一个 <strong>DeepSeek V4 Pro 驱动的 UI 工作台</strong>：
+        这是一个 <strong>需求到逻辑复核工作台</strong>：
         工程师上传或粘贴需求，模型先提出澄清问题，再生成初版逻辑图、理解批注意图，
-        最后给出故障注入准备和沙盒 dry-run 建议。旧画布只保留为备选模块，不参与首页主流程。
+        最后给出故障注入准备和沙盒试运行建议。旧画布只保留为备选模块，不参与首页主流程。
       </p>
     </div>
     <div class="home-brief-block">
       <h2>解决什么问题</h2>
       <p>
         当前演示要证明的是 <strong>大模型能把需求文档转成可审查的工程候选链路</strong>，
-        而不是把用户带进一个手工画布编辑器。所有模型产物都保持 concept/sandbox-only，
+        而不是把用户带进一个手工画布编辑器。所有模型产物都保持候选草稿，
         只作为工程复核输入，不构成适航合规声明。
       </p>
     </div>
@@ -858,8 +855,8 @@
   <!-- Metrics strip -->
   <div class="home-metrics" role="region" aria-label="验证基线指标">
     <div class="home-metric">
-      <span class="home-metric-value">DeepSeek</span>
-      <span class="home-metric-label">V4 Pro 主模型</span>
+      <span class="home-metric-value">DOCX</span>
+      <span class="home-metric-label">需求起点</span>
     </div>
     <div class="home-metric">
       <span class="home-metric-value">4</span>
@@ -870,21 +867,21 @@
       <span class="home-metric-label">控制真值修改</span>
     </div>
     <div class="home-metric">
-      <span class="home-metric-value">dry-run</span>
+      <span class="home-metric-value">试运行</span>
       <span class="home-metric-label">沙盒注入建议</span>
     </div>
     <div class="home-metric">
-      <span class="home-metric-value">backup</span>
-      <span class="home-metric-label">旧画布已降级</span>
+      <span class="home-metric-value">折叠</span>
+      <span class="home-metric-label">旧模块默认收起</span>
     </div>
   </div>
 
   <section class="home-primary-action" aria-label="首页主流程入口">
     <div>
-      <h2>从原始 DOCX 开始</h2>
-      <p>先进入原文档到完整电路主入口；下方四步卡片仍保留需求理解、逻辑绘制、故障准备和沙盒审查的流程预览。</p>
+      <h2>从反推需求开始</h2>
+      <p>先进入需求到电路入口；下方四步卡片仍保留需求理解、逻辑绘制、故障准备和沙盒审查的流程预览。</p>
     </div>
-    <a id="home-primary-next" class="home-primary-next" href="/docx-to-circuit" data-primary-next-action="true" data-primary-entry="docx-source-to-circuit">下一步：原始 DOCX 到完整电路</a>
+    <a id="home-primary-next" class="home-primary-next" href="/docx-to-circuit" data-primary-next-action="true" data-primary-entry="docx-source-to-circuit">下一步：需求到电路</a>
   </section>
 
   <p class="home-flow-preview-label">四步流程预览</p>
@@ -893,23 +890,23 @@
     <a href="/requirements-intake" class="home-card" data-scope="workstation" data-primary-entry="deepseek-v4-pro" aria-labelledby="card-requirements-intake-title">
       <span class="home-card-kind">需求入口</span>
       <h2 class="home-card-title" id="card-requirements-intake-title">需求理解工作台</h2>
-      <p class="home-card-subtitle">/requirements-intake</p>
-      <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，默认通过 DeepSeek V4 Pro 输出澄清问题、概念节点、逻辑连线与参数候选；不写入 controller truth。</p>
+      <p class="home-card-subtitle">文本到需求</p>
+      <p class="home-card-desc">上传 DOCX / TXT / MD 需求文本，输出澄清问题、概念节点、逻辑连线与参数候选；只进入人工复核。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/logic-builder" class="home-card" data-scope="workstation" aria-labelledby="card-logic-builder-title">
       <span class="home-card-kind">模型绘制</span>
       <h2 class="home-card-title" id="card-logic-builder-title">逻辑链路绘制</h2>
-      <p class="home-card-subtitle">/logic-builder</p>
-      <p class="home-card-desc">读取需求理解页的已澄清 JSON，由大模型独立生成节点坐标、正交连线路径和参数小面板；前端只负责渲染模型输出。</p>
+      <p class="home-card-subtitle">需求到图纸</p>
+      <p class="home-card-desc">读取已确认需求，由大模型生成节点坐标、正交连线路径和参数小面板，方便工程师直接审查。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/fault-injection-prepare" class="home-card" data-scope="workstation" aria-labelledby="card-fault-prep-title">
       <span class="home-card-kind">故障准备</span>
       <h2 class="home-card-title" id="card-fault-prep-title">故障注入准备</h2>
-      <p class="home-card-subtitle">/fault-injection-prepare</p>
+      <p class="home-card-subtitle">图纸到场景</p>
       <p class="home-card-desc">读取模型生成的逻辑图纸，由大模型提出故障场景候选、建议注入点和进入沙盒注入前必须确认的安全边界；不执行仿真。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -917,8 +914,8 @@
     <a href="/fault-injection-sandbox" class="home-card" data-scope="workstation" aria-labelledby="card-fault-sandbox-title">
       <span class="home-card-kind">沙盒建议</span>
       <h2 class="home-card-title" id="card-fault-sandbox-title">沙盒故障注入</h2>
-      <p class="home-card-subtitle">/fault-injection-sandbox</p>
-      <p class="home-card-desc">读取已确认边界的故障准备草稿，由模型生成 dry-run 注入配置、预期观测点和人工审查清单；不调用仿真接口。</p>
+      <p class="home-card-subtitle">场景到复核</p>
+      <p class="home-card-desc">读取已确认边界的故障准备草稿，由模型生成试运行配置、预期观测点和人工审查清单。</p>
       <span class="home-card-arrow">→</span>
     </a>
   </section>
@@ -933,7 +930,7 @@
     <a href="/demo.html" class="home-card" data-scope="workstation" aria-labelledby="card-demo-title">
       <span class="home-card-kind">工作台</span>
       <h2 class="home-card-title" id="card-demo-title">反推逻辑工作台</h2>
-      <p class="home-card-subtitle">/demo.html</p>
+      <p class="home-card-subtitle">历史演示</p>
       <p class="home-card-desc">油门拉杆位置 → 位置开关 → 4 层 AND 逻辑门 → 油门锁释放命令。实时信号链路可视化 + 故障注入。5 个场景预设，含着陆展开全链路。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -941,7 +938,7 @@
     <a href="/c919_etras_workstation.html" class="home-card" data-scope="workstation" aria-labelledby="card-etras-title">
       <span class="home-card-kind">工作台</span>
       <h2 class="home-card-title" id="card-etras-title">C919 E-TRAS 工作台</h2>
-      <p class="home-card-subtitle">/c919_etras_workstation.html</p>
+      <p class="home-card-subtitle">C919 演示</p>
       <p class="home-card-desc">C919 电动反推完整展开链：EICU 双通道 → FADEC 部署命令。6 预设场景 + 蒙特卡洛可靠度仿真，支持故障树验证。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -950,8 +947,8 @@
     <a href="http://127.0.0.1:9191/" class="home-card" data-scope="simulation" data-external="true" aria-labelledby="card-panel-title">
       <span class="home-card-kind">仿真 · 外部服务</span>
       <h2 class="home-card-title" id="card-panel-title">C919 MFD 仿真面板</h2>
-      <p class="home-card-subtitle">http://127.0.0.1:9191</p>
-      <p class="home-card-desc">有状态机的动态重放。需另起 <code>scripts/c919_etras_panel_server.py</code>。</p>
+      <p class="home-card-subtitle">外部面板</p>
+      <p class="home-card-desc">有状态机的动态重放。需另行启动本地面板服务。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -959,16 +956,16 @@
     <a href="/fantui_circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-fantui-circuit-title">
       <span class="home-card-kind">电路图</span>
       <h2 class="home-card-title" id="card-fantui-circuit-title">反推电路图</h2>
-      <p class="home-card-subtitle">/fantui_circuit.html</p>
-      <p class="home-card-desc">FANTUI 域内静态 SVG：controller.py::DeployController 信号拓扑。</p>
+      <p class="home-card-subtitle">信号拓扑</p>
+      <p class="home-card-desc">FANTUI 域内静态 SVG：反推信号拓扑。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/c919_etras_panel/circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-etras-circuit-title">
       <span class="home-card-kind">电路图</span>
       <h2 class="home-card-title" id="card-etras-circuit-title">E-TRAS 电路图</h2>
-      <p class="home-card-subtitle">/c919_etras_panel/circuit.html</p>
-      <p class="home-card-desc">C919 thrust-reverser PDF §2 静态 SVG 拓扑，对应 frozen_v1 规范。</p>
+      <p class="home-card-subtitle">C919 拓扑</p>
+      <p class="home-card-desc">C919 反推链路静态 SVG 拓扑。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
@@ -976,7 +973,7 @@
     <a href="/fan_console.html" class="home-card" data-scope="simulation" aria-labelledby="card-fan-console-title">
       <span class="home-card-kind">仿真</span>
       <h2 class="home-card-title" id="card-fan-console-title">反推实时操作台</h2>
-      <p class="home-card-subtitle">/fan_console.html</p>
+      <p class="home-card-subtitle">实时操作</p>
       <p class="home-card-desc">高自由度 tick 驱动的反推仿真：TRA 杠杆 / RA / N1k 实时可调，L1–L4 逻辑门 + 命令 + VDT 仪表 + 时间-状态曲线抽屉，覆盖展开 / 收起 / 抑制 / 过温全链路。</p>
       <span class="home-card-arrow">→</span>
     </a>
@@ -985,16 +982,16 @@
     <a href="/fantui_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-fantui-req-title">
       <span class="home-card-kind">文档</span>
       <h2 class="home-card-title" id="card-fantui-req-title">FANTUI 需求分析</h2>
-      <p class="home-card-subtitle">/fantui_requirements.html</p>
-      <p class="home-card-desc">SR / FR / IR / PR 需求规范 + AI 设计决策 D1–D5 + 12 条需求→代码可追溯矩阵 + L1–L4 控制逻辑推导过程。</p>
+      <p class="home-card-subtitle">反推需求</p>
+      <p class="home-card-desc">反推需求、设计取舍、可追溯矩阵和 L1-L4 控制逻辑推导过程。</p>
       <span class="home-card-arrow">→</span>
     </a>
 
     <a href="/c919_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-c919-req-title">
       <span class="home-card-kind">文档</span>
       <h2 class="home-card-title" id="card-c919-req-title">C919 需求分析</h2>
-      <p class="home-card-subtitle">/c919_requirements.html</p>
-      <p class="home-card-desc">AR / SM / FR 架构需求 + 12 态状态机 S0–SF + AI 推导决策 C1–C4（为何 FANTUI 无状态→C919 状态机）+ 状态→命令可追溯矩阵。</p>
+      <p class="home-card-subtitle">C919 需求</p>
+      <p class="home-card-desc">C919 架构需求、状态机说明、设计取舍和状态到命令的追溯矩阵。</p>
       <span class="home-card-arrow">→</span>
     </a>
     </section>
@@ -1002,12 +999,12 @@
 
   <!-- Demo guide for evaluators -->
   <nav class="home-guide" aria-labelledby="home-guide-title">
-    <h2 id="home-guide-title">DeepSeek V4 Pro UI 工作台 · 演示顺序</h2>
+    <h2 id="home-guide-title">演示顺序</h2>
     <ol class="home-guide-steps">
       <li>
         <span class="home-guide-step-num">1</span>
         <span>
-          进入 <strong>需求理解工作台</strong>，选择 DeepSeek V4 Pro，上传或粘贴需求文本。
+          进入 <strong>需求理解工作台</strong>，上传或粘贴需求文本。
           <em>（展示：模型先澄清需求，而不是直接让用户画图）</em>
         </span>
       </li>
@@ -1022,14 +1019,14 @@
         <span class="home-guide-step-num">3</span>
         <span>
           在图纸上选择节点并提交批注，让模型理解修改意图后更新候选图纸。
-          <em>（展示：DeepSeek 驱动的批注修订闭环）</em>
+          <em>（展示：批注修订闭环）</em>
         </span>
       </li>
       <li>
         <span class="home-guide-step-num">4</span>
         <span>
-          进入 <strong>故障注入准备</strong> 和 <strong>沙盒故障注入</strong>，检查 dry-run 配置、观测点和人工审查清单。
-          <em>（展示：候选输出仍保持 sandbox-only）</em>
+          进入 <strong>故障注入准备</strong> 和 <strong>沙盒故障注入</strong>，检查试运行配置、观测点和人工审查清单。
+          <em>（展示：候选输出仍需人工复核）</em>
         </span>
       </li>
     </ol>
@@ -1037,9 +1034,7 @@
 
   <footer class="home-footer">
     <p>
-      <strong style="color:var(--home-text)">真值源</strong>：<code>src/well_harness/adapters/*.py</code> ·
-      <strong style="color:var(--home-text)">启动服务</strong>：<code>python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002</code> ·
-      <strong style="color:var(--home-text)">验证覆盖</strong>：726 passed · 主分支 CI 全绿
+      <strong style="color:var(--home-text)">说明</strong>：首页只保留可操作入口和验收摘要；完整验证记录由提交流程保留。
     </p>
   </footer>
 </main>
@@ -1049,7 +1044,6 @@
   "use strict";
 
   const REPLAY_ENDPOINT = "/api/requirements-intake/deepseek-live-demo-replay";
-  const LOCAL_SERVER_COMMAND = "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002";
   const LOCAL_SERVER_URL = "http://127.0.0.1:8002/index.html";
   const REQUIREMENTS_KEY = "ai-fantui-requirements-intake-ready-v1";
   const DRAWING_KEY = "ai-fantui-logic-builder-drawing-v1";
@@ -1116,15 +1110,15 @@
       replayCounts.innerHTML = `
         <div class="home-replay-count" data-replay-stage="local-server">
           <strong>本地服务</strong>
-          <span>${escapeText(LOCAL_SERVER_COMMAND)}</span>
+          <span>请从本地服务入口打开页面，再导入最近回放。</span>
         </div>
         <div class="home-replay-count" data-replay-stage="why-http">
           <strong>导入方式</strong>
-          <span>file:// 无法读取回放 API，需通过 HTTP 页面导入</span>
+          <span>浏览器文件模式不能读取本地回放。</span>
         </div>
       `;
     }
-    setReplayStatus("file:// 无法读取回放 API");
+    setReplayStatus("请从本地服务入口打开");
   }
 
   function assertReplayPayload(payload) {
@@ -1160,7 +1154,7 @@
     if (!importButton) return;
     if (isFileMode()) {
       renderFileModeReplayHelp();
-      setReplayStatus(`请先启动服务：${LOCAL_SERVER_COMMAND}`);
+      setReplayStatus("请先从本地服务入口打开");
       return;
     }
     importButton.disabled = true;

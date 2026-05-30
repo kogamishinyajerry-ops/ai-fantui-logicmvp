@@ -49,7 +49,7 @@
       ],
       "properties": {
         "route": {"const": "/demo-reconstruction"},
-        "title": {"const": "demo.html 复刻 MVP 控制台"},
+        "title": {"const": "反推控制台复刻"},
         "node_count": {"const": 20},
         "wire_count": {"const": 23},
         "preset_count": {"const": 5},
@@ -65,7 +65,7 @@
         "route": {"const": "/demo-reconstruction"},
         "element_id": {"const": "home-first-phase-demo-entry"},
         "priority": {"const": "first_phase_mvp"},
-        "label": {"const": "demo.html 复刻 MVP 控制台"}
+        "label": {"const": "打开复刻控制台"}
       }
     },
     "deterministic_gates": {

@@ -63,6 +63,7 @@ M21_STREAMED_AUTHORING_C919_DEPLOY_CMD1_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR ?=
 M21_STREAMED_AUTHORING_C919_DEPLOY_CMD1_THR_IDLE_LOCK_RELEASE_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-m21-streamed-authoring-c919-deploy-cmd1-thr-idle-lock-release-real-doc-raw-intake-gate
 M21_STREAMED_AUTHORING_C919_MLG_WOW_CMD2_CMD3_FANOUT_REAL_DOC_RAW_INTAKE_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-m21-streamed-authoring-c919-mlg-wow-cmd2-cmd3-fanout-real-doc-raw-intake-gate
 M21_STREAMED_AUTHORING_DEMO_FANOUT_JUNCTION_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-m21-streamed-authoring-demo-fanout-junction-gate
+LOGIC_BUILDER_SURFACE_GATE_ARTIFACT_DIR ?= /tmp/ai-fantui-logic-builder-surface-gate
 CUSTOMER_DEMO_MVP_CLOSEOUT_ARTIFACT_DIR ?= /tmp/ai-fantui-customer-demo-mvp-closeout
 PROJECT_OWNER_ACCEPTANCE_REVIEW_PACKET_ARTIFACT_DIR ?= /tmp/ai-fantui-project-owner-acceptance-review-packet
 PROJECT_OWNER_EXTERNAL_REVIEW_HANDOFF_ARTIFACT_DIR ?= /tmp/ai-fantui-project-owner-external-review-handoff
@@ -75,6 +76,7 @@ MULTI_AGENT_M21_STREAMED_LOGIC_AUTHORING_PLAN_ARTIFACT_DIR ?= /tmp/ai-fantui-mul
 .PHONY: phase1-demo-mvp-baseline-handoff verify-phase1-demo-mvp-baseline-handoff
 .PHONY: project-progress-cockpit verify-project-progress-cockpit
 .PHONY: docx-to-circuit-review-links
+.PHONY: logic-builder-surface-gate
 
 help:
 	@echo "Targets:"
@@ -82,6 +84,7 @@ help:
 	@echo "  make demo-html-reconstruction-mvp   — verify old demo.html cockpit reconstruction MVP"
 	@echo "  make demo-html-reconstruction-browser-acceptance — capture browser screenshots and interaction evidence for /demo-reconstruction"
 	@echo "  make docx-to-circuit-review-links   — verify copyable /docx-to-circuit review deep links"
+	@echo "  make logic-builder-surface-gate     — verify compact /logic-builder visible surface"
 	@echo "  make phase1-demo-mvp-review-package — generate JSON + Markdown package for the Phase 1 demo MVP"
 	@echo "  make phase1-demo-mvp-ci-artifact — generate a local Phase 1 demo MVP CI artifact directory"
 	@echo "  make verify-phase1-demo-mvp-ci-artifact — validate the downloaded Phase 1 demo MVP CI artifact directory"
@@ -192,6 +195,9 @@ demo-html-reconstruction-browser-acceptance:
 
 docx-to-circuit-review-links:
 	@PYTHONPATH=src:. python3 scripts/verify_docx_to_circuit_review_links.py --format json
+
+logic-builder-surface-gate:
+	@PYTHONPATH=src:. python3 scripts/verify_logic_builder_surface_gate.py --format json --artifact-dir "$(LOGIC_BUILDER_SURFACE_GATE_ARTIFACT_DIR)"
 
 phase1-demo-mvp-review-package:
 	@PYTHONPATH=src:. python3 scripts/run_phase1_demo_mvp_review_package.py --format json --artifact-dir "$(PHASE1_DEMO_MVP_REVIEW_PACKAGE_ARTIFACT_DIR)"

@@ -30,7 +30,7 @@
   };
 
   const LOGIC_IDS = ["logic1", "logic2", "logic3", "logic4"];
-  const TRACE_KIND_LABELS = {node: "节点", wire: "线束"};
+  const TRACE_KIND_LABELS = {node: "节点", wire: "连线"};
   const WORKBENCH_SECTION_ANCHORS = [
     "docx-circuit-source-index-panel",
     "docx-circuit-review-panel",
@@ -116,6 +116,13 @@
   const sourceIndexClear = $("docx-circuit-source-index-clear");
   const sourceIndexList = $("docx-circuit-source-index-list");
   const workbenchBar = $("docx-circuit-workbench-bar");
+  const sourceIndexDetails = $("docx-circuit-source-index-details");
+  const compactDemandTitle = $("docx-circuit-compact-demand-title");
+  const compactDemandText = $("docx-circuit-compact-demand-text");
+  const compactLogicTitle = $("docx-circuit-compact-logic-title");
+  const compactLogicText = $("docx-circuit-compact-logic-text");
+  const compactDemoTitle = $("docx-circuit-compact-demo-title");
+  const compactDemoText = $("docx-circuit-compact-demo-text");
   const activeAnchor = $("docx-circuit-active-anchor");
   const reviewPanel = $("docx-circuit-review-panel");
   const prevStepButton = $("docx-circuit-prev-step");
@@ -130,9 +137,21 @@
   const showSourceEntryButton = $("docx-circuit-show-source-entry");
   const reviewPacketPreview = $("docx-circuit-review-packet-preview");
   const reviewPacketPreviewText = $("docx-circuit-review-packet-preview-text");
+  const deliveryAnchor = $("docx-circuit-delivery-anchor");
+  const deliveryTitle = $("docx-circuit-delivery-title");
+  const deliveryElement = $("docx-circuit-delivery-element");
+  const deliveryLevels = $("docx-circuit-delivery-levels");
+  const deliveryScope = $("docx-circuit-delivery-scope");
+  const deliveryBoundary = $("docx-circuit-delivery-boundary");
+  const deliveryEvidenceList = $("docx-circuit-delivery-evidence-list");
   const sourceAnchor = $("docx-circuit-source-anchor");
   const sourceTitle = $("docx-circuit-source-title");
   const sourceText = $("docx-circuit-source-text");
+  const acceptanceTrail = $("docx-circuit-acceptance-trail");
+  const trailSource = $("docx-circuit-trail-source");
+  const trailLogic = $("docx-circuit-trail-logic");
+  const trailElement = $("docx-circuit-trail-element");
+  const trailDemo = $("docx-circuit-trail-demo");
   const tracePanel = $("docx-circuit-trace-panel");
   const traceSelectedId = $("docx-circuit-trace-selected-id");
   const traceType = $("docx-circuit-trace-type");
@@ -220,6 +239,42 @@
     return `${value.slice(0, limit - 1)}…`;
   }
 
+  function sourceEntryDisplayRole(entry) {
+    const role = String(entry && entry.role || "").trim();
+    if (!role) return "需求条目";
+    return role.replace(/源文档条目|源文条目/g, "需求条目");
+  }
+
+  function renderCompactDemand(step, activeIndex, steps) {
+    if (!step) return;
+    const position = Number.isFinite(activeIndex) && Array.isArray(steps)
+      ? `${activeIndex + 1}/${steps.length}`
+      : "";
+    const title = [step.anchor, step.title].filter(Boolean).join(" · ");
+    setText(compactDemandTitle, title || "等待需求句子");
+    setText(
+      compactDemandText,
+      `${position ? `${position} · ` : ""}${compactText(step.source_text || "等待读取需求句子。", 96)}`,
+    );
+  }
+
+  function renderCompactLogic(kind, id, logicLevels, folded) {
+    const levels = Array.isArray(logicLevels) && logicLevels.length > 0
+      ? logicLevels.join(" / ")
+      : "动作链路";
+    const predicate = Array.isArray(folded) && folded.length > 0
+      ? compactText(folded.join("；"), 96)
+      : "无合并条件";
+    setText(compactLogicTitle, elementDisplayLabel(kind, id));
+    setText(compactLogicText, `${levels} · ${TRACE_KIND_LABELS[kind] || kind} · ${predicate}`);
+  }
+
+  function renderCompactDemo(scenario, status) {
+    const label = scenario && scenario.label ? scenario.label : "等待场景";
+    setText(compactDemoTitle, label);
+    setText(compactDemoText, `20/20 节点 · 23/23 连线 · ${status || "等待同步"}`);
+  }
+
   function sourceIndexQuery() {
     return sourceIndexRawQuery().toLowerCase();
   }
@@ -260,6 +315,8 @@
     if (!sectionAnchor) return;
     const target = document.getElementById(sectionAnchor);
     if (!target) return;
+    const details = target.closest("details");
+    if (details) details.open = true;
     window.requestAnimationFrame(() => target.scrollIntoView({block: "start", behavior: "auto"}));
   }
 
@@ -459,6 +516,31 @@
     return node ? `${node.label} · ${node.id}` : id;
   }
 
+  function nodeDisplayLabel(id) {
+    const node = circuitNodeById(id);
+    return node ? node.label : (NODE_LABELS[id] || id);
+  }
+
+  function elementDisplayLabel(kind, id) {
+    if (kind === "wire") {
+      const edge = circuitEdgeById(id);
+      return edge ? `${nodeDisplayLabel(edge.source)} → ${nodeDisplayLabel(edge.target)}` : id;
+    }
+    return nodeDisplayLabel(id);
+  }
+
+  function renderAcceptanceTrail(step, kind, id, logicLevels) {
+    if (!acceptanceTrail || !step) return;
+    const scenario = DEMO_SCENARIOS[step.anchor] || DEMO_SCENARIOS[DEFAULT_STEP_ANCHOR];
+    acceptanceTrail.dataset.activeAnchor = step.anchor || "";
+    acceptanceTrail.dataset.selectedElementType = kind || "";
+    acceptanceTrail.dataset.selectedElementId = id || "";
+    setText(trailSource, [step.anchor, step.title].filter(Boolean).join(" · "));
+    setText(trailLogic, Array.isArray(logicLevels) && logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
+    setText(trailElement, elementDisplayLabel(kind, id));
+    setText(trailDemo, scenario ? scenario.label : "控制台同步");
+  }
+
   function setSelectedElementState(kind, id) {
     if (circuitSvg) {
       circuitSvg.dataset.selectedElementType = kind;
@@ -521,21 +603,23 @@
       tracePanel.setAttribute("data-selected-element-id", id);
       tracePanel.setAttribute("data-evidence-scope", evidence.scope);
     }
-    setText(traceSelectedId, elementLabel(kind, id));
+    setText(traceSelectedId, elementDisplayLabel(kind, id));
     setText(traceType, TRACE_KIND_LABELS[kind] || kind);
     setText(traceLogicLevel, logicLevels.length > 0 ? logicLevels.join(" / ") : "动作链路");
-    setText(traceFolded, folded.length > 0 ? folded.join("；") : "无折叠谓词");
+    setText(traceFolded, folded.length > 0 ? folded.join("；") : "无合并条件");
+    renderCompactLogic(kind, id, logicLevels, folded);
+    renderAcceptanceTrail(currentStep(), kind, id, logicLevels);
 
     if (!traceEvidenceList) return;
     traceEvidenceList.innerHTML = "";
     steps.forEach((step) => {
-      appendEvidenceItem(step.anchor || "P035", step.title || "P035 步骤", step.source_text || "", "sequence_step");
+      appendEvidenceItem(step.anchor || "P035", step.title || "工序步骤", step.source_text || "", "sequence_step");
     });
     entries.forEach((entry) => {
-      appendEvidenceItem(entry.anchor || "DOCX", entry.role || "源文档条目", entry.text || "", "source_entry");
+      appendEvidenceItem(entry.anchor || "DOCX", sourceEntryDisplayRole(entry), entry.text || "", "source_entry");
     });
     if (traceEvidenceList.children.length === 0) {
-      appendEvidenceItem("未映射", "无直接 DOCX/P035 证据", "当前选择没有命中可展示证据。", "empty");
+      appendEvidenceItem("未命中", "暂无直接需求来源", "当前选择没有命中可展示来源。", "empty");
     }
     renderTracePacketPreview();
   }
@@ -550,7 +634,7 @@
   function installElementInteraction(element, kind, id, label) {
     element.setAttribute("role", "button");
     element.setAttribute("tabindex", "0");
-    element.setAttribute("aria-label", `反查 ${TRACE_KIND_LABELS[kind] || kind} ${label || id}`);
+    element.setAttribute("aria-label", `查看 ${TRACE_KIND_LABELS[kind] || kind} ${label || id} 的来源`);
     element.addEventListener("click", () => selectCircuitElement(kind, id));
     element.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -705,7 +789,8 @@
     const scenario = DEMO_SCENARIOS[step.anchor] || DEMO_SCENARIOS[DEFAULT_STEP_ANCHOR];
     setText(demoScenario, scenario.label);
     if (!demoFrame || !demoFrame.contentDocument) {
-      setText(demoSyncStatus, "等待 iframe 加载");
+      setText(demoSyncStatus, "等待控制台加载");
+      renderCompactDemo(scenario, "等待控制台加载");
       return;
     }
     const doc = demoFrame.contentDocument;
@@ -715,6 +800,7 @@
     if (presetButton) {
       presetButton.click();
       setText(demoSyncStatus, `已同步 ${scenario.label}`);
+      renderCompactDemo(scenario, "已同步");
       demoFrame.dataset.activeScenario = scenario.preset;
       return;
     }
@@ -728,6 +814,7 @@
     writeInput(doc, "fan-reverser-inhibited", controls.reverserInhibited, "change");
     writeInput(doc, "fan-eec-enable", controls.eecEnable, "change");
     setText(demoSyncStatus, `已同步 ${scenario.label}`);
+    renderCompactDemo(scenario, "已同步");
     demoFrame.dataset.activeScenario = step.anchor;
   }
 
@@ -801,7 +888,7 @@
     const entry = sourceEntryByAnchor(activeSourceEntryAnchor);
     sourceFocus.dataset.hasSource = entry ? "true" : "false";
     activeSourceEntry.textContent = entry
-      ? `${entry.anchor || "DOCX"} · ${entry.role || "源文条目"}`
+      ? `${entry.anchor || "DOCX"} · ${sourceEntryDisplayRole(entry)}`
       : "未指定";
     if (showSourceEntryButton) showSourceEntryButton.disabled = !entry;
   }
@@ -820,6 +907,7 @@
       button = sourceEntryButtonForAnchor(activeSourceEntryAnchor);
     }
     if (!button) return;
+    if (sourceIndexDetails) sourceIndexDetails.open = true;
     button.scrollIntoView({block: "center", inline: "nearest"});
     button.focus({preventScroll: true});
   }
@@ -848,7 +936,7 @@
     return {
       kind: "docx_circuit_review_packet",
       source: {
-        path: sourcePath ? sourcePath.textContent.trim() : "",
+        path: sourcePath ? (sourcePath.dataset.sourceDocumentPath || sourcePath.textContent.trim()) : "",
         anchor: step ? step.anchor : currentAnchor,
         title: step ? step.title : "",
         text: step ? step.source_text : "",
@@ -857,6 +945,7 @@
         type: selectedElement.kind,
         id: selectedElement.id,
         label: elementLabel(selectedElement.kind, selectedElement.id),
+        display_label: elementDisplayLabel(selectedElement.kind, selectedElement.id),
         logic_levels: logicLevels,
         folded_predicates: foldedPredicatesForSteps(evidence.steps),
       },
@@ -887,8 +976,54 @@
   function markdownEvidenceList(items, fallback) {
     if (!Array.isArray(items) || items.length === 0) return `- ${fallback}`;
     return items
-      .map((item) => `- \`${item.anchor || "DOCX"}\` ${item.title || item.role || "证据"}: ${item.text || ""}`)
+      .map((item) => `- \`${item.anchor || "DOCX"}\` ${item.title || item.role || "来源"}: ${item.text || ""}`)
       .join("\n");
+  }
+
+  function evidenceScopeLabel(scope) {
+    if (scope === "selected_element") return "当前元素";
+    if (scope === "active_sentence") return "当前句子";
+    return "当前核对";
+  }
+
+  function appendDeliveryEvidenceItem(item, fallbackRole) {
+    if (!deliveryEvidenceList) return;
+    const row = document.createElement("li");
+    const label = document.createElement("strong");
+    const text = document.createElement("span");
+    label.textContent = `${item.anchor || "DOCX"} · ${item.title || item.role || fallbackRole}`;
+    text.textContent = compactText(item.text || "", 132);
+    row.appendChild(label);
+    row.appendChild(text);
+    deliveryEvidenceList.appendChild(row);
+  }
+
+  function renderDeliverySummary(packet) {
+    if (!packet) return;
+    const source = packet.source || {};
+    const element = packet.selected_element || {};
+    const evidence = packet.evidence || {};
+    const logicLevels = Array.isArray(element.logic_levels) && element.logic_levels.length > 0
+      ? element.logic_levels.join(" / ")
+      : "动作链路";
+    const evidenceItems = [
+      ...listFrom(evidence.p035).slice(0, 2).map((item) => ({...item, role: item.title || "工序来源"})),
+      ...listFrom(evidence.docx).slice(0, 2).map((item) => ({...item, role: sourceEntryDisplayRole(item)})),
+    ];
+    setText(deliveryAnchor, source.anchor || currentAnchor);
+    setText(deliveryTitle, source.title || "等待需求句子");
+    setText(deliveryElement, element.display_label || element.label || "等待选择");
+    setText(deliveryLevels, logicLevels);
+    setText(deliveryScope, evidenceScopeLabel(packet.evidence_scope));
+    setText(deliveryBoundary, "只读复刻 · 人工复核");
+    if (!deliveryEvidenceList) return;
+    deliveryEvidenceList.innerHTML = "";
+    evidenceItems.forEach((item) => appendDeliveryEvidenceItem(item, "来源"));
+    if (deliveryEvidenceList.children.length === 0) {
+      const row = document.createElement("li");
+      row.textContent = "当前选择没有命中可展示来源。";
+      deliveryEvidenceList.appendChild(row);
+    }
   }
 
   function tracePacketMarkdown(packet) {
@@ -900,23 +1035,23 @@
       : "未标注";
     const predicates = Array.isArray(element.folded_predicates) && element.folded_predicates.length > 0
       ? element.folded_predicates.join("；")
-      : "无折叠谓词";
+      : "无合并条件";
     return [
-      "## DOCX Circuit Review Packet",
+      "## DOCX 电路验收摘要",
       "",
-      "### Summary",
-      `- Source: \`${source.anchor || ""}\` ${source.title || ""}`,
-      `- Selected element: \`${element.type || ""}:${element.id || ""}\` ${element.label || ""}`,
-      `- Logic level: ${levels}`,
-      `- Folded predicates: ${predicates}`,
-      `- Evidence scope: \`${packet.evidence_scope || "unknown"}\``,
-      "- Boundary: `truth_effect=none`, `certification_claim=none`",
+      "### 摘要",
+      `- 需求句子: \`${source.anchor || ""}\` ${source.title || ""}`,
+      `- 选中元素: ${element.display_label || element.label || ""}`,
+      `- 逻辑层级: ${levels}`,
+      `- 合并条件: ${predicates}`,
+      `- 覆盖范围: \`${packet.evidence_scope || "unknown"}\``,
+      "- 边界: `truth_effect=none`, `certification_claim=none`",
       "",
-      "### P035 Evidence",
-      markdownEvidenceList(evidence.p035, "无 P035 证据"),
+      "### 工序来源",
+      markdownEvidenceList(evidence.p035, "无工序来源"),
       "",
-      "### DOCX Evidence",
-      markdownEvidenceList(evidence.docx, "无 DOCX 证据"),
+      "### 需求来源",
+      markdownEvidenceList(evidence.docx, "无需求来源"),
       "",
       "### JSON",
       "```json",
@@ -931,8 +1066,10 @@
 
   function renderTracePacketPreview() {
     if (!reviewPacketPreview || !reviewPacketPreviewText || !currentPayload) return;
+    const packet = currentTracePacket();
     reviewPacketPreview.dataset.packetFormat = "markdown_with_json";
-    setText(reviewPacketPreviewText, currentTraceMarkdown());
+    renderDeliverySummary(packet);
+    setText(reviewPacketPreviewText, tracePacketMarkdown(packet));
   }
 
   async function copyText(value) {
@@ -961,7 +1098,7 @@
       renderTracePacketPreview();
       await copyText(packet);
       copyTracePacketButton.dataset.copyState = "success";
-      setText(copyStatus, "审阅包 Markdown 已复制");
+      setText(copyStatus, "验收摘要已复制");
     } catch (error) {
       copyTracePacketButton.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");
@@ -989,7 +1126,7 @@
     try {
       await copyText(sourceEntryReviewUrl(entry));
       button.dataset.copyState = "success";
-      setText(copyStatus, `${entry.anchor || "源文"} 链接已复制`);
+      setText(copyStatus, `${entry.anchor || "需求"} 链接已复制`);
     } catch (error) {
       button.dataset.copyState = "failed";
       setText(copyStatus, "复制失败");
@@ -1011,6 +1148,7 @@
     setText(sourceAnchor, step.anchor);
     setText(sourceTitle, step.title || "");
     setText(sourceText, step.source_text || "");
+    renderCompactDemand(step, activeIndex, steps);
     if (reviewPanel) reviewPanel.dataset.activeAnchor = step.anchor;
     if (demoFrame) demoFrame.dataset.activeSequenceAnchor = step.anchor;
     setGridHighlights(nodeGrid, "node", cumulativeNodes, currentNodes);
@@ -1094,7 +1232,7 @@
       button.dataset.sourceEntryAnchor = entry.anchor || "";
       button.dataset.active = "false";
       const label = document.createElement("strong");
-      label.textContent = `${entry.anchor || "DOCX"} · ${entry.role || "源文条目"}`;
+      label.textContent = `${entry.anchor || "DOCX"} · ${sourceEntryDisplayRole(entry)}`;
       const summary = document.createElement("span");
       summary.textContent = compactText(entry.text, 58);
       button.appendChild(label);
@@ -1106,7 +1244,7 @@
       copyButton.dataset.sourceEntryLinkAnchor = entry.anchor || "";
       copyButton.textContent = "复制";
       copyButton.title = "复制链接";
-      copyButton.setAttribute("aria-label", `复制 ${entry.anchor || "源文"} 链接`);
+      copyButton.setAttribute("aria-label", `复制 ${entry.anchor || "需求"} 链接`);
       copyButton.addEventListener("click", (event) => {
         event.stopPropagation();
         copySourceEntryLink(entry, copyButton);
@@ -1136,14 +1274,17 @@
     applyReviewHashState();
     const restoredSourceEntryAnchor = activeSourceEntryAnchor;
     const restoredSectionAnchor = pendingWorkbenchSectionAnchor;
-    setText(sourcePath, source.path || "uploads/20260409-thrust-reverser-control-logic.docx");
+    if (sourcePath) {
+      sourcePath.dataset.sourceDocumentPath = source.path || sourcePath.dataset.sourceDocumentPath || "uploads/20260409-thrust-reverser-control-logic.docx";
+      sourcePath.textContent = "已登记源文档";
+    }
     setText(
       sourceCount,
       `${coverage.paragraph_count || 0} 段 · ${source.table_count || 0} 表 · ${coverage.source_entry_count || 0} 条`,
     );
     setText(nodeCount, `${coverage.covered_node_count || 0}/${contract.node_count || EXPECTED_NODE_COUNT}`);
     setText(wireCount, `${coverage.covered_wire_count || 0}/${contract.wire_count || EXPECTED_WIRE_COUNT}`);
-    setText(sequenceCount, `P035 · ${coverage.sequence_step_count || 0} 步`);
+    setText(sequenceCount, `${coverage.sequence_step_count || 0} 步`);
     renderSequence(payload && payload.sequence_steps);
     renderSourceIndex(payload && payload.source_entries);
     renderSubcircuit();
