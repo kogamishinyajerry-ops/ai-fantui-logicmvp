@@ -1325,7 +1325,7 @@
 
   function renderEvidenceTiles(payload) {
     if (!payload) {
-      evidenceCount.textContent = "0 tiles";
+      evidenceCount.textContent = "0 项";
       evidenceTiles.innerHTML = '<p class="muted">暂无配置，请先生成沙盒计划。</p>';
       return;
     }
@@ -1338,7 +1338,7 @@
     const covered = Array.from(scenarioIds).filter((id) => plannedScenarioIds.has(id)).length;
     const hasCoverage = scenarioIds.size > 0;
 
-    evidenceCount.textContent = "4 tiles";
+    evidenceCount.textContent = "4 项";
     clearChildren(evidenceTiles);
     const completion = payload && payload.plan_coverage_completion;
     const completedScenarioIds = Array.isArray(completion && completion.completed_fault_scenario_ids)
@@ -1837,12 +1837,12 @@
     if (!evidenceTraceRows) return;
     evidenceTraceRows.innerHTML = "";
     if (!payload || isSourceDeferredSandbox(payload)) {
-      if (evidenceTraceCount) evidenceTraceCount.textContent = "0 links";
+      if (evidenceTraceCount) evidenceTraceCount.textContent = "0 条回链";
       evidenceTraceRows.innerHTML = '<p class="muted">暂无证据追踪。生成沙盒配置后显示来源、运行、审查与报告回链。</p>';
       return;
     }
     const rows = buildEvidenceTraceRows(payload);
-    if (evidenceTraceCount) evidenceTraceCount.textContent = `${rows.length} links`;
+    if (evidenceTraceCount) evidenceTraceCount.textContent = `${rows.length} 条回链`;
     rows.forEach((item) => {
       const row = document.createElement("button");
       row.type = "button";
