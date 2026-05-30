@@ -365,11 +365,11 @@ def test_phase1_demo_mvp_review_package_runner_generates_json_and_markdown(
         {
             "id": "PHASE1-RISK-001",
             "severity": "medium",
-            "summary": "当前交付包证明 demo.html 复刻控制台可演示和可回归，不证明认证级控制律正确性。",
+            "summary": "当前交付包证明反推控制台复刻可演示和可回归，不证明认证级控制律正确性。",
             "mitigation": "后续阶段继续通过 approved-task shell、Safety/Evidence gates 和人工审查推进。",
         }
     ]
-    assert "demo.html 复刻 MVP 控制台" in report_path.read_text(encoding="utf-8")
+    assert "反推控制台复刻" in report_path.read_text(encoding="utf-8")
     assert "embedded_codex_light_palette" in report_path.read_text(encoding="utf-8")
     assert "非认证声明" in report_path.read_text(encoding="utf-8")
 
@@ -816,7 +816,7 @@ def test_phase1_demo_mvp_gate_runner_generates_ci_ready_single_summary(
     assert payload["route"] == "/demo-reconstruction"
     assert payload["demo_surface"] == {
         "route": "/demo-reconstruction",
-        "title": "demo.html 复刻 MVP 控制台",
+        "title": "反推控制台复刻",
         "node_count": 20,
         "wire_count": 23,
         "preset_count": 5,
@@ -1127,7 +1127,7 @@ def test_phase1_demo_mvp_release_runner_generates_single_summary(
     assert summary["route"] == "/demo-reconstruction"
     assert summary["demo_surface"] == {
         "route": "/demo-reconstruction",
-        "title": "demo.html 复刻 MVP 控制台",
+        "title": "反推控制台复刻",
         "node_count": 20,
         "wire_count": 23,
         "preset_count": 5,

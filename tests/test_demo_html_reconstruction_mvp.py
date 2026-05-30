@@ -60,7 +60,7 @@ def test_demo_html_reconstruction_mvp_schema_validates_fixture() -> None:
         "route": "/demo-reconstruction",
         "element_id": "home-first-phase-demo-entry",
         "priority": "first_phase_mvp",
-        "label": "demo.html 复刻 MVP 控制台",
+        "label": "打开复刻控制台",
     }
     assert fixture["contract"]["expected_node_count"] == 20
     assert fixture["contract"]["expected_wire_count"] == 23
@@ -112,7 +112,7 @@ def test_demo_html_reconstruction_mvp_checker_converges() -> None:
         "entry_present": True,
         "route": "/demo-reconstruction",
         "priority": "first_phase_mvp",
-        "label": "demo.html 复刻 MVP 控制台",
+        "label": "打开复刻控制台",
         "appears_before_default_mode_grid": True,
     }
     assert payload["observed"]["logic_builder_bridge"]["target_route"] == "/demo-reconstruction"

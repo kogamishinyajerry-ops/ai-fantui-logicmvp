@@ -59,7 +59,7 @@
         "route": {"const": "/demo-reconstruction"},
         "element_id": {"const": "home-first-phase-demo-entry"},
         "priority": {"const": "first_phase_mvp"},
-        "label": {"const": "demo.html 复刻 MVP 控制台"}
+        "label": {"const": "打开复刻控制台"}
       }
     },
     "contract": {

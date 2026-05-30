@@ -106,16 +106,21 @@ def _extract_replica_surface(html: str) -> dict[str, Any]:
 
 
 def _extract_homepage_entry(html: str) -> dict[str, Any]:
-    entry_match = re.search(r'<a\b[^>]*id="home-first-phase-demo-entry"[^>]*>', html)
-    entry_html = entry_match.group(0) if entry_match else ""
+    entry_match = re.search(
+        r'(<a\b[^>]*id="home-first-phase-demo-entry"[^>]*>)(.*?)</a>',
+        html,
+        flags=re.DOTALL,
+    )
+    entry_html = entry_match.group(1) if entry_match else ""
+    label_html = entry_match.group(2) if entry_match else ""
+    label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", label_html)).strip()
     href_match = re.search(r'href="([^"]+)"', entry_html)
     priority_match = re.search(r'data-home-priority="([^"]+)"', entry_html)
-    label_present = "demo.html 复刻 MVP 控制台" in html
     return {
         "entry_present": bool(entry_html),
         "route": href_match.group(1) if href_match else "",
         "priority": priority_match.group(1).replace("-", "_") if priority_match else "",
-        "label": "demo.html 复刻 MVP 控制台" if label_present else "",
+        "label": label,
         "appears_before_default_mode_grid": (
             'id="home-first-phase-mvp"' in html
             and 'id="home-default-mode-grid"' in html

@@ -669,6 +669,17 @@ def test_landing_page_defaults_to_five_entry_compact_shell(demo_server: str, bro
         expect(page.locator(".home-command-palette-hint")).to_be_visible()
         expect(page.locator("#home-primary-flow-grid")).to_be_hidden()
         expect(page.locator("#deepseek-live-replay-import")).to_be_hidden()
+        visible_text = page.locator("body").inner_text()
+        for backstage_token in [
+            "truth_effect",
+            "candidate_state",
+            "controller truth",
+            "raw JSON",
+            "artifacts/",
+            "make demo-html",
+            "demo.html 复刻",
+        ]:
+            assert backstage_token not in visible_text
         assert page.evaluate("() => document.scrollingElement.scrollHeight <= window.innerHeight") is True
     finally:
         page.close()
@@ -4232,12 +4243,12 @@ def test_deepseek_live_replay_file_mode_explains_local_server_requirement(browse
     try:
         page.goto((Path("src/well_harness/static/index.html").resolve()).as_uri(), wait_until="networkidle")
         expect(page.locator("#deepseek-live-replay-import")).to_be_visible()
-        expect(page.locator("#deepseek-live-replay-status")).to_contain_text("file:// 无法读取回放 API")
+        expect(page.locator("#deepseek-live-replay-status")).to_contain_text("请从本地服务入口打开")
         expect(page.locator("#deepseek-live-replay-meta")).to_contain_text("需启动本地服务")
-        expect(page.locator("#deepseek-live-replay-counts")).to_contain_text("python3 -m well_harness.demo_server")
+        expect(page.locator("#deepseek-live-replay-counts")).to_contain_text("浏览器文件模式不能读取本地回放")
 
         page.click("#deepseek-live-replay-import")
-        expect(page.locator("#deepseek-live-replay-status")).to_contain_text("请先启动服务")
+        expect(page.locator("#deepseek-live-replay-status")).to_contain_text("请先从本地服务入口打开")
         expect(page.locator("#deepseek-live-replay-status")).not_to_contain_text("Failed to fetch")
         assert replay_api_requests == []
     finally:

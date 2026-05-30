@@ -117,7 +117,7 @@ def test_customer_demo_mvp_closeout_combines_visibility_and_demo_gates(
     assert payload["closeout_status"] == "ready_for_project_owner_acceptance"
     assert payload["demo_surface"] == {
         "route": "/demo-reconstruction",
-        "title": "demo.html 复刻 MVP 控制台",
+        "title": "反推控制台复刻",
         "node_count": 20,
         "wire_count": 23,
     }

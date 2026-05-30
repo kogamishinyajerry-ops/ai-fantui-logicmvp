@@ -18,7 +18,7 @@
     "route": "/demo-reconstruction",
     "element_id": "home-first-phase-demo-entry",
     "priority": "first_phase_mvp",
-    "label": "demo.html 复刻 MVP 控制台"
+    "label": "打开复刻控制台"
   },
   "contract": {
     "expected_canvas": {

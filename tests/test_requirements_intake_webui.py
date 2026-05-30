@@ -5869,7 +5869,7 @@ def test_landing_page_has_deepseek_live_replay_import_entry():
     assert 'id="deepseek-live-replay-meta"' in html
     assert 'id="deepseek-live-replay-counts"' in html
     assert "/api/requirements-intake/deepseek-live-demo-replay" in html
-    assert "导入真实 DeepSeek 回放" in html
+    assert "导入最近回放" in html
     assert "最近回放" in html
     assert "不重新调用模型" in html
     assert "renderReplaySummary" in html
@@ -5879,8 +5879,8 @@ def test_landing_page_has_deepseek_live_replay_import_entry():
     assert "http://127.0.0.1:8002/index.html" in html
     assert "renderFileModeReplayHelp" in html
     assert 'window.location.protocol === "file:"' in html
-    assert "file:// 无法读取回放 API" in html
-    assert "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002" in html
+    assert "浏览器文件模式不能读取本地回放" in html
+    assert "PYTHONPATH=src:. python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002" not in html
     assert "ai-fantui-requirements-intake-ready-v1" in html
     assert "ai-fantui-logic-builder-drawing-v1" in html
     assert "ai-fantui-logic-builder-change-history-v1" in html
@@ -5911,8 +5911,10 @@ def test_landing_page_promotes_deepseek_v4_pro_ui_workbench_not_canvas_mainline(
     assert 'href="/logic-builder#evidence"' in html
     assert 'href="/logic-builder#report"' in html
     assert "命令面板" in html
-    assert "truth_effect:none" in html
-    assert "candidate_state:sandbox_candidate" in html
+    assert 'data-boundary-token="truth_effect:none"' in html
+    assert 'data-boundary-token="candidate_state:sandbox_candidate"' in html
+    assert ">truth_effect:none<" not in html
+    assert ">candidate_state:sandbox_candidate<" not in html
     assert 'id="home-primary-flow-grid"' in html
     assert 'aria-label="DeepSeek 四步主流程"' in html
     assert 'id="home-advanced-modules"' in html
@@ -5953,12 +5955,16 @@ def test_landing_page_promotes_demo_reconstruction_as_first_phase_mvp_entry():
     assert 'id="home-first-phase-demo-entry"' in html
     assert 'href="/demo-reconstruction"' in html
     assert 'data-home-priority="first-phase-mvp"' in html
-    assert "第一阶段可演示交付物" in html
-    assert "demo.html 复刻 MVP 控制台" in html
+    assert "复刻控制台交付物" in html
+    assert "反推控制台复刻" in html
     assert "20/20 节点" in html
     assert "23/23 连线" in html
-    assert "make demo-html-reconstruction-mvp" in html
-    assert "make demo-html-reconstruction-browser-acceptance" in html
+    assert 'data-validation-command="make demo-html-reconstruction-mvp"' in html
+    assert 'data-validation-command="make demo-html-reconstruction-browser-acceptance"' in html
+    assert "节点 20/20" in html
+    assert "浏览器验收通过" in html
+    assert ">make demo-html-reconstruction-mvp<" not in html
+    assert ">make demo-html-reconstruction-browser-acceptance<" not in html
     assert html.index('id="home-first-phase-mvp"') < html.index('id="home-default-mode-grid"')
 
 
@@ -5976,7 +5982,7 @@ def test_landing_page_promotes_docx_to_circuit_as_primary_main_entry():
     assert 'data-primary-entry="docx-source-to-circuit"' in primary_next
     assert "uploads/20260409-thrust-reverser-control-logic.docx" not in html
     assert "L1-L4 逻辑复刻" in html
-    assert "demo.html 电路验收" in html
+    assert "控制台验收" in html
     assert html.index('id="home-docx-to-circuit-mainline"') < html.index('id="home-first-phase-mvp"')
 
 

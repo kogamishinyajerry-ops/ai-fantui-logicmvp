@@ -24,7 +24,7 @@ SCHEMA_PATH = (
 )
 EXPECTED_DEMO_SURFACE = {
     "route": "/demo-reconstruction",
-    "title": "demo.html 复刻 MVP 控制台",
+    "title": "反推控制台复刻",
     "node_count": 20,
     "wire_count": 23,
     "preset_count": 5,
@@ -129,7 +129,7 @@ def _markdown_report_valid(report_path: Path | None, mismatches: list[str]) -> b
         return False
     text = report_path.read_text(encoding="utf-8")
     valid = True
-    for fragment in ("demo.html 复刻 MVP 控制台", "/demo-reconstruction", "非认证声明"):
+    for fragment in ("反推控制台复刻", "/demo-reconstruction", "非认证声明"):
         if fragment not in text:
             mismatches.append(f"markdown_report must contain {fragment}")
             valid = False

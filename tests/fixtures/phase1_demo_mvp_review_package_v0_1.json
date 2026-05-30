@@ -6,7 +6,7 @@
   "generated_at": "2026-05-21T00:00:00Z",
   "demo_surface": {
     "route": "/demo-reconstruction",
-    "title": "demo.html 复刻 MVP 控制台",
+    "title": "反推控制台复刻",
     "node_count": 20,
     "wire_count": 23,
     "preset_count": 5,
@@ -17,7 +17,7 @@
     "route": "/demo-reconstruction",
     "element_id": "home-first-phase-demo-entry",
     "priority": "first_phase_mvp",
-    "label": "demo.html 复刻 MVP 控制台"
+    "label": "打开复刻控制台"
   },
   "deterministic_gates": {
     "demo_html_reconstruction_mvp": "pass",
@@ -52,7 +52,7 @@
         "entry_present": true,
         "route": "/demo-reconstruction",
         "priority": "first_phase_mvp",
-        "label": "demo.html 复刻 MVP 控制台",
+        "label": "打开复刻控制台",
         "appears_before_default_mode_grid": true
       }
     }
@@ -107,7 +107,7 @@
     {
       "id": "PHASE1-RISK-001",
       "severity": "medium",
-      "summary": "当前交付包证明 demo.html 复刻控制台可演示和可回归，不证明认证级控制律正确性。",
+      "summary": "当前交付包证明反推控制台复刻可演示和可回归，不证明认证级控制律正确性。",
       "mitigation": "后续阶段继续通过 approved-task shell、Safety/Evidence gates 和人工审查推进。"
     }
   ],

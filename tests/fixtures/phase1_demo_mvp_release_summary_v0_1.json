@@ -77,7 +77,7 @@
     "preset_count": 5,
     "route": "/demo-reconstruction",
     "status_output_count": 6,
-    "title": "demo.html 复刻 MVP 控制台",
+    "title": "反推控制台复刻",
     "wire_count": 23
   },
   "deterministic_gates": {
