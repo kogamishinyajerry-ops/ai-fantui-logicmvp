@@ -5691,7 +5691,10 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "renderSelfRepairDetails" in fault_script
     assert "renderQualitySummary" in fault_script
     assert "isFaultDeferredBySource" in fault_script
-    assert "仍生成 dry-run 候选" in fault_script
+    assert "仍生成空跑候选" in fault_script
+    assert "检查：生成空跑候选" in fault_script
+    assert "可手动生成空跑候选" in fault_script
+    assert "仍生成 dry-run 候选" not in fault_script
     assert "renderBurdenSummary" in fault_script
     assert "sourceAnchorLabel" in fault_script
     assert "renderCoverageCompletionEvidence" in fault_script
