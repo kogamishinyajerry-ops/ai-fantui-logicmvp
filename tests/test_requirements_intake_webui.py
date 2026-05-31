@@ -5777,6 +5777,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "coverage_completion" in fault_script
     assert "completed_node_ids" in fault_script
     assert 'critical_node_coverage: "关键节点覆盖"' in fault_script
+    assert 'ui_blueprint_candidate_preview: "界面蓝图候选预览"' in fault_script
+    assert 'ui_template_preview: "DOCX 模板候选预览"' in fault_script
     assert 'addCoverageRow("补齐策略", coverageTokenLabel(completion.strategy, "确定性空跑候选"))' in fault_script
     assert 'addCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "关键节点覆盖"))' in fault_script
     assert "deterministic_dry_run_candidate" in fault_script
