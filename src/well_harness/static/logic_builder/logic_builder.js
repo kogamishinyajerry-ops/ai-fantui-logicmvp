@@ -2923,14 +2923,14 @@
     });
     circuitSvg.appendChild(bg);
     [
-      [90, "INPUTS"],
-      [340, "LOGIC GATES"],
-      [580, "INTERMEDIATE"],
-      [810, "OUTPUT"],
+      [90, "输入"],
+      [340, "逻辑门"],
+      [580, "中间节点"],
+      [810, "输出"],
     ].forEach(([x, label]) => {
       appendCircuitText(circuitSvg, label, x, 28, {class: "logic-circuit-column-label", "text-anchor": "middle"});
     });
-    appendCircuitText(circuitSvg, "DOCX anchored L1-L4 authority chain", 450, 388, {
+    appendCircuitText(circuitSvg, "DOCX 锚定的 L1-L4 控制链", 450, 388, {
       class: "logic-circuit-footer-label",
       "text-anchor": "middle",
     });
