@@ -216,6 +216,13 @@
     return COVERAGE_TOKEN_LABELS[normalized] || normalized;
   }
 
+  function certificationClaimLabel(value, fallback = "未提供") {
+    const normalized = String(value == null ? "" : value).trim();
+    if (!normalized) return fallback;
+    if (normalized === "none") return "无认证声明";
+    return normalized;
+  }
+
   function booleanDisplayLabel(value) {
     return value ? "是" : "否";
   }
@@ -2050,7 +2057,7 @@
         rows: [
           {label: "报告章节", value: "未决风险"},
           {label: "控制真相", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
-          {label: "认证声明", value: normalizeText(payload && payload.certification_claim)},
+          {label: "认证声明", value: certificationClaimLabel(payload && payload.certification_claim)},
           {label: "下一步", value: truthSafe ? "可生成候选修订单，仍需人工审查。" : "停止并复核候选态边界。"},
         ],
       },

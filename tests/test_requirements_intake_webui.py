@@ -5824,6 +5824,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert '{label: "补齐语义", value: completion ? coverageTokenLabel(completion.semantic_gate) : "未触发补齐"}' in sandbox_script
     assert 'coverageTokenLabel(payload.plan_coverage_completion.strategy)' in sandbox_script
     assert "function booleanDisplayLabel" in sandbox_script
+    assert "function certificationClaimLabel" in sandbox_script
     assert '运行仿真节拍:${booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
     assert '{label: "运行仿真节拍", value: booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
     assert 'label: runTick ? "运行仿真节拍" : "不运行仿真节拍"' in sandbox_script
@@ -5855,6 +5856,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "saveRevisionHandoff" in sandbox_script
     assert "window.localStorage.setItem(REVISION_HANDOFF_KEY" in sandbox_script
     assert "可进入逻辑修订" in sandbox_script
+    assert '{label: "认证声明", value: certificationClaimLabel(payload && payload.certification_claim)}' in sandbox_script
     assert "个一级闸门" in sandbox_script
     assert "需重新生成沙盒配置" in sandbox_script
     assert "loadFaultSandboxPlanDraft" in sandbox_script
@@ -5871,6 +5873,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert '{label: "运行 tick", value: booleanDisplayLabel(Boolean(execution.run_tick))}' not in sandbox_script
     assert 'label: runTick ? "运行仿真步" : "不运行仿真步"' not in sandbox_script
     assert '{label: "运行 tick", value: String(Boolean(execution.run_tick))}' not in sandbox_script
+    assert '{label: "认证声明", value: normalizeText(payload && payload.certification_claim)}' not in sandbox_script
     assert '{label: "仅空跑", value: String(execution.dry_run_only !== false)}' not in sandbox_script
     assert 'allow_fallback: provider.value !== "deepseek"' in sandbox_script
     assert "allow_fallback: true" not in sandbox_script
