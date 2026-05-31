@@ -302,7 +302,7 @@
           node_id: raId,
           signal_name: "radio_altitude_ft",
           injection_mode: "override",
-          safe_boundary_zh: "仅 dry-run 观察，RA 值限制在 0 到 20 ft，不进入真实控制。",
+          safe_boundary_zh: "仅空跑观察，RA 值限制在 0 到 20 ft，不进入真实控制。",
           constraint_zh: "truth_effect:none；controller_truth_modified:false。",
           priority: "P1",
           source_anchors: candidateAnchorsFor(raNode),
@@ -321,7 +321,7 @@
       boundary_questions: [
         {
           id: "blueprint_confirm_dry_run",
-          prompt_zh: "确认此候选只用于 dry-run 沙盒审查？",
+          prompt_zh: "确认此候选只用于空跑沙盒审查？",
           rationale_zh: "蓝图验收需要保留故障注入入口，但不能触发真实控制执行。",
           blocks: "fault_injection",
         },
@@ -335,8 +335,8 @@
       boundary_answers: [
         {
           id: "blueprint_confirm_dry_run",
-          prompt_zh: "确认此候选只用于 dry-run 沙盒审查？",
-          answer_zh: "确认仅用于 dry-run UI 验收。",
+          prompt_zh: "确认此候选只用于空跑沙盒审查？",
+          answer_zh: "确认仅用于空跑界面验收。",
         },
         {
           id: "blueprint_confirm_truth_boundary",
@@ -351,7 +351,7 @@
       },
       workflow_notes: [
         "源文档暂缓仍然保留；该候选仅用于演示蓝图 UI 的故障注入能力。",
-        "进入沙盒后只呈现 dry-run 计划、观测点、审查行和证据回链。",
+        "进入沙盒后只呈现空跑计划、观测点、审查行和证据回链。",
       ],
       llm: {
         provider: "local-ui",
@@ -380,7 +380,7 @@
       first_visit_preview: Boolean(faultPayload.first_visit_preview),
       source_fault_injection_preparation_sha256: "ui-blueprint-preview",
       source_boundary_answers_sha256: "ui-blueprint-preview",
-      summary_zh: "蓝图候选沙盒计划已载入：只读 dry-run 审查，不运行真实 tick。",
+      summary_zh: "蓝图候选沙盒计划已载入：只读空跑审查，不运行真实仿真节拍。",
       execution_contract: {
         run_tick: false,
         simulate: false,
@@ -393,7 +393,7 @@
           node_id: firstScenario.node_id || firstPoint.node_id || "radio_altitude_ft",
           signal_name: firstPoint.signal_name || "radio_altitude_ft",
           injection_mode: firstPoint.injection_mode || "override",
-          safe_range_zh: "0 到 20 ft，仅 UI dry-run。",
+          safe_range_zh: "0 到 20 ft，仅界面空跑。",
           expected_effect_zh: "检查 RA 候选异常是否只在沙盒证据链中呈现。",
           source_anchors: firstScenario.source_anchors || [],
         },
@@ -486,13 +486,13 @@
       ) || "local-docx-l1-l4-template";
       faultPayload.workflow_notes = [
         "DOCX L1-L4 模板从逻辑绘制页进入故障矩阵；不调用模型和控制器。",
-        "进入沙盒后只呈现 dry-run 计划、证据链、审查行和报告预览。",
+        "进入沙盒后只呈现空跑计划、证据链、审查行和报告预览。",
       ];
     }
     const sandboxPayload = buildBlueprintSandboxCandidate(faultPayload);
     if (opts.templateDrawing) {
       sandboxPayload.template_preview = true;
-      sandboxPayload.summary_zh = "DOCX L1-L4 模板候选沙盒计划已载入：只读 dry-run 审查，不运行真实 tick。";
+      sandboxPayload.summary_zh = "DOCX L1-L4 模板候选沙盒计划已载入：只读空跑审查，不运行真实仿真节拍。";
       sandboxPayload.source_fault_injection_preparation_sha256 = "local-docx-l1-l4-template";
       sandboxPayload.plan_coverage_completion = {
         ...(sandboxPayload.plan_coverage_completion || {}),
@@ -510,7 +510,7 @@
       renderSource();
     }
     saveFaultDraft();
-    setProgress(96, "边界已确认", "蓝图候选已预填 dry-run 边界，可进入沙盒审查。", "boundary");
+    setProgress(96, "边界已确认", "蓝图候选已预填空跑边界，可进入沙盒审查。", "boundary");
     finishTask(opts.finishTitle || "蓝图候选已载入", opts.finishDetail || "已写入本地仅候选态草稿；源文档暂缓状态仍保留。");
     if (blueprintCandidateStatus) {
       blueprintCandidateStatus.textContent = opts.statusText || "已载入沙盒候选，不改变源文档范围";
@@ -1251,7 +1251,7 @@
           <span class="fault-matrix-evidence-token blueprint-row-token" data-row-scan-token="evidence" aria-label="来源证据 ${escapeText(evidenceToken)}">${escapeText(evidenceToken)}</span>
         </td>
         <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(scenario.fault_type || point.injection_mode, "fault"))}</span></td>
-        <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span>${escapeText(compactCell(point.safe_boundary_zh || scenario.rationale_zh, "dry-run 条件待确认"))}</span></td>
+        <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span>${escapeText(compactCell(point.safe_boundary_zh || scenario.rationale_zh, "空跑条件待确认"))}</span></td>
         <td class="fault-matrix-effect" data-blueprint-col="expected-effect"><span>${escapeText(compactCell(scenario.expected_effect_zh, "观察路径影响"))}</span></td>
         <td class="fault-matrix-path" data-blueprint-col="covered-path">
           <span class="fault-matrix-path-summary blueprint-row-token" data-row-scan-token="path-summary">${escapeText(coveredPathItems.length ? `${coveredPathItems.length} 节点路径` : "路径待确认")}</span>
