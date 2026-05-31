@@ -5700,10 +5700,16 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "确认不修改控制器真值、认证结论和生产配置" in fault_script
     assert "不会调用模型、仿真节拍或控制器真值" in fault_script
     assert "不触发真实仿真节拍" in fault_script
+    assert "界面蓝图" in fault_script
+    assert "沙盒审查界面" in fault_script
+    assert "报告预览界面" in fault_script
     assert "仍生成 dry-run 候选" not in fault_script
     assert "确认此候选只用于 dry-run 沙盒审查" not in fault_script
     assert "dry-run 条件待确认" not in fault_script
     assert "controller truth" not in fault_script
+    assert "UI 蓝图" not in fault_script
+    assert "沙盒审查 UI" not in fault_script
+    assert "报告预览 UI" not in fault_script
     assert "renderBurdenSummary" in fault_script
     assert "sourceAnchorLabel" in fault_script
     assert "renderCoverageCompletionEvidence" in fault_script
@@ -7817,7 +7823,13 @@ def test_sandbox_review_exposes_failure_path_evidence_and_report_blueprint_surfa
     assert "不运行真实仿真节拍" in script
     assert "不触发真实仿真节拍" in script
     assert "未调用模型、仿真节拍或控制器" in script
+    assert "界面蓝图" in script
+    assert "沙盒审查界面" in script
+    assert "空跑界面预览" in script
+    assert "仅界面空跑" in script
     assert "未调用模型、tick 或控制器" not in script
+    assert "UI 蓝图" not in script
+    assert "沙盒审查 UI" not in script
 
 
 def test_deepseek_visual_acceptance_script_freezes_first_screen_bundle_contract():
