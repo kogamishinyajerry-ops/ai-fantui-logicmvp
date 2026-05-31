@@ -114,6 +114,8 @@
     deterministic_dry_run_plan: "确定性空跑计划",
     critical_node_coverage: "关键节点覆盖",
     scenario_plan_coverage: "场景计划覆盖",
+    ui_blueprint_candidate_preview: "界面蓝图候选预览",
+    ui_template_preview: "DOCX 模板候选预览",
   };
   const FAULT_BOUNDARY_TOKEN_PATTERN = /controller_truth_modified:false|truth_effect:none|sandbox_candidate/g;
 

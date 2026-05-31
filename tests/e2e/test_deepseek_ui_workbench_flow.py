@@ -2139,6 +2139,8 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         expect(page.locator(".fault-scenario-card")).to_have_count(2)
         expect(page.locator(".fault-point-card")).to_have_count(2)
         expect(page.locator("#fault-coverage-evidence-list .fault-coverage-row")).to_have_count(3)
+        expect(page.locator("#fault-coverage-evidence-list")).to_contain_text("界面蓝图候选预览")
+        expect(page.locator("#fault-coverage-evidence-list")).not_to_contain_text("ui_blueprint_candidate_preview")
         expect(page.locator("#fault-sandbox-next")).to_be_enabled()
         preview_contract = page.evaluate(
             """() => {
