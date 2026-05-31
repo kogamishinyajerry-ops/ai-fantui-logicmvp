@@ -1357,7 +1357,7 @@ def test_fault_sandbox_report_strip_prioritizes_review_package_action(
             "certification_claim:none",
             "controller_truth_modified:false",
         ]:
-            expect(report_strip).to_contain_text(boundary)
+            expect(report_strip.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
 
         assert report_strip.evaluate("(element) => element.getBoundingClientRect().height <= 132") is True
         export_action.click()
@@ -1426,7 +1426,7 @@ def test_fault_sandbox_replay_report_workbench_tracks_blueprint37(
             "certification_claim:none",
             "controller_truth_modified:false",
         ]:
-            expect(report_strip).to_contain_text(boundary)
+            expect(report_strip.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
 
         assert report_strip.evaluate("(element) => element.getBoundingClientRect().height <= 132") is True
         assert page.evaluate("() => document.scrollingElement.scrollHeight <= window.innerHeight") is True
