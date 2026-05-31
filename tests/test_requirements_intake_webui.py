@@ -6351,13 +6351,14 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
         1,
     )[0]
     for label in [
-        "TLS 115VAC cmd",
-        "TLS_Unlocked LS",
-        "ETRAC 540VDC cmd",
-        "PLS power",
-        "PDU motor cmd",
-        "VDT90 (>=90% deploy)",
-        "THR_LOCK release",
+        "TLS 115VAC 指令",
+        "TLS 解锁反馈",
+        "ETRAC 540VDC 指令",
+        "EEC 展开指令",
+        "PLS 供电",
+        "PDU 电机指令",
+        "VDT90（≥90% 展开）",
+        "THR_LOCK 释放",
     ]:
         assert label in docx_template_block
     for legacy_label in ["LATCH -> CAUT", '"caut"', '"caut1"', '"caut2"', '"caut3"']:

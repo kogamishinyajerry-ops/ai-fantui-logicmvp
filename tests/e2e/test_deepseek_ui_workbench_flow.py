@@ -2733,6 +2733,18 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
         expect(page.locator('#logic-canvas[data-view-mode="circuit"]')).to_be_visible()
         expect(page.locator("#logic-bottom-run-node-count")).to_contain_text("节点 20/20")
         expect(page.locator("#logic-bottom-run-edge-count")).to_contain_text("连线 23/23")
+        eec_deploy_node = page.locator('[data-demo-node-id="eec_deploy"]')
+        pls_power_node = page.locator('[data-demo-node-id="pls_power"]')
+        pdu_motor_node = page.locator('[data-demo-node-id="pdu_motor"]')
+        thr_lock_node = page.locator('[data-demo-node-id="thr_lock"]')
+        expect(eec_deploy_node.locator(".logic-circuit-node-title")).to_have_text("EEC部署")
+        expect(pls_power_node.locator(".logic-circuit-node-title")).to_have_text("PLS供电")
+        expect(pdu_motor_node.locator(".logic-circuit-node-title")).to_have_text("PDU电机")
+        expect(thr_lock_node.locator(".logic-circuit-node-title")).to_have_text("油门锁释放")
+        expect(eec_deploy_node).to_have_attribute("data-technical-label", re.compile("EEC 展开指令"))
+        expect(pls_power_node).to_have_attribute("data-technical-label", re.compile("PLS 供电"))
+        expect(pdu_motor_node).to_have_attribute("data-technical-label", re.compile("PDU 电机指令"))
+        expect(thr_lock_node).to_have_attribute("data-technical-label", re.compile("THR_LOCK 释放"))
         stored = page.evaluate(
             """
             () => {
