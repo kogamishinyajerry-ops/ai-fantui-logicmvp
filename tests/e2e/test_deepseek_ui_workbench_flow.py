@@ -2738,6 +2738,7 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
         expect(circuit_column_labels.nth(2)).to_have_text("中间节点")
         expect(circuit_column_labels.nth(3)).to_have_text("输出")
         expect(page.locator("#logic-circuit-svg .logic-circuit-footer-label")).to_have_text("DOCX 锚定的 L1-L4 控制链")
+        expect(page.locator('#logic-circuit-svg .logic-circuit-badge[data-badge-id="boundary"]')).to_have_text("真值未变")
         expect(page.locator("#logic-bottom-run-node-count")).to_contain_text("节点 20/20")
         expect(page.locator("#logic-bottom-run-edge-count")).to_contain_text("连线 23/23")
         eec_deploy_node = page.locator('[data-demo-node-id="eec_deploy"]')
