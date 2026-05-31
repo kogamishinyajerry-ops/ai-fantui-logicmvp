@@ -448,10 +448,10 @@
         <button id="sandbox-review-package-close" type="button" class="sandbox-review-package-close" data-ux-action-tier="secondary" aria-label="关闭审查包预览">×</button>
       </header>
       <div id="sandbox-review-package-invariants" class="sandbox-review-package-invariants" aria-label="候选态边界">
-        <span>sandbox_candidate</span>
-        <span>truth_effect:none</span>
-        <span>certification_claim:none</span>
-        <span>controller_truth_modified:false</span>
+        <span data-boundary-token="sandbox_candidate">沙箱候选</span>
+        <span data-boundary-token="truth_effect:none">真值影响：无</span>
+        <span data-boundary-token="certification_claim:none">认证声明：无</span>
+        <span data-boundary-token="controller_truth_modified:false">控制器真值已改动：否</span>
       </div>
       <div class="sandbox-review-package-counts" aria-label="审查包计数">
         <span id="sandbox-review-package-review-count">0 review rows</span>

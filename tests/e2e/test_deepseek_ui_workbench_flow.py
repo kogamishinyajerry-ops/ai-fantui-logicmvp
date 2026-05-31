@@ -1154,7 +1154,7 @@ def test_fault_sandbox_review_uses_three_primary_gates_for_dense_plan(demo_serve
         expect(page.locator("#sandbox-review-package-report-rows [data-blueprint36-package-row='review-package-report']")).to_have_count(7)
         expect(page.locator("#sandbox-review-package-review-rows [data-blueprint36-package-row='review-package-review'] .sandbox-review-package-link-token")).to_have_count(14)
         expect(page.locator("#sandbox-review-package-report-rows [data-blueprint36-package-row='review-package-report'] .sandbox-review-package-link-token")).to_have_count(14)
-        expect(page.locator("#sandbox-review-package-invariants")).to_contain_text("truth_effect:none")
+        expect(page.locator('#sandbox-review-package-invariants [data-boundary-token="truth_effect:none"]')).to_have_count(1)
         review_package_row = page.locator("#sandbox-review-package-review-rows [data-package-item-id='SR-04']")
         expect(review_package_row).to_have_attribute("data-package-target-trace-id", "ET-02")
         expect(review_package_row).to_have_attribute("data-package-target-report-id", "RP-05")
@@ -1608,7 +1608,7 @@ def test_fault_sandbox_blueprint37_canvas_and_report_actions_share_visual_system
 
         page.locator("#fault-sandbox-main-report-actions [data-main-report-action='export']").click()
         expect(page.locator("#sandbox-review-package-panel")).to_be_visible()
-        expect(page.locator("#sandbox-review-package-invariants")).to_contain_text("truth_effect:none")
+        expect(page.locator('#sandbox-review-package-invariants [data-boundary-token="truth_effect:none"]')).to_have_count(1)
         page.locator("#sandbox-review-package-close").click()
         expect(page.locator("#sandbox-review-package-panel")).to_be_hidden()
         assert page.evaluate("() => document.scrollingElement.scrollHeight <= window.innerHeight") is True
@@ -1752,8 +1752,10 @@ def test_fault_sandbox_active_review_package_summary_is_default_readable(
         expect(package_summary.locator("[data-package-summary-token='review']")).to_have_text("SR-06")
         expect(package_summary.locator("[data-package-summary-token='trace']")).to_have_text("ET-04")
         expect(package_summary.locator("[data-package-summary-token='report']")).to_have_text("RP-06")
-        for token in ["报告可追溯", "沙盒审查", "未决问题", "建议修复", "关键证据", "truth_effect:none", "controller_truth_modified:false"]:
+        for token in ["报告可追溯", "沙盒审查", "未决问题", "建议修复", "关键证据"]:
             expect(package_summary).to_contain_text(token)
+        for boundary in ["truth_effect:none", "controller_truth_modified:false"]:
+            expect(package_summary.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
         expect(page.locator("#sandbox-review-package-panel")).to_be_hidden()
         package_summary_height = package_summary.bounding_box()["height"]
         assert 46 <= package_summary_height <= 54
@@ -2845,7 +2847,7 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         page.click('[data-sandbox-report-action="export"]')
         expect(page.locator("#sandbox-review-package-panel")).to_be_visible()
         expect(page.locator("#sandbox-review-package-review-count")).to_have_text("7 review rows")
-        expect(page.locator("#sandbox-review-package-invariants")).to_contain_text("truth_effect:none")
+        expect(page.locator('#sandbox-review-package-invariants [data-boundary-token="truth_effect:none"]')).to_have_count(1)
         assert model_calls == []
         assert tick_calls == []
     finally:
