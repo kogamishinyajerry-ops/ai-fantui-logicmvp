@@ -165,7 +165,7 @@
         id: "BP-FI-01",
         kind: "UI 蓝图",
         origin: "selected-final-set",
-        quote_zh: "首次进入时加载本地 candidate-only 故障预览；不代表源文档要求故障注入。",
+        quote_zh: "首次进入时加载本地仅候选态故障预览；不代表源文档要求故障注入。",
         requirement_level: "candidate-preview",
         confidence: "ui_blueprint",
       },
@@ -313,7 +313,7 @@
           signal_name: "switch_path",
           injection_mode: "toggle_sequence",
           safe_boundary_zh: "仅用于路径高亮和审查回链，不写入控制器。",
-          constraint_zh: "candidate-only sandbox review。",
+          constraint_zh: "仅候选态沙盒审查。",
           priority: "P2",
           source_anchors: candidateAnchorsFor(swNode),
         },
@@ -328,7 +328,7 @@
         {
           id: "blueprint_confirm_truth_boundary",
           prompt_zh: "确认不修改 controller truth、认证结论和生产配置？",
-          rationale_zh: "所有输出保持 sandbox candidate，不进入适航或生产声明。",
+          rationale_zh: "所有输出保持沙盒候选态，不进入适航或生产声明。",
           blocks: "fault_injection",
         },
       ],
@@ -446,7 +446,7 @@
         semantic_gate: "scenario_plan_coverage",
       },
       workflow_notes: [
-        "该沙盒计划由前端蓝图候选演示生成，保持 candidate-only。",
+        "该沙盒计划由前端蓝图候选演示生成，保持仅候选态。",
         "用于验收故障注入、沙盒审查、证据追溯和报告预览 UI。",
       ],
       llm: {
@@ -458,7 +458,7 @@
 
   function renderBlueprintCandidatePreview(options) {
     const opts = options || {};
-    beginTask(opts.title || "载入蓝图候选", opts.detail || "正在构造 candidate-only 故障与沙盒演示草稿。");
+    beginTask(opts.title || "载入蓝图候选", opts.detail || "正在构造仅候选态故障与沙盒演示草稿。");
     const faultPayload = buildBlueprintFaultCandidate();
     if (opts.firstVisit) {
       faultPayload.first_visit_preview = true;
@@ -477,7 +477,7 @@
       faultPayload.source_scope = {
         fault_injection: {
           status: "ui_template_preview",
-          reason_zh: "来自逻辑绘制页的 DOCX L1-L4 模板候选，作为本地 candidate-only 演示路径。",
+          reason_zh: "来自逻辑绘制页的 DOCX L1-L4 模板候选，作为本地仅候选态演示路径。",
           source_anchors: templatePreviewSourceAnchors(),
         },
       };
@@ -499,7 +499,7 @@
         strategy: "ui_template_preview",
       };
       sandboxPayload.workflow_notes = [
-        "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持 candidate-only。",
+        "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持仅候选态。",
         "用于验收故障矩阵、沙盒审查、证据追溯和报告预览 UI。",
       ];
     }
@@ -511,9 +511,9 @@
     }
     saveFaultDraft();
     setProgress(96, "边界已确认", "蓝图候选已预填 dry-run 边界，可进入沙盒审查。", "boundary");
-    finishTask(opts.finishTitle || "蓝图候选已载入", opts.finishDetail || "已写入本地 candidate-only 草稿；源文档暂缓状态仍保留。");
+    finishTask(opts.finishTitle || "蓝图候选已载入", opts.finishDetail || "已写入本地仅候选态草稿；源文档暂缓状态仍保留。");
     if (blueprintCandidateStatus) {
-      blueprintCandidateStatus.textContent = opts.statusText || "已载入 sandbox candidate，不改变源文档范围";
+      blueprintCandidateStatus.textContent = opts.statusText || "已载入沙盒候选，不改变源文档范围";
     }
   }
 
@@ -525,10 +525,10 @@
     renderBlueprintCandidatePreview({
       firstVisit: true,
       title: "载入首次候选预览",
-      detail: "未发现已保存图纸；正在载入本地 candidate-only 蓝图预览。",
+      detail: "未发现已保存图纸；正在载入本地仅候选态蓝图预览。",
       finishTitle: "首次候选预览已载入",
       finishDetail: "默认展示故障矩阵、边界确认和沙盒入口；未调用模型或控制器。",
-      statusText: "首次进入已载入 sandbox candidate，不改变源文档范围",
+      statusText: "首次进入已载入沙盒候选，不改变源文档范围",
     });
   }
 
@@ -536,10 +536,10 @@
     renderBlueprintCandidatePreview({
       templateDrawing: true,
       title: "载入 DOCX 模板候选",
-      detail: "已发现逻辑绘制页 DOCX L1-L4 模板；正在构造 candidate-only 故障矩阵与沙盒入口。",
+      detail: "已发现逻辑绘制页 DOCX L1-L4 模板；正在构造仅候选态故障矩阵与沙盒入口。",
       finishTitle: "DOCX 模板候选已接入",
       finishDetail: "已基于本地模板候选生成故障矩阵、边界确认和沙盒入口；未调用模型或控制器。",
-      statusText: "DOCX L1-L4 模板已接入 sandbox candidate，不改变控制真值",
+      statusText: "DOCX L1-L4 模板已接入沙盒候选，不改变控制真值",
     });
   }
 
@@ -964,20 +964,20 @@
   function renderWorkflowOverview() {
     if (state.faultPayload && state.faultPayload.template_preview) {
       workflowStage.textContent = "DOCX 模板候选";
-      workflowDetail.textContent = "来自逻辑绘制页的 DOCX L1-L4 模板；当前已生成 candidate-only 故障矩阵和沙盒入口。";
+      workflowDetail.textContent = "来自逻辑绘制页的 DOCX L1-L4 模板；当前已生成仅候选态故障矩阵和沙盒入口。";
       setWorkflowSteps("fault", ["requirements", "drawing"]);
       return;
     }
     if (state.faultPayload && state.faultPayload.first_visit_preview) {
       workflowStage.textContent = "蓝图候选预览";
-      workflowDetail.textContent = "未发现已保存图纸，当前显示本地 candidate-only 故障矩阵和沙盒入口。";
+      workflowDetail.textContent = "未发现已保存图纸，当前显示本地仅候选态故障矩阵和沙盒入口。";
       setWorkflowSteps("fault", ["requirements", "drawing"]);
       return;
     }
     if (state.drawingPayload && !state.requirementsPayload) {
       workflowStage.textContent = isDocxTemplateDrawing() ? "DOCX 模板候选" : "本地图纸候选";
       workflowDetail.textContent = isDocxTemplateDrawing()
-        ? "已载入逻辑绘制页 DOCX L1-L4 模板，可生成本地 candidate-only 故障矩阵和沙盒入口。"
+        ? "已载入逻辑绘制页 DOCX L1-L4 模板，可生成本地仅候选态故障矩阵和沙盒入口。"
         : "已载入本地逻辑图纸；如需模型重算，请先回到需求理解页载入原需求。";
       setWorkflowSteps("drawing", ["requirements"]);
       return;
@@ -1020,7 +1020,7 @@
     if (!state.requirementsPayload || !state.drawingPayload) {
       sourceTitle.textContent = state.faultPayload && state.faultPayload.first_visit_preview ? "蓝图候选预览" : "尚未载入";
       sourceSummary.textContent = state.faultPayload && state.faultPayload.first_visit_preview
-        ? "首次进入空态使用本地 candidate-only 预览；不会调用模型、tick 或控制器真值。"
+        ? "首次进入空态使用本地仅候选态预览；不会调用模型、tick 或控制器真值。"
         : "需要先从逻辑绘制页生成图纸。";
       sourceMetrics.textContent = state.faultPayload && state.faultPayload.first_visit_preview
         ? "2 场景 · 2 注入点 · 试运行"

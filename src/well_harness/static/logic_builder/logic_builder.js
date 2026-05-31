@@ -2474,7 +2474,7 @@
     renderDrawing(buildDocxTemplateCandidate());
     resetDrawerParameters({skipSummary: true});
     renderRunSignalSummary("idle");
-    finishTask("模板已载入", "DOCX L1-L4 官方模板已作为 sandbox candidate 展示。");
+    finishTask("模板已载入", "DOCX L1-L4 官方模板已作为沙盒候选展示。");
   }
 
   function handleTemplateAction(action) {
@@ -2496,7 +2496,7 @@
       renderDrawing(buildDocxTemplateCandidate());
       resetDrawerParameters({skipSummary: true});
       renderRunSignalSummary("idle");
-      finishTask("模板已载入", "DOCX L1-L4 官方模板已作为 sandbox candidate 展示。");
+      finishTask("模板已载入", "DOCX L1-L4 官方模板已作为沙盒候选展示。");
       return;
     }
     if (selected === "restore") {
