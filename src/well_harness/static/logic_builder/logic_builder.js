@@ -2192,8 +2192,8 @@
     const anchors = {
       logic1: anchor("L1", "工作逻辑1：RA<6ft 且 SW1 进入 TRA [-1.4,-6.2] 区间，输出 TLS 115VAC。"),
       logic2: anchor("L2", "工作逻辑2：SW2 有效且 TRA 区间满足时，输出 ETRAC 540VDC。"),
-      logic3: anchor("L3", "工作逻辑3：TLS/PLS 反馈满足后，驱动 EEC deploy、PLS power、PDU motor。"),
-      logic4: anchor("L4", "工作逻辑4：VDT 达到 90% deploy 且 TRA<=-11.74deg，THR_LOCK release。"),
+      logic3: anchor("L3", "工作逻辑3：TLS/PLS 反馈满足后，驱动 EEC 展开、PLS 供电、PDU 电机。"),
+      logic4: anchor("L4", "工作逻辑4：VDT 达到 90% 展开且 TRA≤-11.74°，THR_LOCK 释放。"),
       local: anchor("demo-cabin-context", "演示舱运行上下文，本地补齐；不改变控制真值。", "local"),
     };
     const sourceAnchorsById = {
@@ -2246,16 +2246,16 @@
       reverser_inhibited: "反推抑制必须为 false；本地补齐为安全上下文。",
       logic1: "L1 输出 TLS 115VAC 解锁命令。",
       logic2: "L2 输出 ETRAC 540VDC 供电命令。",
-      logic3: "L3 驱动 EEC deploy、PLS power、PDU motor。",
-      tls115: "TLS 115VAC command。",
+      logic3: "L3 驱动 EEC 展开、PLS 供电、PDU 电机。",
+      tls115: "TLS 115VAC 指令。",
       tls_unlocked: "TLS 解锁反馈。",
       vdt90: "反推展开达到 90% 的 VDT 反馈。",
-      etrac_540v: "ETRAC 540VDC command。",
-      eec_deploy: "EEC deploy command。",
-      pls_power: "PLS power command。",
-      pdu_motor: "PDU motor command。",
-      logic4: "L4 汇合 L3 与 VDT90，控制 THR_LOCK release。",
-      thr_lock: "THR_LOCK release，DOCX L1-L4 链路末端输出。",
+      etrac_540v: "ETRAC 540VDC 指令。",
+      eec_deploy: "EEC 展开指令。",
+      pls_power: "PLS 供电指令。",
+      pdu_motor: "PDU 电机指令。",
+      logic4: "L4 汇合 L3 与 VDT90，控制 THR_LOCK 释放。",
+      thr_lock: "THR_LOCK 释放，DOCX L1-L4 链路末端输出。",
     };
     const activeNodes = new Set(["aircraft_on_ground", "radio_altitude_ft", "engine_running", "eec_enable"]);
     const blockedNodes = new Set(["logic1", "logic2", "logic3", "logic4", "thr_lock"]);
