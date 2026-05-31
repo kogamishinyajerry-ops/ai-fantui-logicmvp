@@ -4026,13 +4026,18 @@ def test_logic_builder_combines_notes_change_and_history_into_tabbed_canvas_draw
 ) -> None:
     page = browser.new_page(viewport={"width": 1440, "height": 960})
     try:
+        drawing = _circuit_view_drawing()
+        drawing["drawing_notes"] = [
+            *drawing["drawing_notes"],
+            "truth_effect:none；controller_truth_modified:false。",
+        ]
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate(
             """(drawing) => {
               localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
               localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
             }""",
-            _circuit_view_drawing(),
+            drawing,
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
@@ -4063,6 +4068,14 @@ def test_logic_builder_combines_notes_change_and_history_into_tabbed_canvas_draw
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
         expect(page.locator("#logic-change-loop-details")).to_be_hidden()
         expect(page.locator("#logic-drawing-notes-details")).to_be_hidden()
+
+        page.click('#logic-collapsed-tool-rail [data-workbench-tab="notes"]')
+        expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "notes")
+        expect(page.locator("#logic-drawing-notes-details")).to_be_visible()
+        logic_notes = page.locator("#logic-notes")
+        for boundary in ["truth_effect:none", "controller_truth_modified:false"]:
+            expect(logic_notes.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
+            assert boundary not in logic_notes.inner_text()
 
         page.click('#logic-collapsed-tool-rail [data-workbench-tab="history"]')
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "history")

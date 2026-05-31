@@ -329,6 +329,13 @@
     hudLogic: $("logic-circuit-hud-logic"),
     hudThrLock: $("logic-circuit-hud-thr-lock"),
   };
+  const LOGIC_BOUNDARY_TOKEN_LABELS = {
+    "sandbox_candidate": "沙箱候选",
+    "truth_effect:none": "真值影响：无",
+    "certification_claim:none": "认证声明：无",
+    "controller_truth_modified:false": "控制器真值已改动：否",
+  };
+  const LOGIC_BOUNDARY_TOKEN_PATTERN = /controller_truth_modified:false|certification_claim:none|truth_effect:none|sandbox_candidate/g;
 
   function escapeText(value) {
     return String(value == null ? "" : value)
@@ -336,6 +343,33 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function renderBoundaryTokenValue(target, value) {
+    const text = String(value == null ? "" : value);
+    let cursor = 0;
+    let matched = false;
+    text.replace(LOGIC_BOUNDARY_TOKEN_PATTERN, (token, offset) => {
+      if (offset > cursor) {
+        target.appendChild(document.createTextNode(text.slice(cursor, offset)));
+      }
+      const chip = document.createElement("span");
+      chip.className = "logic-boundary-token";
+      chip.dataset.boundaryToken = token;
+      chip.textContent = LOGIC_BOUNDARY_TOKEN_LABELS[token] || token;
+      target.appendChild(chip);
+      cursor = offset + token.length;
+      matched = true;
+      return token;
+    });
+    if (!matched) {
+      target.textContent = text;
+      return false;
+    }
+    if (cursor < text.length) {
+      target.appendChild(document.createTextNode(text.slice(cursor)));
+    }
+    return true;
   }
 
   function sourceAnchorLabel(anchors) {
@@ -3409,7 +3443,9 @@
     }
     for (const item of items) {
       const li = document.createElement("li");
-      li.textContent = item;
+      if (renderBoundaryTokenValue(li, item)) {
+        li.className = "logic-note-boundary-value";
+      }
       notes.appendChild(li);
     }
   }
