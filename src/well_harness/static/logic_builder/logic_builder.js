@@ -801,11 +801,11 @@
     }
     if (streamedRequirementsGateText) {
       if (requirementsEdit && requirementsEdit.authorized) {
-        streamedRequirementsGateText.textContent = "已授权：仅记录需求文档候选补丁，仍不会写入 controller.py。";
+        streamedRequirementsGateText.textContent = "已授权：仅记录需求文档候选补丁，仍不会写入真实控制器。";
       } else if (requirementsEdit && requirementsEdit.status === "authorization_required") {
         streamedRequirementsGateText.textContent = "待授权：需求文档候选补丁已暂存，但不会自动修改原文。";
       } else {
-        streamedRequirementsGateText.textContent = "未授权：不会自动修改需求文档，也不会写入 controller.py。";
+        streamedRequirementsGateText.textContent = "未授权：不会自动修改需求文档，也不会写入真实控制器。";
       }
     }
     streamedAuthoringPanel.dataset.state = proposal

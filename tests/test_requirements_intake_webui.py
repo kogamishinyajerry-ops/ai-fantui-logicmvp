@@ -3239,6 +3239,10 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'data-gate-status="locked"' in html
     assert "确认候选，不写需求" in html
     assert "反馈后重算候选" in html
+    assert "不会写入真实控制器" in html
+    assert "不会写入真实控制器" in js
+    assert "controller.py" not in html
+    assert "controller.py" not in js
     assert "/api/requirements-intake/streamed-authoring/proposal" in js
     assert "is-streamed-authoring-active" in js
     assert "stream_replay" in js
