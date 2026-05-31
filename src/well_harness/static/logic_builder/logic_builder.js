@@ -2174,7 +2174,7 @@
     if (svg) svg.innerHTML = "";
     if (nodeLayer) nodeLayer.innerHTML = "";
     if (panelLayer) panelLayer.innerHTML = "";
-    if (counts) counts.textContent = "0 nodes · 0 edges · 0 panels";
+    if (counts) counts.textContent = "0 个节点 · 0 条连线 · 0 个面板";
     if (source) source.textContent = "来源待确认";
     if (bottomRunNodeCount) bottomRunNodeCount.textContent = "节点 0/0";
     if (bottomRunEdgeCount) bottomRunEdgeCount.textContent = "连线 0/0";
@@ -3995,8 +3995,8 @@
     resultState.textContent = circuitView ? "电路图已完成绘制" : "图纸已完成绘制";
     resultSummary.textContent = payload.summary_zh || "初版逻辑链路图已生成。";
     counts.textContent = circuitView
-      ? `${(circuitView.rows || []).length} rows · ${(circuitView.nodes || []).length} circuit nodes · ${(circuitView.wires || []).length} wires`
-      : `${(payload.nodes || []).length} nodes · ${(payload.edges || []).length} edges · ${(payload.parameter_panels || []).length} panels`;
+      ? `${(circuitView.rows || []).length} 行 · ${(circuitView.nodes || []).length} 个电路节点 · ${(circuitView.wires || []).length} 条连线`
+      : `${(payload.nodes || []).length} 个节点 · ${(payload.edges || []).length} 条连线 · ${(payload.parameter_panels || []).length} 个面板`;
     if (bottomRunNodeCount) {
       const nodeTotal = circuitView ? (circuitView.nodes || []).length : (payload.nodes || []).length;
       bottomRunNodeCount.textContent = `节点 ${nodeTotal}/${nodeTotal}`;
