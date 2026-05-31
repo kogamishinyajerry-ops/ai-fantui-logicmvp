@@ -7827,9 +7827,11 @@ def test_sandbox_review_exposes_failure_path_evidence_and_report_blueprint_surfa
     assert "沙盒审查界面" in script
     assert "空跑界面预览" in script
     assert "仅界面空跑" in script
+    assert '{label: "覆盖率", value: hasCoverage ? `${Math.round((covered / scenarioIds.size) * 100)}%` : "不适用"}' in script
     assert "未调用模型、tick 或控制器" not in script
     assert "UI 蓝图" not in script
     assert "沙盒审查 UI" not in script
+    assert ': "N/A"}' not in script
 
 
 def test_deepseek_visual_acceptance_script_freezes_first_screen_bundle_contract():
