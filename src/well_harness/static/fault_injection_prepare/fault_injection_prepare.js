@@ -126,7 +126,7 @@
     const value = text || "等待候选";
     const pathCueByState = {
       "等待候选": "等待候选：生成后得到故障矩阵与沙盒入口。",
-      "默认暂缓": "默认暂缓：源文档暂不要求故障注入，仅保留 dry-run 入口。",
+      "默认暂缓": "默认暂缓：源文档暂不要求故障注入，仅保留空跑入口。",
       "模型处理中": "模型处理中：完成后会刷新故障矩阵与沙盒入口。",
       "需重新生成边界问题": "需重新生成边界问题：边界齐全后才能进入沙盒。",
       "需完成边界确认": "需完成边界确认：确认后把候选矩阵送入沙盒。",
@@ -914,7 +914,7 @@
     }
     generateButton.textContent = isBusy
       ? "生成中..."
-      : (isFaultDeferredBySource() && !state.faultPayload ? "检查：生成 dry-run 候选" : "检查：生成候选");
+      : (isFaultDeferredBySource() && !state.faultPayload ? "检查：生成空跑候选" : "检查：生成候选");
     updateSandboxGate();
   }
 
@@ -996,7 +996,7 @@
     }
     if (isFaultDeferredBySource()) {
       workflowStage.textContent = "故障注入默认暂缓";
-      workflowDetail.textContent = "源文档声明本轮暂不考虑故障注入；只有点击“仍生成 dry-run 候选”才会继续。";
+      workflowDetail.textContent = "源文档声明本轮暂不考虑故障注入；只有点击“仍生成空跑候选”才会继续。";
       setWorkflowSteps("fault", ["requirements", "drawing"]);
       return;
     }
@@ -1053,7 +1053,7 @@
   function renderBurdenSummary(payload) {
     if (isFaultDeferredBySource() && !payload) {
       burdenAction.textContent = "当前只需决定是否保持暂缓。";
-      burdenOutputs.innerHTML = "<li>源文档暂缓故障注入</li><li>默认不进入沙盒</li><li>可手动生成 dry-run 候选</li>";
+      burdenOutputs.innerHTML = "<li>源文档暂缓故障注入</li><li>默认不进入沙盒</li><li>可手动生成空跑候选</li>";
       setFaultDecisionCandidateSummary("源文档暂缓");
       setFaultDecisionBoundarySummary("0/0 已回答");
       return;
@@ -1517,7 +1517,7 @@
       beginTask("读取源文档范围", "正在检查源文档是否允许推进故障注入。");
       resultState.textContent = "源文档暂缓";
       resultSummary.textContent = faultDeferredReason();
-      qualitySummary.textContent = "默认不生成故障候选；需要时点击“仍生成 dry-run 候选”。";
+      qualitySummary.textContent = "默认不生成故障候选；需要时点击“仍生成空跑候选”。";
       renderSourceDeferral();
       renderBurdenSummary(null);
       finishTask("故障注入暂缓", "源文档声明本轮暂不考虑故障注入。");
