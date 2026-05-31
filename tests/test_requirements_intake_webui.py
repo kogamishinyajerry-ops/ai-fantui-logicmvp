@@ -5697,9 +5697,13 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "确认此候选只用于空跑沙盒审查" in fault_script
     assert "只读空跑审查" in fault_script
     assert "空跑条件待确认" in fault_script
+    assert "确认不修改控制器真值、认证结论和生产配置" in fault_script
+    assert "不会调用模型、仿真节拍或控制器真值" in fault_script
+    assert "不触发真实仿真节拍" in fault_script
     assert "仍生成 dry-run 候选" not in fault_script
     assert "确认此候选只用于 dry-run 沙盒审查" not in fault_script
     assert "dry-run 条件待确认" not in fault_script
+    assert "controller truth" not in fault_script
     assert "renderBurdenSummary" in fault_script
     assert "sourceAnchorLabel" in fault_script
     assert "renderCoverageCompletionEvidence" in fault_script
