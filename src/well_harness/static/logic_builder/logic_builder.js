@@ -1796,19 +1796,19 @@
     const tls = nodeById.get("tls_unlocked");
     const vdt90 = nodeById.get("vdt90");
     const thr = nodeById.get("thr_lock");
-    if (circuitReadouts.hudSw1) circuitReadouts.hudSw1.textContent = sw1 && sw1.state === "active" ? "CLOSED" : "open";
-    if (circuitReadouts.hudSw2) circuitReadouts.hudSw2.textContent = sw2 && sw2.state === "active" ? "CLOSED" : "open";
-    if (circuitReadouts.hudTls) circuitReadouts.hudTls.textContent = tls && tls.state === "active" ? "UNLOCKED" : "locked";
-    if (circuitReadouts.hudVdt90) circuitReadouts.hudVdt90.textContent = vdt90 && vdt90.state === "active" ? ">=90%" : "pending";
+    if (circuitReadouts.hudSw1) circuitReadouts.hudSw1.textContent = sw1 && sw1.state === "active" ? "闭合" : "断开";
+    if (circuitReadouts.hudSw2) circuitReadouts.hudSw2.textContent = sw2 && sw2.state === "active" ? "闭合" : "断开";
+    if (circuitReadouts.hudTls) circuitReadouts.hudTls.textContent = tls && tls.state === "active" ? "已解锁" : "锁定";
+    if (circuitReadouts.hudVdt90) circuitReadouts.hudVdt90.textContent = vdt90 && vdt90.state === "active" ? "≥90%" : "待到位";
     if (circuitReadouts.hudLogic) {
       circuitReadouts.hudLogic.textContent = ["logic1", "logic2", "logic3", "logic4"].map((id, index) => {
         const node = nodeById.get(id);
-        return `L${index + 1}:${node && node.state === "active" ? "ON" : "-"}`;
+        return `L${index + 1}:${node && node.state === "active" ? "通" : "-"}`;
       }).join(" · ");
     }
     if (circuitReadouts.hudThrLock) {
-      if (thr && thr.state === "active") circuitReadouts.hudThrLock.textContent = "RELEASED";
-      else if (thr && thr.state === "blocked") circuitReadouts.hudThrLock.textContent = "BLOCKED";
+      if (thr && thr.state === "active") circuitReadouts.hudThrLock.textContent = "已释放";
+      else if (thr && thr.state === "blocked") circuitReadouts.hudThrLock.textContent = "已阻断";
       else circuitReadouts.hudThrLock.textContent = "-";
     }
     updateCircuitInputReadouts(snapshot);

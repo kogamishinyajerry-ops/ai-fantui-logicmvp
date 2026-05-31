@@ -3383,6 +3383,12 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         page.select_option("#logic-circuit-preset-select", "max-reverse")
         expect(page.locator("#logic-circuit-preset-status")).to_contain_text("最大反推")
         expect(page.locator("#logic-circuit-status-badge")).to_have_text("已放出")
+        expect(page.locator("#logic-circuit-hud-sw1")).to_have_text("闭合")
+        expect(page.locator("#logic-circuit-hud-sw2")).to_have_text("闭合")
+        expect(page.locator("#logic-circuit-hud-tls")).to_have_text("已解锁")
+        expect(page.locator("#logic-circuit-hud-vdt90")).to_have_text("≥90%")
+        expect(page.locator("#logic-circuit-hud-logic")).to_contain_text("L4:通")
+        expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_text("已释放")
         expect(page.locator('[data-demo-node-id="thr_lock"]')).to_have_attribute("data-state", "active")
         expect(page.locator('.logic-circuit-wire[data-source="logic4"][data-target="thr_lock"]')).to_have_attribute(
             "data-state",
@@ -3391,6 +3397,8 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
 
         page.select_option("#logic-circuit-preset-select", "inhibit-block")
         expect(page.locator("#logic-circuit-status-badge")).to_have_text("异常")
+        expect(page.locator("#logic-circuit-hud-vdt90")).to_have_text("待到位")
+        expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_text("已阻断")
         expect(page.locator('.logic-circuit-wire[data-source="reverser_inhibited"][data-target="logic1"]')).to_have_attribute(
             "data-state",
             "fault",
