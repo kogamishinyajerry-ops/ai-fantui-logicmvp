@@ -5582,6 +5582,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "renderCircuitNodeDetails" in logic_script
     assert "renderCircuitLaneGuides" in logic_script
     assert "data-readable-lane" in logic_script
+    assert "SW1/SW2 通道" in logic_script
+    assert "SW1/SW2 lane" not in logic_script
     assert "data-fit-mode" in logic_script
     assert "logic-circuit-short-label" in logic_script
     assert "logic-circuit-tech-id" in logic_script

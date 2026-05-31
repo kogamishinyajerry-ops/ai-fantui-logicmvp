@@ -2964,7 +2964,7 @@
       rx: 5,
       class: "logic-circuit-lane-band",
     }));
-    appendCircuitText(guide, "SW1/SW2 lane", laneX + 12, laneY + 14, {
+    appendCircuitText(guide, "SW1/SW2 通道", laneX + 12, laneY + 14, {
       class: "logic-circuit-lane-label",
     });
     circuitSvg.appendChild(guide);
