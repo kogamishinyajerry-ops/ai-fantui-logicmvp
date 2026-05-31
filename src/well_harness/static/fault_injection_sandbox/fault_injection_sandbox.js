@@ -2451,7 +2451,7 @@
     row.setAttribute("data-blueprint36-package-row", linkTarget.packageKind || "package-item");
     row.classList.toggle("is-linked-active", linkTarget.reviewRowId === state.activeReviewRowId);
     const decision = linkTarget.decision || "联动";
-    const evidence = linkTarget.evidence || meta || "candidate";
+    const evidence = linkTarget.evidence || meta || "候选证据";
     const source = linkTarget.sourceLabel || extra || "候选态边界";
     const traceId = linkTarget.traceId || "ET";
     const reportId = linkTarget.reportId || "RP";
