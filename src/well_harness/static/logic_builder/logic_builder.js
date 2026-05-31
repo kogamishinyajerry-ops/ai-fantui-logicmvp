@@ -3861,7 +3861,7 @@
   function clearInterpretation() {
     state.interpretationPayload = null;
     interpretationBox.hidden = true;
-    interpretationState.textContent = "WAITING";
+    interpretationState.textContent = "等待";
     interpretationSummary.textContent = "";
     interpretationMatch.textContent = "";
     interpretationQuestion.textContent = "";

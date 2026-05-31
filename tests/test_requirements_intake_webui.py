@@ -5598,7 +5598,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "生成修改意见草稿" in logic_html
     assert "请根据沙盒审查补充具体修改意见" in logic_script
     assert "ai-fantui-logic-builder-change-history-v1" in logic_script
-    assert "STEP 2/4" in logic_html
+    assert "第 2/4 步" in logic_html
     assert 'id="logic-page-system-strip"' in logic_html
     assert 'data-blueprint-surface="compact-top-bar"' in logic_html
     assert 'data-blueprint27-compact-topbar="step-progress-workflow"' in logic_html
@@ -6096,7 +6096,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         (
             STATIC_ROOT / "logic_builder" / "index.html",
             "2",
-            "STEP 2/4",
+            "第 2/4 步",
             "逻辑绘制",
             "logic-fault-next",
             "下一步：进入故障准备",

@@ -735,7 +735,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         (
             "/logic-builder",
             "2",
-            "STEP 2/4",
+            "第 2/4 步",
             "逻辑绘制",
             "#logic-fault-next",
             "下一步：进入故障准备",
@@ -3661,8 +3661,8 @@ def test_logic_builder_left_rail_merges_source_status_and_trust_counts(
             "aside.logic-inspector > section.logic-panel > .logic-kicker",
             "(kickers) => kickers.map((kicker) => kicker.textContent.trim())",
         )
-        assert direct_kickers == ["ENGINEERING RAIL"]
-        for old_kicker in ("INPUT", "MODEL OUTPUT", "READING LOAD"):
+        assert direct_kickers == ["状态与输入"]
+        for old_kicker in ("ENGINEERING RAIL", "INPUT", "MODEL OUTPUT", "READING LOAD"):
             assert old_kicker not in direct_kickers
 
         rail_box = page.locator("#logic-engineering-rail").bounding_box()

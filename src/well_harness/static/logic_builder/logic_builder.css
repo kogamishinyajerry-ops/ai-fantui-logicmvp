@@ -95,6 +95,7 @@ body.unified-nav-enabled { padding-top: 48px; }
   color: var(--logic-accent);
   font-family: "Courier New", monospace;
   font-size: 11px;
+  line-height: 1.1;
   letter-spacing: 0.12em;
 }
 h1, h2, p { margin-top: 0; }
