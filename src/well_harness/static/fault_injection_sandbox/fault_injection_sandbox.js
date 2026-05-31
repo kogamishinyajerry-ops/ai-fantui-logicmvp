@@ -161,6 +161,14 @@
     "certification_claim:none": "认证声明：无",
     "controller_truth_modified:false": "控制器真值已改动：否",
   };
+  const REVIEW_CATEGORY_LABELS = {
+    coverage: "覆盖",
+    dry_run: "dry-run 合同",
+    review: "审查",
+    risk: "风险",
+    safety: "安全",
+    traceability: "可追溯性",
+  };
   const BOUNDARY_TOKENS = Object.keys(BOUNDARY_TOKEN_LABELS).sort((left, right) => right.length - left.length);
   const BOUNDARY_TOKEN_PATTERN = new RegExp(BOUNDARY_TOKENS.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
 
@@ -182,6 +190,11 @@
 
   function normalizeText(value) {
     return (value == null || value === "") ? "未提供" : value;
+  }
+
+  function reviewCategoryLabel(value) {
+    const raw = (value == null || value === "") ? "review" : String(value);
+    return REVIEW_CATEGORY_LABELS[raw] || raw;
   }
 
   function boundaryTokenChip(token) {
@@ -218,12 +231,12 @@
   function compactRailLabel(value) {
     const raw = normalizeText(value);
     const aliases = {
-      blueprint_plan_ra_override: "PLAN RA",
-      blueprint_plan_sw2_dropout: "PLAN SW2",
-      observe_release_gate: "OBS L1",
-      observe_thr_lock: "OBS LOCK",
+      blueprint_plan_ra_override: "计划 RA",
+      blueprint_plan_sw2_dropout: "计划 SW2",
+      observe_release_gate: "观测 L1",
+      observe_thr_lock: "观测锁定",
       radio_altitude_ft: "RA",
-      release_gate: "L1 gate",
+      release_gate: "L1 闸门",
       thr_lock_release: "THR_LOCK",
       ra_lt_6ft: "RA<6ft",
       logic1: "L1",
@@ -234,10 +247,10 @@
     };
     if (aliases[raw]) return aliases[raw];
     return raw
-      .replace(/^blueprint_plan_/, "PLAN ")
-      .replace(/^observe_/, "OBS ")
-      .replace(/^plan_/, "P")
-      .replace(/^fault_/, "F")
+      .replace(/^blueprint_plan_/, "计划 ")
+      .replace(/^observe_/, "观测 ")
+      .replace(/^plan_/, "计划 ")
+      .replace(/^fault_/, "故障 ")
       .replace(/_/g, " ")
       .slice(0, 24)
       .trim();
@@ -1447,9 +1460,9 @@
   }
 
   function sandboxReviewDecisionLabel(stateName) {
-    if (stateName === "pass") return "PASS";
-    if (stateName === "warn") return "REVIEW";
-    return "WAIT";
+    if (stateName === "pass") return "通过";
+    if (stateName === "warn") return "待复核";
+    return "等待";
   }
 
   function reportChapterKind(reportId) {
@@ -1652,12 +1665,12 @@
         : "无候选沙盒路径",
       node: compactRailLabel(planNode),
       snapshot: plans.length
-        ? `${compactRailLabel(firstPlan.signal_name || firstPlan.node_id)} · ${normalizeText(firstPlan.injection_mode)} · no tick`
+        ? `${compactRailLabel(firstPlan.signal_name || firstPlan.node_id)} · ${normalizeText(firstPlan.injection_mode)} · 不运行 tick`
         : "无输入快照",
       pathNodes: [
         {
           id: planId || "plan",
-          kind: "PLAN",
+          kind: "计划",
           title: compactRailLabel(planNode || "候选计划"),
           meta: normalizeText(firstPlan.injection_mode || firstPlan.fault_scenario_id || "dry-run"),
           reviewRowId: "SR-04",
@@ -1667,9 +1680,9 @@
         },
         {
           id: observationId || "observe",
-          kind: "NODE",
+          kind: "节点",
           title: compactRailLabel(observationNode || "观测节点"),
-          meta: compactRailLabel(firstObservation.signal_name || firstObservation.check_zh || "observation"),
+          meta: compactRailLabel(firstObservation.signal_name || firstObservation.check_zh || "观测"),
           reviewRowId: "SR-05",
           traceId: replayLink.traceId,
           reportId: replayLink.reportId,
@@ -1677,7 +1690,7 @@
         },
         {
           id: "candidate-boundary",
-          kind: "GATE",
+          kind: "闸门",
           title: "仅候选态",
           meta: `${reviewRowsBuilt.length} 审查行`,
           reviewRowId: "SR-07",
@@ -1826,7 +1839,7 @@
         id: "ET-04",
         title: "报告预览",
         value: `${reportSections.length} 章节已回链`,
-        ...traceLink("ET-04", "REPORT", "报告"),
+        ...traceLink("ET-04", "报告", "报告"),
         linkedReviewRows: reviewRowsForTrace("ET-04"),
         rows: [
           {label: "报告章节", value: "沙盒回放审查包"},
@@ -1840,7 +1853,7 @@
         id: "ET-01",
         title: "来源锚点",
         value: anchor ? normalizeText(anchor.id || anchor.kind) : "候选来源",
-        ...traceLink("ET-01", "SOURCE", "来源"),
+        ...traceLink("ET-01", "来源", "来源"),
         linkedReviewRows: reviewRowsForTrace("ET-01"),
         rows: [
           {label: "来源摘录", value: anchor ? normalizeText(anchor.quote_zh || anchor.quote || anchor.text) : "候选节点来源待人工复核。"},
@@ -1853,7 +1866,7 @@
         id: "ET-02",
         title: "运行帧",
         value: `${plans.length} 计划 / ${observations.length} 观测点`,
-        ...traceLink("ET-02", "RUN", "定位"),
+        ...traceLink("ET-02", "运行", "定位"),
         linkedReviewRows: reviewRowsForTrace("ET-02"),
         rows: [
           {label: "相关运行帧", value: "仅 dry-run"},
@@ -1866,7 +1879,7 @@
         id: "ET-03",
         title: "审查行",
         value: `${reviewRowsBuilt.length} 审查行`,
-        ...traceLink("ET-03", "REVIEW", "审查"),
+        ...traceLink("ET-03", "审查", "审查"),
         linkedReviewRows: reviewRowsForTrace("ET-03"),
         rows: [
           {label: "审查备注", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
@@ -2571,11 +2584,11 @@
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "sandbox-checklist-chip";
-      chip.innerHTML = `<strong>${escapeText(item.category || "审查")}</strong> ${escapeText(item.condition_zh || item.id || "审查条目")}`;
+      chip.innerHTML = `<strong>${escapeText(reviewCategoryLabel(item.category))}</strong> ${escapeText(item.condition_zh || item.id || "审查条目")}`;
       chip.addEventListener("click", () => {
         const rows = [
           {label: "条目", value: normalizeText(item.id || item.condition_zh || "审查")},
-          {label: "类型", value: normalizeText(item.category || "审查")},
+          {label: "类型", value: reviewCategoryLabel(item.category)},
           {label: "审查条件", value: normalizeText(item.condition_zh)},
           {label: "通过标准", value: normalizeText(item.pass_criteria_zh)},
           {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
@@ -2693,13 +2706,13 @@
       card.tabIndex = 0;
       card.innerHTML = `
         <strong>${escapeText(item.condition_zh || item.id)}</strong>
-        <code>${escapeText(item.category || "审查")}</code>
+        <code>${escapeText(reviewCategoryLabel(item.category))}</code>
         <p>${escapeText(item.pass_criteria_zh || "需要人工确认。")}</p>
       `;
       card.addEventListener("click", () => {
         renderEvidenceRows(`审查细项：${normalizeText(item.condition_zh || item.id)}`, [
           {label: "ID", value: normalizeText(item.id)},
-          {label: "类型", value: normalizeText(item.category)},
+          {label: "类型", value: reviewCategoryLabel(item.category)},
           {label: "审查条件", value: normalizeText(item.condition_zh)},
           {label: "通过标准", value: normalizeText(item.pass_criteria_zh)},
           {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
