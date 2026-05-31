@@ -5570,6 +5570,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'if (id === "eec_deploy") return "展开";' in logic_script
     assert "等待输入：TRA、RA 与在地状态未满足 L1 前置条件。" in logic_script
     assert "反推抑制必须为否；本地补齐为安全上下文。" in logic_script
+    assert "L4 满足，油门锁释放。油门反向段解锁。" in logic_script
+    assert "先看 L1-L4 四行电路、油门锁输出和来源标记。" in logic_script
+    assert "看油门锁，必要时批注。" in logic_script
     assert "requirements-intake/draw-logic" in logic_script
     assert "requirements-intake/interpret-logic-change" in logic_script
     assert "requirements-intake/update-logic-drawing" in logic_script
@@ -5590,6 +5593,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'return "deploy";' not in logic_script
     assert "等待输入：TRA / RA / aircraft_on_ground 未满足 L1 前置条件。" not in logic_script
     assert "反推抑制必须为 false；本地补齐为安全上下文。" not in logic_script
+    assert "L4 满足，THR_LOCK 释放。油门反向段解锁。" not in logic_script
+    assert "先看 L1-L4 四行电路、THR_LOCK 输出和来源标记。" not in logic_script
+    assert "看 THR_LOCK，必要时批注。" not in logic_script
     assert "下一页生成故障矩阵" in logic_script
     assert ".logic-circuit-eval-panel" in logic_stylesheet
     assert ".logic-circuit-preset-menu" in logic_stylesheet

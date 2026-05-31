@@ -1880,7 +1880,7 @@
       summary = "反推被抑制：抑制信号为真，展开链路阻塞。";
     } else if (thr && thr.state === "active") {
       status = "deployed";
-      summary = "L4 满足，THR_LOCK 释放。油门反向段解锁。";
+      summary = "L4 满足，油门锁释放。油门反向段解锁。";
     } else if (logic4 && logic4.state === "blocked") {
       const blockers = (logic4.blockers || logic4.blocked_by || []).join(" / ") || "VDT90 / plant feedback";
       status = "fault";
@@ -2809,9 +2809,9 @@
         `${(circuitView.wires || []).length} 条确定性连线`,
         badges ? "源文档暂缓项已标记" : "未发现源文档暂缓项",
       ];
-      burdenAction.textContent = "先看 L1-L4 四行电路、THR_LOCK 输出和来源标记。";
+      burdenAction.textContent = "先看 L1-L4 四行电路、油门锁输出和来源标记。";
       burdenOutputs.innerHTML = outputs.slice(0, 3).map((item) => `<li>${escapeText(item)}</li>`).join("");
-      setDetailNextAction("看 THR_LOCK，必要时批注。");
+      setDetailNextAction("看油门锁，必要时批注。");
       return;
     }
     const metrics = drawingMetrics(payload);
