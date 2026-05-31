@@ -3196,13 +3196,13 @@
     const id = node.id || "";
     if (id === "ra") return "235 ft";
     if (id === "radio_altitude_ft") return "RA<6ft";
-    if (id === "aircraft_on_ground") return "TRUE";
-    if (id === "engine_running") return "TRUE";
-    if (id === "n1k") return "OK";
-    if (id === "eec_enable") return "TRUE";
-    if (id === "reverser_inhibited") return "FALSE";
-    if (id === "sw1") return "ON";
-    if (id === "sw2") return "OFF";
+    if (id === "aircraft_on_ground") return "是";
+    if (id === "engine_running") return "是";
+    if (id === "n1k") return "正常";
+    if (id === "eec_enable") return "是";
+    if (id === "reverser_inhibited") return "否";
+    if (id === "sw1") return "接通";
+    if (id === "sw2") return "断开";
     if (id === "vdt") return "132 kt";
     if (id === "tra") return "350 ft";
     if (id === "l1_threshold") return ">= 250 ft";
@@ -3216,7 +3216,7 @@
     if (id === "caut1") return "CAUT1";
     if (id === "caut2") return "CAUT2";
     if (id === "caut3") return "CAUT3";
-    if (id === "cancel") return "Cancel";
+    if (id === "cancel") return "取消";
     if (id === "logic1") return "SW1 · RA · 未抑制";
     if (id === "logic2") return "SW2 · 在地 · EEC";
     if (id === "logic3") return ["TLS/N1K/TRA", "门限成立"];
@@ -3225,9 +3225,9 @@
     if (id === "tls_unlocked") return "反馈";
     if (id === "vdt90") return ">=90%";
     if (id === "etrac_540v") return "540VDC";
-    if (id === "eec_deploy") return "deploy";
-    if (id === "pls_power") return "power";
-    if (id === "pdu_motor") return "motor";
+    if (id === "eec_deploy") return "展开";
+    if (id === "pls_power") return "供电";
+    if (id === "pdu_motor") return "电机";
     if (id === "thr_lock") return "L4 成立";
     return "";
   }
