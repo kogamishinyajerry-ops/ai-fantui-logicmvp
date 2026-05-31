@@ -3248,6 +3248,12 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert "stream_replay" in js
     assert "candidate_edit_committed" in js
     assert "candidate_edit_revision_requested" in js
+    assert "function streamedGraphDiffOperationLabel" in js
+    assert 'candidate_requirements_text_revision: "需求文档候选修订"' in js
+    assert 'return `${operationLabel} · +${nodeCount} 节点 / +${wireCount} 连线`;' in js
+    assert "function streamedCandidateRecalculationStatusLabel" in js
+    assert 'revision_candidate_ready: "修订候选已就绪"' in js
+    assert "event.candidate_recalculation.status ? event.candidate_recalculation.status" not in js
     assert "requirements_document_patch_status" in js
     assert "requirements_document_patch_sha256" in js
     assert "committed_candidate_graph" in js

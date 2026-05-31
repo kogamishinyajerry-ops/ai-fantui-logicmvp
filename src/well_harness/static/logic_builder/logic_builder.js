@@ -583,12 +583,35 @@
     return `上游：${upstream}；下游：${downstream}`;
   }
 
+  const STREAMED_GRAPH_DIFF_OPERATION_LABELS = {
+    add_node: "新增节点",
+    add_wire: "新增连线",
+    candidate_edit: "候选编辑",
+    candidate_requirements_text_revision: "需求文档候选修订",
+    update_node: "更新节点",
+    update_wire: "更新连线",
+  };
+
+  const STREAMED_RECALCULATION_STATUS_LABELS = {
+    revision_candidate_ready: "修订候选已就绪",
+  };
+
+  function streamedGraphDiffOperationLabel(operation) {
+    const key = String(operation || "candidate_edit");
+    return STREAMED_GRAPH_DIFF_OPERATION_LABELS[key] || "候选编辑";
+  }
+
+  function streamedCandidateRecalculationStatusLabel(status) {
+    const key = String(status || "revision_candidate_ready");
+    return STREAMED_RECALCULATION_STATUS_LABELS[key] || "候选已重算";
+  }
+
   function streamedGraphDiffSummary(graphDiff) {
     const diff = graphDiff && typeof graphDiff === "object" ? graphDiff : {};
-    const operation = diff.operation || "candidate_edit";
+    const operationLabel = streamedGraphDiffOperationLabel(diff.operation);
     const nodeCount = Array.isArray(diff.node_ids_added) ? diff.node_ids_added.length : 0;
     const wireCount = Array.isArray(diff.wire_ids_added) ? diff.wire_ids_added.length : 0;
-    return `${operation} · +${nodeCount} 节点 / +${wireCount} 连线`;
+    return `${operationLabel} · +${nodeCount} 节点 / +${wireCount} 连线`;
   }
 
   function revisionFeedbackForProposal(proposal) {
@@ -696,7 +719,7 @@
         const target = annotationTargetLabel(event.target_type, event.target_id, event.display_label);
         const sourceExcerpt = event.source_excerpt ? ` · 来源：${String(event.source_excerpt).slice(0, 56)}` : "";
         const recalculation = event.event_type === "candidate_edit_revision_requested"
-          ? ` · ${event.candidate_recalculation && event.candidate_recalculation.status ? event.candidate_recalculation.status : "revision_candidate_ready"}`
+          ? ` · ${streamedCandidateRecalculationStatusLabel(event.candidate_recalculation && event.candidate_recalculation.status)}`
           : "";
         const patchHash = event.requirements_document_patch_sha256 ? ` · patch:${String(event.requirements_document_patch_sha256).slice(0, 8)}` : "";
         const docGate = event.requirements_document_edit_requested
