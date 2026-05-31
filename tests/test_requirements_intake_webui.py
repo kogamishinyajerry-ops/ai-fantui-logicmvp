@@ -7280,6 +7280,8 @@ def test_logic_builder_uses_selected_final_codex_minimal_blueprint_skin():
     assert 'data-command-palette-state="closed"' in html
     assert 'data-panel-default="collapsed"' in html
     assert 'data-panel-strategy="single-auxiliary"' in html
+    assert "可信度 · 预设 · TRA/RA/N1K/VDT" in html
+    assert "可信度 · preset · TRA/RA/N1K/VDT" not in html
 
     for selector in [
         '.logic-shell[data-ui-skin="codex-minimal"]',
