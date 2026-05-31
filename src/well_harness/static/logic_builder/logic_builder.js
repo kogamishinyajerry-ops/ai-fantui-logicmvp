@@ -72,6 +72,12 @@
     intermediate: "中间节点",
     final_output: "最终输出",
   };
+  const NODE_KIND_LABELS = {
+    input: "输入",
+    logic: "逻辑",
+    output: "输出",
+    component: "组件",
+  };
   const CIRCUIT_STATE_LABELS = {
     idle: "待命",
     active: "已触发",
@@ -390,6 +396,12 @@
       .slice(0, 2)
       .map((anchor) => `${anchor.id || "DOCX"} · ${anchor.kind || "正文条件"}`)
       .join(" / ");
+  }
+
+  function nodeKindLabel(value, fallback = "逻辑") {
+    const normalized = String(value == null ? "" : value).trim();
+    if (!normalized) return fallback;
+    return NODE_KIND_LABELS[normalized] || normalized;
   }
 
   function providerValue() {
@@ -3422,7 +3434,7 @@
         element.title = hoverTitle;
       }
       element.innerHTML = `
-        <span class="logic-node-kind">${escapeText(node.node_kind || "logic")}</span>
+        <span class="logic-node-kind">${escapeText(nodeKindLabel(node.node_kind))}</span>
         <div class="logic-node-title">
           <strong>${escapeText(node.label || node.id)}</strong>
         </div>

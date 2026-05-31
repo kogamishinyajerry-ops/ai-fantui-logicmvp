@@ -5554,6 +5554,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'const changeLoopDetails = $("logic-change-loop-details")' in logic_script
     assert "manual_override_signoff" in logic_script
     assert "logic-circuit-node" in logic_script
+    assert "function nodeKindLabel" in logic_script
+    assert 'logic: "逻辑"' in logic_script
+    assert '<span class="logic-node-kind">${escapeText(nodeKindLabel(node.node_kind))}</span>' in logic_script
     assert "requirements-intake/draw-logic" in logic_script
     assert "requirements-intake/interpret-logic-change" in logic_script
     assert "requirements-intake/update-logic-drawing" in logic_script
@@ -5568,6 +5571,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "renderChangeHistory" in logic_script
     assert "renderWorkflowOverview" in logic_script
     assert "renderBurdenSummary" in logic_script
+    assert '<span class="logic-node-kind">${escapeText(node.node_kind || "logic")}</span>' not in logic_script
     assert "下一页生成故障矩阵" in logic_script
     assert ".logic-circuit-eval-panel" in logic_stylesheet
     assert ".logic-circuit-preset-menu" in logic_stylesheet
