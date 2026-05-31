@@ -2271,15 +2271,15 @@
       ["logic1", "L1", "logic", 260, 70, 160, 38],
       ["logic2", "L2", "logic", 260, 170, 160, 38],
       ["logic3", "L3", "logic", 260, 260, 160, 50],
-      ["tls115", "TLS 115VAC cmd", "component", 500, 56, 160, 28],
-      ["tls_unlocked", "TLS_Unlocked LS", "component", 500, 92, 160, 28],
-      ["vdt90", "VDT90 (>=90% deploy)", "component", 500, 128, 160, 28],
-      ["etrac_540v", "ETRAC 540VDC cmd", "component", 500, 156, 160, 28],
-      ["eec_deploy", "EEC_deploy cmd", "output", 500, 246, 160, 28],
-      ["pls_power", "PLS power", "output", 500, 282, 160, 28],
-      ["pdu_motor", "PDU motor cmd", "output", 500, 318, 160, 28],
+      ["tls115", "TLS 115VAC 指令", "component", 500, 56, 160, 28],
+      ["tls_unlocked", "TLS 解锁反馈", "component", 500, 92, 160, 28],
+      ["vdt90", "VDT90（≥90% 展开）", "component", 500, 128, 160, 28],
+      ["etrac_540v", "ETRAC 540VDC 指令", "component", 500, 156, 160, 28],
+      ["eec_deploy", "EEC 展开指令", "output", 500, 246, 160, 28],
+      ["pls_power", "PLS 供电", "output", 500, 282, 160, 28],
+      ["pdu_motor", "PDU 电机指令", "output", 500, 318, 160, 28],
       ["logic4", "L4", "logic", 720, 130, 160, 38],
-      ["thr_lock", "THR_LOCK release", "output", 720, 200, 160, 34],
+      ["thr_lock", "THR_LOCK 释放", "output", 720, 200, 160, 34],
     ];
     const roleForNode = (id, x, kind) => {
       if (kind === "logic") return "gate";
