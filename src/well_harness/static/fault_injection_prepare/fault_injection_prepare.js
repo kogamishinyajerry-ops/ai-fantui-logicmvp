@@ -109,6 +109,12 @@
     toggle_sequence: "序列切换",
     dry_run_observe: "空跑观测",
   };
+  const COVERAGE_TOKEN_LABELS = {
+    deterministic_dry_run_candidate: "确定性空跑候选",
+    deterministic_dry_run_plan: "确定性空跑计划",
+    critical_node_coverage: "关键节点覆盖",
+    scenario_plan_coverage: "场景计划覆盖",
+  };
   const FAULT_BOUNDARY_TOKEN_PATTERN = /controller_truth_modified:false|truth_effect:none|sandbox_candidate/g;
 
   function escapeText(value) {
@@ -608,6 +614,10 @@
 
   function injectionModeLabel(value, fallback = "未提供") {
     return mappedDisplayLabel(value, INJECTION_MODE_LABELS, fallback);
+  }
+
+  function coverageTokenLabel(value, fallback = "未提供") {
+    return mappedDisplayLabel(value, COVERAGE_TOKEN_LABELS, fallback);
   }
 
   function renderBoundaryTokenValue(target, value) {
@@ -1184,9 +1194,9 @@
       return;
     }
     coverageEvidence.hidden = false;
-    addCoverageRow("补齐策略", completion.strategy || "deterministic_dry_run_candidate");
+    addCoverageRow("补齐策略", coverageTokenLabel(completion.strategy, "确定性空跑候选"));
     addCoverageRow("补齐节点", completedNodeIds.join(", "));
-    addCoverageRow("语义门", completion.semantic_gate || "critical_node_coverage");
+    addCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "关键节点覆盖"));
   }
 
   function renderQualitySummary(payload) {

@@ -175,6 +175,12 @@
     toggle_sequence: "序列切换",
     dry_run_observe: "空跑观测",
   };
+  const COVERAGE_TOKEN_LABELS = {
+    deterministic_dry_run_candidate: "确定性空跑候选",
+    deterministic_dry_run_plan: "确定性空跑计划",
+    critical_node_coverage: "关键节点覆盖",
+    scenario_plan_coverage: "场景计划覆盖",
+  };
   const BOUNDARY_TOKENS = Object.keys(BOUNDARY_TOKEN_LABELS).sort((left, right) => right.length - left.length);
   const BOUNDARY_TOKEN_PATTERN = new RegExp(BOUNDARY_TOKENS.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
 
@@ -202,6 +208,12 @@
     const normalized = String(value == null ? "" : value).trim();
     if (!normalized) return fallback;
     return INJECTION_MODE_LABELS[normalized] || normalized;
+  }
+
+  function coverageTokenLabel(value, fallback = "未提供") {
+    const normalized = String(value == null ? "" : value).trim();
+    if (!normalized) return fallback;
+    return COVERAGE_TOKEN_LABELS[normalized] || normalized;
   }
 
   function reviewCategoryLabel(value) {
@@ -1329,9 +1341,9 @@
       return;
     }
     planCoverageEvidence.hidden = false;
-    addPlanCoverageRow("补齐策略", completion.strategy || "deterministic_dry_run_plan");
+    addPlanCoverageRow("补齐策略", coverageTokenLabel(completion.strategy, "确定性空跑计划"));
     addPlanCoverageRow("补齐场景", completedScenarioIds.join(", "));
-    addPlanCoverageRow("语义门", completion.semantic_gate || "scenario_plan_coverage");
+    addPlanCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "场景计划覆盖"));
   }
 
   function renderQualitySummary(payload) {
@@ -1447,8 +1459,8 @@
         value: completedScenarioIds.length ? `${completedScenarioIds.length} 条` : "无补齐",
         state: completedScenarioIds.length ? "ready" : "none",
         rows: [
-          {label: "策略", value: completion ? completion.strategy : "无补齐"},
-          {label: "补齐语义", value: completion ? normalizeText(completion.semantic_gate) : "未触发补齐"},
+          {label: "策略", value: completion ? coverageTokenLabel(completion.strategy) : "无补齐"},
+          {label: "补齐语义", value: completion ? coverageTokenLabel(completion.semantic_gate) : "未触发补齐"},
           {label: "补齐场景", value: completedScenarioIds.length ? completedScenarioIds.join(", ") : "无"},
         ],
       },
@@ -2013,7 +2025,7 @@
           {label: "报告章节", value: "故障覆盖"},
           {label: "相关故障", value: plans.map((item) => item && item.fault_scenario_id).filter(Boolean).join(", ") || "未提供"},
           {label: "相关运行帧", value: observations.map((item) => item && item.id).filter(Boolean).join(", ") || "未提供"},
-          {label: "覆盖证据", value: payload && payload.plan_coverage_completion ? normalizeText(payload.plan_coverage_completion.strategy) : "模型返回计划覆盖"},
+          {label: "覆盖证据", value: payload && payload.plan_coverage_completion ? coverageTokenLabel(payload.plan_coverage_completion.strategy) : "模型返回计划覆盖"},
         ],
       },
       {
