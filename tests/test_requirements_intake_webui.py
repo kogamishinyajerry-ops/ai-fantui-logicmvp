@@ -7433,8 +7433,10 @@ def test_fault_prepare_compacts_candidates_and_boundary_into_decision_board():
     assert 'data-blueprint-surface="fault-matrix-rows"' in html
     for column in ["checkbox", "id", "injection-position", "covered-path", "risk", "state"]:
         assert f'data-blueprint-col="{column}"' in html
-    for header in ["ID", "注入位置", "故障类型", "触发条件", "预期影响", "覆盖路径", "风险", "状态"]:
+    for header in ["编号", "注入位置", "故障类型", "触发条件", "预期影响", "覆盖路径", "风险", "状态"]:
         assert header in html
+    assert '<th data-blueprint-col="id">编号</th>' in html
+    assert '<th data-blueprint-col="id">ID</th>' not in html
     assert 'id="fault-bottom-action-strip"' in html
     assert 'data-blueprint-surface="fault-bottom-action-strip"' in html
     assert 'data-unified-inspector-state="none"' in html
@@ -7530,6 +7532,7 @@ def test_fault_prepare_compacts_candidates_and_boundary_into_decision_board():
 
 def test_sandbox_review_exposes_failure_path_evidence_and_report_blueprint_surfaces():
     html = (STATIC_ROOT / "fault_injection_sandbox" / "index.html").read_text(encoding="utf-8")
+    script = (STATIC_ROOT / "fault_injection_sandbox" / "fault_injection_sandbox.js").read_text(encoding="utf-8")
     stylesheet = (STATIC_ROOT / "fault_injection_sandbox" / "fault_injection_sandbox.css").read_text(encoding="utf-8")
 
     assert 'data-blueprint-phase="sandbox-review-final"' in html
@@ -7557,6 +7560,8 @@ def test_sandbox_review_exposes_failure_path_evidence_and_report_blueprint_surfa
     assert 'data-blueprint36-contract="checkbox-id-gate-status-evidence-source-hazard_action-trace_report-action"' in html
     assert 'data-blueprint-density="compact-workbench"' in html
     assert 'class="sandbox-review-row-header"' in html
+    assert '<span data-blueprint-col="id">编号</span>' in html
+    assert '<span data-blueprint-col="id">ID</span>' not in html
     assert 'data-blueprint-surface="sandbox-review-rows"' in html
     assert 'data-blueprint-col="hazard-decision"' in html
     assert 'data-blueprint-col="trace-report"' in html
@@ -7576,6 +7581,11 @@ def test_sandbox_review_exposes_failure_path_evidence_and_report_blueprint_surfa
     assert 'id="fault-sandbox-review-package-summary"' in html
     assert 'data-blueprint-surface="active-review-package-summary"' in html
     assert 'data-blueprint37-right-section="active-package"' in html
+    assert '<span data-blueprint-col="id">编号</span>' in script
+    assert '<span data-blueprint-col="id">ID</span>' not in script
+    assert '{label: "编号", value: item.id}' in script
+    assert '{label: "编号", value: normalizeText(item.id)}' in script
+    assert "锚点编号" in script
     assert 'data-blueprint36-contract="active_review-trace-report-unresolved-fix-evidence"' in html
     assert 'data-package-state="empty"' in html
     assert 'data-blueprint37-right-section="diagnosis-summary"' in html
