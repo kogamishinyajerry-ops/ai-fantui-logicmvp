@@ -2854,6 +2854,8 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         expect(page.locator("#logic-template-entry")).to_be_hidden()
         expect(page.locator("#logic-result-state")).to_have_text("电路图已完成绘制")
         expect(page.locator("#logic-result-summary")).to_contain_text("DOCX L1-L4")
+        expect(page.locator("#logic-result-summary")).to_contain_text("界面蓝图演示")
+        expect(page.locator("#logic-result-summary")).not_to_contain_text("UI 蓝图演示")
         expect(page.locator("#logic-workflow-detail")).to_contain_text("故障矩阵")
         expect(page.locator("#logic-fault-next")).to_be_enabled()
 
