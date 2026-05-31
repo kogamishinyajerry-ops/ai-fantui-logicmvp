@@ -2185,9 +2185,10 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         page.wait_for_url("**/fault-injection-sandbox")
         expect(page.locator("#fault-sandbox-result-state")).to_have_text("配置已生成")
         expect(page.locator("#fault-sandbox-result-summary")).to_contain_text("蓝图候选沙盒计划已载入")
-        expect(page.locator("#fault-sandbox-contract")).to_contain_text("run_tick:false")
-        expect(page.locator("#fault-sandbox-contract")).to_contain_text("simulate:false")
-        expect(page.locator("#fault-sandbox-contract")).to_contain_text("dry_run_only:true")
+        contract = page.locator("#fault-sandbox-contract")
+        for token in ["run_tick:false", "simulate:false", "dry_run_only:true"]:
+            expect(contract.locator(f'[data-contract-token="{token}"]')).to_have_count(1)
+            assert token not in contract.inner_text()
         expect(page.locator("#fault-sandbox-plan-count")).to_have_text("2 计划")
         expect(page.locator("#fault-sandbox-review-gate")).to_have_text("需确认 3 个一级闸门")
         expect(page.locator(".sandbox-evidence-tile")).to_have_count(4)

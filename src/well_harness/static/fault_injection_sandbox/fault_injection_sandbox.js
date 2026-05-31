@@ -2602,15 +2602,19 @@
   function renderExecutionContract(payload) {
     const execution = (payload && payload.execution_contract) || {};
     contract.innerHTML = "";
+    const runTick = Boolean(execution.run_tick);
+    const simulate = Boolean(execution.simulate);
+    const dryRunOnly = execution.dry_run_only !== false;
     const entries = [
-      `run_tick:${Boolean(execution.run_tick)}`,
-      `simulate:${Boolean(execution.simulate)}`,
-      `dry_run_only:${execution.dry_run_only !== false}`,
+      {token: `run_tick:${runTick}`, label: runTick ? "运行仿真步" : "不运行仿真步"},
+      {token: `simulate:${simulate}`, label: simulate ? "执行仿真" : "不执行仿真"},
+      {token: `dry_run_only:${dryRunOnly}`, label: dryRunOnly ? "仅空跑" : "允许非空跑"},
     ];
     for (const entry of entries) {
       const span = document.createElement("span");
       span.className = "sandbox-contract-pill";
-      span.textContent = entry;
+      span.dataset.contractToken = entry.token;
+      span.textContent = entry.label;
       contract.appendChild(span);
     }
   }
