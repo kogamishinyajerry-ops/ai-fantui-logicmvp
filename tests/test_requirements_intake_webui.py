@@ -7814,7 +7814,10 @@ def test_sandbox_review_exposes_failure_path_evidence_and_report_blueprint_surfa
     assert "loadFirstVisitSandboxPreview" in script
     assert "first_visit_preview" in script
     assert "首次进入已载入本地蓝图沙盒预览" in script
-    assert "未调用模型、tick 或控制器" in script
+    assert "不运行真实仿真节拍" in script
+    assert "不触发真实仿真节拍" in script
+    assert "未调用模型、仿真节拍或控制器" in script
+    assert "未调用模型、tick 或控制器" not in script
 
 
 def test_deepseek_visual_acceptance_script_freezes_first_screen_bundle_contract():
