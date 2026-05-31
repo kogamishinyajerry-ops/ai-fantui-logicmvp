@@ -401,7 +401,7 @@
   function nodeKindLabel(value, fallback = "逻辑") {
     const normalized = String(value == null ? "" : value).trim();
     if (!normalized) return fallback;
-    return NODE_KIND_LABELS[normalized] || normalized;
+    return NODE_KIND_LABELS[normalized] || fallback;
   }
 
   function providerValue() {

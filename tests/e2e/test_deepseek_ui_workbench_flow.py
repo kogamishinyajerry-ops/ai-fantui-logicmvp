@@ -1867,6 +1867,32 @@ def test_desktop_logic_builder_draws_cockpit_control_console_and_main_display(
         page.close()
 
 
+def test_logic_builder_unknown_node_kind_uses_readable_fallback(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    drawing = json.loads(json.dumps(LOGIC_DRAWING))
+    drawing["nodes"][1]["node_kind"] = "backend_gate_raw"
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        raw_kind_node = page.locator('.logic-node[data-node-id="gate_release"]')
+        expect(raw_kind_node).to_have_attribute("data-kind", "backend_gate_raw")
+        expect(raw_kind_node.locator(".logic-node-kind")).to_have_text("逻辑")
+        expect(raw_kind_node.locator(".logic-node-kind")).not_to_have_text("backend_gate_raw")
+    finally:
+        page.close()
+
+
 def test_fault_sandbox_source_deferred_replay_does_not_claim_config_generated(
     demo_server: str, browser: Any
 ) -> None:
