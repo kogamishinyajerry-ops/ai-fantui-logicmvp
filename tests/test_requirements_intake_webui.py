@@ -5819,6 +5819,11 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "模型输出已自动整理" in sandbox_script
     assert "模型输出需要重新生成" in sandbox_script
     assert "renderSandboxInjectionPlan" in sandbox_script
+    assert 'override_value: "覆盖值注入"' in sandbox_script
+    assert 'toggle_sequence: "序列切换"' in sandbox_script
+    assert "injectionModeLabel(firstPlan.injection_mode)" in sandbox_script
+    assert 'const modeText = injectionModeLabel(item.injection_mode, "模式")' in sandbox_script
+    assert '{label: "注入方式", value: injectionModeLabel(item.injection_mode)}' in sandbox_script
     assert "renderObservationPoints" in sandbox_script
     assert 'item.node_id || "节点待确认"' in sandbox_script
     assert 'item.node_id || "node:none"' not in sandbox_script
@@ -5838,6 +5843,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "loadFaultSandboxPlanDraft" in sandbox_script
     assert "saveFaultSandboxPlanDraft" in sandbox_script
     assert "requirements-intake/prepare-fault-injection/sandbox" in sandbox_script
+    assert "normalizeText(firstPlan.injection_mode)" not in sandbox_script
+    assert '{label: "注入方式", value: normalizeText(item.injection_mode)}' not in sandbox_script
+    assert 'item.injection_mode || "模式"' not in sandbox_script
     assert 'allow_fallback: provider.value !== "deepseek"' in sandbox_script
     assert "allow_fallback: true" not in sandbox_script
     assert "self_repair" in sandbox_script
