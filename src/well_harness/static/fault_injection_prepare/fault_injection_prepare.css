@@ -902,6 +902,17 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 12px;
   line-height: 1.5;
 }
+.fault-context-boundary-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.fault-context-boundary-value .fault-context-link-boundary {
+  display: inline-flex;
+  grid-column: auto;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+}
 .fault-metrics {
   margin-top: 10px;
   color: var(--fault-muted);
