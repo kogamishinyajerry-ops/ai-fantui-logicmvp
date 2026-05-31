@@ -4171,8 +4171,8 @@ def test_logic_builder_circuit_view_reduces_label_density_and_protects_sw_lane(
         expect(page.locator('[data-demo-node-id="sw2"] .logic-circuit-tech-id')).to_have_text("sw2")
 
         expect(page.locator('.logic-circuit-lane-guide[data-readable-lane="sw"]')).to_have_count(1)
-        expect(page.locator('.logic-circuit-lane-guide[data-readable-lane="sw"] .logic-circuit-lane-label')).to_contain_text(
-            "SW1/SW2"
+        expect(page.locator('.logic-circuit-lane-guide[data-readable-lane="sw"] .logic-circuit-lane-label')).to_have_text(
+            "SW1/SW2 通道"
         )
         expect(page.locator('.logic-circuit-wire[data-source="sw1"][data-target="logic1"]')).to_have_attribute(
             "data-readable-lane",
