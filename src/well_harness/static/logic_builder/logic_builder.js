@@ -3515,7 +3515,7 @@
   }
 
   function renderChangeHistory() {
-    historyCount.textContent = `${state.changeHistory.length} changes`;
+    historyCount.textContent = `${state.changeHistory.length} 条记录`;
     historyList.innerHTML = "";
     if (!state.changeHistory.length) {
       historyList.innerHTML = '<p class="muted">每次批注、系统理解、用户确认和图纸更新都会记录在这里。</p>';
@@ -3529,19 +3529,19 @@
       const proposed = item.proposed_changes || [];
       card.innerHTML = `
         <div class="logic-change-card-head">
-          <strong>Change ${escapeText(item.index)}</strong>
+          <strong>记录 ${escapeText(item.index)}</strong>
           <span>${escapeText(changeStatusText(item.status))}</span>
         </div>
         <div class="logic-change-meta">
-          <span>node:${escapeText(item.target_node_id || "none")}</span>
+          <span>节点：${escapeText(item.target_node_id || "未选择")}</span>
           <span>${escapeText(item.provider || provider.value)}</span>
-          ${item.annotation_batch_count ? `<span>${escapeText(item.annotation_batch_count)} notes</span>` : ""}
+          ${item.annotation_batch_count ? `<span>${escapeText(item.annotation_batch_count)} 条批注</span>` : ""}
         </div>
         <p class="logic-change-annotation">${escapeText(item.annotation_text || "")}</p>
         <p class="logic-change-understanding">${escapeText(item.understanding_zh || "等待系统理解。")}</p>
         ${item.confirmation_question_zh ? `<p class="logic-change-question">${escapeText(item.confirmation_question_zh)}</p>` : ""}
         ${item.updated_summary_zh ? `<p class="logic-change-updated">${escapeText(item.updated_summary_zh)}</p>` : ""}
-        ${metrics.nodes != null ? `<div class="logic-change-meta"><span>${escapeText(metrics.nodes)} nodes</span><span>${escapeText(metrics.edges)} edges</span><span>${escapeText(metrics.panels)} panels</span></div>` : ""}
+        ${metrics.nodes != null ? `<div class="logic-change-meta"><span>${escapeText(metrics.nodes)} 个节点</span><span>${escapeText(metrics.edges)} 条连线</span><span>${escapeText(metrics.panels)} 个面板</span></div>` : ""}
         ${proposed.length ? `<details><summary>建议修改项</summary><ul>${proposed.map((entry) => `<li>${escapeText(entry)}</li>`).join("")}</ul></details>` : ""}
       `;
       historyList.appendChild(card);
