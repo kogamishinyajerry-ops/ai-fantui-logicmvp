@@ -59,7 +59,7 @@
   const streamChunks = $("sandbox-stream-chunks");
   const STREAM_CHUNK_COPY = {
     load: "已读取准备：载入候选和边界",
-    model: "DeepSeek 正在配置：生成 dry-run 沙盒",
+    model: "DeepSeek 正在配置：生成空跑沙盒",
     plan: "整理观测点：计划与信号已返回",
     review: "审查清单：等待一级闸门确认",
   };
@@ -163,7 +163,7 @@
   };
   const REVIEW_CATEGORY_LABELS = {
     coverage: "覆盖",
-    dry_run: "dry-run 合同",
+    dry_run: "空跑合同",
     review: "审查",
     risk: "风险",
     safety: "安全",
@@ -444,7 +444,7 @@
     const link = reviewLinkForRow(item.id);
     const diagnosis = payload && !isSourceDeferredSandbox(payload)
       ? buildFailureDiagnosis(payload)
-      : {path: "无候选沙盒路径", node: "未定位", snapshot: "未启用 dry-run"};
+      : {path: "无候选沙盒路径", node: "未定位", snapshot: "未启用空跑"};
     return [
       {label: "ID", value: item.id},
       {label: "状态", value: item.label},
@@ -700,7 +700,7 @@
           node_id: "radio_altitude_ft",
           fault_type: "sensor_stuck_low",
           severity: "medium",
-          rationale_zh: "用于检查高度门限异常时的 dry-run 路径、证据回链和审查行。",
+          rationale_zh: "用于检查高度门限异常时的空跑路径、证据回链和审查行。",
           expected_effect_zh: "沙盒中只观察路径影响，不触发真实 tick 或控制器写入。",
           observable_signals: ["radio_altitude_ft", "thr_lock"],
           source_anchors: anchors,
@@ -725,7 +725,7 @@
           node_id: "radio_altitude_ft",
           signal_name: "radio_altitude_ft",
           injection_mode: "override",
-          safe_boundary_zh: "仅 dry-run 观察，RA 值限制在 0 到 20 ft，不进入真实控制。",
+          safe_boundary_zh: "仅空跑观察，RA 值限制在 0 到 20 ft，不进入真实控制。",
           constraint_zh: "truth_effect:none；controller_truth_modified:false。",
           priority: "P1",
           source_anchors: anchors,
@@ -744,7 +744,7 @@
       boundary_questions: [
         {
           id: "first_visit_confirm_dry_run",
-          prompt_zh: "确认此候选只用于 dry-run 沙盒审查？",
+          prompt_zh: "确认此候选只用于空跑沙盒审查？",
           rationale_zh: "首次进入默认态需要完整闭环，但不能触发真实控制执行。",
           blocks: "fault_injection",
         },
@@ -758,8 +758,8 @@
       boundary_answers: [
         {
           id: "first_visit_confirm_dry_run",
-          prompt_zh: "确认此候选只用于 dry-run 沙盒审查？",
-          answer_zh: "确认仅用于 dry-run UI 预览。",
+          prompt_zh: "确认此候选只用于空跑沙盒审查？",
+          answer_zh: "确认仅用于空跑 UI 预览。",
         },
         {
           id: "first_visit_confirm_truth_boundary",
@@ -801,7 +801,7 @@
       first_visit_preview: true,
       source_fault_injection_preparation_sha256: "ui-blueprint-first-visit",
       source_boundary_answers_sha256: "ui-blueprint-first-visit",
-      summary_zh: "首次进入已载入本地蓝图沙盒预览：只读 dry-run 审查，不运行真实 tick。",
+      summary_zh: "首次进入已载入本地蓝图沙盒预览：只读空跑审查，不运行真实 tick。",
       execution_contract: {
         run_tick: false,
         simulate: false,
@@ -814,7 +814,7 @@
           node_id: firstScenario.node_id || "radio_altitude_ft",
           signal_name: "radio_altitude_ft",
           injection_mode: "override",
-          safe_range_zh: "0 到 20 ft，仅 UI dry-run。",
+          safe_range_zh: "0 到 20 ft，仅 UI 空跑。",
           expected_effect_zh: "检查 RA 候选异常是否只在沙盒证据链中呈现。",
           source_anchors: firstScenario.source_anchors || anchors,
         },
@@ -849,7 +849,7 @@
         {
           id: "first_visit_review_dry_run",
           category: "dry_run",
-          condition_zh: "确认执行合同保持不运行 tick、不执行仿真、仅 dry-run。",
+          condition_zh: "确认执行合同保持不运行 tick、不执行仿真、仅空跑。",
           pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真 tick。",
           source_anchors: anchors,
         },
@@ -893,8 +893,8 @@
     sandboxPayload.first_visit_preview = false;
     sandboxPayload.template_preview = true;
     sandboxPayload.summary_zh = opts.refresh
-      ? "DOCX L1-L4 模板候选沙盒计划已刷新：只读 dry-run 审查，不运行真实 tick。"
-      : "DOCX L1-L4 模板候选沙盒计划已载入：只读 dry-run 审查，不运行真实 tick。";
+      ? "DOCX L1-L4 模板候选沙盒计划已刷新：只读空跑审查，不运行真实 tick。"
+      : "DOCX L1-L4 模板候选沙盒计划已载入：只读空跑审查，不运行真实 tick。";
     sandboxPayload.source_fault_injection_preparation_sha256 = "local-docx-l1-l4-template";
     sandboxPayload.source_boundary_answers_sha256 = "local-docx-l1-l4-template";
     sandboxPayload.plan_coverage_completion = {
@@ -1042,7 +1042,7 @@
     }
     if (isSourceDeferredSandbox(state.sandboxPayload)) {
       workflowStage.textContent = "源文档暂缓";
-      workflowDetail.textContent = "DOCX 明确暂缓故障注入，默认不生成沙盒计划；如需演示，请显式生成 dry-run 候选。";
+      workflowDetail.textContent = "DOCX 明确暂缓故障注入，默认不生成沙盒计划；如需演示，请显式生成空跑候选。";
       setWorkflowSteps("fault", ["requirements", "drawing", "fault"]);
       return;
     }
@@ -1053,7 +1053,7 @@
       return;
     }
     workflowStage.textContent = "准备生成沙盒配置";
-    workflowDetail.textContent = "已载入故障准备草稿，模型将生成 dry-run 配置建议和观测点。";
+    workflowDetail.textContent = "已载入故障准备草稿，模型将生成空跑配置建议和观测点。";
     setWorkflowSteps("sandbox", ["requirements", "drawing", "fault"]);
   }
 
@@ -1128,16 +1128,16 @@
     });
     setPrimaryGateInputsEnabled(Boolean(payload) && !sourceDeferred);
     if (sourceDeferred) {
-      setPrimaryGateDetail("dry-run", "源文档暂缓故障注入，默认不生成 dry-run 沙盒计划。");
+      setPrimaryGateDetail("dry-run", "源文档暂缓故障注入，默认不生成空跑沙盒计划。");
       setPrimaryGateDetail("coverage", "覆盖 0 个故障场景 · 0 计划 · 0 观测点");
-      setPrimaryGateDetail("risk", "无沙盒细项需要确认；仅保留显式 dry-run 入口。");
+      setPrimaryGateDetail("risk", "无沙盒细项需要确认；仅保留显式空跑入口。");
       setSandboxDecisionConclusion("源文档暂缓，不生成沙盒计划");
       updateReviewGate();
       return;
     }
     setPrimaryGateDetail(
       "dry-run",
-      `运行 tick:${Boolean(execution.run_tick)} · 仿真执行:${Boolean(execution.simulate)} · 仅 dry-run:${execution.dry_run_only !== false}`,
+      `运行 tick:${Boolean(execution.run_tick)} · 仿真执行:${Boolean(execution.simulate)} · 仅空跑:${execution.dry_run_only !== false}`,
     );
     setPrimaryGateDetail(
       "coverage",
@@ -1360,7 +1360,7 @@
     }
     if (isSourceDeferredSandbox(payload)) {
       burdenAction.textContent = "源文档暂缓，默认不生成沙盒配置。";
-      burdenOutputs.innerHTML = ["dry-run 合同：未启用", "覆盖：0 个计划 / 0 个观测点", "例外/风险：无待确认细项"]
+      burdenOutputs.innerHTML = ["空跑合同：未启用", "覆盖：0 个计划 / 0 个观测点", "例外/风险：无待确认细项"]
         .map((item) => `<li>${escapeText(item)}</li>`)
         .join("");
       setSandboxDecisionConclusion("源文档暂缓，不生成沙盒计划");
@@ -1370,7 +1370,7 @@
     const observations = Array.isArray(payload.observation_points) ? payload.observation_points.length : 0;
     const reviews = Array.isArray(payload.review_checklist) ? payload.review_checklist.length : 0;
     burdenAction.textContent = "先确认 3 个一级闸门；细项默认折叠。";
-    burdenOutputs.innerHTML = ["dry-run 合同", `覆盖：${plans} 个计划 / ${observations} 个观测点`, `例外/风险：${reviews} 条细项`]
+    burdenOutputs.innerHTML = ["空跑合同", `覆盖：${plans} 个计划 / ${observations} 个观测点`, `例外/风险：${reviews} 条细项`]
       .map((item) => `<li>${escapeText(item)}</li>`)
       .join("");
     setSandboxDecisionConclusion(`沙盒计划 ${plans} 项 · 观测点 ${observations} 个 · 审查项 ${reviews} 条`);
@@ -1416,8 +1416,8 @@
         rows: [
           {label: "运行 tick", value: String(Boolean(execution.run_tick))},
           {label: "仿真执行", value: String(Boolean(execution.simulate))},
-          {label: "仅 dry-run", value: String(execution.dry_run_only !== false)},
-          {label: "要求", value: "dry-run 仅回放，不写入控制器。"},
+          {label: "仅空跑", value: String(execution.dry_run_only !== false)},
+          {label: "要求", value: "空跑仅回放，不写入控制器。"},
         ],
       },
       {
@@ -1504,15 +1504,15 @@
         ...sandboxReviewRowStatus(hasPlans && hasObservations, false),
         evidence: `${observations.length} 观测点`,
         sourceLabel: `${plans.length} 计划`,
-        description: "关键触发条件必须落到 dry-run 计划和观测点。",
+        description: "关键触发条件必须落到空跑计划和观测点。",
       },
       {
         id: "SR-02",
         title: "阈值一致性",
         ...sandboxReviewRowStatus(dryRunSafe, false),
-        evidence: dryRunSafe ? "dry-run" : "合同缺口",
+        evidence: dryRunSafe ? "空跑" : "合同缺口",
         sourceLabel: "执行合同",
-        description: "运行 tick:false、仿真执行:false、仅 dry-run:true 必须保持一致。",
+        description: "运行 tick:false、仿真执行:false、仅空跑:true 必须保持一致。",
       },
       {
         id: "SR-03",
@@ -1656,9 +1656,9 @@
     const replayLink = reviewLinkForRow("SR-05");
     const truthLink = reviewLinkForRow("SR-07");
     return {
-      state: dryRunSafe ? "dry-run" : "待复核",
+      state: dryRunSafe ? "空跑" : "待复核",
       summary: dryRunSafe
-        ? `dry-run 路径就绪 · ${plans.length} 计划 / ${observations.length} 观测 / ${reviews.length} 审查`
+        ? `空跑路径就绪 · ${plans.length} 计划 / ${observations.length} 观测 / ${reviews.length} 审查`
         : `沙盒合同待复核 · ${plans.length} 计划 / ${observations.length} 观测`,
       path: plans.length
         ? `${compactRailLabel(planNode)} -> ${compactRailLabel(observationNode)}`
@@ -1672,7 +1672,7 @@
           id: planId || "plan",
           kind: "计划",
           title: compactRailLabel(planNode || "候选计划"),
-          meta: normalizeText(firstPlan.injection_mode || firstPlan.fault_scenario_id || "dry-run"),
+          meta: normalizeText(firstPlan.injection_mode || firstPlan.fault_scenario_id || "空跑"),
           reviewRowId: "SR-04",
           traceId: planLink.traceId,
           reportId: planLink.reportId,
@@ -1730,7 +1730,7 @@
       diagnosisSummary.textContent = payload.summary_zh || "源文档暂缓故障注入，默认不生成诊断路径。";
       if (affectedPath) affectedPath.textContent = "源文档暂缓";
       if (firstAbnormalNode) firstAbnormalNode.textContent = "无候选异常";
-      if (inputSnapshot) inputSnapshot.textContent = "未启用 dry-run";
+      if (inputSnapshot) inputSnapshot.textContent = "未启用空跑";
       if (diagnosisChain) diagnosisChain.innerHTML = '<p class="muted">源文档暂缓，未启用候选失败路径。</p>';
       if (repairSuggestions) repairSuggestions.innerHTML = "<li>仅可通过显式蓝图候选演示载入沙盒候选。</li>";
       if (diagnosisEvidenceLinks) diagnosisEvidenceLinks.innerHTML = '<button type="button" class="secondary" disabled>源文档暂缓</button>';
@@ -1869,7 +1869,7 @@
         ...traceLink("ET-02", "运行", "定位"),
         linkedReviewRows: reviewRowsForTrace("ET-02"),
         rows: [
-          {label: "相关运行帧", value: "仅 dry-run"},
+          {label: "相关运行帧", value: "仅空跑"},
           {label: "主计划", value: normalizeText(primaryPlan.id)},
           {label: "相关故障", value: plans.map((item) => item && item.fault_scenario_id).filter(Boolean).join(", ") || "未提供"},
           {label: "输入快照", value: normalizeText(primaryPlan.signal_name || primaryPlan.node_id)},
@@ -1953,7 +1953,7 @@
         metric: `${plans.length} 计划`,
         rows: [
           {label: "报告章节", value: "摘要"},
-          {label: "概况", value: payload && payload.summary_zh ? payload.summary_zh : "沙盒 dry-run 候选报告。"},
+          {label: "概况", value: payload && payload.summary_zh ? payload.summary_zh : "沙盒空跑候选报告。"},
           {label: "节点", value: `${observations.length} 观测点`},
           {label: "事件", value: `${plans.length + reviews.length} 候选事件`},
         ],
@@ -1983,12 +1983,12 @@
       {
         id: "RP-04",
         title: "仿真参数",
-        metric: "dry-run",
+        metric: "空跑",
         rows: [
           {label: "报告章节", value: "仿真参数"},
           {label: "运行 tick", value: String(Boolean(execution.run_tick))},
           {label: "仿真执行", value: String(Boolean(execution.simulate))},
-          {label: "仅 dry-run", value: String(execution.dry_run_only !== false)},
+          {label: "仅空跑", value: String(execution.dry_run_only !== false)},
         ],
       },
       {
@@ -2566,7 +2566,7 @@
       return;
     }
     openReportPackage("报告预览：重新运行沙盒", [
-      {label: "运行模式", value: "仅 dry-run"},
+      {label: "运行模式", value: "仅空跑"},
       {label: "相关运行帧", value: `${sandboxList(payload, "observation_points").length} 观测点`},
       {label: "下一步", value: "使用顶部检查按钮重新生成候选配置。"},
     ]);
@@ -2814,7 +2814,7 @@
     beginTask("读取准备草稿", "正在读取故障候选、注入点和边界回答。");
     setBusy(true);
     try {
-      setProgress(28, "提交模型", "正在让模型生成 dry-run 沙盒配置建议。", "model");
+      setProgress(28, "提交模型", "正在让模型生成空跑沙盒配置建议。", "model");
       const payload = await requestFaultSandboxPlan();
       setProgress(84, "生成配置", "模型已返回沙盒配置建议，正在整理观测点。", "plan");
       renderSandboxPayload(payload);
