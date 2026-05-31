@@ -349,9 +349,9 @@
         <span><em>关键证据</em><strong>${escapeText(summary.evidenceLabel)}</strong></span>
       </div>
       <div class="sandbox-review-package-summary-invariants" aria-label="候选态边界">
-        <span>sandbox_candidate</span>
-        <span>truth_effect:none</span>
-        <span>controller_truth_modified:false</span>
+        <span data-boundary-token="sandbox_candidate">沙箱候选</span>
+        <span data-boundary-token="truth_effect:none">真值影响：无</span>
+        <span data-boundary-token="controller_truth_modified:false">控制器真值已改动：否</span>
       </div>
     `;
   }
