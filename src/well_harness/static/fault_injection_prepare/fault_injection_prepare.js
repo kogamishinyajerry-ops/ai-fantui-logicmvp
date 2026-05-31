@@ -730,7 +730,7 @@
       {label: "场景", value: normalizeText(item.label || item.id)},
       {label: "节点", value: normalizeText(item.node_id)},
       {label: "故障类型", value: normalizeText(item.fault_type)},
-      {label: "严重度", value: normalizeText(item.severity || "medium")},
+      {label: "严重度", value: faultRiskLabel(item.severity)},
       {label: "序号", value: String(index + 1)},
       {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
       {label: "可观测信号", value: signals.length ? signals.map((signal) => normalizeText(signal)).join("；") : "未提供"},
@@ -1307,7 +1307,7 @@
             <strong>${escapeText(item.label || item.id)}</strong>
             <code>${escapeText(item.node_id || "节点待确认")} · ${escapeText(item.fault_type || "故障待确认")}</code>
           </div>
-          <span class="fault-scenario-severity">${escapeText(item.severity || "medium")}</span>
+          <span class="fault-scenario-severity">${escapeText(faultRiskLabel(item.severity))}</span>
         </div>
         <p>${escapeText(item.rationale_zh || "模型未返回选择理由。")}</p>
         <p>${escapeText(item.expected_effect_zh || "模型未返回预期影响。")}</p>
