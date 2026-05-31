@@ -446,7 +446,7 @@
       ? buildFailureDiagnosis(payload)
       : {path: "无候选沙盒路径", node: "未定位", snapshot: "未启用空跑"};
     return [
-      {label: "ID", value: item.id},
+      {label: "编号", value: item.id},
       {label: "状态", value: item.label},
       {label: "证据数", value: item.evidence},
       {label: "来源", value: item.sourceLabel},
@@ -1566,7 +1566,7 @@
     header.setAttribute("aria-hidden", "true");
     header.innerHTML = `
       <span data-blueprint-col="checkbox">选</span>
-      <span data-blueprint-col="id">ID</span>
+      <span data-blueprint-col="id">编号</span>
       <span data-blueprint-col="gate">闸门</span>
       <span data-blueprint-col="status">状态</span>
       <span data-blueprint-col="evidence">证据</span>
@@ -1857,7 +1857,7 @@
         linkedReviewRows: reviewRowsForTrace("ET-01"),
         rows: [
           {label: "来源摘录", value: anchor ? normalizeText(anchor.quote_zh || anchor.quote || anchor.text) : "候选节点来源待人工复核。"},
-          {label: "锚点 ID", value: anchor ? normalizeText(anchor.id) : "蓝图预览"},
+          {label: "锚点编号", value: anchor ? normalizeText(anchor.id) : "蓝图预览"},
           {label: "需求层级", value: anchor ? normalizeText(anchor.requirement_level || anchor.level) : "候选"},
           {label: "置信度", value: normalizeText(anchor && (anchor.confidence || anchor.confidence_label))},
         ],
@@ -1965,7 +1965,7 @@
         rows: [
           {label: "报告章节", value: "需求来源"},
           {label: "来源摘录", value: sourceAnchor ? normalizeText(sourceAnchor.quote_zh || sourceAnchor.quote || sourceAnchor.text) : "候选预览无直接原文摘录。"},
-          {label: "锚点 ID", value: sourceAnchor ? normalizeText(sourceAnchor.id) : "蓝图预览"},
+          {label: "锚点编号", value: sourceAnchor ? normalizeText(sourceAnchor.id) : "蓝图预览"},
           {label: "需求层级", value: sourceAnchor ? normalizeText(sourceAnchor.requirement_level || sourceAnchor.level) : "候选"},
         ],
       },
@@ -2417,7 +2417,7 @@
     const reportId = linkTarget.reportId || "RP";
     const actionLabel = linkTarget.actionLabel || "联动";
     row.innerHTML = `
-      <span class="sandbox-review-package-id blueprint-row-token" data-blueprint-col="id">${escapeText(id || "ID")}</span>
+      <span class="sandbox-review-package-id blueprint-row-token" data-blueprint-col="id">${escapeText(id || "编号")}</span>
       <strong class="sandbox-review-package-title" data-blueprint-col="section">${escapeText(title || "未命名")}</strong>
       <span class="sandbox-review-package-decision blueprint-row-chip" data-blueprint-col="decision">${escapeText(decision)}</span>
       <code class="sandbox-review-package-evidence" data-blueprint-col="evidence">${escapeText(evidence)}</code>
@@ -2715,7 +2715,7 @@
       `;
       card.addEventListener("click", () => {
         renderEvidenceRows(`审查细项：${normalizeText(item.condition_zh || item.id)}`, [
-          {label: "ID", value: normalizeText(item.id)},
+          {label: "编号", value: normalizeText(item.id)},
           {label: "类型", value: reviewCategoryLabel(item.category)},
           {label: "审查条件", value: normalizeText(item.condition_zh)},
           {label: "通过标准", value: normalizeText(item.pass_criteria_zh)},
