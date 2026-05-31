@@ -1116,7 +1116,7 @@
     setPrimaryGateInputsEnabled(Boolean(payload) && !sourceDeferred);
     if (sourceDeferred) {
       setPrimaryGateDetail("dry-run", "源文档暂缓故障注入，默认不生成 dry-run 沙盒计划。");
-      setPrimaryGateDetail("coverage", "覆盖 0 个故障场景 · 0 plans · 0 points");
+      setPrimaryGateDetail("coverage", "覆盖 0 个故障场景 · 0 计划 · 0 观测点");
       setPrimaryGateDetail("risk", "无沙盒细项需要确认；仅保留显式 dry-run 入口。");
       setSandboxDecisionConclusion("源文档暂缓，不生成沙盒计划");
       updateReviewGate();
@@ -1129,8 +1129,8 @@
     setPrimaryGateDetail(
       "coverage",
       scenarioIds.size
-        ? `覆盖 ${covered}/${scenarioIds.size} 个故障场景 · ${plans.length} plans · ${observations.length} points`
-      : `${plans.length} plans · ${observations.length} points`,
+        ? `覆盖 ${covered}/${scenarioIds.size} 个故障场景 · ${plans.length} 计划 · ${observations.length} 观测点`
+      : `${plans.length} 计划 · ${observations.length} 观测点`,
     );
     setPrimaryGateDetail("risk", `${reviews.length} 条审查细项默认折叠，展开后复核例外和风险。`);
     setSandboxDecisionConclusion(payload ? "沙盒配置已生成，等待一级闸门确认" : "等待配置");
@@ -1176,7 +1176,7 @@
       isBlocked = false;
     }
     if (primaryGateCount) {
-      primaryGateCount.textContent = `${completion.confirmed}/${completion.total || 3} gates`;
+      primaryGateCount.textContent = `${completion.confirmed}/${completion.total || 3} 闸门`;
     }
     setSandboxDecisionGates(`${completion.confirmed}/${completion.total || 3} 已确认`);
     primaryGateInputs.forEach((input) => {
@@ -1221,7 +1221,7 @@
     const answers = payload.boundary_answers || [];
     sourceTitle.textContent = payload.summary_zh ? "已载入故障准备草稿" : "尚未载入";
     sourceSummary.textContent = payload.summary_zh || "需要先保存故障注入准备草稿。";
-    sourceMetrics.textContent = `${scenarios.length} scenarios · ${answers.length} answers`;
+    sourceMetrics.textContent = `${scenarios.length} 场景 · ${answers.length} 已回答`;
   }
 
   function renderFlags(payload) {
@@ -1412,7 +1412,7 @@
         value: `${reviews.length} 条 · 快照`,
         state: reviews.length > 0 ? "ready" : "warn",
         rows: [
-          {label: "一级闸门", value: `${primaryGateCount ? primaryGateCount.textContent : "0/3 gates"}`},
+          {label: "一级闸门", value: `${primaryGateCount ? primaryGateCount.textContent : "0/3 闸门"}`},
           {label: "审查细项", value: `${reviews.length} 条`},
           {label: "默认状态", value: "细项默认折叠，点击下方条目查看详情。"},
         ],
@@ -1489,8 +1489,8 @@
         id: "SR-01",
         title: "条件完整性",
         ...sandboxReviewRowStatus(hasPlans && hasObservations, false),
-        evidence: `${observations.length} points`,
-        sourceLabel: `${plans.length} plans`,
+        evidence: `${observations.length} 观测点`,
+        sourceLabel: `${plans.length} 计划`,
         description: "关键触发条件必须落到 dry-run 计划和观测点。",
       },
       {
@@ -1505,7 +1505,7 @@
         id: "SR-03",
         title: "不确定项处理",
         ...sandboxReviewRowStatus(false, hasReviews),
-        evidence: `${reviews.length} checks`,
+        evidence: `${reviews.length} 审查项`,
         sourceLabel: "review_checklist",
         description: "开放不确定项保留为人工复核，不升级为控制真值。",
       },
@@ -1521,7 +1521,7 @@
         id: "SR-05",
         title: "回放可复现",
         ...sandboxReviewRowStatus(hasPlans && dryRunSafe, false),
-        evidence: `${plans.length} replay refs`,
+        evidence: `${plans.length} 回放引用`,
         sourceLabel: "localStorage draft",
         description: "沙盒回放只读复现，不调用真实仿真 tick。",
       },
@@ -1529,7 +1529,7 @@
         id: "SR-06",
         title: "报告可追溯",
         ...sandboxReviewRowStatus(hasReviews || hasObservations, false),
-        evidence: `${reviews.length + observations.length} links`,
+        evidence: `${reviews.length + observations.length} 回链`,
         sourceLabel: "evidence tiles",
         description: "报告、证据和审查行必须能互相回链。",
       },
@@ -1564,7 +1564,7 @@
     `;
     reviewRows.appendChild(header);
     if (!payload || isSourceDeferredSandbox(payload)) {
-      if (reviewRowCount) reviewRowCount.textContent = "0 rows";
+      if (reviewRowCount) reviewRowCount.textContent = "0 行";
       const empty = document.createElement("p");
       empty.className = "muted";
       empty.textContent = "暂无审查结果。生成沙盒配置后显示 7 条蓝图审查行。";
@@ -1572,7 +1572,7 @@
       return;
     }
     const rows = buildSandboxReviewRows(payload);
-    if (reviewRowCount) reviewRowCount.textContent = `${rows.length} rows`;
+    if (reviewRowCount) reviewRowCount.textContent = `${rows.length} 行`;
     rows.forEach((item) => {
       const link = reviewLinkForRow(item.id);
       const row = document.createElement("article");
@@ -1645,8 +1645,8 @@
     return {
       state: dryRunSafe ? "dry-run" : "待复核",
       summary: dryRunSafe
-        ? `dry-run 路径就绪 · ${plans.length} plan / ${observations.length} obs / ${reviews.length} SR`
-        : `沙盒合同待复核 · ${plans.length} plan / ${observations.length} obs`,
+        ? `dry-run 路径就绪 · ${plans.length} 计划 / ${observations.length} 观测 / ${reviews.length} 审查`
+        : `沙盒合同待复核 · ${plans.length} 计划 / ${observations.length} 观测`,
       path: plans.length
         ? `${compactRailLabel(planNode)} -> ${compactRailLabel(observationNode)}`
         : "无候选沙盒路径",
@@ -1679,7 +1679,7 @@
           id: "candidate-boundary",
           kind: "GATE",
           title: "仅候选态",
-          meta: `${reviewRowsBuilt.length} SR rows`,
+          meta: `${reviewRowsBuilt.length} 审查行`,
           reviewRowId: "SR-07",
           traceId: truthLink.traceId,
           reportId: truthLink.reportId,
@@ -1694,7 +1694,7 @@
       evidence: [
         {label: "计划", value: planId, reviewRowId: "SR-04", traceId: planLink.traceId, reportId: planLink.reportId},
         {label: "观测", value: observationId, reviewRowId: "SR-05", traceId: replayLink.traceId, reportId: replayLink.reportId},
-        {label: "审查", value: `${reviews.length} checklist items`, reviewRowId: "SR-07", traceId: truthLink.traceId, reportId: truthLink.reportId},
+        {label: "审查", value: `${reviews.length} 审查项`, reviewRowId: "SR-07", traceId: truthLink.traceId, reportId: truthLink.reportId},
       ],
     };
   }
@@ -1825,13 +1825,13 @@
       {
         id: "ET-04",
         title: "报告预览",
-        value: `${reportSections.length} sections linked`,
+        value: `${reportSections.length} 章节已回链`,
         ...traceLink("ET-04", "REPORT", "报告"),
         linkedReviewRows: reviewRowsForTrace("ET-04"),
         rows: [
           {label: "report section", value: "sandbox replay review package"},
-          {label: "related run frames", value: `${observations.length} observation points`},
-          {label: "related faults", value: `${plans.length} sandbox plans`},
+          {label: "related run frames", value: `${observations.length} 观测点`},
+          {label: "related faults", value: `${plans.length} 沙盒计划`},
           {label: "report sections", value: reportSections.map((item) => item.title).join(" / ")},
           {label: "controller truth", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
         ],
@@ -1852,7 +1852,7 @@
       {
         id: "ET-02",
         title: "运行帧",
-        value: `${plans.length} plans / ${observations.length} points`,
+        value: `${plans.length} 计划 / ${observations.length} 观测点`,
         ...traceLink("ET-02", "RUN", "定位"),
         linkedReviewRows: reviewRowsForTrace("ET-02"),
         rows: [
@@ -1865,7 +1865,7 @@
       {
         id: "ET-03",
         title: "审查行",
-        value: `${reviewRowsBuilt.length} review rows`,
+        value: `${reviewRowsBuilt.length} 审查行`,
         ...traceLink("ET-03", "REVIEW", "审查"),
         linkedReviewRows: reviewRowsForTrace("ET-03"),
         rows: [
@@ -1937,12 +1937,12 @@
       {
         id: "RP-01",
         title: "摘要",
-        metric: `${plans.length} plan`,
+        metric: `${plans.length} 计划`,
         rows: [
           {label: "report section", value: "摘要"},
           {label: "概况", value: payload && payload.summary_zh ? payload.summary_zh : "沙盒 dry-run 候选报告。"},
-          {label: "节点", value: `${observations.length} observation points`},
-          {label: "事件", value: `${plans.length + reviews.length} candidate events`},
+          {label: "节点", value: `${observations.length} 观测点`},
+          {label: "事件", value: `${plans.length + reviews.length} 候选事件`},
         ],
       },
       {
@@ -1959,7 +1959,7 @@
       {
         id: "RP-03",
         title: "逻辑图",
-        metric: `${observations.length} node`,
+        metric: `${observations.length} 观测节点`,
         rows: [
           {label: "report section", value: "逻辑图"},
           {label: "相关节点", value: observations.map((item) => item && item.node_id).filter(Boolean).join(", ") || "未提供"},
@@ -1992,7 +1992,7 @@
       {
         id: "RP-06",
         title: "沙盒审查",
-        metric: `${reviewRowsBuilt.length} SR`,
+        metric: `${reviewRowsBuilt.length} 审查行`,
         rows: [
           {label: "report section", value: "沙盒审查"},
           {label: "review rows", value: reviewRowsBuilt.map((item) => `${item.id}:${item.label}`).join(", ")},
@@ -2003,7 +2003,7 @@
       {
         id: "RP-07",
         title: "未决风险",
-        metric: truthSafe ? "0 diff" : "risk",
+        metric: truthSafe ? "0 差异" : "risk",
         rows: [
           {label: "report section", value: "未决风险"},
           {label: "controller truth", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
@@ -2221,7 +2221,7 @@
     if (!mainReportRows) return;
     clearChildren(mainReportRows);
     if (!payload || isSourceDeferredSandbox(payload)) {
-      if (mainReportCount) mainReportCount.textContent = "0 sections";
+      if (mainReportCount) mainReportCount.textContent = "0 章节";
       mainReportRows.innerHTML = '<p class="muted">暂无报告章节。</p>';
       return;
     }
@@ -2230,8 +2230,8 @@
     const statusOnly = mainReportRail && mainReportRail.dataset.blueprint39Default === "status-only";
     if (mainReportCount) {
       mainReportCount.textContent = statusOnly
-        ? `1 active / ${sections.length} sections`
-        : `${sections.length} sections`;
+        ? `1 个激活 / ${sections.length} 章节`
+        : `${sections.length} 章节`;
     }
     sections.forEach((item) => {
       const primaryReviewRowId = primaryReviewRowForReport(item.id);
@@ -2329,12 +2329,12 @@
     if (!reportSectionRows) return;
     reportSectionRows.innerHTML = "";
     if (!payload || isSourceDeferredSandbox(payload)) {
-      if (reportPreviewCount) reportPreviewCount.textContent = "0 sections";
+      if (reportPreviewCount) reportPreviewCount.textContent = "0 章节";
       reportSectionRows.innerHTML = '<p class="muted">暂无报告章节。生成沙盒配置后显示可回链的报告预览。</p>';
       return;
     }
     const sections = buildReplayReportSections(payload);
-    if (reportPreviewCount) reportPreviewCount.textContent = `${sections.length} sections`;
+    if (reportPreviewCount) reportPreviewCount.textContent = `${sections.length} 章节`;
     sections.forEach((item) => {
       const row = document.createElement("button");
       row.type = "button";
@@ -2429,9 +2429,9 @@
     const reviewRowsBuilt = buildSandboxReviewRows(payload);
     const evidenceRowsBuilt = buildEvidenceTraceRows(payload);
     const reportSections = buildReplayReportSections(payload);
-    if (reviewPackageReviewCount) reviewPackageReviewCount.textContent = `${reviewRowsBuilt.length} review rows`;
-    if (reviewPackageEvidenceCount) reviewPackageEvidenceCount.textContent = `${evidenceRowsBuilt.length} evidence links`;
-    if (reviewPackageReportCount) reviewPackageReportCount.textContent = `${reportSections.length} report sections`;
+    if (reviewPackageReviewCount) reviewPackageReviewCount.textContent = `${reviewRowsBuilt.length} 审查行`;
+    if (reviewPackageEvidenceCount) reviewPackageEvidenceCount.textContent = `${evidenceRowsBuilt.length} 证据回链`;
+    if (reviewPackageReportCount) reviewPackageReportCount.textContent = `${reportSections.length} 报告章节`;
     clearChildren(reviewPackageReviewRows);
     clearChildren(reviewPackageEvidenceRows);
     clearChildren(reviewPackageReportRows);
@@ -2465,7 +2465,7 @@
         item.id,
         item.title,
         item.value,
-        (item.linkedReviewRows || []).join(", ") || "review links",
+        (item.linkedReviewRows || []).join(", ") || "审查回链",
         {
           reviewRowId,
           traceId: item.id,
@@ -2473,7 +2473,7 @@
           packageKind: "review-package-evidence",
           decision: "TRACE",
           evidence: item.value,
-          sourceLabel: (item.linkedReviewRows || []).join(", ") || "review links",
+          sourceLabel: (item.linkedReviewRows || []).join(", ") || "审查回链",
           actionLabel: "证据",
         },
       );
@@ -2542,7 +2542,7 @@
     }
     if (action === "revision") {
       openReportPackage("报告预览：生成修订单", [
-        {label: "report sections", value: `${sections.length} sections`},
+        {label: "report sections", value: `${sections.length} 章节`},
         {label: "handoff", value: "候选修订单将回到 logic-builder，仍需 3 个一级闸门确认。"},
         {label: "候选态边界", value: "controller_truth_modified:false"},
       ]);
@@ -2554,14 +2554,14 @@
     }
     openReportPackage("报告预览：重新运行沙盒", [
       {label: "run mode", value: "dry-run only"},
-      {label: "related run frames", value: `${sandboxList(payload, "observation_points").length} observation points`},
+      {label: "related run frames", value: `${sandboxList(payload, "observation_points").length} 观测点`},
       {label: "next action", value: "使用顶部检查按钮重新生成候选配置。"},
     ]);
   }
 
   function renderCompactChecklist(payload) {
     const items = sandboxList(payload, "review_checklist");
-    checklistCount.textContent = `${items.length} checks`;
+    checklistCount.textContent = `${items.length} 审查项`;
     clearChildren(checklistStrip);
     if (!items.length) {
       checklistStrip.innerHTML = '<p class="muted">暂无审查细项。</p>';
@@ -2604,7 +2604,7 @@
 
   function renderSandboxInjectionPlan(payload) {
     const items = payload && payload.sandbox_injection_plan ? payload.sandbox_injection_plan : [];
-    planCount.textContent = `${items.length} plans`;
+    planCount.textContent = `${items.length} 计划`;
     planList.innerHTML = "";
     if (!items.length) {
       planList.innerHTML = '<p class="muted">模型未返回沙盒配置建议。</p>';
@@ -2644,7 +2644,7 @@
 
   function renderObservationPoints(payload) {
     const items = payload && payload.observation_points ? payload.observation_points : [];
-    observationCount.textContent = `${items.length} points`;
+    observationCount.textContent = `${items.length} 观测点`;
     observationList.innerHTML = "";
     if (!items.length) {
       observationList.innerHTML = '<p class="muted">模型未返回观测点。</p>';
@@ -2680,7 +2680,7 @@
 
   function renderReviewChecklist(payload) {
     const items = payload && payload.review_checklist ? payload.review_checklist : [];
-    reviewCount.textContent = `${items.length} checks`;
+    reviewCount.textContent = `${items.length} 审查项`;
     reviewList.innerHTML = "";
     if (!items.length) {
       reviewList.innerHTML = '<p class="muted">模型未返回审查清单。</p>';
