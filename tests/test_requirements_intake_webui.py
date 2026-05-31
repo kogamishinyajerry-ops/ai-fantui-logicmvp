@@ -5861,6 +5861,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "plan_coverage_completion" in sandbox_script
     assert "completed_fault_scenario_ids" in sandbox_script
     assert 'scenario_plan_coverage: "场景计划覆盖"' in sandbox_script
+    assert 'ui_blueprint_first_visit_preview: "首次进入蓝图沙盒预览"' in sandbox_script
+    assert 'ui_blueprint_candidate_preview: "界面蓝图候选预览"' in sandbox_script
+    assert 'ui_template_preview: "DOCX 模板候选预览"' in sandbox_script
     assert 'addPlanCoverageRow("补齐策略", coverageTokenLabel(completion.strategy, "确定性空跑计划"))' in sandbox_script
     assert 'addPlanCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "场景计划覆盖"))' in sandbox_script
     assert '{label: "补齐语义", value: completion ? coverageTokenLabel(completion.semantic_gate) : "未触发补齐"}' in sandbox_script

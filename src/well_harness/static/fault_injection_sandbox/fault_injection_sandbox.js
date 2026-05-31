@@ -180,6 +180,9 @@
     deterministic_dry_run_plan: "确定性空跑计划",
     critical_node_coverage: "关键节点覆盖",
     scenario_plan_coverage: "场景计划覆盖",
+    ui_blueprint_first_visit_preview: "首次进入蓝图沙盒预览",
+    ui_blueprint_candidate_preview: "界面蓝图候选预览",
+    ui_template_preview: "DOCX 模板候选预览",
   };
   const BOUNDARY_TOKENS = Object.keys(BOUNDARY_TOKEN_LABELS).sort((left, right) => right.length - left.length);
   const BOUNDARY_TOKEN_PATTERN = new RegExp(BOUNDARY_TOKENS.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
