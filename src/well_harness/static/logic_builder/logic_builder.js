@@ -1842,12 +1842,12 @@
     if (circuitStatusBadge) {
       circuitStatusBadge.dataset.state = status;
       circuitStatusBadge.textContent = ({
-        idle: "IDLE",
-        ready: "READY",
-        deploying: "DEPLOYING",
-        deployed: "DEPLOYED",
-        fault: "FAULT",
-      })[status] || "IDLE";
+        idle: "等待",
+        ready: "就绪",
+        deploying: "放出中",
+        deployed: "已放出",
+        fault: "异常",
+      })[status] || "等待";
     }
     if (circuitStatusSummary) circuitStatusSummary.textContent = summary;
   }
@@ -1894,7 +1894,7 @@
     } catch (error) {
       if (circuitStatusBadge) {
         circuitStatusBadge.dataset.state = "fault";
-        circuitStatusBadge.textContent = "ERROR";
+        circuitStatusBadge.textContent = "错误";
       }
       if (circuitStatusSummary) {
         const details = error.payload && error.payload.message ? error.payload.message : error.message;

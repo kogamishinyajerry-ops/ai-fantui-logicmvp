@@ -3059,7 +3059,7 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
         assert page.locator("#logic-circuit-status-details").evaluate("element => element.open") is False
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
         page.select_option("#logic-circuit-preset-select", "max-reverse")
-        expect(page.locator("#logic-circuit-status-badge")).to_have_text("DEPLOYED")
+        expect(page.locator("#logic-circuit-status-badge")).to_have_text("已放出")
         expect(page.locator('[data-demo-node-id="thr_lock"]')).to_have_attribute("data-state", "active")
         geometry.append(_assert_deepseek_page_contract(page, "logic-builder"))
         _screenshot(page, "02-logic-builder-drawing")
@@ -3381,7 +3381,7 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
 
         page.select_option("#logic-circuit-preset-select", "max-reverse")
         expect(page.locator("#logic-circuit-preset-status")).to_contain_text("最大反推")
-        expect(page.locator("#logic-circuit-status-badge")).to_have_text("DEPLOYED")
+        expect(page.locator("#logic-circuit-status-badge")).to_have_text("已放出")
         expect(page.locator('[data-demo-node-id="thr_lock"]')).to_have_attribute("data-state", "active")
         expect(page.locator('.logic-circuit-wire[data-source="logic4"][data-target="thr_lock"]')).to_have_attribute(
             "data-state",
@@ -3389,7 +3389,7 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         )
 
         page.select_option("#logic-circuit-preset-select", "inhibit-block")
-        expect(page.locator("#logic-circuit-status-badge")).to_have_text("FAULT")
+        expect(page.locator("#logic-circuit-status-badge")).to_have_text("异常")
         expect(page.locator('.logic-circuit-wire[data-source="reverser_inhibited"][data-target="logic1"]')).to_have_attribute(
             "data-state",
             "fault",
@@ -3583,7 +3583,7 @@ def test_logic_builder_circuit_inputs_default_to_compact_details(demo_server: st
         expect(page.locator("#logic-circuit-status-details")).to_be_hidden()
 
         page.select_option("#logic-circuit-preset-select", "max-reverse")
-        expect(page.locator("#logic-circuit-status-badge")).to_have_text("DEPLOYED")
+        expect(page.locator("#logic-circuit-status-badge")).to_have_text("已放出")
         assert page.locator("#logic-circuit-input-details").evaluate("element => element.open") is False
 
         page.click("#logic-circuit-input-details > summary")
@@ -4263,7 +4263,7 @@ def test_deepseek_live_replay_import_seeds_workbench_without_model_calls(demo_se
         _show_logic_builder_workbench(page)
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         page.select_option("#logic-circuit-preset-select", "max-reverse")
-        expect(page.locator("#logic-circuit-status-badge")).to_have_text("DEPLOYED")
+        expect(page.locator("#logic-circuit-status-badge")).to_have_text("已放出")
         page.goto(f"{demo_server}/requirements-intake", wait_until="networkidle")
         expect(page.locator("#requirements-status")).to_have_text("已恢复回放草稿")
         expect(page.locator("#result-state")).to_have_text("可进入逻辑链路")
