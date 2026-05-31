@@ -5557,6 +5557,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "function nodeKindLabel" in logic_script
     assert 'logic: "逻辑"' in logic_script
     assert '<span class="logic-node-kind">${escapeText(nodeKindLabel(node.node_kind))}</span>' in logic_script
+    assert 'if (id === "aircraft_on_ground") return "是";' in logic_script
+    assert 'if (id === "reverser_inhibited") return "否";' in logic_script
+    assert 'if (id === "eec_deploy") return "展开";' in logic_script
     assert "requirements-intake/draw-logic" in logic_script
     assert "requirements-intake/interpret-logic-change" in logic_script
     assert "requirements-intake/update-logic-drawing" in logic_script
@@ -5572,6 +5575,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "renderWorkflowOverview" in logic_script
     assert "renderBurdenSummary" in logic_script
     assert '<span class="logic-node-kind">${escapeText(node.node_kind || "logic")}</span>' not in logic_script
+    assert 'return "TRUE";' not in logic_script
+    assert 'return "FALSE";' not in logic_script
+    assert 'return "deploy";' not in logic_script
     assert "下一页生成故障矩阵" in logic_script
     assert ".logic-circuit-eval-panel" in logic_stylesheet
     assert ".logic-circuit-preset-menu" in logic_stylesheet
