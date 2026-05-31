@@ -701,7 +701,7 @@
           fault_type: "sensor_stuck_low",
           severity: "medium",
           rationale_zh: "用于检查高度门限异常时的空跑路径、证据回链和审查行。",
-          expected_effect_zh: "沙盒中只观察路径影响，不触发真实 tick 或控制器写入。",
+          expected_effect_zh: "沙盒中只观察路径影响，不触发真实仿真节拍或控制器写入。",
           observable_signals: ["radio_altitude_ft", "thr_lock"],
           source_anchors: anchors,
           provenance: "ui_blueprint_first_visit_preview",
@@ -801,7 +801,7 @@
       first_visit_preview: true,
       source_fault_injection_preparation_sha256: "ui-blueprint-first-visit",
       source_boundary_answers_sha256: "ui-blueprint-first-visit",
-      summary_zh: "首次进入已载入本地蓝图沙盒预览：只读空跑审查，不运行真实 tick。",
+      summary_zh: "首次进入已载入本地蓝图沙盒预览：只读空跑审查，不运行真实仿真节拍。",
       execution_contract: {
         run_tick: false,
         simulate: false,
@@ -849,8 +849,8 @@
         {
           id: "first_visit_review_dry_run",
           category: "dry_run",
-          condition_zh: "确认执行合同保持不运行 tick、不执行仿真、仅空跑。",
-          pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真 tick。",
+          condition_zh: "确认执行合同保持不运行仿真节拍、不执行仿真、仅空跑。",
+          pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真节拍。",
           source_anchors: anchors,
         },
         {
@@ -893,8 +893,8 @@
     sandboxPayload.first_visit_preview = false;
     sandboxPayload.template_preview = true;
     sandboxPayload.summary_zh = opts.refresh
-      ? "DOCX L1-L4 模板候选沙盒计划已刷新：只读空跑审查，不运行真实 tick。"
-      : "DOCX L1-L4 模板候选沙盒计划已载入：只读空跑审查，不运行真实 tick。";
+      ? "DOCX L1-L4 模板候选沙盒计划已刷新：只读空跑审查，不运行真实仿真节拍。"
+      : "DOCX L1-L4 模板候选沙盒计划已载入：只读空跑审查，不运行真实仿真节拍。";
     sandboxPayload.source_fault_injection_preparation_sha256 = "local-docx-l1-l4-template";
     sandboxPayload.source_boundary_answers_sha256 = "local-docx-l1-l4-template";
     sandboxPayload.plan_coverage_completion = {
@@ -1536,7 +1536,7 @@
         ...sandboxReviewRowStatus(hasPlans && dryRunSafe, false),
         evidence: `${plans.length} 回放引用`,
         sourceLabel: "本地草稿",
-        description: "沙盒回放只读复现，不调用真实仿真 tick。",
+        description: "沙盒回放只读复现，不调用真实仿真节拍。",
       },
       {
         id: "SR-06",
@@ -1665,7 +1665,7 @@
         : "无候选沙盒路径",
       node: compactRailLabel(planNode),
       snapshot: plans.length
-        ? `${compactRailLabel(firstPlan.signal_name || firstPlan.node_id)} · ${normalizeText(firstPlan.injection_mode)} · 不运行 tick`
+        ? `${compactRailLabel(firstPlan.signal_name || firstPlan.node_id)} · ${normalizeText(firstPlan.injection_mode)} · 不运行仿真节拍`
         : "无输入快照",
       pathNodes: [
         {
@@ -2805,14 +2805,14 @@
       beginTask("刷新沙盒预览", "正在刷新本地仅候选态沙盒预览。");
       loadFirstVisitSandboxPreview();
       setProgress(96, "审查清单", "本地预览已生成 7 条蓝图审查行。", "review");
-      finishTask("沙盒预览已刷新", "未调用模型、tick 或控制器真值。");
+      finishTask("沙盒预览已刷新", "未调用模型、仿真节拍或控制器真值。");
       return;
     }
     if (state.faultPreparationPayload.template_preview) {
       beginTask("刷新 DOCX 模板沙盒", "正在刷新本地仅候选态模板沙盒预览。");
       loadTemplateSandboxPreview({refresh: true});
       setProgress(96, "审查清单", "模板预览已生成 7 条蓝图审查行。", "review");
-      finishTask("DOCX 模板沙盒已刷新", "未调用模型、tick 或控制器真值。");
+      finishTask("DOCX 模板沙盒已刷新", "未调用模型、仿真节拍或控制器真值。");
       return;
     }
     beginTask("读取准备草稿", "正在读取故障候选、注入点和边界回答。");
@@ -2852,7 +2852,7 @@
       beginTask("载入首次沙盒预览", "未发现故障准备草稿；正在载入本地仅候选态沙盒闭环。");
       loadFirstVisitSandboxPreview();
       setProgress(96, "审查清单", "本地预览已生成审查行、证据链和报告章节。", "review");
-      finishTask("首次沙盒预览已载入", "默认展示沙盒审查闭环；未调用模型、tick 或控制器。");
+      finishTask("首次沙盒预览已载入", "默认展示沙盒审查闭环；未调用模型、仿真节拍或控制器。");
     }
     setBusy(false);
   }
