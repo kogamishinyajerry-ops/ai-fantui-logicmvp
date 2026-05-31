@@ -1851,7 +1851,7 @@
     const logic4 = nodeById.get("logic4");
     const logic3 = nodeById.get("logic3");
     let status = "idle";
-    let summary = "等待输入：TRA / RA / aircraft_on_ground 未满足 L1 前置条件。";
+    let summary = "等待输入：TRA、RA 与在地状态未满足 L1 前置条件。";
     if (checkedInput(circuitInputs.reverserInhibited)) {
       status = "fault";
       summary = "反推被抑制：抑制信号为真，展开链路阻塞。";
@@ -2275,7 +2275,7 @@
       engine_running: "发动机运行状态，本地补齐为运行上下文。",
       n1k: "N1K 门限，本地补齐为 L3 运行约束。",
       eec_enable: "EEC 允许，本地补齐为执行链上下文。",
-      reverser_inhibited: "反推抑制必须为 false；本地补齐为安全上下文。",
+      reverser_inhibited: "反推抑制必须为否；本地补齐为安全上下文。",
       logic1: "L1 输出 TLS 115VAC 解锁命令。",
       logic2: "L2 输出 ETRAC 540VDC 供电命令。",
       logic3: "L3 驱动 EEC 展开、PLS 供电、PDU 电机。",
