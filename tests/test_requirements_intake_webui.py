@@ -7197,6 +7197,8 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
     assert 'id="logic-batch-interpretation-panel"' in html
     assert 'id="logic-batch-summary"' in html
     assert 'id="logic-batch-conflict-summary"' in html
+    assert '补丁:${String(event.requirements_document_patch_sha256).slice(0, 8)}' in script
+    assert 'patch:${String(event.requirements_document_patch_sha256).slice(0, 8)}' not in script
     assert 'id="logic-batch-proposed-changes"' in html
     assert "提交此次标注意见" in html
     assert "AI 修订建议" in html

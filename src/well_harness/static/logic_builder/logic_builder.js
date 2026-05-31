@@ -721,7 +721,7 @@
         const recalculation = event.event_type === "candidate_edit_revision_requested"
           ? ` · ${streamedCandidateRecalculationStatusLabel(event.candidate_recalculation && event.candidate_recalculation.status)}`
           : "";
-        const patchHash = event.requirements_document_patch_sha256 ? ` · patch:${String(event.requirements_document_patch_sha256).slice(0, 8)}` : "";
+        const patchHash = event.requirements_document_patch_sha256 ? ` · 补丁:${String(event.requirements_document_patch_sha256).slice(0, 8)}` : "";
         const docGate = event.requirements_document_edit_requested
           ? (event.requirements_document_edit_authorized ? " · 需求文档候选补丁已授权" : " · 需求文档补丁待授权")
           : "";
