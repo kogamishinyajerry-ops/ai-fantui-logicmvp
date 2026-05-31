@@ -661,7 +661,7 @@
     return [
       {
         id: "BP-SB-01",
-        kind: "UI 蓝图",
+        kind: "界面蓝图",
         origin: "selected-final-set",
         quote_zh: "首次进入沙盒时加载本地仅候选态审查预览；不代表源文档已要求故障注入。",
         requirement_level: "candidate-preview",
@@ -692,7 +692,7 @@
       },
       source_requirements_sha256: "ui-blueprint-first-visit",
       source_drawing_sha256: "ui-blueprint-first-visit",
-      summary_zh: "首次进入已载入本地蓝图故障候选预览；仅用于沙盒审查 UI，不修改控制器真值。",
+      summary_zh: "首次进入已载入本地蓝图故障候选预览；仅用于沙盒审查界面，不修改控制器真值。",
       fault_scenarios: [
         {
           id: "first_visit_fault_ra_low",
@@ -759,7 +759,7 @@
         {
           id: "first_visit_confirm_dry_run",
           prompt_zh: "确认此候选只用于空跑沙盒审查？",
-          answer_zh: "确认仅用于空跑 UI 预览。",
+          answer_zh: "确认仅用于空跑界面预览。",
         },
         {
           id: "first_visit_confirm_truth_boundary",
@@ -814,7 +814,7 @@
           node_id: firstScenario.node_id || "radio_altitude_ft",
           signal_name: "radio_altitude_ft",
           injection_mode: "override",
-          safe_range_zh: "0 到 20 ft，仅 UI 空跑。",
+          safe_range_zh: "0 到 20 ft，仅界面空跑。",
           expected_effect_zh: "检查 RA 候选异常是否只在沙盒证据链中呈现。",
           source_anchors: firstScenario.source_anchors || anchors,
         },
@@ -868,7 +868,7 @@
       },
       workflow_notes: [
         "该沙盒计划由前端首次进入预览生成，保持仅候选态。",
-        "用于验收故障注入、沙盒审查、证据追溯和报告预览 UI。",
+        "用于验收故障注入、沙盒审查、证据追溯和报告预览界面。",
       ],
       llm: {
         provider: "local-ui",
@@ -903,7 +903,7 @@
     };
     sandboxPayload.workflow_notes = [
       "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持仅候选态。",
-      "用于验收故障矩阵、沙盒审查、证据追溯和报告预览 UI。",
+      "用于验收故障矩阵、沙盒审查、证据追溯和报告预览界面。",
     ];
     return sandboxPayload;
   }

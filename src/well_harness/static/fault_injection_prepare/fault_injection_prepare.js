@@ -163,7 +163,7 @@
     return [
       {
         id: "BP-FI-01",
-        kind: "UI 蓝图",
+        kind: "界面蓝图",
         origin: "selected-final-set",
         quote_zh: "首次进入时加载本地仅候选态故障预览；不代表源文档要求故障注入。",
         requirement_level: "candidate-preview",
@@ -269,7 +269,7 @@
       source_requirements_sha256: "ui-blueprint-preview",
       source_drawing_sha256: "ui-blueprint-preview",
       source_change_history_sha256: "ui-blueprint-preview",
-      summary_zh: "蓝图候选演示已载入：仅用于验证故障注入与沙盒审查 UI，不修改控制器真值。",
+      summary_zh: "蓝图候选演示已载入：仅用于验证故障注入与沙盒审查界面，不修改控制器真值。",
       fault_scenarios: [
         {
           id: "blueprint_fault_ra_low",
@@ -350,7 +350,7 @@
         semantic_gate: "critical_node_coverage",
       },
       workflow_notes: [
-        "源文档暂缓仍然保留；该候选仅用于演示蓝图 UI 的故障注入能力。",
+        "源文档暂缓仍然保留；该候选仅用于演示蓝图界面的故障注入能力。",
         "进入沙盒后只呈现空跑计划、观测点、审查行和证据回链。",
       ],
       llm: {
@@ -447,7 +447,7 @@
       },
       workflow_notes: [
         "该沙盒计划由前端蓝图候选演示生成，保持仅候选态。",
-        "用于验收故障注入、沙盒审查、证据追溯和报告预览 UI。",
+        "用于验收故障注入、沙盒审查、证据追溯和报告预览界面。",
       ],
       llm: {
         provider: "local-ui",
@@ -466,7 +466,7 @@
       faultPayload.source_scope = {
         fault_injection: {
           status: "ui_blueprint_preview",
-          reason_zh: "没有已保存图纸时显示本地蓝图候选预览，作为 UI 工作台空态。",
+          reason_zh: "没有已保存图纸时显示本地蓝图候选预览，作为界面工作台空态。",
           source_anchors: blueprintPreviewSourceAnchors(),
         },
       };
@@ -500,7 +500,7 @@
       };
       sandboxPayload.workflow_notes = [
         "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持仅候选态。",
-        "用于验收故障矩阵、沙盒审查、证据追溯和报告预览 UI。",
+        "用于验收故障矩阵、沙盒审查、证据追溯和报告预览界面。",
       ];
     }
     setProgress(84, "候选已构造", "正在渲染故障场景、注入点和覆盖证据。", "candidates");
