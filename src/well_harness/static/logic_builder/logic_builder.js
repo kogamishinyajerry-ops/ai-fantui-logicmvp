@@ -2489,7 +2489,7 @@
     return {
       kind: "ai-fantui-logic-link-drawing",
       status: "draft_ready",
-      summary_zh: "已载入 DOCX L1-L4 官方模板候选；仅用于 UI 蓝图演示，不修改控制真值。",
+      summary_zh: "已载入 DOCX L1-L4 官方模板候选；仅用于界面蓝图演示，不修改控制真值。",
       truth_effect: "none",
       candidate_state: "sandbox_candidate",
       certification_claim: "none",
