@@ -278,7 +278,7 @@
           fault_type: "sensor_stuck_low",
           severity: "medium",
           rationale_zh: "用于检查 RA 门限异常时，下游释放门和油门锁路径是否仍可追溯。",
-          expected_effect_zh: "沙盒中只观察路径影响，不触发真实 tick 或控制器写入。",
+          expected_effect_zh: "沙盒中只观察路径影响，不触发真实仿真节拍或控制器写入。",
           observable_signals: [raId, outputId],
           source_anchors: candidateAnchorsFor(raNode),
           provenance: "ui_blueprint_candidate_preview",
@@ -327,7 +327,7 @@
         },
         {
           id: "blueprint_confirm_truth_boundary",
-          prompt_zh: "确认不修改 controller truth、认证结论和生产配置？",
+          prompt_zh: "确认不修改控制器真值、认证结论和生产配置？",
           rationale_zh: "所有输出保持沙盒候选态，不进入适航或生产声明。",
           blocks: "fault_injection",
         },
@@ -340,7 +340,7 @@
         },
         {
           id: "blueprint_confirm_truth_boundary",
-          prompt_zh: "确认不修改 controller truth、认证结论和生产配置？",
+          prompt_zh: "确认不修改控制器真值、认证结论和生产配置？",
           answer_zh: "确认不修改控制器真值和认证结论。",
         },
       ],
@@ -429,7 +429,7 @@
           id: "blueprint_review_dry_run",
           category: "dry_run",
           condition_zh: "确认执行合同保持 run_tick:false、simulate:false、dry_run_only:true。",
-          pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真 tick。",
+          pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真节拍。",
           source_anchors: firstScenario.source_anchors || [],
         },
         {
@@ -1010,7 +1010,7 @@
       const drawing = state.drawingPayload || {};
       sourceTitle.textContent = isDocxTemplateDrawing() ? "DOCX L1-L4 模板候选" : "本地逻辑图纸";
       sourceSummary.textContent = isDocxTemplateDrawing()
-        ? "来自逻辑绘制页的 DOCX L1-L4 本地候选；不会调用模型、tick 或控制器真值。"
+        ? "来自逻辑绘制页的 DOCX L1-L4 本地候选；不会调用模型、仿真节拍或控制器真值。"
         : (drawing.summary_zh || "已读取本地保存的模型图纸；缺少需求数据时仅保持候选态展示。");
       sourceMetrics.textContent = `${(drawing.nodes || []).length} 节点 · ${(drawing.edges || []).length} 连线 · ${(drawing.parameter_panels || []).length} 面板`;
       renderSourceDeferral();
@@ -1020,7 +1020,7 @@
     if (!state.requirementsPayload || !state.drawingPayload) {
       sourceTitle.textContent = state.faultPayload && state.faultPayload.first_visit_preview ? "蓝图候选预览" : "尚未载入";
       sourceSummary.textContent = state.faultPayload && state.faultPayload.first_visit_preview
-        ? "首次进入空态使用本地仅候选态预览；不会调用模型、tick 或控制器真值。"
+        ? "首次进入空态使用本地仅候选态预览；不会调用模型、仿真节拍或控制器真值。"
         : "需要先从逻辑绘制页生成图纸。";
       sourceMetrics.textContent = state.faultPayload && state.faultPayload.first_visit_preview
         ? "2 场景 · 2 注入点 · 试运行"
