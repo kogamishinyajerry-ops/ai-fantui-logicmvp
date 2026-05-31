@@ -6361,8 +6361,10 @@ def test_logic_builder_declares_demo_reconstruction_mode_and_bridge_entry():
         "THR_LOCK 释放",
     ]:
         assert label in docx_template_block
+    assert 'label: "真值未变"' in docx_template_block
     for legacy_label in ["LATCH -> CAUT", '"caut"', '"caut1"', '"caut2"', '"caut3"']:
         assert legacy_label not in docx_template_block
+    assert 'label: "truth unchanged"' not in docx_template_block
     assert ".logic-reconstruction-mode-panel" in stylesheet
 
 

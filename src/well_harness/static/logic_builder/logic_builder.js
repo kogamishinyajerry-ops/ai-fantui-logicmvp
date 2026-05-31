@@ -2404,7 +2404,7 @@
       ],
       badges: [
         {id: "stage", label: "DOCX L1-L4", x: 678, y: 18, width: 96, height: 24},
-        {id: "boundary", label: "truth unchanged", x: 784, y: 18, width: 116, height: 24},
+        {id: "boundary", label: "真值未变", x: 784, y: 18, width: 116, height: 24},
       ],
     };
   }
