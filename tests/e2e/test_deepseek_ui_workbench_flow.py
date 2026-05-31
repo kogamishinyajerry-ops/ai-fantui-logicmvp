@@ -724,6 +724,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         (
             "/requirements-intake",
             "1",
+            "STEP 1/4",
             "需求理解",
             "#logic-builder-next",
             "下一步：进入逻辑链路绘制",
@@ -734,6 +735,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         (
             "/logic-builder",
             "2",
+            "STEP 2/4",
             "逻辑绘制",
             "#logic-fault-next",
             "下一步：进入故障准备",
@@ -747,6 +749,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         (
             "/fault-injection-prepare",
             "3",
+            "STEP 3/4",
             "故障准备",
             "#fault-sandbox-next",
             "下一步：进入沙盒审查",
@@ -760,6 +763,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         (
             "/fault-injection-sandbox",
             "4",
+            "第 4/4 步",
             "沙盒注入",
             "#fault-sandbox-revision-next",
             "下一步：生成逻辑修订单",
@@ -772,7 +776,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
         ),
     ]
     try:
-        for path, step, title, primary_selector, primary_text, cue_selector, cue_text, secondary_buttons in page_contracts:
+        for path, step, step_label, title, primary_selector, primary_text, cue_selector, cue_text, secondary_buttons in page_contracts:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
             strip = page.locator('[data-command-strip="deepseek-step"]')
             if path == "/logic-builder":
@@ -781,7 +785,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
             expect(strip).to_be_visible()
             expect(strip).to_have_attribute("data-command-step", step)
             expect(strip.locator("h1")).to_have_text(title)
-            expect(strip.locator(".deepseek-step-kicker")).to_have_text(f"STEP {step}/4")
+            expect(strip.locator(".deepseek-step-kicker")).to_have_text(step_label)
             expect(page.locator(cue_selector)).to_be_visible()
             expect(page.locator(cue_selector)).to_contain_text(cue_text)
             expect(strip.locator('[data-primary-next-action="true"]')).to_have_count(1)
