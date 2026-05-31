@@ -5727,6 +5727,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'item.node_id || "node:none"' not in fault_script
     assert 'compactCell(point.signal_name, "signal")' not in fault_script
     assert 'item.injection_mode || "mode"' not in fault_script
+    assert 'addCoverageRow("语义门", completion.semantic_gate || "critical_node_coverage")' not in fault_script
     assert "UI 蓝图" not in fault_script
     assert "沙盒审查 UI" not in fault_script
     assert "报告预览 UI" not in fault_script
@@ -5735,6 +5736,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "renderCoverageCompletionEvidence" in fault_script
     assert "coverage_completion" in fault_script
     assert "completed_node_ids" in fault_script
+    assert 'critical_node_coverage: "关键节点覆盖"' in fault_script
+    assert 'addCoverageRow("补齐策略", coverageTokenLabel(completion.strategy, "确定性空跑候选"))' in fault_script
+    assert 'addCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "关键节点覆盖"))' in fault_script
     assert "deterministic_dry_run_candidate" in fault_script
     assert "已覆盖" in fault_script
     assert "个关键节点" in fault_script
@@ -5812,6 +5816,11 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".sandbox-shell" in sandbox_script
     assert "plan_coverage_completion" in sandbox_script
     assert "completed_fault_scenario_ids" in sandbox_script
+    assert 'scenario_plan_coverage: "场景计划覆盖"' in sandbox_script
+    assert 'addPlanCoverageRow("补齐策略", coverageTokenLabel(completion.strategy, "确定性空跑计划"))' in sandbox_script
+    assert 'addPlanCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "场景计划覆盖"))' in sandbox_script
+    assert '{label: "补齐语义", value: completion ? coverageTokenLabel(completion.semantic_gate) : "未触发补齐"}' in sandbox_script
+    assert 'coverageTokenLabel(payload.plan_coverage_completion.strategy)' in sandbox_script
     assert "deterministic_dry_run_plan" in sandbox_script
     assert "已覆盖" in sandbox_script
     assert "个故障场景" in sandbox_script
@@ -5846,6 +5855,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "normalizeText(firstPlan.injection_mode)" not in sandbox_script
     assert '{label: "注入方式", value: normalizeText(item.injection_mode)}' not in sandbox_script
     assert 'item.injection_mode || "模式"' not in sandbox_script
+    assert 'addPlanCoverageRow("语义门", completion.semantic_gate || "scenario_plan_coverage")' not in sandbox_script
+    assert 'normalizeText(completion.semantic_gate)' not in sandbox_script
+    assert 'normalizeText(payload.plan_coverage_completion.strategy)' not in sandbox_script
     assert 'allow_fallback: provider.value !== "deepseek"' in sandbox_script
     assert "allow_fallback: true" not in sandbox_script
     assert "self_repair" in sandbox_script
