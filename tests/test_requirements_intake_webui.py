@@ -6108,7 +6108,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         (
             STATIC_ROOT / "fault_injection_prepare" / "index.html",
             "3",
-            "STEP 3/4",
+            "第 3/4 步",
             "故障准备",
             "fault-sandbox-next",
             "下一步：进入沙盒审查",

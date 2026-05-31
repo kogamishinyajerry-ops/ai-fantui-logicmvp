@@ -50,7 +50,7 @@
 <main class="fault-shell" data-blueprint-phase="fault-injection-final" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-active-aux-panel="none" data-unified-inspector-state="none">
   <section class="fault-topbar deepseek-command-strip" data-command-strip="deepseek-step" data-command-step="3" data-blueprint-surface="compact-top-bar">
     <div>
-      <p class="fault-kicker deepseek-step-kicker">STEP 3/4</p>
+      <p class="fault-kicker deepseek-step-kicker">第 3/4 步</p>
       <h1>故障准备</h1>
     </div>
     <div class="fault-controls">
@@ -70,19 +70,19 @@
     <section class="fault-main">
       <section id="fault-decision-board" class="fault-decision-board" data-decision-board="fault-prepare" aria-label="故障准备判断">
         <article class="fault-decision-card" data-fault-card="candidate">
-          <p class="fault-kicker">CANDIDATE</p>
+          <p class="fault-kicker">候选</p>
           <h2>候选状态</h2>
           <strong id="fault-decision-candidate-summary">等待候选</strong>
           <p class="muted">场景和注入点折叠为参考。</p>
         </article>
         <article class="fault-decision-card" data-fault-card="boundary">
-          <p class="fault-kicker">BOUNDARY</p>
+          <p class="fault-kicker">边界</p>
           <h2>边界确认</h2>
           <strong id="fault-decision-boundary-summary">0/0 已回答</strong>
           <p class="muted">只回答进入沙盒前的限制。</p>
         </article>
         <article class="fault-decision-card" data-fault-card="next">
-          <p class="fault-kicker">NEXT</p>
+          <p class="fault-kicker">下一步</p>
           <h2>下一步</h2>
           <p id="fault-decision-next-action" class="muted" data-usage-path-cue="fault">等待候选：生成后得到故障矩阵与沙盒入口。</p>
           <div id="fault-blueprint-candidate-actions" class="fault-source-defer-actions" hidden>
@@ -95,7 +95,7 @@
       <section id="fault-candidate-matrix-panel" class="fault-panel fault-candidate-matrix-panel" data-blueprint-surface="fault-matrix-rows" aria-labelledby="fault-candidate-matrix-title">
         <div class="fault-section-head">
           <div>
-            <p class="fault-kicker">FAULT MATRIX</p>
+            <p class="fault-kicker">故障矩阵</p>
             <h2 id="fault-candidate-matrix-title">故障注入矩阵</h2>
           </div>
           <span id="fault-candidate-matrix-count">0 行</span>
@@ -138,7 +138,7 @@
       <details id="fault-candidate-details" class="fault-panel fault-reference-details">
         <summary class="fault-section-head">
           <div>
-            <p class="fault-kicker">FAULT SCENARIOS</p>
+            <p class="fault-kicker">故障场景</p>
             <h2>故障场景候选</h2>
           </div>
           <span id="fault-scenario-count">0 场景</span>
@@ -157,7 +157,7 @@
       <details id="fault-injection-point-details" class="fault-panel fault-reference-details">
         <summary class="fault-section-head">
           <div>
-            <p class="fault-kicker">INJECTION POINTS</p>
+            <p class="fault-kicker">注入点</p>
             <h2>建议注入点</h2>
           </div>
           <span id="fault-point-count">0 注入点</span>
@@ -176,7 +176,7 @@
       <section class="fault-panel">
         <div class="fault-section-head">
           <div>
-            <p class="fault-kicker">BOUNDARY CONFIRMATION</p>
+            <p class="fault-kicker">边界确认</p>
             <h2>边界确认问题</h2>
           </div>
           <span id="fault-boundary-progress">0/0 已回答</span>
@@ -193,13 +193,13 @@
 
     <aside class="fault-sidebar" data-unified-inspector="right-inspector" data-inspector-role="fault-preparation-summary">
       <section class="fault-panel">
-        <p class="fault-kicker">SOURCE</p>
+        <p class="fault-kicker">来源</p>
         <h2 id="fault-source-title">尚未载入</h2>
         <p id="fault-source-summary" class="muted">需要先从逻辑绘制页生成图纸。</p>
         <div id="fault-source-metrics" class="fault-metrics">0 节点 · 0 连线 · 0 面板</div>
       </section>
       <section class="fault-panel">
-        <p class="fault-kicker">MODEL OUTPUT</p>
+        <p class="fault-kicker">模型输出</p>
         <h2 id="fault-result-state">尚未生成</h2>
         <p id="fault-result-summary" class="muted">等待大模型返回故障场景、注入点和边界问题。</p>
         <div id="fault-result-flags" class="fault-flags"></div>
@@ -210,30 +210,30 @@
         </details>
       </section>
       <section id="fault-source-defer" class="fault-panel fault-source-defer" hidden>
-        <p class="fault-kicker">SOURCE SCOPE</p>
+        <p class="fault-kicker">来源范围</p>
         <h2>源文档声明暂缓</h2>
         <p id="fault-source-defer-summary">故障注入本轮不强制推进。</p>
       </section>
       <section class="fault-panel fault-burden-summary">
-        <p class="fault-kicker">READING LOAD</p>
+        <p class="fault-kicker">阅读负担</p>
         <h2 id="fault-burden-action">等待候选</h2>
         <ul id="fault-burden-outputs" class="fault-notes">
           <li>本页只先看源文档是否允许推进故障注入。</li>
         </ul>
       </section>
       <section id="fault-coverage-evidence" class="fault-panel fault-coverage-evidence" hidden>
-        <p class="fault-kicker">AUTO COMPLETION</p>
+        <p class="fault-kicker">自动补齐</p>
         <h2>自动补齐证据</h2>
         <div id="fault-coverage-evidence-list" class="fault-coverage-list"></div>
       </section>
       <section class="fault-panel">
-        <p class="fault-kicker">WORKFLOW NOTES</p>
+        <p class="fault-kicker">流程备注</p>
         <ul id="fault-workflow-notes" class="fault-notes">
           <li class="muted">模型输出后会显示后续进入沙盒注入前需要确认的事项。</li>
         </ul>
       </section>
       <section class="fault-panel fault-source-map-note">
-        <p class="fault-kicker">INJECTION CONTEXT MAP</p>
+        <p class="fault-kicker">注入上下文图</p>
         <h2>故障点上下文</h2>
         <p class="muted">点选左侧场景芯片或注入点以查看“故障点上下文”浮窗。</p>
       </section>
@@ -258,7 +258,7 @@
   <section id="fault-process" class="fault-process" aria-live="polite">
     <div class="fault-process-head">
       <div>
-        <p class="fault-kicker">TASK PROGRESS</p>
+        <p class="fault-kicker">任务进度</p>
         <h2 id="fault-process-title">等待故障准备</h2>
       </div>
       <span id="fault-process-elapsed">00:00</span>
@@ -276,7 +276,7 @@
 
   <section id="fault-injection-workflow-overview" class="fault-workflow-overview" aria-label="流程总览">
     <div class="fault-workflow-copy">
-      <p class="fault-kicker">WORKFLOW</p>
+      <p class="fault-kicker">工作流</p>
       <h2 id="fault-injection-workflow-stage">等待逻辑图纸</h2>
       <p id="fault-injection-workflow-detail">先完成需求澄清和初版逻辑绘制，再让模型准备故障候选。</p>
     </div>
@@ -291,7 +291,7 @@
   <section id="fault-context-popover" class="fault-context-popover" data-blueprint-surface="unified-inspector-popover" data-unified-aux-panel="fault-context-popover" data-unified-panel-state="closed" aria-hidden="true" hidden>
     <div class="fault-context-card">
       <header class="fault-context-head">
-        <p class="fault-kicker">FAULT CONTEXT</p>
+        <p class="fault-kicker">故障上下文</p>
         <h2 id="fault-context-title">详情</h2>
         <button id="fault-context-close" type="button" class="fault-context-close" data-ux-action-tier="secondary" aria-label="关闭上下文浮窗">×</button>
       </header>
