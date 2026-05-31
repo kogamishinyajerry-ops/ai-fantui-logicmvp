@@ -5532,6 +5532,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'id="logic-fill-handoff-draft"' in logic_html
     assert 'id="logic-circuit-eval-panel"' in logic_html
     assert 'id="logic-circuit-status-details"' in logic_html
+    assert "<dt>油门锁</dt>" in logic_html
+    assert "<dt>THR_LOCK</dt>" not in logic_html
     assert 'id="logic-drawing-notes-details"' in logic_html
     assert 'id="logic-change-loop-details"' in logic_html
     assert 'id="logic-change-history-details"' in logic_html
