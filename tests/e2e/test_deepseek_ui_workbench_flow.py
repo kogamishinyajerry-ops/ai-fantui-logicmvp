@@ -1182,6 +1182,7 @@ def test_fault_sandbox_review_uses_three_primary_gates_for_dense_plan(demo_serve
         page.locator('[data-sandbox-report-action="export"]').click()
         evidence_package_row = page.locator("#sandbox-review-package-evidence-rows [data-package-item-id='ET-04']")
         expect(evidence_package_row).to_have_attribute("data-package-target-review-row", "SR-06")
+        expect(evidence_package_row.locator(".sandbox-review-package-decision")).to_have_text("证据回链")
         evidence_package_row.click()
         expect(page.locator("#sandbox-review-package-panel")).to_be_hidden()
         expect(page.locator('[data-blueprint-review-row="SR-06"]')).to_have_attribute("aria-selected", "true")

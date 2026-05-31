@@ -5860,6 +5860,10 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".sandbox-shell" in sandbox_script
     assert "plan_coverage_completion" in sandbox_script
     assert "completed_fault_scenario_ids" in sandbox_script
+    assert 'const decision = linkTarget.decision || "联动"' in sandbox_script
+    assert 'decision: "证据回链"' in sandbox_script
+    assert 'linkTarget.decision || "LINK"' not in sandbox_script
+    assert 'decision: "TRACE"' not in sandbox_script
     assert 'scenario_plan_coverage: "场景计划覆盖"' in sandbox_script
     assert 'ui_blueprint_first_visit_preview: "首次进入蓝图沙盒预览"' in sandbox_script
     assert 'ui_blueprint_candidate_preview: "界面蓝图候选预览"' in sandbox_script
