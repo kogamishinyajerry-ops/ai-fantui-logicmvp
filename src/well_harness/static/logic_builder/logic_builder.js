@@ -1822,7 +1822,7 @@
     let summary = "等待输入：TRA / RA / aircraft_on_ground 未满足 L1 前置条件。";
     if (checkedInput(circuitInputs.reverserInhibited)) {
       status = "fault";
-      summary = "反推被抑制：reverser_inhibited=TRUE，deploy 链路阻塞。";
+      summary = "反推被抑制：抑制信号为真，展开链路阻塞。";
     } else if (thr && thr.state === "active") {
       status = "deployed";
       summary = "L4 满足，THR_LOCK 释放。油门反向段解锁。";
@@ -1832,7 +1832,7 @@
       summary = `L4 阻塞：${blockers}。`;
     } else if (logic3 && logic3.state === "active") {
       status = "deploying";
-      summary = "L3 激活：EEC deploy / PLS / PDU 通电。等待 VDT>=90% 解锁深拉区。";
+      summary = "L3 激活：EEC 展开 / PLS / PDU 通电。等待 VDT≥90% 解锁深拉区。";
     } else if (circuitNodeActive(nodeById, "logic2") || circuitNodeActive(nodeById, "logic1")) {
       status = "ready";
       summary = circuitNodeActive(nodeById, "logic2")

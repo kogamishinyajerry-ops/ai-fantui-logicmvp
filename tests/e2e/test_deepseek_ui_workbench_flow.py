@@ -3416,6 +3416,7 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
 
         page.select_option("#logic-circuit-preset-select", "inhibit-block")
         expect(page.locator("#logic-circuit-status-badge")).to_have_text("异常")
+        expect(page.locator("#logic-circuit-status-summary")).to_have_text("反推被抑制：抑制信号为真，展开链路阻塞。")
         expect(page.locator("#logic-circuit-hud-vdt90")).to_have_text("待到位")
         expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_text("已阻断")
         expect(page.locator('.logic-circuit-wire[data-source="reverser_inhibited"][data-target="logic1"]')).to_have_attribute(
