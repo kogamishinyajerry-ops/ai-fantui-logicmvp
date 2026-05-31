@@ -1601,7 +1601,7 @@
         <code class="sandbox-review-row-source" data-blueprint-col="source">${escapeText(item.sourceLabel)}</code>
         <p class="sandbox-review-row-description" data-blueprint-col="hazard-decision">
           <span class="sandbox-review-row-decision blueprint-row-chip">${escapeText(sandboxReviewDecisionLabel(item.state))}</span>
-          <span class="sandbox-review-row-description-text">${escapeText(item.description)}</span>
+          <span class="sandbox-review-row-description-text"></span>
         </p>
         <span class="sandbox-review-row-links blueprint-row-linkbar" data-blueprint-col="trace-report" data-row-scan-token="link" aria-label="证据回链 ${escapeText(link.traceId)} ${escapeText(link.reportId)}">
           <span class="sandbox-review-row-link-token blueprint-row-token blueprint-row-token--trace" data-link-kind="trace">${escapeText(link.traceId)}</span>
@@ -1609,6 +1609,10 @@
         </span>
         <span class="sandbox-review-row-action blueprint-row-chip" data-blueprint-col="action">查看</span>
       `;
+      const descriptionText = row.querySelector(".sandbox-review-row-description-text");
+      if (descriptionText && renderBoundaryTokenValue(descriptionText, item.description)) {
+        descriptionText.classList.add("sandbox-review-row-description-text--boundary");
+      }
       row.addEventListener("click", () => activateReviewRow(item));
       row.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
