@@ -2450,7 +2450,7 @@
     row.dataset.blueprintColumns = "id section decision evidence source trace-report action";
     row.setAttribute("data-blueprint36-package-row", linkTarget.packageKind || "package-item");
     row.classList.toggle("is-linked-active", linkTarget.reviewRowId === state.activeReviewRowId);
-    const decision = linkTarget.decision || "LINK";
+    const decision = linkTarget.decision || "联动";
     const evidence = linkTarget.evidence || meta || "candidate";
     const source = linkTarget.sourceLabel || extra || "候选态边界";
     const traceId = linkTarget.traceId || "ET";
@@ -2524,7 +2524,7 @@
           traceId: item.id,
           reportId: link.reportId,
           packageKind: "review-package-evidence",
-          decision: "TRACE",
+          decision: "证据回链",
           evidence: item.value,
           sourceLabel: (item.linkedReviewRows || []).join(", ") || "审查回链",
           actionLabel: "证据",
