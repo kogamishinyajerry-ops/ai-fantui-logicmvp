@@ -178,13 +178,13 @@ FAULT_PREPARATION = {
             "node_id": "input_ra",
             "signal_name": "ra_ft",
             "injection_mode": "override",
-            "safe_boundary_zh": "仅 dry-run，不触发真实执行。",
+            "safe_boundary_zh": "仅空跑，不触发真实执行。",
         }
     ],
     "boundary_questions": [
         {
             "id": "boundary_dry_run",
-            "prompt_zh": "确认本次只生成 dry-run 沙盒建议？",
+            "prompt_zh": "确认本次只生成空跑沙盒建议？",
             "rationale_zh": "防止演示链路被误解为真实控制执行。",
         },
         {
@@ -207,7 +207,7 @@ FAULT_PREPARATION = {
 SANDBOX_PLAN = {
     "kind": "ai-fantui-fault-injection-sandbox-plan",
     "status": "sandbox_plan_ready",
-    "summary_zh": "已生成 dry-run 沙盒配置建议和人工审查清单。",
+    "summary_zh": "已生成空跑沙盒配置建议和人工审查清单。",
     "sandbox_injection_plan": [
         {
             "id": "plan_ra_override",
@@ -254,7 +254,7 @@ def _dense_sandbox_plan() -> dict[str, Any]:
             "fault_scenario_id": f"fault_{index}",
             "node_id": f"node_{index}",
             "injection_mode": "override",
-            "safe_range_zh": "仅 dry-run，范围由准备页边界限制。",
+            "safe_range_zh": "仅空跑，范围由准备页边界限制。",
             "expected_effect_zh": "观察对应逻辑节点是否保持可解释状态。",
         }
         for index in range(1, 10)
@@ -264,7 +264,7 @@ def _dense_sandbox_plan() -> dict[str, Any]:
             "id": f"observe_{index}",
             "node_id": f"node_{index}",
             "signal_name": f"signal_{index}",
-            "check_zh": "记录 dry-run 输出，不触发仿真 tick。",
+            "check_zh": "记录空跑输出，不触发仿真 tick。",
         }
         for index in range(1, 10)
     ]
@@ -368,8 +368,8 @@ def _replay_payload() -> dict[str, Any]:
         "boundary_answers": [
             {
                 "id": "boundary_dry_run",
-                "prompt_zh": "确认本次只生成 dry-run 沙盒建议？",
-                "answer_zh": "确认只用于 dry-run 回放演示。",
+                "prompt_zh": "确认本次只生成空跑沙盒建议？",
+                "answer_zh": "确认只用于空跑回放演示。",
             },
             {
                 "id": "boundary_range",
@@ -1094,7 +1094,7 @@ def test_fault_sandbox_review_uses_three_primary_gates_for_dense_plan(demo_serve
         assert review_row_box
         assert review_row_box["height"] <= 58
         expect(page.locator("#fault-sandbox-diagnosis-inspector")).to_be_visible()
-        expect(page.locator("#fault-sandbox-diagnosis-summary")).to_contain_text("dry-run")
+        expect(page.locator("#fault-sandbox-diagnosis-summary")).to_contain_text("空跑")
         expect(page.locator("#fault-sandbox-affected-path")).to_have_text("node 1 -> node 1")
         expect(page.locator("#fault-sandbox-first-abnormal-node")).to_have_text("node 1")
         expect(page.locator("#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node='failure-path']")).to_have_count(3)
@@ -1720,7 +1720,7 @@ def test_fault_matrix_selection_carries_review_linkage_into_sandbox(
 
         page.locator("#fault-context-close").click()
         for index in range(page.locator("textarea[data-boundary-id]").count()):
-            page.locator("textarea[data-boundary-id]").nth(index).fill("确认 dry-run 演示边界。")
+            page.locator("textarea[data-boundary-id]").nth(index).fill("确认空跑演示边界。")
         expect(page.locator("#fault-sandbox-next")).to_be_enabled()
         page.locator("#fault-sandbox-next").click()
         page.wait_for_url(re.compile(r".*/fault-injection-sandbox\?review=SR-06&trace=ET-04&report=RP-06$"))
@@ -2208,7 +2208,7 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         expect(page.locator("#fault-sandbox-review-rows .sandbox-review-row-check input[disabled]")).to_have_count(7)
         expect(page.locator("#fault-sandbox-review-rows")).to_contain_text("报告可追溯")
         expect(page.locator("#fault-sandbox-diagnosis-inspector")).to_be_visible()
-        expect(page.locator("#fault-sandbox-diagnosis-summary")).to_contain_text("dry-run")
+        expect(page.locator("#fault-sandbox-diagnosis-summary")).to_contain_text("空跑")
         expect(page.locator("#fault-sandbox-affected-path")).to_have_text("RA -> RA")
         expect(page.locator("#fault-sandbox-first-abnormal-node")).to_have_text("RA")
         expect(page.locator("#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node='failure-path']")).to_have_count(3)
@@ -2300,7 +2300,7 @@ def test_fault_prepare_defaults_to_candidate_boundary_decision_board(
         assert board_box["height"] <= 132
 
         for index in range(page.locator("textarea[data-boundary-id]").count()):
-            page.locator("textarea[data-boundary-id]").nth(index).fill("确认 dry-run 演示边界。")
+            page.locator("textarea[data-boundary-id]").nth(index).fill("确认空跑演示边界。")
         expect(board.locator("#fault-decision-boundary-summary")).to_have_text("2/2 已回答")
         expect(board.locator("#fault-decision-next-action")).to_contain_text("可进入沙盒")
         expect(board.locator("#fault-decision-next-action")).to_contain_text("候选矩阵")
@@ -3067,7 +3067,7 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
         expect(page.locator("#fault-coverage-evidence")).to_contain_text("自动补齐证据")
         expect(page.locator("#fault-coverage-evidence")).to_contain_text("thr_lock_rel")
         for index in range(page.locator("textarea[data-boundary-id]").count()):
-            page.locator("textarea[data-boundary-id]").nth(index).fill("确认 dry-run 演示边界。")
+            page.locator("textarea[data-boundary-id]").nth(index).fill("确认空跑演示边界。")
         expect(page.locator("#fault-sandbox-next")).to_be_enabled()
         geometry.append(_assert_deepseek_page_contract(page, "fault-injection-prepare"))
         _screenshot(page, "03-fault-injection-prepare")
