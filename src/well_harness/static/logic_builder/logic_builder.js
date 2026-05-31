@@ -66,6 +66,18 @@
     "assumption": "候选假设",
     "local": "本地补齐",
   };
+  const CIRCUIT_ROLE_LABELS = {
+    input: "输入",
+    gate: "逻辑门",
+    intermediate: "中间节点",
+    final_output: "最终输出",
+  };
+  const CIRCUIT_STATE_LABELS = {
+    idle: "待命",
+    active: "已触发",
+    blocked: "已阻塞",
+    fault: "故障",
+  };
   const state = {
     requirementsPayload: null,
     drawingPayload: null,
@@ -1491,8 +1503,8 @@
   function circuitNodeParamSummary(node) {
     if (!node) return "";
     const parts = [
-      node.circuit_role ? `role:${node.circuit_role}` : "",
-      node.state ? `state:${node.state}` : "",
+      node.circuit_role ? `角色：${circuitRoleLabel(node.circuit_role)}` : "",
+      node.state ? `状态：${circuitStateLabel(node.state)}` : "",
       circuitTechnicalLabel(node),
       node.description_zh || "",
     ].filter(Boolean);
@@ -1515,7 +1527,7 @@
       const wireLabel = `${edge.source || state.selectedTargetId.split("->")[0] || "source"} → ${edge.target || state.selectedTargetId.split("->")[1] || "target"}`;
       return {
         sourceText,
-        paramText: `${wireLabel}${edge.state ? ` · state:${edge.state}` : ""}`,
+        paramText: `${wireLabel}${edge.state ? ` · 状态：${circuitStateLabel(edge.state)}` : ""}`,
       };
     }
     const circuitNode = circuitNodeBySelectableId(state.selectedTargetId);
@@ -1775,6 +1787,14 @@
     const normalized = String(value || "idle");
     if (normalized === "active" || normalized === "blocked" || normalized === "fault") return normalized;
     return "idle";
+  }
+
+  function circuitRoleLabel(value) {
+    return CIRCUIT_ROLE_LABELS[value] || value || "";
+  }
+
+  function circuitStateLabel(value) {
+    return CIRCUIT_STATE_LABELS[value] || value || "";
   }
 
   function setCircuitVisualState(element, rawState) {

@@ -5575,6 +5575,12 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "logic-circuit-node" in logic_script
     assert "circuitDisplayLabel" in logic_script
     assert "circuitTechnicalLabel" in logic_script
+    assert "circuitRoleLabel" in logic_script
+    assert "角色：" in logic_script
+    assert "状态：" in logic_script
+    assert "role:${node.circuit_role}" not in logic_script
+    assert "state:${node.state}" not in logic_script
+    assert " · state:${edge.state}" not in logic_script
     assert "circuitProvenanceKindForNode" in logic_script
     assert "renderCircuitProvenanceLegend" in logic_script
     assert "setCircuitProvenanceFilter" in logic_script
