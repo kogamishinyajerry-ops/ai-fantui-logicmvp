@@ -3054,7 +3054,7 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
         page.wait_for_url("**/logic-builder")
         _show_logic_builder_workbench(page)
         expect(page.locator("#logic-result-state")).to_have_text("电路图已完成绘制")
-        expect(page.locator("#logic-canvas-counts")).to_contain_text("20 circuit nodes")
+        expect(page.locator("#logic-canvas-counts")).to_contain_text("20 个电路节点")
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         assert page.locator("#logic-circuit-status-details").evaluate("element => element.open") is False
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
@@ -3375,7 +3375,7 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
         _show_logic_builder_workbench(page)
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
-        expect(page.locator("#logic-canvas-counts")).to_contain_text("20 circuit nodes")
+        expect(page.locator("#logic-canvas-counts")).to_contain_text("20 个电路节点")
         assert page.locator("#logic-circuit-status-details").evaluate("element => element.open") is False
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
 
@@ -3434,7 +3434,7 @@ def test_logic_builder_shows_demo_reconstruction_mode_and_concept_mode_warning(
         expect(page.locator("#logic-reconstruction-mode")).to_have_text("当前模式：概念图，尚未对齐演示舱电路")
         expect(page.locator("#logic-reconstruction-fidelity")).to_have_text("链路覆盖：未启用")
         expect(page.locator("#logic-demo-bridge")).to_have_text("打开对照视图")
-        expect(page.locator("#logic-canvas-counts")).to_have_text("3 nodes · 2 edges · 1 panels")
+        expect(page.locator("#logic-canvas-counts")).to_have_text("3 个节点 · 2 条连线 · 1 个面板")
     finally:
         page.close()
 
@@ -3759,7 +3759,7 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         expect(page.locator("#logic-back")).to_have_text("更多：返回需求")
         expect(page.locator("#logic-canvas-compact-toolbar")).to_be_visible()
         expect(page.locator("#logic-canvas-compact-toolbar")).to_have_class(re.compile(r"logic-canvas-compact-toolbar"))
-        expect(page.locator("#logic-canvas-compact-toolbar #logic-canvas-counts")).to_contain_text("20 circuit nodes")
+        expect(page.locator("#logic-canvas-compact-toolbar #logic-canvas-counts")).to_contain_text("20 个电路节点")
         expect(page.locator("#logic-canvas-compact-toolbar #logic-provenance-filter")).to_be_visible()
         expect(page.locator("#logic-canvas-compact-toolbar #logic-canvas-source")).to_be_visible()
         expect(page.locator("#logic-mode-dock [data-logic-mode]")).to_have_count(5)
