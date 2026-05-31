@@ -169,6 +169,12 @@
     safety: "安全",
     traceability: "可追溯性",
   };
+  const INJECTION_MODE_LABELS = {
+    override: "覆盖注入",
+    override_value: "覆盖值注入",
+    toggle_sequence: "序列切换",
+    dry_run_observe: "空跑观测",
+  };
   const BOUNDARY_TOKENS = Object.keys(BOUNDARY_TOKEN_LABELS).sort((left, right) => right.length - left.length);
   const BOUNDARY_TOKEN_PATTERN = new RegExp(BOUNDARY_TOKENS.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
 
@@ -190,6 +196,12 @@
 
   function normalizeText(value) {
     return (value == null || value === "") ? "未提供" : value;
+  }
+
+  function injectionModeLabel(value, fallback = "未提供") {
+    const normalized = String(value == null ? "" : value).trim();
+    if (!normalized) return fallback;
+    return INJECTION_MODE_LABELS[normalized] || normalized;
   }
 
   function reviewCategoryLabel(value) {
@@ -1665,14 +1677,16 @@
         : "无候选沙盒路径",
       node: compactRailLabel(planNode),
       snapshot: plans.length
-        ? `${compactRailLabel(firstPlan.signal_name || firstPlan.node_id)} · ${normalizeText(firstPlan.injection_mode)} · 不运行仿真节拍`
+        ? `${compactRailLabel(firstPlan.signal_name || firstPlan.node_id)} · ${injectionModeLabel(firstPlan.injection_mode)} · 不运行仿真节拍`
         : "无输入快照",
       pathNodes: [
         {
           id: planId || "plan",
           kind: "计划",
           title: compactRailLabel(planNode || "候选计划"),
-          meta: normalizeText(firstPlan.injection_mode || firstPlan.fault_scenario_id || "空跑"),
+          meta: firstPlan.injection_mode
+            ? injectionModeLabel(firstPlan.injection_mode)
+            : normalizeText(firstPlan.fault_scenario_id || "空跑"),
           reviewRowId: "SR-04",
           traceId: planLink.traceId,
           reportId: planLink.reportId,
@@ -2628,13 +2642,14 @@
       return;
     }
     for (const item of items) {
+      const modeText = injectionModeLabel(item.injection_mode, "模式");
       const card = document.createElement("article");
       card.className = "sandbox-plan-card";
       card.style.cursor = "pointer";
       card.tabIndex = 0;
       card.innerHTML = `
         <strong>${escapeText(item.id || item.fault_scenario_id)}</strong>
-        <code>${escapeText(item.fault_scenario_id || "场景")} · ${escapeText(item.node_id || "节点")} · ${escapeText(item.injection_mode || "模式")}</code>
+        <code>${escapeText(item.fault_scenario_id || "场景")} · ${escapeText(item.node_id || "节点")} · ${escapeText(modeText)}</code>
         <p>${escapeText(item.safe_range_zh || "模型未返回安全范围。")}</p>
         <p>${escapeText(item.expected_effect_zh || "模型未返回预期影响。")}</p>
         <p class="sandbox-anchor">来源：${escapeText(sourceAnchorLabel(item.source_anchors))}</p>
@@ -2643,7 +2658,7 @@
         renderEvidenceRows(`沙盒计划：${escapeText(item.id || item.fault_scenario_id)}`, [
           {label: "节点", value: normalizeText(item.node_id)},
           {label: "信号", value: normalizeText(item.signal_name)},
-          {label: "注入方式", value: normalizeText(item.injection_mode)},
+          {label: "注入方式", value: injectionModeLabel(item.injection_mode)},
           {label: "安全范围", value: normalizeText(item.safe_range_zh)},
           {label: "预期影响", value: normalizeText(item.expected_effect_zh)},
           {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
