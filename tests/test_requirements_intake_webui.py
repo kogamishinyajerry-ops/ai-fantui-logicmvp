@@ -5821,6 +5821,10 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'addPlanCoverageRow("语义门", coverageTokenLabel(completion.semantic_gate, "场景计划覆盖"))' in sandbox_script
     assert '{label: "补齐语义", value: completion ? coverageTokenLabel(completion.semantic_gate) : "未触发补齐"}' in sandbox_script
     assert 'coverageTokenLabel(payload.plan_coverage_completion.strategy)' in sandbox_script
+    assert "function booleanDisplayLabel" in sandbox_script
+    assert '运行 tick:${booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
+    assert '{label: "运行 tick", value: booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
+    assert '{label: "仅空跑", value: booleanDisplayLabel(execution.dry_run_only !== false)}' in sandbox_script
     assert "deterministic_dry_run_plan" in sandbox_script
     assert "已覆盖" in sandbox_script
     assert "个故障场景" in sandbox_script
@@ -5858,6 +5862,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'addPlanCoverageRow("语义门", completion.semantic_gate || "scenario_plan_coverage")' not in sandbox_script
     assert 'normalizeText(completion.semantic_gate)' not in sandbox_script
     assert 'normalizeText(payload.plan_coverage_completion.strategy)' not in sandbox_script
+    assert '{label: "运行 tick", value: String(Boolean(execution.run_tick))}' not in sandbox_script
+    assert '{label: "仅空跑", value: String(execution.dry_run_only !== false)}' not in sandbox_script
     assert 'allow_fallback: provider.value !== "deepseek"' in sandbox_script
     assert "allow_fallback: true" not in sandbox_script
     assert "self_repair" in sandbox_script
