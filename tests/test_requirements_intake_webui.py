@@ -5807,6 +5807,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "模型输出需要重新生成" in sandbox_script
     assert "renderSandboxInjectionPlan" in sandbox_script
     assert "renderObservationPoints" in sandbox_script
+    assert 'item.node_id || "节点待确认"' in sandbox_script
+    assert 'item.node_id || "node:none"' not in sandbox_script
     assert "renderReviewChecklist" in sandbox_script
     assert "renderPrimaryReviewGates" in sandbox_script
     assert "getReviewCompletion" in sandbox_script

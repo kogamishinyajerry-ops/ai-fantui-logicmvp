@@ -2674,7 +2674,7 @@
       card.tabIndex = 0;
       card.innerHTML = `
         <strong>${escapeText(item.signal_name || item.id)}</strong>
-        <code>${escapeText(item.node_id || "node:none")}</code>
+        <code>${escapeText(item.node_id || "节点待确认")}</code>
         <p>${escapeText(item.check_zh || "观察该信号是否符合预期。")}</p>
       `;
       card.addEventListener("click", () => {
