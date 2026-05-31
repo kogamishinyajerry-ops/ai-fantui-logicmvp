@@ -2236,7 +2236,7 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         expect(page.locator("#fault-sandbox-report-section-rows")).to_contain_text("沙盒审查")
         page.locator("#fault-sandbox-report-section-rows .sandbox-report-section-row").first.click()
         expect(page.locator("#sandbox-evidence-popover")).to_be_visible()
-        expect(page.locator("#sandbox-evidence-body")).to_contain_text("report section")
+        expect(page.locator("#sandbox-evidence-body")).to_contain_text("报告章节")
         page.locator("#sandbox-evidence-close").click()
         expect(page.locator(".sandbox-review-item")).to_have_count(2)
         expect(page.locator("#fault-sandbox-detail-drawer")).to_be_hidden()
