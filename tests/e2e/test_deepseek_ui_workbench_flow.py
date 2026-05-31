@@ -1696,8 +1696,10 @@ def test_fault_matrix_selection_carries_review_linkage_into_sandbox(
         expect(summary).to_have_attribute("data-active-review-row", "SR-06")
         expect(summary).to_have_attribute("data-active-trace-id", "ET-04")
         expect(summary).to_have_attribute("data-active-report-id", "RP-06")
-        for token in ["沙盒预选", "SR-06", "ET-04", "RP-06", "sandbox_candidate", "truth_effect:none"]:
+        for token in ["沙盒预选", "SR-06", "ET-04", "RP-06"]:
             expect(summary).to_contain_text(token)
+        for boundary in ["sandbox_candidate", "truth_effect:none", "controller_truth_modified:false"]:
+            expect(summary.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
 
         page.locator("#fault-context-close").click()
         for index in range(page.locator("textarea[data-boundary-id]").count()):
