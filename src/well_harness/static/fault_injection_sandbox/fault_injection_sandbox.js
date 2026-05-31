@@ -737,7 +737,7 @@
         },
         {
           id: "first_visit_confirm_truth_boundary",
-          prompt_zh: "确认不修改 controller truth、认证结论和生产配置？",
+          prompt_zh: "确认不修改控制真相、认证结论和生产配置？",
           rationale_zh: "所有输出保持沙盒候选态，不进入适航或生产声明。",
           blocks: "fault_injection",
         },
@@ -750,7 +750,7 @@
         },
         {
           id: "first_visit_confirm_truth_boundary",
-          prompt_zh: "确认不修改 controller truth、认证结论和生产配置？",
+          prompt_zh: "确认不修改控制真相、认证结论和生产配置？",
           answer_zh: "确认不修改控制器真值和认证结论。",
         },
       ],
@@ -836,7 +836,7 @@
         {
           id: "first_visit_review_dry_run",
           category: "dry_run",
-          condition_zh: "确认执行合同保持 run_tick:false、simulate:false、dry_run_only:true。",
+          condition_zh: "确认执行合同保持不运行 tick、不执行仿真、仅 dry-run。",
           pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真 tick。",
           source_anchors: anchors,
         },
@@ -1124,7 +1124,7 @@
     }
     setPrimaryGateDetail(
       "dry-run",
-      `run_tick:${Boolean(execution.run_tick)} · simulate:${Boolean(execution.simulate)} · dry_run_only:${execution.dry_run_only !== false}`,
+      `运行 tick:${Boolean(execution.run_tick)} · 仿真执行:${Boolean(execution.simulate)} · 仅 dry-run:${execution.dry_run_only !== false}`,
     );
     setPrimaryGateDetail(
       "coverage",
@@ -1398,12 +1398,12 @@
       },
       {
         title: "执行合同",
-        value: `run_tick:${Boolean(execution.run_tick)} · simulate:${Boolean(execution.simulate)}`,
+        value: `运行 tick:${Boolean(execution.run_tick)} · 仿真执行:${Boolean(execution.simulate)}`,
         state: execution && execution.run_tick === false && execution.simulate === false ? "ready" : "warn",
         rows: [
-          {label: "run_tick", value: String(Boolean(execution.run_tick))},
-          {label: "simulate", value: String(Boolean(execution.simulate))},
-          {label: "dry_run_only", value: String(execution.dry_run_only !== false)},
+          {label: "运行 tick", value: String(Boolean(execution.run_tick))},
+          {label: "仿真执行", value: String(Boolean(execution.simulate))},
+          {label: "仅 dry-run", value: String(execution.dry_run_only !== false)},
           {label: "要求", value: "dry-run 仅回放，不写入控制器。"},
         ],
       },
@@ -1497,24 +1497,24 @@
         id: "SR-02",
         title: "阈值一致性",
         ...sandboxReviewRowStatus(dryRunSafe, false),
-        evidence: dryRunSafe ? "dry-run" : "contract gap",
-        sourceLabel: "execution_contract",
-        description: "run_tick:false、simulate:false、dry_run_only:true 必须保持一致。",
+        evidence: dryRunSafe ? "dry-run" : "合同缺口",
+        sourceLabel: "执行合同",
+        description: "运行 tick:false、仿真执行:false、仅 dry-run:true 必须保持一致。",
       },
       {
         id: "SR-03",
         title: "不确定项处理",
         ...sandboxReviewRowStatus(false, hasReviews),
         evidence: `${reviews.length} 审查项`,
-        sourceLabel: "review_checklist",
+        sourceLabel: "审查清单",
         description: "开放不确定项保留为人工复核，不升级为控制真值。",
       },
       {
         id: "SR-04",
         title: "故障覆盖",
         ...sandboxReviewRowStatus(Boolean(planCoverage) || (hasPlans && hasObservations), false),
-        evidence: planCoverage ? "completion" : `${plans.length}/${observations.length}`,
-        sourceLabel: "fault_scenarios",
+        evidence: planCoverage ? "覆盖完成" : `${plans.length}/${observations.length}`,
+        sourceLabel: "故障场景",
         description: "候选故障需要至少一条计划或自动补齐证据。",
       },
       {
@@ -1522,7 +1522,7 @@
         title: "回放可复现",
         ...sandboxReviewRowStatus(hasPlans && dryRunSafe, false),
         evidence: `${plans.length} 回放引用`,
-        sourceLabel: "localStorage draft",
+        sourceLabel: "本地草稿",
         description: "沙盒回放只读复现，不调用真实仿真 tick。",
       },
       {
@@ -1530,15 +1530,15 @@
         title: "报告可追溯",
         ...sandboxReviewRowStatus(hasReviews || hasObservations, false),
         evidence: `${reviews.length + observations.length} 回链`,
-        sourceLabel: "evidence tiles",
+        sourceLabel: "证据卡片",
         description: "报告、证据和审查行必须能互相回链。",
       },
       {
         id: "SR-07",
         title: "控制真相未修改",
         ...sandboxReviewRowStatus(truthSafe, false),
-        evidence: truthSafe ? "diff=0" : "boundary violation",
-        sourceLabel: "candidate chips",
+        evidence: truthSafe ? "差异=0" : "边界违规",
+        sourceLabel: "候选标签",
         description: "保持 truth_effect:none、certification_claim:none、controller_truth_modified:false。",
       },
     ];
@@ -1688,7 +1688,7 @@
       ],
       suggestions: [
         `修订单：复核 ${compactRailLabel(planNode)} 边界。`,
-        `${reviewRowsBuilt.length} 条 SR 保持仅候选态。`,
+        `${reviewRowsBuilt.length} 条审查行保持仅候选态。`,
         `人工复核：${compactRailLabel(firstReview.id || firstReview.condition_zh)}。`,
       ],
       evidence: [
@@ -1829,24 +1829,24 @@
         ...traceLink("ET-04", "REPORT", "报告"),
         linkedReviewRows: reviewRowsForTrace("ET-04"),
         rows: [
-          {label: "report section", value: "sandbox replay review package"},
-          {label: "related run frames", value: `${observations.length} 观测点`},
-          {label: "related faults", value: `${plans.length} 沙盒计划`},
-          {label: "report sections", value: reportSections.map((item) => item.title).join(" / ")},
-          {label: "controller truth", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
+          {label: "报告章节", value: "沙盒回放审查包"},
+          {label: "相关运行帧", value: `${observations.length} 观测点`},
+          {label: "相关故障", value: `${plans.length} 沙盒计划`},
+          {label: "报告章节列表", value: reportSections.map((item) => item.title).join(" / ")},
+          {label: "控制真相", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
         ],
       },
       {
         id: "ET-01",
         title: "来源锚点",
-        value: anchor ? normalizeText(anchor.id || anchor.kind) : "candidate source",
+        value: anchor ? normalizeText(anchor.id || anchor.kind) : "候选来源",
         ...traceLink("ET-01", "SOURCE", "来源"),
         linkedReviewRows: reviewRowsForTrace("ET-01"),
         rows: [
-          {label: "source excerpt", value: anchor ? normalizeText(anchor.quote_zh || anchor.quote || anchor.text) : "候选节点来源待人工复核。"},
-          {label: "anchor ID", value: anchor ? normalizeText(anchor.id) : "ui-blueprint-preview"},
-          {label: "requirement level", value: anchor ? normalizeText(anchor.requirement_level || anchor.level) : "candidate"},
-          {label: "confidence", value: normalizeText(anchor && (anchor.confidence || anchor.confidence_label))},
+          {label: "来源摘录", value: anchor ? normalizeText(anchor.quote_zh || anchor.quote || anchor.text) : "候选节点来源待人工复核。"},
+          {label: "锚点 ID", value: anchor ? normalizeText(anchor.id) : "蓝图预览"},
+          {label: "需求层级", value: anchor ? normalizeText(anchor.requirement_level || anchor.level) : "候选"},
+          {label: "置信度", value: normalizeText(anchor && (anchor.confidence || anchor.confidence_label))},
         ],
       },
       {
@@ -1856,10 +1856,10 @@
         ...traceLink("ET-02", "RUN", "定位"),
         linkedReviewRows: reviewRowsForTrace("ET-02"),
         rows: [
-          {label: "related run frames", value: "dry-run only"},
-          {label: "primary plan", value: normalizeText(primaryPlan.id)},
-          {label: "related faults", value: plans.map((item) => item && item.fault_scenario_id).filter(Boolean).join(", ") || "未提供"},
-          {label: "input snapshot", value: normalizeText(primaryPlan.signal_name || primaryPlan.node_id)},
+          {label: "相关运行帧", value: "仅 dry-run"},
+          {label: "主计划", value: normalizeText(primaryPlan.id)},
+          {label: "相关故障", value: plans.map((item) => item && item.fault_scenario_id).filter(Boolean).join(", ") || "未提供"},
+          {label: "输入快照", value: normalizeText(primaryPlan.signal_name || primaryPlan.node_id)},
         ],
       },
       {
@@ -1869,8 +1869,8 @@
         ...traceLink("ET-03", "REVIEW", "审查"),
         linkedReviewRows: reviewRowsForTrace("ET-03"),
         rows: [
-          {label: "reviewer note", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
-          {label: "blueprint rows", value: reviewRowsBuilt.map((item) => item.id).join(", ")},
+          {label: "审查备注", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
+          {label: "蓝图行", value: reviewRowsBuilt.map((item) => item.id).join(", ")},
           {label: "候选态边界", value: "truth_effect:none / certification_claim:none"},
         ],
       },
@@ -1939,7 +1939,7 @@
         title: "摘要",
         metric: `${plans.length} 计划`,
         rows: [
-          {label: "report section", value: "摘要"},
+          {label: "报告章节", value: "摘要"},
           {label: "概况", value: payload && payload.summary_zh ? payload.summary_zh : "沙盒 dry-run 候选报告。"},
           {label: "节点", value: `${observations.length} 观测点`},
           {label: "事件", value: `${plans.length + reviews.length} 候选事件`},
@@ -1948,12 +1948,12 @@
       {
         id: "RP-02",
         title: "需求来源",
-        metric: sourceAnchor ? normalizeText(sourceAnchor.id || sourceAnchor.kind) : "candidate",
+        metric: sourceAnchor ? normalizeText(sourceAnchor.id || sourceAnchor.kind) : "候选",
         rows: [
-          {label: "report section", value: "需求来源"},
-          {label: "source excerpt", value: sourceAnchor ? normalizeText(sourceAnchor.quote_zh || sourceAnchor.quote || sourceAnchor.text) : "候选预览无直接原文摘录。"},
-          {label: "anchor ID", value: sourceAnchor ? normalizeText(sourceAnchor.id) : "ui-blueprint-preview"},
-          {label: "requirement level", value: sourceAnchor ? normalizeText(sourceAnchor.requirement_level || sourceAnchor.level) : "candidate"},
+          {label: "报告章节", value: "需求来源"},
+          {label: "来源摘录", value: sourceAnchor ? normalizeText(sourceAnchor.quote_zh || sourceAnchor.quote || sourceAnchor.text) : "候选预览无直接原文摘录。"},
+          {label: "锚点 ID", value: sourceAnchor ? normalizeText(sourceAnchor.id) : "蓝图预览"},
+          {label: "需求层级", value: sourceAnchor ? normalizeText(sourceAnchor.requirement_level || sourceAnchor.level) : "候选"},
         ],
       },
       {
@@ -1961,10 +1961,10 @@
         title: "逻辑图",
         metric: `${observations.length} 观测节点`,
         rows: [
-          {label: "report section", value: "逻辑图"},
+          {label: "报告章节", value: "逻辑图"},
           {label: "相关节点", value: observations.map((item) => item && item.node_id).filter(Boolean).join(", ") || "未提供"},
           {label: "相关信号", value: observations.map((item) => item && item.signal_name).filter(Boolean).join(", ") || "未提供"},
-          {label: "canvas link", value: "logic-builder candidate canvas"},
+          {label: "画布链接", value: "逻辑图候选画布"},
         ],
       },
       {
@@ -1972,10 +1972,10 @@
         title: "仿真参数",
         metric: "dry-run",
         rows: [
-          {label: "report section", value: "仿真参数"},
-          {label: "run_tick", value: String(Boolean(execution.run_tick))},
-          {label: "simulate", value: String(Boolean(execution.simulate))},
-          {label: "dry_run_only", value: String(execution.dry_run_only !== false)},
+          {label: "报告章节", value: "仿真参数"},
+          {label: "运行 tick", value: String(Boolean(execution.run_tick))},
+          {label: "仿真执行", value: String(Boolean(execution.simulate))},
+          {label: "仅 dry-run", value: String(execution.dry_run_only !== false)},
         ],
       },
       {
@@ -1983,10 +1983,10 @@
         title: "故障覆盖",
         metric: `${plans.length}/${observations.length}`,
         rows: [
-          {label: "report section", value: "故障覆盖"},
-          {label: "related faults", value: plans.map((item) => item && item.fault_scenario_id).filter(Boolean).join(", ") || "未提供"},
-          {label: "related run frames", value: observations.map((item) => item && item.id).filter(Boolean).join(", ") || "未提供"},
-          {label: "coverage evidence", value: payload && payload.plan_coverage_completion ? normalizeText(payload.plan_coverage_completion.strategy) : "模型返回计划覆盖"},
+          {label: "报告章节", value: "故障覆盖"},
+          {label: "相关故障", value: plans.map((item) => item && item.fault_scenario_id).filter(Boolean).join(", ") || "未提供"},
+          {label: "相关运行帧", value: observations.map((item) => item && item.id).filter(Boolean).join(", ") || "未提供"},
+          {label: "覆盖证据", value: payload && payload.plan_coverage_completion ? normalizeText(payload.plan_coverage_completion.strategy) : "模型返回计划覆盖"},
         ],
       },
       {
@@ -1994,21 +1994,21 @@
         title: "沙盒审查",
         metric: `${reviewRowsBuilt.length} 审查行`,
         rows: [
-          {label: "report section", value: "沙盒审查"},
-          {label: "review rows", value: reviewRowsBuilt.map((item) => `${item.id}:${item.label}`).join(", ")},
-          {label: "reviewer note", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
+          {label: "报告章节", value: "沙盒审查"},
+          {label: "审查行", value: reviewRowsBuilt.map((item) => `${item.id}:${item.label}`).join(", ")},
+          {label: "审查备注", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
           {label: "候选态边界", value: "truth_effect:none / certification_claim:none"},
         ],
       },
       {
         id: "RP-07",
         title: "未决风险",
-        metric: truthSafe ? "0 差异" : "risk",
+        metric: truthSafe ? "0 差异" : "风险",
         rows: [
-          {label: "report section", value: "未决风险"},
-          {label: "controller truth", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
-          {label: "certification claim", value: normalizeText(payload && payload.certification_claim)},
-          {label: "next action", value: truthSafe ? "可生成候选修订单，仍需人工审查。" : "停止并复核候选态边界。"},
+          {label: "报告章节", value: "未决风险"},
+          {label: "控制真相", value: `controller_truth_modified:${Boolean(payload && payload.controller_truth_modified)}`},
+          {label: "认证声明", value: normalizeText(payload && payload.certification_claim)},
+          {label: "下一步", value: truthSafe ? "可生成候选修订单，仍需人工审查。" : "停止并复核候选态边界。"},
         ],
       },
     ];
@@ -2037,7 +2037,7 @@
         ...event,
         traceId: link.traceId,
         reportTitle: report.title || event.reportId,
-        metric: report.metric || "candidate",
+        metric: report.metric || "候选",
         linkedReviewRows: reviewRowsForReport(event.reportId).includes(event.reviewRowId)
           ? reviewRowsForReport(event.reportId)
           : [event.reviewRowId],
@@ -2488,7 +2488,7 @@
         item.id,
         item.title,
         item.metric,
-        reviewRowsForReport(item.id).join(", ") || "report section",
+        reviewRowsForReport(item.id).join(", ") || "报告章节",
         {
           reviewRowId,
           traceId: link.traceId,
@@ -2496,7 +2496,7 @@
           packageKind: "review-package-report",
           decision: sandboxReviewDecisionLabel(reviewRow.state),
           evidence: item.metric,
-          sourceLabel: reviewRowsForReport(item.id).join(", ") || "report section",
+          sourceLabel: reviewRowsForReport(item.id).join(", ") || "报告章节",
           actionLabel: "打开",
         },
       );
@@ -2542,8 +2542,8 @@
     }
     if (action === "revision") {
       openReportPackage("报告预览：生成修订单", [
-        {label: "report sections", value: `${sections.length} 章节`},
-        {label: "handoff", value: "候选修订单将回到 logic-builder，仍需 3 个一级闸门确认。"},
+        {label: "报告章节", value: `${sections.length} 章节`},
+        {label: "交接", value: "候选修订单将回到逻辑图，仍需 3 个一级闸门确认。"},
         {label: "候选态边界", value: "controller_truth_modified:false"},
       ]);
       return;
@@ -2553,9 +2553,9 @@
       return;
     }
     openReportPackage("报告预览：重新运行沙盒", [
-      {label: "run mode", value: "dry-run only"},
-      {label: "related run frames", value: `${sandboxList(payload, "observation_points").length} 观测点`},
-      {label: "next action", value: "使用顶部检查按钮重新生成候选配置。"},
+      {label: "运行模式", value: "仅 dry-run"},
+      {label: "相关运行帧", value: `${sandboxList(payload, "observation_points").length} 观测点`},
+      {label: "下一步", value: "使用顶部检查按钮重新生成候选配置。"},
     ]);
   }
 
@@ -2571,16 +2571,16 @@
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "sandbox-checklist-chip";
-      chip.innerHTML = `<strong>${escapeText(item.category || "review")}</strong> ${escapeText(item.condition_zh || item.id || "审查条目")}`;
+      chip.innerHTML = `<strong>${escapeText(item.category || "审查")}</strong> ${escapeText(item.condition_zh || item.id || "审查条目")}`;
       chip.addEventListener("click", () => {
         const rows = [
-          {label: "条目", value: normalizeText(item.id || item.condition_zh || "review")},
-          {label: "类型", value: normalizeText(item.category || "review")},
+          {label: "条目", value: normalizeText(item.id || item.condition_zh || "审查")},
+          {label: "类型", value: normalizeText(item.category || "审查")},
           {label: "审查条件", value: normalizeText(item.condition_zh)},
           {label: "通过标准", value: normalizeText(item.pass_criteria_zh)},
           {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
         ];
-        renderEvidenceRows(`审查细项：${normalizeText(item.condition_zh || item.id || "review")}`, rows);
+        renderEvidenceRows(`审查细项：${normalizeText(item.condition_zh || item.id || "审查")}`, rows);
       });
       checklistStrip.appendChild(chip);
     });
@@ -2617,7 +2617,7 @@
       card.tabIndex = 0;
       card.innerHTML = `
         <strong>${escapeText(item.id || item.fault_scenario_id)}</strong>
-        <code>${escapeText(item.fault_scenario_id || "scenario")} · ${escapeText(item.node_id || "node")} · ${escapeText(item.injection_mode || "mode")}</code>
+        <code>${escapeText(item.fault_scenario_id || "场景")} · ${escapeText(item.node_id || "节点")} · ${escapeText(item.injection_mode || "模式")}</code>
         <p>${escapeText(item.safe_range_zh || "模型未返回安全范围。")}</p>
         <p>${escapeText(item.expected_effect_zh || "模型未返回预期影响。")}</p>
         <p class="sandbox-anchor">来源：${escapeText(sourceAnchorLabel(item.source_anchors))}</p>
@@ -2693,7 +2693,7 @@
       card.tabIndex = 0;
       card.innerHTML = `
         <strong>${escapeText(item.condition_zh || item.id)}</strong>
-        <code>${escapeText(item.category || "review")}</code>
+        <code>${escapeText(item.category || "审查")}</code>
         <p>${escapeText(item.pass_criteria_zh || "需要人工确认。")}</p>
       `;
       card.addEventListener("click", () => {
