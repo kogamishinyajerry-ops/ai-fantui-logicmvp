@@ -2228,13 +2228,16 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .sandbox-report-invariants span {
+  display: inline-flex;
+  align-items: center;
   overflow: hidden;
   border: 1px solid rgba(38, 58, 82, 0.82);
   border-radius: 999px;
   color: #b8c9dc;
-  font-family: "Courier New", monospace;
-  font-size: 10px;
-  padding: 3px 6px;
+  font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 9px;
+  line-height: 1.1;
+  padding: 2px 6px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
