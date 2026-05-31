@@ -1073,7 +1073,7 @@
     burdenOutputs.innerHTML = [`${scenarios} 个故障场景`, `${points} 个注入点`, `${questions} 个边界问题`]
       .map((item) => `<li>${escapeText(item)}</li>`)
       .join("");
-    setFaultDecisionCandidateSummary(`${scenarios} scenarios · ${points} points`);
+    setFaultDecisionCandidateSummary(`${scenarios} 场景 · ${points} 注入点`);
     setFaultDecisionBoundarySummary(`${Math.min(answers, questions)}/${questions} 已回答`);
   }
 
@@ -1199,7 +1199,7 @@
     const rowCount = Math.max(scenarios.length, points.length);
     const previousRowId = state.activeFaultMatrixSelection ? state.activeFaultMatrixSelection.rowId : "";
     state.activeFaultMatrixSelection = null;
-    if (faultCandidateMatrixCount) faultCandidateMatrixCount.textContent = `${rowCount} rows`;
+    if (faultCandidateMatrixCount) faultCandidateMatrixCount.textContent = `${rowCount} 行`;
     if (!faultCandidateMatrixBody) return;
     faultCandidateMatrixBody.innerHTML = "";
     if (!rowCount) {
@@ -1288,7 +1288,7 @@
 
   function renderFaultScenarios(payload) {
     const items = payload.fault_scenarios || [];
-    scenarioCount.textContent = `${items.length} scenarios`;
+    scenarioCount.textContent = `${items.length} 场景`;
     clearChildren(scenarioChips);
     clearChildren(scenarioCards);
     if (!items.length) {
@@ -1331,7 +1331,7 @@
 
   function renderInjectionPoints(payload) {
     const items = payload.injection_points || [];
-    pointCount.textContent = `${items.length} points`;
+    pointCount.textContent = `${items.length} 注入点`;
     clearChildren(pointChips);
     clearChildren(pointCards);
     if (!items.length) {
