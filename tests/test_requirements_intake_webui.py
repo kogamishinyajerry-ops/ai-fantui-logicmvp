@@ -5827,6 +5827,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert '运行仿真节拍:${booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
     assert '{label: "运行仿真节拍", value: booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
     assert 'label: runTick ? "运行仿真节拍" : "不运行仿真节拍"' in sandbox_script
+    assert "运行仿真节拍为否、仿真执行为否、仅空跑为是必须保持一致。" in sandbox_script
     assert '{label: "仅空跑", value: booleanDisplayLabel(execution.dry_run_only !== false)}' in sandbox_script
     assert "deterministic_dry_run_plan" in sandbox_script
     assert "已覆盖" in sandbox_script
@@ -5866,6 +5867,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'normalizeText(completion.semantic_gate)' not in sandbox_script
     assert 'normalizeText(payload.plan_coverage_completion.strategy)' not in sandbox_script
     assert '运行 tick:${booleanDisplayLabel(Boolean(execution.run_tick))}' not in sandbox_script
+    assert "运行 tick:false、仿真执行:false、仅空跑:true 必须保持一致。" not in sandbox_script
     assert '{label: "运行 tick", value: booleanDisplayLabel(Boolean(execution.run_tick))}' not in sandbox_script
     assert 'label: runTick ? "运行仿真步" : "不运行仿真步"' not in sandbox_script
     assert '{label: "运行 tick", value: String(Boolean(execution.run_tick))}' not in sandbox_script

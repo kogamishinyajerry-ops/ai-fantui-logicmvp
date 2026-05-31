@@ -1540,7 +1540,7 @@
         ...sandboxReviewRowStatus(dryRunSafe, false),
         evidence: dryRunSafe ? "空跑" : "合同缺口",
         sourceLabel: "执行合同",
-        description: "运行 tick:false、仿真执行:false、仅空跑:true 必须保持一致。",
+        description: "运行仿真节拍为否、仿真执行为否、仅空跑为是必须保持一致。",
       },
       {
         id: "SR-03",
