@@ -649,9 +649,9 @@
       <code data-link-summary-kind="trace">${escapeText(selection.traceId)}</code>
       <code data-link-summary-kind="report">${escapeText(selection.reportId)}</code>
       <span class="fault-context-link-note">${escapeText(selection.label || "审查联动")}</span>
-      <span class="fault-context-link-boundary">sandbox_candidate</span>
-      <span class="fault-context-link-boundary">truth_effect:none</span>
-      <span class="fault-context-link-boundary">controller_truth_modified:false</span>
+      <span class="fault-context-link-boundary" data-boundary-token="sandbox_candidate">沙箱候选</span>
+      <span class="fault-context-link-boundary" data-boundary-token="truth_effect:none">真值影响：无</span>
+      <span class="fault-context-link-boundary" data-boundary-token="controller_truth_modified:false">控制器真值已改动：否</span>
     `;
     return shell;
   }
