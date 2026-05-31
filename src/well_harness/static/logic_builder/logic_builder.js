@@ -1828,8 +1828,8 @@
     return CIRCUIT_ROLE_LABELS[value] || value || "";
   }
 
-  function circuitStateLabel(value) {
-    return CIRCUIT_STATE_LABELS[value] || value || "";
+  function circuitStateLabel(value, fallback = "状态待确认") {
+    return CIRCUIT_STATE_LABELS[value] || fallback;
   }
 
   function setCircuitVisualState(element, rawState) {

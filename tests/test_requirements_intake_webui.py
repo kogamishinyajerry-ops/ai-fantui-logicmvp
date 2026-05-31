@@ -5622,6 +5622,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "circuitDisplayLabel" in logic_script
     assert "circuitTechnicalLabel" in logic_script
     assert "circuitRoleLabel" in logic_script
+    assert 'function circuitStateLabel(value, fallback = "状态待确认")' in logic_script
+    assert "return CIRCUIT_STATE_LABELS[value] || fallback;" in logic_script
     assert "角色：" in logic_script
     assert "状态：" in logic_script
     assert "技术 ID：" in logic_script
@@ -5633,6 +5635,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "role:${node.circuit_role}" not in logic_script
     assert "state:${node.state}" not in logic_script
     assert " · state:${edge.state}" not in logic_script
+    assert "return CIRCUIT_STATE_LABELS[value] || value || \"\";" not in logic_script
     assert "circuitProvenanceKindForNode" in logic_script
     assert "renderCircuitProvenanceLegend" in logic_script
     assert "setCircuitProvenanceFilter" in logic_script

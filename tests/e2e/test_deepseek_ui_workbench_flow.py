@@ -4297,6 +4297,52 @@ def test_logic_builder_circuit_view_provenance_legend_filters_node_sources(
         page.close()
 
 
+def test_logic_builder_unknown_circuit_state_uses_readable_fallback(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 980, "height": 760})
+    drawing = _circuit_view_drawing()
+    view = drawing["circuit_view"]
+    view["nodes"].append(
+        {
+            "id": "state_probe",
+            "label": "状态探针",
+            "circuit_role": "input",
+            "state": "backend_pending_raw",
+            "x": 700,
+            "y": 330,
+            "width": 132,
+            "height": 28,
+        }
+    )
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        state_probe = page.locator('[data-demo-node-id="state_probe"]')
+        expect(state_probe).to_have_attribute("data-state", "idle")
+        stored_state = page.evaluate(
+            """() => {
+              const drawing = JSON.parse(localStorage.getItem("ai-fantui-logic-builder-drawing-v1"));
+              return drawing.circuit_view.nodes.find((node) => node.id === "state_probe").state;
+            }"""
+        )
+        assert stored_state == "backend_pending_raw"
+        page.click('[data-demo-node-id="state_probe"]')
+        expect(page.locator("#logic-annotation-params")).to_contain_text("状态：状态待确认")
+        expect(page.locator("#logic-annotation-params")).not_to_contain_text("backend_pending_raw")
+    finally:
+        page.close()
+
+
 def test_deepseek_live_replay_import_seeds_workbench_without_model_calls(demo_server: str, browser: Any) -> None:
     page = browser.new_page(viewport={"width": 1440, "height": 1000})
     model_calls: list[str] = []
