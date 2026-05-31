@@ -5707,10 +5707,14 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "信号待确认" in fault_script
     assert "故障待确认" in fault_script
     assert "模式待确认" in fault_script
+    assert '{label: "严重度", value: faultRiskLabel(item.severity)}' in fault_script
+    assert '<span class="fault-scenario-severity">${escapeText(faultRiskLabel(item.severity))}</span>' in fault_script
     assert "仍生成 dry-run 候选" not in fault_script
     assert "确认此候选只用于 dry-run 沙盒审查" not in fault_script
     assert "dry-run 条件待确认" not in fault_script
     assert "controller truth" not in fault_script
+    assert '{label: "严重度", value: normalizeText(item.severity || "medium")}' not in fault_script
+    assert '<span class="fault-scenario-severity">${escapeText(item.severity || "medium")}</span>' not in fault_script
     assert 'item.node_id || "node:none"' not in fault_script
     assert 'compactCell(point.signal_name, "signal")' not in fault_script
     assert 'item.injection_mode || "mode"' not in fault_script
