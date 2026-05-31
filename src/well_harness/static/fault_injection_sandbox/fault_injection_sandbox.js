@@ -2636,7 +2636,7 @@
     const simulate = Boolean(execution.simulate);
     const dryRunOnly = execution.dry_run_only !== false;
     const entries = [
-      {token: `run_tick:${runTick}`, label: runTick ? "运行仿真步" : "不运行仿真步"},
+      {token: `run_tick:${runTick}`, label: runTick ? "运行仿真节拍" : "不运行仿真节拍"},
       {token: `simulate:${simulate}`, label: simulate ? "执行仿真" : "不执行仿真"},
       {token: `dry_run_only:${dryRunOnly}`, label: dryRunOnly ? "仅空跑" : "允许非空跑"},
     ];

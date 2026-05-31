@@ -5804,6 +5804,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'id="fault-sandbox-plan-coverage-list"' in sandbox_html
     assert 'id="fault-sandbox-toggle-detail-panel"' in sandbox_html
     assert 'id="fault-sandbox-detail-drawer"' in sandbox_html
+    assert 'data-contract-token="run_tick:false">不运行仿真节拍' in sandbox_html
+    assert 'data-contract-token="run_tick:false">不运行仿真步' not in sandbox_html
     assert "自动补齐证据" in sandbox_html
     assert "v=sandbox6" in sandbox_html
     assert "requestFaultSandboxPlan" in sandbox_script
@@ -5824,6 +5826,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "function booleanDisplayLabel" in sandbox_script
     assert '运行仿真节拍:${booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
     assert '{label: "运行仿真节拍", value: booleanDisplayLabel(Boolean(execution.run_tick))}' in sandbox_script
+    assert 'label: runTick ? "运行仿真节拍" : "不运行仿真节拍"' in sandbox_script
     assert '{label: "仅空跑", value: booleanDisplayLabel(execution.dry_run_only !== false)}' in sandbox_script
     assert "deterministic_dry_run_plan" in sandbox_script
     assert "已覆盖" in sandbox_script
@@ -5864,6 +5867,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'normalizeText(payload.plan_coverage_completion.strategy)' not in sandbox_script
     assert '运行 tick:${booleanDisplayLabel(Boolean(execution.run_tick))}' not in sandbox_script
     assert '{label: "运行 tick", value: booleanDisplayLabel(Boolean(execution.run_tick))}' not in sandbox_script
+    assert 'label: runTick ? "运行仿真步" : "不运行仿真步"' not in sandbox_script
     assert '{label: "运行 tick", value: String(Boolean(execution.run_tick))}' not in sandbox_script
     assert '{label: "仅空跑", value: String(execution.dry_run_only !== false)}' not in sandbox_script
     assert 'allow_fallback: provider.value !== "deepseek"' in sandbox_script
