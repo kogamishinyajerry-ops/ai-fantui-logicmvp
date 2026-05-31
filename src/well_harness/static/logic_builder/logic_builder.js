@@ -2838,9 +2838,9 @@
   function circuitTechnicalLabel(node) {
     const displayLabel = circuitDisplayLabel(node);
     const parts = [];
-    if (node.id) parts.push(`技术 id: ${node.id}`);
-    if (node.label && node.label !== displayLabel) parts.push(`技术标签: ${node.label}`);
-    if (node.linked_node_id && node.linked_node_id !== node.id) parts.push(`关联节点: ${node.linked_node_id}`);
+    if (node.id) parts.push(`技术 ID：${node.id}`);
+    if (node.label && node.label !== displayLabel) parts.push(`技术标签：${node.label}`);
+    if (node.linked_node_id && node.linked_node_id !== node.id) parts.push(`关联节点：${node.linked_node_id}`);
     return parts.join(" · ");
   }
 
@@ -2891,7 +2891,7 @@
 
   function circuitNodeHoverTitle(node) {
     const sourceText = circuitProvenanceSummaryForNode(node);
-    return [`显示标签: ${circuitDisplayLabel(node)}`, circuitTechnicalLabel(node), `来源: ${sourceText}`]
+    return [`显示标签：${circuitDisplayLabel(node)}`, circuitTechnicalLabel(node), `来源：${sourceText}`]
       .filter(Boolean)
       .join("\n");
   }
@@ -3067,7 +3067,7 @@
       "marker-end": `url(#logic-circuit-arrow-${wireState === "fault" ? "fault" : wireState === "active" ? "active" : "idle"})`,
     });
     const title = createSvgElement("title");
-    title.textContent = `${wire.label || `${wire.source || ""} → ${wire.target || ""}`} · 来源: ${circuitProvenanceLabel(provenanceKind)}`;
+    title.textContent = `${wire.label || `${wire.source || ""} → ${wire.target || ""}`} · 来源：${circuitProvenanceLabel(provenanceKind)}`;
     polyline.appendChild(title);
     polyline.addEventListener("click", (event) => {
       event.stopPropagation();

@@ -4166,7 +4166,9 @@ def test_logic_builder_circuit_view_reduces_label_density_and_protects_sw_lane(
         assert "TRA" not in (page.locator('[data-demo-node-id="sw2"] .logic-circuit-node-title').text_content() or "")
 
         sw1_title = page.locator('[data-demo-node-id="sw1"] title').text_content() or ""
-        assert "技术 id: sw1" in sw1_title
+        assert "显示标签：SW1" in sw1_title
+        assert "技术 ID：sw1" in sw1_title
+        assert "技术 id:" not in sw1_title
         assert "TRA [-1.4°,-6.2°]" in sw1_title
         expect(page.locator('[data-demo-node-id="sw1"] .logic-circuit-tech-id')).to_have_text("sw1")
         expect(page.locator('[data-demo-node-id="sw2"] .logic-circuit-tech-id')).to_have_text("sw2")
@@ -4183,6 +4185,9 @@ def test_logic_builder_circuit_view_reduces_label_density_and_protects_sw_lane(
             "data-readable-lane",
             "sw",
         )
+        sw_wire_title = page.locator('.logic-circuit-wire[data-source="sw1"][data-target="logic1"] title').text_content() or ""
+        assert "来源：" in sw_wire_title
+        assert "来源:" not in sw_wire_title
         _assert_logic_circuit_blueprint_geometry(page)
     finally:
         page.close()
@@ -4235,7 +4240,7 @@ def test_logic_builder_circuit_view_provenance_legend_filters_node_sources(
         expect(page.locator('[data-demo-node-id="radio_altitude_ft"]')).to_have_attribute("data-provenance-kind", "source")
         expect(page.locator('[data-demo-node-id="sw1"]')).to_have_attribute("data-provenance-kind", "local")
         expect(page.locator('[data-demo-node-id="model_gap_probe"]')).to_have_attribute("data-provenance-kind", "assumption")
-        assert "来源: 本地补齐" in (page.locator('[data-demo-node-id="sw1"] title').text_content() or "")
+        assert "来源：本地补齐" in (page.locator('[data-demo-node-id="sw1"] title').text_content() or "")
 
         page.click('[data-provenance-filter="assumption"]')
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "assumption")

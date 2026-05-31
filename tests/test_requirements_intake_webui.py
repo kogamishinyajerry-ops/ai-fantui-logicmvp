@@ -5578,6 +5578,12 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "circuitRoleLabel" in logic_script
     assert "角色：" in logic_script
     assert "状态：" in logic_script
+    assert "技术 ID：" in logic_script
+    assert "显示标签：" in logic_script
+    assert "来源：" in logic_script
+    assert "技术 id:" not in logic_script
+    assert "显示标签:" not in logic_script
+    assert "来源:" not in logic_script
     assert "role:${node.circuit_role}" not in logic_script
     assert "state:${node.state}" not in logic_script
     assert " · state:${edge.state}" not in logic_script
