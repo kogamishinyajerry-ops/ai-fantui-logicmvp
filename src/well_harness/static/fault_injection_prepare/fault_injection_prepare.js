@@ -90,6 +90,12 @@
   const contextBody = $("fault-context-body");
   const contextClose = $("fault-context-close");
   const faultShell = document.querySelector(".fault-shell");
+  const FAULT_BOUNDARY_TOKEN_LABELS = {
+    "sandbox_candidate": "沙箱候选",
+    "truth_effect:none": "真值影响：无",
+    "controller_truth_modified:false": "控制器真值已改动：否",
+  };
+  const FAULT_BOUNDARY_TOKEN_PATTERN = /controller_truth_modified:false|truth_effect:none|sandbox_candidate/g;
 
   function escapeText(value) {
     return String(value == null ? "" : value)
@@ -576,6 +582,33 @@
     return normalized.length > 68 ? `${normalized.slice(0, 65)}...` : normalized;
   }
 
+  function renderBoundaryTokenValue(target, value) {
+    const text = String(value == null ? "" : value);
+    let cursor = 0;
+    let matched = false;
+    text.replace(FAULT_BOUNDARY_TOKEN_PATTERN, (token, offset) => {
+      if (offset > cursor) {
+        target.appendChild(document.createTextNode(text.slice(cursor, offset)));
+      }
+      const chip = document.createElement("span");
+      chip.className = "fault-context-link-boundary";
+      chip.dataset.boundaryToken = token;
+      chip.textContent = FAULT_BOUNDARY_TOKEN_LABELS[token] || token;
+      target.appendChild(chip);
+      cursor = offset + token.length;
+      matched = true;
+      return token;
+    });
+    if (!matched) {
+      target.textContent = text;
+      return false;
+    }
+    if (cursor < text.length) {
+      target.appendChild(document.createTextNode(text.slice(cursor)));
+    }
+    return true;
+  }
+
   function faultRiskLabel(severity) {
     const normalized = String(severity || "medium").toLowerCase();
     if (normalized === "high") return "高";
@@ -672,7 +705,9 @@
         const dt = document.createElement("dt");
         dt.textContent = row.label;
         const dd = document.createElement("dd");
-        dd.textContent = row.value;
+        if (renderBoundaryTokenValue(dd, row.value)) {
+          dd.className = "fault-context-boundary-value";
+        }
         dl.appendChild(dt);
         dl.appendChild(dd);
       });

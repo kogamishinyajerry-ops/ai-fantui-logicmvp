@@ -1672,6 +1672,15 @@ def test_fault_matrix_selection_carries_review_linkage_into_sandbox(
 ) -> None:
     page = browser.new_page(viewport={"width": 1366, "height": 768})
     try:
+        fault_payload = {
+            **FAULT_PREPARATION,
+            "injection_points": [
+                {
+                    **FAULT_PREPARATION["injection_points"][0],
+                    "constraint_zh": "truth_effect:none；controller_truth_modified:false。",
+                }
+            ],
+        }
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate(
             """([requirementsPayload, drawingPayload, faultPayload, sandboxPayload]) => {
@@ -1680,7 +1689,7 @@ def test_fault_matrix_selection_carries_review_linkage_into_sandbox(
               localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(faultPayload));
               localStorage.setItem("ai-fantui-fault-injection-sandbox-plan-v1", JSON.stringify(sandboxPayload));
             }""",
-            [REQUIREMENTS_READY, _circuit_view_drawing(), FAULT_PREPARATION, _dense_sandbox_plan()],
+            [REQUIREMENTS_READY, _circuit_view_drawing(), fault_payload, _dense_sandbox_plan()],
         )
 
         page.goto(f"{demo_server}/fault-injection-prepare", wait_until="networkidle")
@@ -1700,6 +1709,10 @@ def test_fault_matrix_selection_carries_review_linkage_into_sandbox(
             expect(summary).to_contain_text(token)
         for boundary in ["sandbox_candidate", "truth_effect:none", "controller_truth_modified:false"]:
             expect(summary.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
+        context_details = page.locator("#fault-context-body dl")
+        for boundary in ["truth_effect:none", "controller_truth_modified:false"]:
+            expect(context_details.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
+            assert boundary not in context_details.inner_text()
 
         page.locator("#fault-context-close").click()
         for index in range(page.locator("textarea[data-boundary-id]").count()):
