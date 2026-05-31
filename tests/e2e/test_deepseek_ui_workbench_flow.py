@@ -4343,6 +4343,45 @@ def test_logic_builder_unknown_circuit_state_uses_readable_fallback(
         page.close()
 
 
+def test_logic_builder_unknown_circuit_role_uses_readable_fallback(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 980, "height": 760})
+    drawing = _circuit_view_drawing()
+    view = drawing["circuit_view"]
+    view["nodes"].append(
+        {
+            "id": "role_probe",
+            "label": "角色探针",
+            "circuit_role": "backend_role_raw",
+            "state": "idle",
+            "x": 700,
+            "y": 360,
+            "width": 132,
+            "height": 28,
+        }
+    )
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        role_probe = page.locator('[data-demo-node-id="role_probe"]')
+        expect(role_probe).to_have_attribute("data-circuit-role", "backend_role_raw")
+        page.click('[data-demo-node-id="role_probe"]')
+        expect(page.locator("#logic-annotation-params")).to_contain_text("角色：角色待确认")
+        expect(page.locator("#logic-annotation-params")).not_to_contain_text("backend_role_raw")
+    finally:
+        page.close()
+
+
 def test_deepseek_live_replay_import_seeds_workbench_without_model_calls(demo_server: str, browser: Any) -> None:
     page = browser.new_page(viewport={"width": 1440, "height": 1000})
     model_calls: list[str] = []

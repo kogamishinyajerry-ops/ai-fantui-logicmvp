@@ -1824,8 +1824,8 @@
     return "idle";
   }
 
-  function circuitRoleLabel(value) {
-    return CIRCUIT_ROLE_LABELS[value] || value || "";
+  function circuitRoleLabel(value, fallback = "角色待确认") {
+    return CIRCUIT_ROLE_LABELS[value] || fallback;
   }
 
   function circuitStateLabel(value, fallback = "状态待确认") {
