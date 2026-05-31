@@ -5703,10 +5703,17 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "界面蓝图" in fault_script
     assert "沙盒审查界面" in fault_script
     assert "报告预览界面" in fault_script
+    assert "节点待确认" in fault_script
+    assert "信号待确认" in fault_script
+    assert "故障待确认" in fault_script
+    assert "模式待确认" in fault_script
     assert "仍生成 dry-run 候选" not in fault_script
     assert "确认此候选只用于 dry-run 沙盒审查" not in fault_script
     assert "dry-run 条件待确认" not in fault_script
     assert "controller truth" not in fault_script
+    assert 'item.node_id || "node:none"' not in fault_script
+    assert 'compactCell(point.signal_name, "signal")' not in fault_script
+    assert 'item.injection_mode || "mode"' not in fault_script
     assert "UI 蓝图" not in fault_script
     assert "沙盒审查 UI" not in fault_script
     assert "报告预览 UI" not in fault_script

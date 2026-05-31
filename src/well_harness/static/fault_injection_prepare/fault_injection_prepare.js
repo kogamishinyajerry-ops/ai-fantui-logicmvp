@@ -1247,10 +1247,10 @@
         <td class="fault-matrix-id" data-blueprint-col="id"><code class="blueprint-row-token" data-row-scan-token="id">${escapeText(rowId)}</code></td>
         <td class="fault-matrix-injection-cell" data-blueprint-col="injection-position">
           <strong>${escapeText(compactCell(point.node_id || scenario.node_id, "待确认节点"))}</strong>
-          <small>${escapeText(compactCell(point.signal_name, "signal"))}</small>
+          <small>${escapeText(compactCell(point.signal_name, "信号待确认"))}</small>
           <span class="fault-matrix-evidence-token blueprint-row-token" data-row-scan-token="evidence" aria-label="来源证据 ${escapeText(evidenceToken)}">${escapeText(evidenceToken)}</span>
         </td>
-        <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(scenario.fault_type || point.injection_mode, "fault"))}</span></td>
+        <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(scenario.fault_type || point.injection_mode, "故障待确认"))}</span></td>
         <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span>${escapeText(compactCell(point.safe_boundary_zh || scenario.rationale_zh, "空跑条件待确认"))}</span></td>
         <td class="fault-matrix-effect" data-blueprint-col="expected-effect"><span>${escapeText(compactCell(scenario.expected_effect_zh, "观察路径影响"))}</span></td>
         <td class="fault-matrix-path" data-blueprint-col="covered-path">
@@ -1305,7 +1305,7 @@
         <div class="fault-scenario-head">
           <div>
             <strong>${escapeText(item.label || item.id)}</strong>
-            <code>${escapeText(item.node_id || "node:none")} · ${escapeText(item.fault_type || "fault")}</code>
+            <code>${escapeText(item.node_id || "节点待确认")} · ${escapeText(item.fault_type || "故障待确认")}</code>
           </div>
           <span class="fault-scenario-severity">${escapeText(item.severity || "medium")}</span>
         </div>
@@ -1322,7 +1322,7 @@
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "fault-scenario-chip";
-      chip.textContent = `${item.label || item.id} · ${item.node_id || "node"} · ${item.fault_type || "fault"}`;
+      chip.textContent = `${item.label || item.id} · ${item.node_id || "节点待确认"} · ${item.fault_type || "故障待确认"}`;
       chip.title = item.rationale_zh || "点击查看场景上下文";
       chip.addEventListener("click", openContextForScenario(item, index));
       scenarioChips.appendChild(chip);
@@ -1343,15 +1343,15 @@
       const chip = document.createElement("button");
       chip.className = "fault-point-chip";
       chip.type = "button";
-      chip.textContent = `${item.node_id || "node"} · ${item.signal_name || "signal"} · ${item.injection_mode || "mode"}`;
+      chip.textContent = `${item.node_id || "节点待确认"} · ${item.signal_name || "信号待确认"} · ${item.injection_mode || "模式待确认"}`;
       chip.title = item.safe_boundary_zh || "";
       chip.addEventListener("click", openContextForPoint(item, index));
       pointChips.appendChild(chip);
 
       const card = document.createElement("article");
       card.className = "fault-point-card";
-      const titleText = `${item.node_id || "node"} · ${item.signal_name || "signal"}`;
-      const modeText = item.injection_mode || "mode";
+      const titleText = `${item.node_id || "节点待确认"} · ${item.signal_name || "信号待确认"}`;
+      const modeText = item.injection_mode || "模式待确认";
       const rationaleText = item.safe_boundary_zh || "未返回安全边界";
       card.innerHTML = `
         <div class="fault-point-head">
