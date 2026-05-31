@@ -1882,7 +1882,7 @@
       status = "deployed";
       summary = "L4 满足，油门锁释放。油门反向段解锁。";
     } else if (logic4 && logic4.state === "blocked") {
-      const blockers = (logic4.blockers || logic4.blocked_by || []).join(" / ") || "VDT90 / plant feedback";
+      const blockers = (logic4.blockers || logic4.blocked_by || []).join(" / ") || "VDT90 / 反馈信号";
       status = "fault";
       summary = `L4 阻塞：${blockers}。`;
     } else if (logic3 && logic3.state === "active") {
