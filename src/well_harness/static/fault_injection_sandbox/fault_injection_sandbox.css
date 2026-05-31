@@ -565,6 +565,22 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.sandbox-review-row-description-text--boundary {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.sandbox-review-row-description-text--boundary .sandbox-evidence-link-boundary {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  background: rgba(30, 103, 255, 0.06);
+  color: var(--sandbox-muted);
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 9px;
+  line-height: 1;
+}
 .sandbox-review-row-status,
 .sandbox-review-row-action,
 .sandbox-review-row-decision,

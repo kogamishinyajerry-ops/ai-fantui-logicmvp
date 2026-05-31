@@ -1086,6 +1086,10 @@ def test_fault_sandbox_review_uses_three_primary_gates_for_dense_plan(demo_serve
         expect(page.locator("[data-blueprint-review-row='SR-06'] [data-link-kind='report']")).to_have_text("RP-06")
         expect(page.locator("#fault-sandbox-review-rows .sandbox-review-row-check input[disabled]")).to_have_count(7)
         expect(page.locator("#fault-sandbox-review-rows")).to_contain_text("控制真相未修改")
+        sr07_description = page.locator("[data-blueprint-review-row='SR-07'] .sandbox-review-row-description-text")
+        for boundary in ["truth_effect:none", "certification_claim:none", "controller_truth_modified:false"]:
+            expect(sr07_description.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
+            assert boundary not in sr07_description.inner_text()
         review_row_box = page.locator("#fault-sandbox-review-rows [data-blueprint-density='compact-workbench']").first.bounding_box()
         assert review_row_box
         assert review_row_box["height"] <= 58
