@@ -5707,12 +5707,21 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "信号待确认" in fault_script
     assert "故障待确认" in fault_script
     assert "模式待确认" in fault_script
+    assert 'sensor_stuck_low: "传感器卡低"' in fault_script
+    assert 'override_value: "覆盖值注入"' in fault_script
+    assert '{label: "故障类型", value: faultTypeLabel(item.fault_type)}' in fault_script
+    assert '{label: "方式", value: injectionModeLabel(item.injection_mode)}' in fault_script
+    assert "compactCell(faultTypeText, \"故障待确认\")" in fault_script
+    assert 'const modeText = injectionModeLabel(item.injection_mode, "模式待确认")' in fault_script
     assert '{label: "严重度", value: faultRiskLabel(item.severity)}' in fault_script
     assert '<span class="fault-scenario-severity">${escapeText(faultRiskLabel(item.severity))}</span>' in fault_script
     assert "仍生成 dry-run 候选" not in fault_script
     assert "确认此候选只用于 dry-run 沙盒审查" not in fault_script
     assert "dry-run 条件待确认" not in fault_script
     assert "controller truth" not in fault_script
+    assert '{label: "故障类型", value: normalizeText(item.fault_type)}' not in fault_script
+    assert '{label: "方式", value: normalizeText(item.injection_mode)}' not in fault_script
+    assert 'compactCell(scenario.fault_type || point.injection_mode, "故障待确认")' not in fault_script
     assert '{label: "严重度", value: normalizeText(item.severity || "medium")}' not in fault_script
     assert '<span class="fault-scenario-severity">${escapeText(item.severity || "medium")}</span>' not in fault_script
     assert 'item.node_id || "node:none"' not in fault_script

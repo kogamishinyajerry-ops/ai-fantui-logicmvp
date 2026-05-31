@@ -95,6 +95,20 @@
     "truth_effect:none": "真值影响：无",
     "controller_truth_modified:false": "控制器真值已改动：否",
   };
+  const FAULT_TYPE_LABELS = {
+    sensor_stuck_low: "传感器卡低",
+    intermittent_signal: "间歇信号",
+    logic_stuck: "逻辑卡滞",
+    output_blocked: "输出受阻",
+    dry_run_observation_gap: "空跑观测缺口",
+    stuck_low: "卡低",
+  };
+  const INJECTION_MODE_LABELS = {
+    override: "覆盖注入",
+    override_value: "覆盖值注入",
+    toggle_sequence: "序列切换",
+    dry_run_observe: "空跑观测",
+  };
   const FAULT_BOUNDARY_TOKEN_PATTERN = /controller_truth_modified:false|truth_effect:none|sandbox_candidate/g;
 
   function escapeText(value) {
@@ -582,6 +596,20 @@
     return normalized.length > 68 ? `${normalized.slice(0, 65)}...` : normalized;
   }
 
+  function mappedDisplayLabel(value, labels, fallback) {
+    const normalized = String(value == null ? "" : value).trim();
+    if (!normalized) return fallback;
+    return labels[normalized] || normalized;
+  }
+
+  function faultTypeLabel(value, fallback = "未提供") {
+    return mappedDisplayLabel(value, FAULT_TYPE_LABELS, fallback);
+  }
+
+  function injectionModeLabel(value, fallback = "未提供") {
+    return mappedDisplayLabel(value, INJECTION_MODE_LABELS, fallback);
+  }
+
   function renderBoundaryTokenValue(target, value) {
     const text = String(value == null ? "" : value);
     let cursor = 0;
@@ -729,7 +757,7 @@
     const rows = [
       {label: "场景", value: normalizeText(item.label || item.id)},
       {label: "节点", value: normalizeText(item.node_id)},
-      {label: "故障类型", value: normalizeText(item.fault_type)},
+      {label: "故障类型", value: faultTypeLabel(item.fault_type)},
       {label: "严重度", value: faultRiskLabel(item.severity)},
       {label: "序号", value: String(index + 1)},
       {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
@@ -746,7 +774,7 @@
       {label: "注入点", value: normalizeText(item.label || item.id || index + 1)},
       {label: "节点", value: normalizeText(item.node_id)},
       {label: "信号", value: normalizeText(item.signal_name)},
-      {label: "方式", value: normalizeText(item.injection_mode)},
+      {label: "方式", value: injectionModeLabel(item.injection_mode)},
       {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
       {label: "安全边界", value: normalizeText(item.safe_boundary_zh)},
       {label: "约束", value: normalizeText(item.constraint_zh)},
@@ -1213,6 +1241,9 @@
       const point = points[index] || points[0] || {};
       const rowId = scenario.id || point.id || `fault_row_${index + 1}`;
       const risk = faultRiskLabel(scenario.severity);
+      const faultTypeText = scenario.fault_type
+        ? faultTypeLabel(scenario.fault_type, "故障待确认")
+        : injectionModeLabel(point.injection_mode, "故障待确认");
       const coveredPathItems = faultCoveredPathItems(scenario, point);
       const coveredPathLabel = faultCoveredPathLabel(scenario, point);
       const evidenceToken = faultMatrixEvidenceToken(scenario, point, index);
@@ -1250,7 +1281,7 @@
           <small>${escapeText(compactCell(point.signal_name, "信号待确认"))}</small>
           <span class="fault-matrix-evidence-token blueprint-row-token" data-row-scan-token="evidence" aria-label="来源证据 ${escapeText(evidenceToken)}">${escapeText(evidenceToken)}</span>
         </td>
-        <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(scenario.fault_type || point.injection_mode, "故障待确认"))}</span></td>
+        <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(faultTypeText, "故障待确认"))}</span></td>
         <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span>${escapeText(compactCell(point.safe_boundary_zh || scenario.rationale_zh, "空跑条件待确认"))}</span></td>
         <td class="fault-matrix-effect" data-blueprint-col="expected-effect"><span>${escapeText(compactCell(scenario.expected_effect_zh, "观察路径影响"))}</span></td>
         <td class="fault-matrix-path" data-blueprint-col="covered-path">
@@ -1301,11 +1332,12 @@
       card.className = "fault-scenario-card";
       card.dataset.severity = item.severity || "medium";
       const signals = Array.isArray(item.observable_signals) ? item.observable_signals : [];
+      const faultTypeText = faultTypeLabel(item.fault_type, "故障待确认");
       card.innerHTML = `
         <div class="fault-scenario-head">
           <div>
             <strong>${escapeText(item.label || item.id)}</strong>
-            <code>${escapeText(item.node_id || "节点待确认")} · ${escapeText(item.fault_type || "故障待确认")}</code>
+            <code>${escapeText(item.node_id || "节点待确认")} · ${escapeText(faultTypeText)}</code>
           </div>
           <span class="fault-scenario-severity">${escapeText(faultRiskLabel(item.severity))}</span>
         </div>
@@ -1322,7 +1354,7 @@
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "fault-scenario-chip";
-      chip.textContent = `${item.label || item.id} · ${item.node_id || "节点待确认"} · ${item.fault_type || "故障待确认"}`;
+      chip.textContent = `${item.label || item.id} · ${item.node_id || "节点待确认"} · ${faultTypeText}`;
       chip.title = item.rationale_zh || "点击查看场景上下文";
       chip.addEventListener("click", openContextForScenario(item, index));
       scenarioChips.appendChild(chip);
@@ -1340,10 +1372,11 @@
       return;
     }
     items.forEach((item, index) => {
+      const modeText = injectionModeLabel(item.injection_mode, "模式待确认");
       const chip = document.createElement("button");
       chip.className = "fault-point-chip";
       chip.type = "button";
-      chip.textContent = `${item.node_id || "节点待确认"} · ${item.signal_name || "信号待确认"} · ${item.injection_mode || "模式待确认"}`;
+      chip.textContent = `${item.node_id || "节点待确认"} · ${item.signal_name || "信号待确认"} · ${modeText}`;
       chip.title = item.safe_boundary_zh || "";
       chip.addEventListener("click", openContextForPoint(item, index));
       pointChips.appendChild(chip);
@@ -1351,7 +1384,6 @@
       const card = document.createElement("article");
       card.className = "fault-point-card";
       const titleText = `${item.node_id || "节点待确认"} · ${item.signal_name || "信号待确认"}`;
-      const modeText = item.injection_mode || "模式待确认";
       const rationaleText = item.safe_boundary_zh || "未返回安全边界";
       card.innerHTML = `
         <div class="fault-point-head">
