@@ -7153,6 +7153,23 @@ def test_logic_builder_exposes_five_entry_mode_dock_command_palette_and_bottom_d
     for drawer_tab in ["parameters", "run", "evidence", "report"]:
         assert f'data-bottom-drawer-tab="{drawer_tab}"' in html
         assert f'data-bottom-drawer-panel="{drawer_tab}"' in html
+    report_preview_html = html.split('class="logic-report-preview"', 1)[1].split("</dl>", 1)[0]
+    for label in ["真值影响", "候选状态", "认证声明", "控制器真值已改动"]:
+        assert f"<dt>{label}</dt>" in report_preview_html
+    for token in [
+        "truth_effect:none",
+        "candidate_state:sandbox_candidate",
+        "certification_claim:none",
+        "controller_truth_modified:false",
+    ]:
+        assert f'data-boundary-token="{token}"' in report_preview_html
+    for english_key in [
+        "truth_effect",
+        "candidate_state",
+        "certification_claim",
+        "controller_truth_modified",
+    ]:
+        assert f"<dt>{english_key}</dt>" not in report_preview_html
     for control_id in [
         "logic-drawer-ra",
         "logic-drawer-sw1",
