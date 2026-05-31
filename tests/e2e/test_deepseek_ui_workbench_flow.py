@@ -2756,6 +2756,7 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
             """
             () => {
               const payload = JSON.parse(localStorage.getItem("ai-fantui-logic-builder-drawing-v1"));
+              const circuitNodes = Object.fromEntries(payload.circuit_view.nodes.map((node) => [node.id, node]));
               return {
                 truth_effect: payload.truth_effect,
                 candidate_state: payload.candidate_state,
@@ -2765,6 +2766,11 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
                 edge_count: payload.edges.length,
                 circuit_node_count: payload.circuit_view.nodes.length,
                 circuit_wire_count: payload.circuit_view.wires.length,
+                logic3_quote: circuitNodes.logic3.source_anchors[0].quote_zh,
+                logic4_quote: circuitNodes.logic4.source_anchors[0].quote_zh,
+                eec_description: circuitNodes.eec_deploy.description_zh,
+                pdu_description: circuitNodes.pdu_motor.description_zh,
+                thr_lock_description: circuitNodes.thr_lock.description_zh,
               };
             }
             """
@@ -2778,6 +2784,11 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
             "edge_count": 23,
             "circuit_node_count": 20,
             "circuit_wire_count": 23,
+            "logic3_quote": "工作逻辑3：TLS/PLS 反馈满足后，驱动 EEC 展开、PLS 供电、PDU 电机。",
+            "logic4_quote": "工作逻辑4：VDT 达到 90% 展开且 TRA≤-11.74°，THR_LOCK 释放。",
+            "eec_description": "EEC 展开指令。",
+            "pdu_description": "PDU 电机指令。",
+            "thr_lock_description": "THR_LOCK 释放，DOCX L1-L4 链路末端输出。",
         }
         assert model_calls == []
     finally:
