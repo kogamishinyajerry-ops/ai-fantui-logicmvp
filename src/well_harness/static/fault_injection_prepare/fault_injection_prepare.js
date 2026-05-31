@@ -448,7 +448,7 @@
         {
           id: "blueprint_review_dry_run",
           category: "dry_run",
-          condition_zh: "确认执行合同保持 run_tick:false、simulate:false、dry_run_only:true。",
+          condition_zh: "确认执行合同保持不运行仿真节拍、不执行仿真、仅空跑。",
           pass_criteria_zh: "审查页仅显示候选证据，不触发真实仿真节拍。",
           source_anchors: firstScenario.source_anchors || [],
         },

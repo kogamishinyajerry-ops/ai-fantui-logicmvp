@@ -5700,6 +5700,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "确认不修改控制器真值、认证结论和生产配置" in fault_script
     assert "不会调用模型、仿真节拍或控制器真值" in fault_script
     assert "不触发真实仿真节拍" in fault_script
+    assert "确认执行合同保持不运行仿真节拍、不执行仿真、仅空跑。" in fault_script
     assert "界面蓝图" in fault_script
     assert "沙盒审查界面" in fault_script
     assert "报告预览界面" in fault_script
@@ -5718,6 +5719,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "仍生成 dry-run 候选" not in fault_script
     assert "确认此候选只用于 dry-run 沙盒审查" not in fault_script
     assert "dry-run 条件待确认" not in fault_script
+    assert "确认执行合同保持 run_tick:false、simulate:false、dry_run_only:true。" not in fault_script
     assert "controller truth" not in fault_script
     assert '{label: "故障类型", value: normalizeText(item.fault_type)}' not in fault_script
     assert '{label: "方式", value: normalizeText(item.injection_mode)}' not in fault_script
