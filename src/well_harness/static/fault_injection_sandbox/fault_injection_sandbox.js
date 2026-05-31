@@ -154,6 +154,15 @@
     "evidence-popover": evidencePopover,
     "review-package": reviewPackagePanel,
   };
+  const BOUNDARY_TOKEN_LABELS = {
+    "sandbox_candidate": "沙箱候选",
+    "candidate_state:sandbox_candidate": "沙箱候选",
+    "truth_effect:none": "真值影响：无",
+    "certification_claim:none": "认证声明：无",
+    "controller_truth_modified:false": "控制器真值已改动：否",
+  };
+  const BOUNDARY_TOKENS = Object.keys(BOUNDARY_TOKEN_LABELS).sort((left, right) => right.length - left.length);
+  const BOUNDARY_TOKEN_PATTERN = new RegExp(BOUNDARY_TOKENS.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
 
   function escapeText(value) {
     return String(value == null ? "" : value)
@@ -173,6 +182,37 @@
 
   function normalizeText(value) {
     return (value == null || value === "") ? "未提供" : value;
+  }
+
+  function boundaryTokenChip(token) {
+    const span = document.createElement("span");
+    span.className = "sandbox-evidence-link-boundary";
+    span.dataset.boundaryToken = token;
+    span.textContent = BOUNDARY_TOKEN_LABELS[token] || token;
+    return span;
+  }
+
+  function renderBoundaryTokenValue(element, value) {
+    const raw = String(value == null ? "" : value);
+    BOUNDARY_TOKEN_PATTERN.lastIndex = 0;
+    let cursor = 0;
+    let match = BOUNDARY_TOKEN_PATTERN.exec(raw);
+    if (!match) {
+      element.textContent = raw;
+      return false;
+    }
+    while (match) {
+      if (match.index > cursor) {
+        element.appendChild(document.createTextNode(raw.slice(cursor, match.index)));
+      }
+      element.appendChild(boundaryTokenChip(match[0]));
+      cursor = match.index + match[0].length;
+      match = BOUNDARY_TOKEN_PATTERN.exec(raw);
+    }
+    if (cursor < raw.length) {
+      element.appendChild(document.createTextNode(raw.slice(cursor)));
+    }
+    return true;
   }
 
   function compactRailLabel(value) {
@@ -466,8 +506,8 @@
       <code data-link-summary-kind="review">${escapeText(summary.reviewRowId || "SR")}</code>
       <code data-link-summary-kind="trace">${escapeText(summary.traceId || "ET")}</code>
       <code data-link-summary-kind="report">${escapeText(summary.reportId || "RP")}</code>
-      <span class="sandbox-evidence-link-boundary">truth_effect:none</span>
-      <span class="sandbox-evidence-link-boundary">controller_truth_modified:false</span>
+      <span class="sandbox-evidence-link-boundary" data-boundary-token="truth_effect:none">真值影响：无</span>
+      <span class="sandbox-evidence-link-boundary" data-boundary-token="controller_truth_modified:false">控制器真值已改动：否</span>
     `;
     evidenceBody.appendChild(shell);
   }
@@ -518,7 +558,7 @@
       const dt = document.createElement("dt");
       dt.textContent = row.label;
       const dd = document.createElement("dd");
-      dd.textContent = row.value;
+      if (renderBoundaryTokenValue(dd, row.value)) dd.className = "sandbox-evidence-boundary-value";
       dl.append(dt, dd);
     });
     evidenceBody.appendChild(dl);
