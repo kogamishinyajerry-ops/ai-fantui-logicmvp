@@ -2003,6 +2003,8 @@ def test_fault_routes_first_visit_show_candidate_preview_without_seeded_storage(
         expect(page.locator("#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node='failure-path']")).to_have_count(3)
         expect(page.locator("#fault-sandbox-evidence-trace-rows [data-blueprint36-evidence-row='evidence-chain']")).to_have_count(4)
         expect(page.locator("#fault-sandbox-report-section-rows [data-blueprint36-report-row='replay-report']")).to_have_count(7)
+        expect(page.locator("#fault-sandbox-plan-coverage-list")).to_contain_text("首次进入蓝图沙盒预览")
+        expect(page.locator("#fault-sandbox-plan-coverage-list")).not_to_contain_text("ui_blueprint_first_visit_preview")
         expect(page.locator("#fault-sandbox-review-gate")).to_have_text("需确认 3 个一级闸门")
 
         sandbox_contract = page.evaluate(
@@ -2196,6 +2198,8 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
             expect(contract.locator(f'[data-contract-token="{token}"]')).to_have_count(1)
             assert token not in contract.inner_text()
         expect(page.locator("#fault-sandbox-plan-count")).to_have_text("2 计划")
+        expect(page.locator("#fault-sandbox-plan-coverage-list")).to_contain_text("界面蓝图候选预览")
+        expect(page.locator("#fault-sandbox-plan-coverage-list")).not_to_contain_text("ui_blueprint_candidate_preview")
         expect(page.locator("#fault-sandbox-review-gate")).to_have_text("需确认 3 个一级闸门")
         expect(page.locator(".sandbox-evidence-tile")).to_have_count(4)
         expect(page.locator("#fault-sandbox-review-row-panel")).to_be_visible()
@@ -2898,6 +2902,8 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         expect(page.locator("#fault-sandbox-review-rows [data-blueprint36-row='sandbox-review']")).to_have_count(7)
         expect(page.locator("#fault-sandbox-evidence-trace-rows [data-blueprint36-evidence-row='evidence-chain']")).to_have_count(4)
         expect(page.locator("#fault-sandbox-report-section-rows [data-blueprint36-report-row='replay-report']")).to_have_count(7)
+        expect(page.locator("#fault-sandbox-plan-coverage-list")).to_contain_text("DOCX 模板候选预览")
+        expect(page.locator("#fault-sandbox-plan-coverage-list")).not_to_contain_text("ui_template_preview")
 
         page.click("#fault-sandbox-generate")
         expect(page.locator("#fault-sandbox-result-summary")).to_contain_text("DOCX L1-L4 模板候选沙盒计划已刷新")
