@@ -650,7 +650,7 @@
         id: "BP-SB-01",
         kind: "UI 蓝图",
         origin: "selected-final-set",
-        quote_zh: "首次进入沙盒时加载本地 candidate-only 审查预览；不代表源文档已要求故障注入。",
+        quote_zh: "首次进入沙盒时加载本地仅候选态审查预览；不代表源文档已要求故障注入。",
         requirement_level: "candidate-preview",
         confidence: "ui_blueprint",
       },
@@ -723,7 +723,7 @@
           signal_name: "switch_path",
           injection_mode: "toggle_sequence",
           safe_boundary_zh: "仅用于路径高亮和审查回链，不写入控制器。",
-          constraint_zh: "candidate-only sandbox review。",
+          constraint_zh: "仅候选态沙盒审查。",
           priority: "P2",
           source_anchors: anchors,
         },
@@ -738,7 +738,7 @@
         {
           id: "first_visit_confirm_truth_boundary",
           prompt_zh: "确认不修改 controller truth、认证结论和生产配置？",
-          rationale_zh: "所有输出保持 sandbox candidate，不进入适航或生产声明。",
+          rationale_zh: "所有输出保持沙盒候选态，不进入适航或生产声明。",
           blocks: "fault_injection",
         },
       ],
@@ -760,7 +760,7 @@
         semantic_gate: "critical_node_coverage",
       },
       workflow_notes: [
-        "首次进入预览由前端本地构造，保持 candidate-only。",
+        "首次进入预览由前端本地构造，保持仅候选态。",
         "如需真实模型输出，请先从需求和逻辑绘制流程生成正式草稿。",
       ],
       llm: {
@@ -854,7 +854,7 @@
         semantic_gate: "scenario_plan_coverage",
       },
       workflow_notes: [
-        "该沙盒计划由前端首次进入预览生成，保持 candidate-only。",
+        "该沙盒计划由前端首次进入预览生成，保持仅候选态。",
         "用于验收故障注入、沙盒审查、证据追溯和报告预览 UI。",
       ],
       llm: {
@@ -889,7 +889,7 @@
       strategy: "ui_template_preview",
     };
     sandboxPayload.workflow_notes = [
-      "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持 candidate-only。",
+      "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持仅候选态。",
       "用于验收故障矩阵、沙盒审查、证据追溯和报告预览 UI。",
     ];
     return sandboxPayload;
@@ -1080,7 +1080,7 @@
     } else if (value === "模型处理中") {
       sandboxDecisionNextAction.textContent = "模型处理中：完成后刷新审查包、证据链和回放报告。";
     } else if (value === "源文档暂缓") {
-      sandboxDecisionNextAction.textContent = "源文档暂缓：不生成真实执行，只保留 candidate-only 证据。";
+      sandboxDecisionNextAction.textContent = "源文档暂缓：不生成真实执行，只保留仅候选态证据。";
     } else if (value === "需重新生成沙盒配置") {
       sandboxDecisionNextAction.textContent = "需重新生成沙盒配置：补齐计划、观测点和审查行。";
     } else if (value.startsWith("已确认") || value.startsWith("需确认")) {
@@ -1678,7 +1678,7 @@
         {
           id: "candidate-boundary",
           kind: "GATE",
-          title: "candidate-only",
+          title: "仅候选态",
           meta: `${reviewRowsBuilt.length} SR rows`,
           reviewRowId: "SR-07",
           traceId: truthLink.traceId,
@@ -1688,7 +1688,7 @@
       ],
       suggestions: [
         `修订单：复核 ${compactRailLabel(planNode)} 边界。`,
-        `${reviewRowsBuilt.length} 条 SR 保持 candidate-only。`,
+        `${reviewRowsBuilt.length} 条 SR 保持仅候选态。`,
         `人工复核：${compactRailLabel(firstReview.id || firstReview.condition_zh)}。`,
       ],
       evidence: [
@@ -1719,7 +1719,7 @@
       if (firstAbnormalNode) firstAbnormalNode.textContent = "无候选异常";
       if (inputSnapshot) inputSnapshot.textContent = "未启用 dry-run";
       if (diagnosisChain) diagnosisChain.innerHTML = '<p class="muted">源文档暂缓，未启用候选失败路径。</p>';
-      if (repairSuggestions) repairSuggestions.innerHTML = "<li>仅可通过显式蓝图候选演示载入 sandbox candidate。</li>";
+      if (repairSuggestions) repairSuggestions.innerHTML = "<li>仅可通过显式蓝图候选演示载入沙盒候选。</li>";
       if (diagnosisEvidenceLinks) diagnosisEvidenceLinks.innerHTML = '<button type="button" class="secondary" disabled>源文档暂缓</button>';
       return;
     }
@@ -1871,7 +1871,7 @@
         rows: [
           {label: "reviewer note", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
           {label: "blueprint rows", value: reviewRowsBuilt.map((item) => item.id).join(", ")},
-          {label: "candidate-only", value: "truth_effect:none / certification_claim:none"},
+          {label: "候选态边界", value: "truth_effect:none / certification_claim:none"},
         ],
       },
     ];
@@ -1997,7 +1997,7 @@
           {label: "report section", value: "沙盒审查"},
           {label: "review rows", value: reviewRowsBuilt.map((item) => `${item.id}:${item.label}`).join(", ")},
           {label: "reviewer note", value: reviews[0] ? normalizeText(reviews[0].condition_zh || reviews[0].pass_criteria_zh) : "等待人工审查。"},
-          {label: "candidate-only", value: "truth_effect:none / certification_claim:none"},
+          {label: "候选态边界", value: "truth_effect:none / certification_claim:none"},
         ],
       },
       {
@@ -2399,7 +2399,7 @@
     row.classList.toggle("is-linked-active", linkTarget.reviewRowId === state.activeReviewRowId);
     const decision = linkTarget.decision || "LINK";
     const evidence = linkTarget.evidence || meta || "candidate";
-    const source = linkTarget.sourceLabel || extra || "candidate-only";
+    const source = linkTarget.sourceLabel || extra || "候选态边界";
     const traceId = linkTarget.traceId || "ET";
     const reportId = linkTarget.reportId || "RP";
     const actionLabel = linkTarget.actionLabel || "联动";
@@ -2527,7 +2527,7 @@
     if (!payload || isSourceDeferredSandbox(payload)) {
       openReportPackage("报告预览：未生成", [
         {label: "状态", value: payload && payload.summary_zh ? payload.summary_zh : "暂无沙盒配置。"},
-        {label: "下一步", value: "先生成或载入 sandbox candidate。"},
+        {label: "下一步", value: "先生成或载入沙盒候选。"},
       ]);
       return;
     }
@@ -2544,7 +2544,7 @@
       openReportPackage("报告预览：生成修订单", [
         {label: "report sections", value: `${sections.length} sections`},
         {label: "handoff", value: "候选修订单将回到 logic-builder，仍需 3 个一级闸门确认。"},
-        {label: "candidate-only", value: "controller_truth_modified:false"},
+        {label: "候选态边界", value: "controller_truth_modified:false"},
       ]);
       return;
     }
@@ -2785,14 +2785,14 @@
       return;
     }
     if (state.faultPreparationPayload.first_visit_preview) {
-      beginTask("刷新沙盒预览", "正在刷新本地 candidate-only 沙盒预览。");
+      beginTask("刷新沙盒预览", "正在刷新本地仅候选态沙盒预览。");
       loadFirstVisitSandboxPreview();
       setProgress(96, "审查清单", "本地预览已生成 7 条蓝图审查行。", "review");
       finishTask("沙盒预览已刷新", "未调用模型、tick 或控制器真值。");
       return;
     }
     if (state.faultPreparationPayload.template_preview) {
-      beginTask("刷新 DOCX 模板沙盒", "正在刷新本地 candidate-only 模板沙盒预览。");
+      beginTask("刷新 DOCX 模板沙盒", "正在刷新本地仅候选态模板沙盒预览。");
       loadTemplateSandboxPreview({refresh: true});
       setProgress(96, "审查清单", "模板预览已生成 7 条蓝图审查行。", "review");
       finishTask("DOCX 模板沙盒已刷新", "未调用模型、tick 或控制器真值。");
@@ -2832,7 +2832,7 @@
     } else if (state.faultPreparationPayload) {
       generateSandboxPlan();
     } else {
-      beginTask("载入首次沙盒预览", "未发现故障准备草稿；正在载入本地 candidate-only 沙盒闭环。");
+      beginTask("载入首次沙盒预览", "未发现故障准备草稿；正在载入本地仅候选态沙盒闭环。");
       loadFirstVisitSandboxPreview();
       setProgress(96, "审查清单", "本地预览已生成审查行、证据链和报告章节。", "review");
       finishTask("首次沙盒预览已载入", "默认展示沙盒审查闭环；未调用模型、tick 或控制器。");
