@@ -6087,6 +6087,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         (
             STATIC_ROOT / "requirements_intake" / "index.html",
             "1",
+            "STEP 1/4",
             "需求理解",
             "logic-builder-next",
             "下一步：进入逻辑链路绘制",
@@ -6095,6 +6096,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         (
             STATIC_ROOT / "logic_builder" / "index.html",
             "2",
+            "STEP 2/4",
             "逻辑绘制",
             "logic-fault-next",
             "下一步：进入故障准备",
@@ -6106,6 +6108,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         (
             STATIC_ROOT / "fault_injection_prepare" / "index.html",
             "3",
+            "STEP 3/4",
             "故障准备",
             "fault-sandbox-next",
             "下一步：进入沙盒审查",
@@ -6117,6 +6120,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         (
             STATIC_ROOT / "fault_injection_sandbox" / "index.html",
             "4",
+            "第 4/4 步",
             "沙盒注入",
             "fault-sandbox-revision-next",
             "下一步：生成逻辑修订单",
@@ -6127,12 +6131,12 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
         ),
     ]
 
-    for path, step, title, primary_id, primary_text, secondary_buttons in page_contracts:
+    for path, step, step_label, title, primary_id, primary_text, secondary_buttons in page_contracts:
         html = path.read_text(encoding="utf-8")
         assert 'data-command-strip="deepseek-step"' in html, path
         assert f'data-command-step="{step}"' in html, path
         assert f"<h1" in html and f">{title}</h1>" in html, path
-        assert f"STEP {step}/4" in html, path
+        assert step_label in html, path
 
         assert html.count('data-primary-next-action="true"') == 1, path
 
