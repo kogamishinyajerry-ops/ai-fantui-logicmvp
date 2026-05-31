@@ -1165,7 +1165,7 @@
     }
     setPrimaryGateDetail(
       "dry-run",
-      `运行 tick:${booleanDisplayLabel(Boolean(execution.run_tick))} · 仿真执行:${booleanDisplayLabel(Boolean(execution.simulate))} · 仅空跑:${booleanDisplayLabel(execution.dry_run_only !== false)}`,
+      `运行仿真节拍:${booleanDisplayLabel(Boolean(execution.run_tick))} · 仿真执行:${booleanDisplayLabel(Boolean(execution.simulate))} · 仅空跑:${booleanDisplayLabel(execution.dry_run_only !== false)}`,
     );
     setPrimaryGateDetail(
       "coverage",
@@ -1439,10 +1439,10 @@
       },
       {
         title: "执行合同",
-        value: `运行 tick:${booleanDisplayLabel(Boolean(execution.run_tick))} · 仿真执行:${booleanDisplayLabel(Boolean(execution.simulate))}`,
+        value: `运行仿真节拍:${booleanDisplayLabel(Boolean(execution.run_tick))} · 仿真执行:${booleanDisplayLabel(Boolean(execution.simulate))}`,
         state: execution && execution.run_tick === false && execution.simulate === false ? "ready" : "warn",
         rows: [
-          {label: "运行 tick", value: booleanDisplayLabel(Boolean(execution.run_tick))},
+          {label: "运行仿真节拍", value: booleanDisplayLabel(Boolean(execution.run_tick))},
           {label: "仿真执行", value: booleanDisplayLabel(Boolean(execution.simulate))},
           {label: "仅空跑", value: booleanDisplayLabel(execution.dry_run_only !== false)},
           {label: "要求", value: "空跑仅回放，不写入控制器。"},
@@ -2016,7 +2016,7 @@
         metric: "空跑",
         rows: [
           {label: "报告章节", value: "仿真参数"},
-          {label: "运行 tick", value: booleanDisplayLabel(Boolean(execution.run_tick))},
+          {label: "运行仿真节拍", value: booleanDisplayLabel(Boolean(execution.run_tick))},
           {label: "仿真执行", value: booleanDisplayLabel(Boolean(execution.simulate))},
           {label: "仅空跑", value: booleanDisplayLabel(execution.dry_run_only !== false)},
         ],
