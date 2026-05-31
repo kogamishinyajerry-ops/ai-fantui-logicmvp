@@ -520,7 +520,7 @@
     nodes.slice(0, 3).forEach((node) => {
       events.push({
         kind: "node",
-        text: `生成节点 ${node.id || node.label || "node"} · 来源：${sourceAnchorLabel(node.source_anchors)}`,
+        text: `生成节点 ${node.id || node.label || "节点"} · 来源：${sourceAnchorLabel(node.source_anchors)}`,
       });
     });
     wires.slice(0, 3).forEach((wire) => {
@@ -568,7 +568,7 @@
   function streamedTargetLabel(proposal) {
     if (!proposal) return "等待候选对象";
     const typeLabel = proposal.target_type === "wire" ? "连线" : "节点";
-    const display = proposal.display_label || proposal.target_id || "candidate";
+    const display = proposal.display_label || proposal.target_id || "候选";
     return `${typeLabel} ${display}`;
   }
 
@@ -1559,7 +1559,7 @@
       const sourceText = sourceAnchorQuote(anchors)
         || (edge.provenance ? `${edge.provenance}` : "")
         || sourceAnchorLabel(anchors);
-      const wireLabel = `${edge.source || state.selectedTargetId.split("->")[0] || "source"} → ${edge.target || state.selectedTargetId.split("->")[1] || "target"}`;
+      const wireLabel = `${edge.source || state.selectedTargetId.split("->")[0] || "起点"} → ${edge.target || state.selectedTargetId.split("->")[1] || "终点"}`;
       return {
         sourceText,
         paramText: `${wireLabel}${edge.state ? ` · 状态：${circuitStateLabel(edge.state)}` : ""}`,
