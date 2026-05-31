@@ -1405,7 +1405,7 @@
         rows: [
           {label: "故障场景", value: hasCoverage ? `${scenarioIds.size} 个` : "未读取故障场景"},
           {label: "沙盒计划", value: `${plans.length} 个`},
-          {label: "覆盖率", value: hasCoverage ? `${Math.round((covered / scenarioIds.size) * 100)}%` : "N/A"},
+          {label: "覆盖率", value: hasCoverage ? `${Math.round((covered / scenarioIds.size) * 100)}%` : "不适用"},
           {label: "说明", value: hasCoverage ? "每个故障场景应至少有一条沙盒计划。" : "当前以模型返回主视图为准。"},
         ],
       },
