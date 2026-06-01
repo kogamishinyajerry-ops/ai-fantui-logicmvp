@@ -4689,6 +4689,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         controls_box = page.locator("#logic-command-controls").bounding_box()
         actions_box = page.locator("#logic-command-controls .logic-control-actions").bounding_box()
         process_box = page.locator("#logic-process").bounding_box()
+        workflow_detail_box = page.locator("#logic-workflow-detail").bounding_box()
         provider_box = page.locator("#logic-provider").bounding_box()
         primary_box = page.locator("#logic-fault-next").bounding_box()
         back_box = page.locator("#logic-back").bounding_box()
@@ -4706,6 +4707,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert controls_box is not None
         assert actions_box is not None
         assert process_box is not None
+        assert workflow_detail_box is not None
         assert provider_box is not None
         assert primary_box is not None
         assert back_box is not None
@@ -4725,6 +4727,10 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert primary_box["height"] <= 24
         assert primary_box["width"] >= 128
         assert controls_box["width"] >= 340
+        assert workflow_detail_box["height"] >= 20
+        assert page.locator("#logic-workflow-detail").evaluate(
+            "el => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1"
+        )
         assert page.locator("#logic-process").evaluate("el => el.scrollHeight <= el.clientHeight + 1")
         assert stream_chunks_box["y"] >= generation_stream_box["y"] + generation_stream_box["height"] - 1
         assert stream_chunks_box["y"] + stream_chunks_box["height"] <= process_box["y"] + process_box["height"] + 1

@@ -3795,12 +3795,12 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy p:last-child {
     display: block;
-    overflow: hidden;
+    overflow: visible;
     color: var(--logic-muted);
     font-size: 9px;
     line-height: 1.15;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-overflow: clip;
+    white-space: normal;
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy,
