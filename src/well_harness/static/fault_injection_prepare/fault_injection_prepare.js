@@ -635,11 +635,23 @@
     return labels[normalized] || compactCell(normalized, fallback);
   }
 
-  function faultMatrixDisplayText(value, fallback) {
-    return compactCell(value, fallback)
+  function faultDisplayText(value, fallback) {
+    const raw = (value == null || value === "")
+      ? (fallback == null ? "" : fallback)
+      : value;
+    const normalized = String(raw).replace(/\s+/g, " ").trim();
+    if (!normalized) return "";
+    const compacted = normalized.length > 68 ? `${normalized.slice(0, 65)}...` : normalized;
+    return compacted
+      .replace(/\bTHR_LOCK\s+release\b/gi, "油门锁释放")
       .replace(/\bdry-run\b/gi, "空跑")
       .replace(/仅\s+空跑/g, "仅空跑")
-      .replace(/\bTHR_LOCK\b/g, "油门锁");
+      .replace(/\bTHR_LOCK\b/g, "油门锁")
+      .replace(/([\u4e00-\u9fff])\s+(空跑|油门锁)/g, "$1$2")
+      .replace(/(空跑|油门锁)\s+([\u4e00-\u9fff])/g, "$1$2")
+      .replace(/应保持\s+油门锁\s+不释放/g, "应保持油门锁不释放")
+      .replace(/油门锁\s+释放/g, "油门锁释放")
+      .replace(/油门锁\s+不释放/g, "油门锁不释放");
   }
 
   function mappedDisplayLabel(value, labels, fallback) {
@@ -812,9 +824,9 @@
       {label: "序号", value: String(index + 1)},
       {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
       {label: "可观测信号", value: signals.length ? signals.map((signal) => normalizeText(signal)).join("；") : "未提供"},
-      {label: "期望影响", value: normalizeText(item.expected_effect_zh)},
-      {label: "模型理由", value: normalizeText(item.rationale_zh)},
-      {label: "边界安全", value: normalizeText(item.safe_boundary_zh)},
+      {label: "期望影响", value: faultDisplayText(item.expected_effect_zh, "")},
+      {label: "模型理由", value: faultDisplayText(item.rationale_zh, "")},
+      {label: "边界安全", value: faultDisplayText(item.safe_boundary_zh, "")},
     ];
     return rows;
   }
@@ -826,7 +838,7 @@
       {label: "信号", value: normalizeText(item.signal_name)},
       {label: "方式", value: injectionModeLabel(item.injection_mode)},
       {label: "来源", value: sourceAnchorLabel(item.source_anchors)},
-      {label: "安全边界", value: normalizeText(item.safe_boundary_zh)},
+      {label: "安全边界", value: faultDisplayText(item.safe_boundary_zh, "")},
       {label: "约束", value: normalizeText(item.constraint_zh)},
       {label: "优先级", value: normalizeText(item.priority)},
     ];
@@ -1302,8 +1314,8 @@
         : injectionModeLabel(rawFaultType, "故障待确认");
       const rawTriggerText = point.safe_boundary_zh || scenario.rationale_zh || "";
       const rawEffectText = scenario.expected_effect_zh || "";
-      const displayTriggerText = faultMatrixDisplayText(rawTriggerText, "空跑条件待确认");
-      const displayEffectText = faultMatrixDisplayText(rawEffectText, "观察路径影响");
+      const displayTriggerText = faultDisplayText(rawTriggerText, "空跑条件待确认");
+      const displayEffectText = faultDisplayText(rawEffectText, "观察路径影响");
       const coveredPathItems = faultCoveredPathItems(scenario, point);
       const coveredPathLabel = faultCoveredPathLabel(scenario, point);
       const evidenceToken = faultMatrixEvidenceToken(scenario, point, index);
@@ -1401,8 +1413,8 @@
           </div>
           <span class="fault-scenario-severity">${escapeText(faultRiskLabel(item.severity))}</span>
         </div>
-        <p>${escapeText(item.rationale_zh || "模型未返回选择理由。")}</p>
-        <p>${escapeText(item.expected_effect_zh || "模型未返回预期影响。")}</p>
+        <p>${escapeText(faultDisplayText(item.rationale_zh, "模型未返回选择理由。"))}</p>
+        <p>${escapeText(faultDisplayText(item.expected_effect_zh, "模型未返回预期影响。"))}</p>
         <p class="fault-anchor">来源：${escapeText(sourceAnchorLabel(item.source_anchors))}</p>
         <div class="fault-scenario-meta">
           ${signals.map((signal) => `<code>${escapeText(signal)}</code>`).join("")}
@@ -1444,7 +1456,7 @@
       const card = document.createElement("article");
       card.className = "fault-point-card";
       const titleText = `${item.node_id || "节点待确认"} · ${item.signal_name || "信号待确认"}`;
-      const rationaleText = item.safe_boundary_zh || "未返回安全边界";
+      const rationaleText = faultDisplayText(item.safe_boundary_zh, "未返回安全边界");
       card.innerHTML = `
         <div class="fault-point-head">
           <strong>${escapeText(titleText)}</strong>
@@ -1491,11 +1503,14 @@
       const article = document.createElement("article");
       article.className = "fault-boundary-item";
       const id = item.id || item.prompt_zh || "boundary";
+      const rawPrompt = item.prompt_zh || id;
+      const rawRationale = item.rationale_zh || "";
+      const rawAnswer = existingAnswers.get(id) || "";
       article.innerHTML = `
         <label>
-          <strong>${escapeText(item.prompt_zh || id)}</strong>
-          <p>${escapeText(item.rationale_zh || "该边界会影响后续沙盒注入范围。")}</p>
-          <textarea data-boundary-id="${escapeText(id)}" data-boundary-prompt="${escapeText(item.prompt_zh || id)}" placeholder="在这里输入边界确认或限制条件。">${escapeText(existingAnswers.get(id) || "")}</textarea>
+          <strong>${escapeText(faultDisplayText(rawPrompt, id))}</strong>
+          <p>${escapeText(faultDisplayText(rawRationale, "该边界会影响后续沙盒注入范围。"))}</p>
+          <textarea data-boundary-id="${escapeText(id)}" data-boundary-prompt="${escapeText(rawPrompt)}" data-boundary-answer-raw="${escapeText(rawAnswer)}" placeholder="在这里输入边界确认或限制条件。">${escapeText(faultDisplayText(rawAnswer, ""))}</textarea>
         </label>
       `;
       boundaryList.appendChild(article);
@@ -1522,12 +1537,13 @@
 
   function renderFaultPayload(payload) {
     state.faultPayload = payload;
+    resultSummary.dataset.rawSummary = payload.summary_zh || "";
     if (isSourceDeferredFaultPayload(payload) && !(payload.fault_scenarios || []).length) {
       resultState.textContent = "源文档暂缓";
-      resultSummary.textContent = payload.summary_zh || faultDeferredReason();
+      resultSummary.textContent = faultDisplayText(payload.summary_zh, faultDeferredReason());
     } else {
       resultState.textContent = "候选已生成";
-      resultSummary.textContent = payload.summary_zh || "模型已生成故障注入准备候选。";
+      resultSummary.textContent = faultDisplayText(payload.summary_zh, "模型已生成故障注入准备候选。");
     }
     renderFlags(payload);
     renderQualitySummary(payload);

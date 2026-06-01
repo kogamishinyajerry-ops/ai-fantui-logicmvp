@@ -3245,6 +3245,15 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
     page = browser.new_page(viewport={"width": 1366, "height": 768})
     try:
         fault_for_layout = json.loads(json.dumps(FAULT_PREPARATION))
+        fault_for_layout["summary_zh"] = "蓝图候选故障矩阵已准备，仅用于 dry-run 沙盒候选。"
+        fault_for_layout["boundary_questions"][0]["prompt_zh"] = "确认本次只生成 dry-run 沙盒建议？"
+        fault_for_layout["boundary_answers"] = [
+            {
+                "id": "boundary_dry_run",
+                "prompt_zh": "确认本次只生成 dry-run 沙盒建议？",
+                "answer_zh": "确认只用于 dry-run 回放演示。",
+            }
+        ]
         fault_for_layout["fault_scenarios"].append(
             {
                 "id": "fault_sw2_drop",
@@ -3340,8 +3349,25 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
             "仅空跑，不写入控制器状态。"
         )
         expect(page.locator("#fault-candidate-matrix-body [data-raw-matrix-effect='应保持 THR_LOCK 不释放。']")).to_have_text(
-            "应保持 油门锁 不释放。"
+            "应保持油门锁不释放。"
         )
+        expect(page.locator("#fault-result-summary")).to_have_text("蓝图候选故障矩阵已准备，仅用于空跑沙盒候选。")
+        expect(page.locator("#fault-result-summary")).to_have_attribute(
+            "data-raw-summary", "蓝图候选故障矩阵已准备，仅用于 dry-run 沙盒候选。"
+        )
+        expect(page.locator("#fault-boundary-list .fault-boundary-item").first.locator("strong")).to_have_text(
+            "确认本次只生成空跑沙盒建议？"
+        )
+        expect(page.locator("#fault-boundary-list textarea[data-boundary-id='boundary_dry_run']")).to_have_attribute(
+            "data-boundary-prompt", "确认本次只生成 dry-run 沙盒建议？"
+        )
+        expect(page.locator("#fault-boundary-list textarea[data-boundary-id='boundary_dry_run']")).to_have_attribute(
+            "data-boundary-answer-raw", "确认只用于 dry-run 回放演示。"
+        )
+        expect(page.locator("#fault-boundary-list textarea[data-boundary-id='boundary_dry_run']")).to_have_value(
+            "确认只用于空跑回放演示。"
+        )
+        assert "dry-run" not in page.locator("body").inner_text()
         expect(page.locator("#fault-candidate-details")).to_be_visible()
         expect(page.locator("#fault-injection-point-details")).to_be_visible()
 
