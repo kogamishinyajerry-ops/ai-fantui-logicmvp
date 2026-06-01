@@ -2513,7 +2513,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] {
-    grid-template-rows: 72px minmax(70px, 74px) minmax(0, 1fr);
+    grid-template-rows: 72px minmax(70px, 74px) minmax(0, 1fr) 128px;
     gap: 8px;
     padding: 14px 28px 12px;
   }
@@ -2563,7 +2563,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-surface {
     grid-template-rows: minmax(44px, 50px) minmax(44px, 52px) minmax(0, 1fr);
     gap: 8px;
-    padding-bottom: 132px;
+    padding-bottom: 0;
   }
 
   .sandbox-decision-board {
@@ -2645,7 +2645,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card .muted,
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-gate small {
-    -webkit-line-clamp: 1;
+    display: none;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card[data-sandbox-card="next"] {
@@ -2676,10 +2676,15 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     gap: 8px;
   }
 
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-gate-panel .sandbox-section-head {
+    display: none;
+  }
+
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-gate {
     grid-template-columns: 16px minmax(0, 1fr);
     gap: 7px;
-    min-height: 42px;
+    min-height: 32px;
+    padding: 5px 8px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-gate strong {
@@ -3069,10 +3074,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-report-strip {
-    position: absolute;
-    left: 28px;
-    right: 28px;
-    bottom: 12px;
+    position: static;
+    grid-row: 4;
     z-index: 16;
     min-height: 112px;
   }

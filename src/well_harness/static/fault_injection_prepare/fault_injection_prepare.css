@@ -1374,7 +1374,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   .fault-shell {
     position: relative;
     display: grid;
-    grid-template-rows: 86px minmax(92px, auto) minmax(0, 1fr);
+    grid-template-rows: 86px minmax(92px, auto) minmax(0, 1fr) 54px;
     gap: 12px;
     width: 100%;
     max-width: none;
@@ -1403,7 +1403,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   .fault-main,
   .fault-sidebar {
     min-height: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     gap: 10px;
   }
 
@@ -1488,10 +1489,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   }
 
   .fault-bottom-action-strip {
-    position: absolute;
-    left: 28px;
-    right: 28px;
-    bottom: 12px;
+    position: static;
+    grid-row: 4;
     z-index: 16;
     min-height: 52px;
   }

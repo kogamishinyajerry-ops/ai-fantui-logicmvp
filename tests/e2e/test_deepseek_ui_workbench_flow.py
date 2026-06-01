@@ -3052,6 +3052,55 @@ def test_desktop_four_step_pages_prioritize_primary_decision_surfaces(
         page.close()
 
 
+def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing, fault, sandbox]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(fault));
+              localStorage.setItem("ai-fantui-fault-injection-sandbox-plan-v1", JSON.stringify(sandbox));
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing(), FAULT_PREPARATION, _dense_sandbox_plan()],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        expect(page.locator("#logic-workflow-detail")).to_be_visible()
+        expect(page.locator("#logic-stream-chunks")).to_be_visible()
+        assert page.locator("#logic-workflow-detail").evaluate(
+            "el => el.scrollHeight <= el.clientHeight + 1"
+        )
+        assert page.locator("#logic-stream-chunks").evaluate(
+            "el => el.scrollHeight <= el.clientHeight + 1"
+        )
+
+        page.goto(f"{demo_server}/fault-injection-prepare", wait_until="networkidle")
+        layout_box = page.locator(".fault-layout").bounding_box()
+        action_strip_box = page.locator("#fault-bottom-action-strip").bounding_box()
+        assert layout_box is not None
+        assert action_strip_box is not None
+        assert layout_box["y"] + layout_box["height"] <= action_strip_box["y"]
+        expect(page.locator("#fault-candidate-details")).to_be_visible()
+        expect(page.locator("#fault-injection-point-details")).to_be_visible()
+
+        page.goto(f"{demo_server}/fault-injection-sandbox", wait_until="networkidle")
+        for selector in ["#fault-sandbox-decision-board", ".sandbox-review-gate-panel"]:
+            expect(page.locator(selector)).to_be_visible()
+            assert page.locator(selector).evaluate(
+                "el => el.scrollHeight <= el.clientHeight + 1"
+            )
+        expect(page.locator("#fault-sandbox-primary-gates")).to_contain_text("空跑合同")
+        expect(page.locator("#fault-sandbox-primary-gates")).to_contain_text("覆盖完整性")
+        expect(page.locator("#fault-sandbox-primary-gates")).to_contain_text("例外/风险已读")
+    finally:
+        page.close()
+
+
 def test_deepseek_visual_acceptance_script_generates_first_screen_bundle(
     demo_server: str, tmp_path: Path
 ) -> None:
