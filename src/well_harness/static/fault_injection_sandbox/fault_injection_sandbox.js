@@ -1135,7 +1135,7 @@
     } else if (value === "需重新生成沙盒配置") {
       sandboxDecisionNextAction.textContent = "需重新生成沙盒配置：补齐计划、观测点和审查行。";
     } else if (value.startsWith("已确认") || value.startsWith("需确认")) {
-      sandboxDecisionNextAction.textContent = `${value}：确认后用审查包和回放报告生成候选修订单。`;
+      sandboxDecisionNextAction.textContent = `${value}：确认后生成修订单。`;
     } else if (value === "可进入逻辑修订") {
       sandboxDecisionNextAction.textContent = "可进入逻辑修订：审查包和回放报告将作为修订单依据。";
     } else {

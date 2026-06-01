@@ -768,7 +768,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
             "#fault-sandbox-revision-next",
             "下一步：生成逻辑修订单",
             '[data-usage-path-cue="sandbox"]',
-            "审查包",
+            "生成修订单",
             [
                 ("#fault-sandbox-generate", "检查：生成配置"),
                 ("#fault-sandbox-back", "更多：返回故障准备"),
@@ -3113,7 +3113,10 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         expect(page.locator("#fault-sandbox-result-state")).to_have_text("配置已生成")
         expect(page.locator("#fault-sandbox-result-summary")).to_contain_text("DOCX L1-L4 模板候选沙盒计划已载入")
         expect(page.locator("#fault-sandbox-source-summary")).to_contain_text("DOCX L1-L4 模板候选已接入故障矩阵")
-        expect(page.locator("#fault-sandbox-decision-next-action")).to_contain_text("确认后用审查包和回放报告")
+        expect(page.locator("#fault-sandbox-decision-next-action")).to_contain_text("确认后生成修订单")
+        assert page.locator("#fault-sandbox-decision-next-action").evaluate(
+            "element => element.scrollWidth <= element.clientWidth + 1"
+        ) is True
         expect(page.locator("#fault-sandbox-review-row-count")).to_have_text("7 行")
         expect(page.locator("#fault-sandbox-review-rows [data-blueprint36-row='sandbox-review']")).to_have_count(7)
         expect(page.locator("#fault-sandbox-evidence-trace-rows [data-blueprint36-evidence-row='evidence-chain']")).to_have_count(4)
@@ -3124,7 +3127,10 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         page.click("#fault-sandbox-generate")
         expect(page.locator("#fault-sandbox-result-summary")).to_contain_text("DOCX L1-L4 模板候选沙盒计划已刷新")
         expect(page.locator("#fault-sandbox-review-row-count")).to_have_text("7 行")
-        expect(page.locator("#fault-sandbox-decision-next-action")).to_contain_text("确认后用审查包和回放报告")
+        expect(page.locator("#fault-sandbox-decision-next-action")).to_contain_text("确认后生成修订单")
+        assert page.locator("#fault-sandbox-decision-next-action").evaluate(
+            "element => element.scrollWidth <= element.clientWidth + 1"
+        ) is True
 
         page.click('[data-sandbox-report-action="export"]')
         expect(page.locator("#sandbox-review-package-panel")).to_be_visible()

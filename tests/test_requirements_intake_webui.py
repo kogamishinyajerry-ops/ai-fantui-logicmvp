@@ -6952,7 +6952,7 @@ def test_sandbox_review_page_has_current_conclusion_decision_board():
     assert '#fault-sandbox-decision-next-action[data-usage-path-cue]' in stylesheet
     assert "sandboxDecisionConclusion" in script
     assert "setSandboxDecisionNextAction" in script
-    assert "确认后用审查包和回放报告生成候选修订单" in script
+    assert "确认后生成修订单" in script
     assert "审查包和回放报告将作为修订单依据" in script
 
 
