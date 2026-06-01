@@ -4067,6 +4067,56 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         page.close()
 
 
+def test_logic_builder_compact_topbar_controls_fit_at_1280(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            _circuit_view_drawing(),
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        strip_box = page.locator("#logic-page-system-strip").bounding_box()
+        controls_box = page.locator("#logic-command-controls").bounding_box()
+        actions_box = page.locator("#logic-command-controls .logic-control-actions").bounding_box()
+        provider_box = page.locator("#logic-provider").bounding_box()
+        primary_box = page.locator("#logic-fault-next").bounding_box()
+        back_box = page.locator("#logic-back").bounding_box()
+        assert strip_box is not None
+        assert controls_box is not None
+        assert actions_box is not None
+        assert provider_box is not None
+        assert primary_box is not None
+        assert back_box is not None
+        assert strip_box["height"] <= 84
+        assert actions_box["y"] + actions_box["height"] <= strip_box["y"] + strip_box["height"] - 1
+        assert provider_box["y"] >= strip_box["y"] + 1
+        assert primary_box["height"] <= 24
+        assert primary_box["width"] >= 88
+        action_button_boxes = page.locator("#logic-command-controls button").evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              return {y: rect.y, bottom: rect.y + rect.height, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight};
+            })"""
+        )
+        assert len(action_button_boxes) == 3
+        assert max(box["y"] for box in action_button_boxes) - min(box["y"] for box in action_button_boxes) <= 1
+        for box in action_button_boxes:
+            assert box["bottom"] <= strip_box["y"] + strip_box["height"] - 1
+            assert box["scrollHeight"] <= box["clientHeight"] + 1
+        expect(page.locator("#logic-fault-next")).to_be_visible()
+        expect(page.locator("#logic-back")).to_have_text("更多：返回需求")
+    finally:
+        page.close()
+
+
 def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
     demo_server: str, browser: Any
 ) -> None:

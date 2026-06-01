@@ -3832,7 +3832,16 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-control-actions {
-    grid-template-columns: minmax(78px, 0.82fr) minmax(118px, 1.18fr);
+    grid-template-columns: minmax(58px, 0.72fr) minmax(92px, 1.16fr) minmax(58px, 0.72fr);
+    gap: 3px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-control-actions button {
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-canvas-wrap {
