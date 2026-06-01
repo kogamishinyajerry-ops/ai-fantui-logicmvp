@@ -4881,10 +4881,36 @@ def test_logic_builder_combines_notes_change_and_history_into_tabbed_canvas_draw
         page.click('#logic-collapsed-tool-rail [data-workbench-tab="notes"]')
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "notes")
         expect(page.locator("#logic-drawing-notes-details")).to_be_visible()
+        expect(page.locator("#logic-annotation-popover")).to_be_hidden()
         logic_notes = page.locator("#logic-notes")
         for boundary in ["truth_effect:none", "controller_truth_modified:false"]:
             expect(logic_notes.locator(f'[data-boundary-token="{boundary}"]')).to_have_count(1)
             assert boundary not in logic_notes.inner_text()
+        canvas_box_after_drawer = page.locator("#logic-canvas").bounding_box()
+        drawer_box = page.locator("#logic-workbench-drawers").bounding_box()
+        bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
+        assert canvas_box_after_drawer is not None
+        assert drawer_box is not None
+        assert bottom_strip_box is not None
+        assert canvas_box_after_drawer["y"] + canvas_box_after_drawer["height"] <= drawer_box["y"] - 4
+        assert drawer_box["y"] + drawer_box["height"] <= bottom_strip_box["y"] - 4
+        drawer_covered_nodes = page.evaluate(
+            """() => {
+              const drawer = document.querySelector("#logic-workbench-drawers")?.getBoundingClientRect();
+              if (!drawer) return ["missing-drawer"];
+              return Array.from(document.querySelectorAll(".logic-circuit-node"))
+                .filter((node) => {
+                  const box = node.getBoundingClientRect();
+                  if (box.width === 0 || box.height === 0) return false;
+                  return drawer.left < box.right
+                    && drawer.right > box.left
+                    && drawer.top < box.bottom
+                    && drawer.bottom > box.top;
+                })
+                .map((node) => node.dataset.demoNodeId || node.dataset.nodeId || node.textContent.trim());
+            }"""
+        )
+        assert drawer_covered_nodes == []
 
         page.click('#logic-collapsed-tool-rail [data-workbench-tab="history"]')
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "history")

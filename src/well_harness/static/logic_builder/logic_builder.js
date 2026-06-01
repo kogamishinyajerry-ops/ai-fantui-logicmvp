@@ -988,8 +988,13 @@
 
   function activateWorkbenchTab(tabName) {
     const activeTab = ["notes", "change", "history"].includes(tabName) ? tabName : "none";
+    const previousActiveTab = workbenchDrawer ? workbenchDrawer.dataset.activeTab || "none" : "none";
+    const drawerState = activeTab === "none" ? "closed" : "open";
     if (workbenchDrawer) {
       workbenchDrawer.dataset.activeTab = activeTab;
+      workbenchDrawer.dataset.workbenchDrawerState = drawerState;
+      const canvasWrap = workbenchDrawer.closest(".logic-canvas-wrap");
+      if (canvasWrap) canvasWrap.dataset.workbenchDrawerState = drawerState;
     }
     workbenchTabButtons.forEach((button) => {
       const isActive = button.dataset.workbenchTab === activeTab;
@@ -999,6 +1004,11 @@
     workbenchPanels.forEach((panel) => {
       panel.hidden = panel.dataset.workbenchPanel !== activeTab;
     });
+    if (previousActiveTab !== activeTab && state.drawingPayload) {
+      window.requestAnimationFrame(() => {
+        if (state.drawingPayload) renderDrawing(state.drawingPayload);
+      });
+    }
   }
 
   function setActiveAuxPanel(name) {
