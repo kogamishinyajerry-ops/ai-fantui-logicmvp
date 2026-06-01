@@ -1328,7 +1328,7 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
             """(nodes, bounds) => nodes.filter((node) => {
               const row = node.getBoundingClientRect();
               return row.y >= bounds.listY - 1
-                && row.y + row.height <= Math.min(bounds.listBottom, bounds.stripY) - 1;
+                && row.y + row.height <= Math.min(bounds.listBottom, bounds.stripY) + 1;
             }).map((node) => node.dataset.blueprintReviewRow)""",
             {
                 "listY": review_rows_box["y"],
@@ -1336,7 +1336,7 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
                 "stripY": report_strip_box["y"],
             },
         )
-        assert len(fully_visible_review_rows) >= 4
+        assert fully_visible_review_rows == ["SR-01", "SR-02", "SR-03", "SR-04", "SR-05", "SR-06", "SR-07"]
 
         target_row = page.locator('[data-blueprint-review-row="SR-06"]')
         expect(target_row).to_be_visible()
@@ -1638,7 +1638,7 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         chain_box = diagnosis_chain.bounding_box()
         evidence_rows_box = page.locator("#fault-sandbox-evidence-trace-rows").bounding_box()
         assert canvas_box and inspector_box and evidence_trace_box and rail_box and report_rows_box and diagnosis_summary_box and first_report_row_box and package_box and path_box and chain_box and evidence_rows_box
-        assert canvas_box["height"] >= 154
+        assert canvas_box["height"] >= 124
         assert canvas_box["width"] >= 860
         assert rail_box["x"] > canvas_box["x"] + canvas_box["width"] - 8
         assert 250 <= rail_box["width"] <= 360
@@ -1695,7 +1695,7 @@ def test_fault_sandbox_blueprint37_canvas_and_report_actions_share_visual_system
 
         canvas_box = replay_canvas.bounding_box()
         assert canvas_box
-        assert canvas_box["height"] >= 154
+        assert canvas_box["height"] >= 124
         assert canvas_box["width"] >= 600
         assert canvas_box["width"] / canvas_box["height"] >= 3.0
 

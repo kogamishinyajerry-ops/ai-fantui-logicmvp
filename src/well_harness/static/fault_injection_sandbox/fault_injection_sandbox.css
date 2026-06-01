@@ -461,6 +461,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   white-space: nowrap;
 }
 .sandbox-review-row-list {
+  align-content: start;
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -487,7 +488,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   grid-template-columns: 22px 42px minmax(62px, 0.74fr) 52px minmax(74px, 0.8fr) minmax(66px, 0.68fr) minmax(112px, 1.14fr) minmax(86px, 0.86fr) 36px;
   gap: 5px;
   min-height: 40px;
-  padding: 5px 7px;
+  padding: 4px 7px;
 }
 .sandbox-review-row-header {
   cursor: default;
@@ -2711,7 +2712,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-review-row-panel[data-blueprint37-surface="replay-main-canvas"] {
-    grid-template-rows: auto minmax(154px, 154px) minmax(112px, 1fr);
+    grid-template-rows: auto minmax(124px, 124px) minmax(112px, 1fr);
     gap: 5px;
     padding-right: 10px;
   }
@@ -2729,21 +2730,21 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-replay-canvas-main {
-    min-height: 154px;
+    min-height: 124px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] {
-    gap: 3px;
+    gap: 1px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row-header {
-    min-height: 20px;
-    padding: 3px 7px;
+    min-height: 18px;
+    padding: 2px 7px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row {
-    min-height: 36px;
-    padding: 4px 7px;
+    min-height: 30px;
+    padding: 2px 6px;
   }
 
   .sandbox-replay-canvas-node {
