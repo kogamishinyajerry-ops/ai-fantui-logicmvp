@@ -1771,6 +1771,12 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
               const rect = node.getBoundingClientRect();
               const title = node.querySelector(".sandbox-diagnosis-chain-title");
               const links = node.querySelector(".sandbox-diagnosis-chain-links");
+              const stage = node.querySelector(".sandbox-diagnosis-chain-stage");
+              const action = node.querySelector(".sandbox-diagnosis-chain-action");
+              const titleRect = title ? title.getBoundingClientRect() : null;
+              const linksRect = links ? links.getBoundingClientRect() : null;
+              const stageRect = stage ? stage.getBoundingClientRect() : null;
+              const actionRect = action ? action.getBoundingClientRect() : null;
               return {
                 width: rect.width,
                 scrollWidth: node.scrollWidth,
@@ -1779,6 +1785,13 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
                 titleClientWidth: title ? title.clientWidth : 0,
                 linksScrollWidth: links ? links.scrollWidth : 0,
                 linksClientWidth: links ? links.clientWidth : 0,
+                titleTop: titleRect ? titleRect.top : 0,
+                titleBottom: titleRect ? titleRect.bottom : 0,
+                linksTop: linksRect ? linksRect.top : 0,
+                chipBottom: Math.max(
+                  stageRect ? stageRect.bottom : 0,
+                  actionRect ? actionRect.bottom : 0,
+                ),
               };
             })"""
         )
@@ -1787,6 +1800,8 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         assert all(card["scrollWidth"] <= card["clientWidth"] + 1 for card in diagnosis_chain_cards)
         assert all(card["titleScrollWidth"] <= card["titleClientWidth"] + 1 for card in diagnosis_chain_cards)
         assert all(card["linksScrollWidth"] <= card["linksClientWidth"] + 1 for card in diagnosis_chain_cards)
+        assert all(card["chipBottom"] <= card["titleTop"] + 0.5 for card in diagnosis_chain_cards)
+        assert all(card["titleBottom"] <= card["linksTop"] + 0.5 for card in diagnosis_chain_cards)
         assert 66 <= chain_box["height"] <= 80
         assert 26 <= report_rows_box["height"] <= 44
         assert first_report_row_box["height"] >= 26

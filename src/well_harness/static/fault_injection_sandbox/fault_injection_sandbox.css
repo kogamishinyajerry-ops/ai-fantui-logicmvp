@@ -2950,21 +2950,21 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] .sandbox-diagnosis-chain-node {
-    gap: 2px;
+    gap: 1px;
     min-height: 32px;
-    padding: 3px 5px;
+    padding: 1px 5px;
   }
 
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] .sandbox-diagnosis-chain-title {
-    font-size: 9px;
-    line-height: 1.12;
+    font-size: 8px;
+    line-height: 1;
   }
 
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] .sandbox-diagnosis-chain-stage,
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] .sandbox-diagnosis-chain-action,
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] .sandbox-diagnosis-chain-link-token {
-    font-size: 8px;
-    padding: 2px 3px;
+    font-size: 7px;
+    padding: 1px 2px;
   }
 
   .sandbox-evidence-trace[data-blueprint37-right-section="evidence-trace"] {
