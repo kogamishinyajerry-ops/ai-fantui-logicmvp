@@ -1517,6 +1517,18 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     display: grid;
   }
 
+  @media (min-height: 800px) {
+    .fault-sidebar {
+      align-content: stretch;
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .fault-sidebar #fault-source-defer {
+      align-content: start;
+      min-height: 0;
+    }
+  }
+
   .fault-boundary-list {
     gap: 8px;
     grid-template-columns: repeat(2, minmax(0, 1fr));

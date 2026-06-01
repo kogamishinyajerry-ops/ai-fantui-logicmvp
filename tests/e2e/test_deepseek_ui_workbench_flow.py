@@ -3777,6 +3777,11 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
         assert fault_boundary_textarea_boxes
         assert min(box["height"] for box in fault_boundary_textarea_boxes) >= 230
         assert all(box["scrollHeight"] <= box["clientHeight"] + 1 for box in fault_boundary_textarea_boxes)
+        fault_source_defer_box = page.locator("#fault-source-defer").bounding_box()
+        assert fault_source_defer_box is not None
+        assert fault_source_defer_box["height"] >= 320
+        assert fault_action_strip_box["y"] - (fault_source_defer_box["y"] + fault_source_defer_box["height"]) <= 16
+        assert page.locator("#fault-source-defer").evaluate("node => node.scrollHeight <= node.clientHeight + 1")
         geometry.append(_assert_deepseek_page_contract(page, "fault-injection-prepare"))
         _screenshot(page, "03-fault-injection-prepare")
 
