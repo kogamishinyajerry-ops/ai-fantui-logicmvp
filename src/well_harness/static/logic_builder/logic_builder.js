@@ -949,24 +949,35 @@
     outputBacktracePanel.dataset.activeTraceId = activeId;
     outputBacktracePanel.dataset.activeOutput = activeOutputId || "none";
     outputBacktracePanel.dataset.relatedOutputCount = String(relatedOutputIds.size);
+    const relatedLabels = Array.from(relatedOutputIds)
+      .map((outputId) => outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === outputId))
+      .filter(Boolean)
+      .map((item) => {
+        const label = item.querySelector("strong");
+        return label ? label.textContent.trim() : "";
+      })
+      .filter(Boolean);
+    const relatedOutputMode = activeId === "none" || !relatedOutputIds.size
+      ? "none"
+      : (relatedOutputIds.size > 1 ? "multi" : "single");
+    outputBacktracePanel.dataset.relatedOutputMode = relatedOutputMode;
+    outputBacktracePanel.dataset.relatedOutputLabels = relatedLabels.join("|");
     if (outputBacktraceCoverage) {
       const totalOutputGroups = Number(outputBacktracePanel.dataset.outputTotalCount || "0");
       const coveredOutputGroups = Number(outputBacktracePanel.dataset.outputCoveredCount || "0");
       const globalCoverageText = `输出 ${coveredOutputGroups}/${totalOutputGroups}`;
-      const relatedLabels = Array.from(relatedOutputIds)
-        .map((outputId) => outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === outputId))
-        .filter(Boolean)
-        .map((item) => {
-          const label = item.querySelector("strong");
-          return label ? label.textContent.trim() : "";
-        })
-        .filter(Boolean);
       const coverageTail = relatedLabels.length
         ? ` · ${relatedLabels.slice(0, 2).join(" / ")}${relatedLabels.length > 2 ? ` +${relatedLabels.length - 2}` : ""}`
         : "";
+      const currentCoverageText = relatedOutputMode === "multi"
+        ? `多输出 ${relatedOutputIds.size}组`
+        : `当前 ${relatedOutputIds.size}组`;
+      outputBacktraceCoverage.dataset.currentOutputMode = relatedOutputMode;
+      outputBacktraceCoverage.dataset.currentOutputCount = String(relatedOutputIds.size);
+      outputBacktraceCoverage.dataset.currentOutputLabels = relatedLabels.join("|");
       outputBacktraceCoverage.textContent = activeId === "none"
         ? `${globalCoverageText} · 当前 0组`
-        : `${globalCoverageText} · 当前 ${relatedOutputIds.size}组${coverageTail}`;
+        : `${globalCoverageText} · ${currentCoverageText}${coverageTail}`;
     }
     outputBacktracePanel.dataset.relatedOutputIds = Array.from(relatedOutputIds).join("|");
     outputBacktraceItems.forEach((item) => {

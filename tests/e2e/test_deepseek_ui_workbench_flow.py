@@ -3282,7 +3282,26 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
+        expect(output_backtrace).to_have_attribute("data-related-output-mode", "multi")
+        expect(output_backtrace).to_have_attribute("data-related-output-count", "2")
+        expect(output_coverage).to_have_attribute("data-current-output-mode", "multi")
+        expect(output_coverage).to_contain_text("多输出")
+        expect(output_coverage).to_contain_text("TLS")
         expect(output_coverage).to_contain_text("EEC/PLS/PDU")
+        multi_output_state = page.evaluate("""() => {
+          const panel = document.querySelector("#logic-output-backtrace-panel");
+          const ids = (panel?.dataset.relatedOutputIds || "").split("|").filter(Boolean);
+          const labels = (panel?.dataset.relatedOutputLabels || "").split("|").filter(Boolean);
+          return {
+            ok: ids.includes("tls") && ids.includes("deploy") && !ids.includes("etrac")
+              && labels.includes("TLS") && labels.includes("EEC/PLS/PDU"),
+            ids,
+            labels,
+            mode: panel?.dataset.relatedOutputMode || "",
+          };
+        }""")
+        assert multi_output_state["ok"] is True, multi_output_state
+        expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_have_class(re.compile("is-related"))
         expect(output_backtrace.locator('[data-output-backtrace-output="deploy"]')).to_have_class(re.compile("is-related"))
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).not_to_have_class(re.compile("is-active|is-related"))
 
