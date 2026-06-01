@@ -2171,10 +2171,11 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .sandbox-report-strip .sandbox-report-section-row {
-  grid-template-columns: 28px minmax(42px, 1fr) 36px 42px 46px;
+  grid-template-columns: 27px minmax(72px, 1fr) 32px 42px 46px;
+  gap: 2px;
   min-height: 15px;
   overflow: hidden;
-  padding: 1px 4px;
+  padding: 1px 2px;
 }
 
 .sandbox-report-strip .sandbox-report-section-row [data-blueprint-col="source"],

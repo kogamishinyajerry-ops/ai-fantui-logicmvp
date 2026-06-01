@@ -1489,17 +1489,57 @@ def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
 
         report_strip = page.locator("#sandbox-report-strip")
         timeline = page.locator("#fault-sandbox-replay-timeline")
+        report_preview = page.locator("#fault-sandbox-report-preview")
+        report_actions = page.locator("#sandbox-report-strip .sandbox-report-actions")
         expect(report_strip).to_be_visible()
         expect(timeline).to_be_visible()
+        expect(report_preview).to_be_visible()
+        expect(report_actions).to_be_visible()
         expect(timeline.locator("[data-replay-marker]")).to_have_count(10)
         report_box = report_strip.bounding_box()
         timeline_box = timeline.bounding_box()
+        preview_box = report_preview.bounding_box()
+        actions_box = report_actions.bounding_box()
         assert report_box is not None
         assert timeline_box is not None
+        assert preview_box is not None
+        assert actions_box is not None
         assert report_box["height"] <= 132
         assert timeline_box["height"] <= 58
+        assert actions_box["x"] >= preview_box["x"] + preview_box["width"] + 6
         assert timeline.evaluate("el => el.scrollWidth <= el.clientWidth + 1")
         assert timeline.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
+        expect(report_preview.locator('[data-blueprint-col="evidence"]:visible')).to_have_count(7)
+        report_row_boxes = report_preview.locator(".sandbox-report-section-row").evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              const title = node.querySelector(".sandbox-report-section-title");
+              const links = node.querySelector(".sandbox-report-section-links");
+              return {
+                width: rect.width,
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth,
+                titleWidth: title ? title.getBoundingClientRect().width : 0,
+                titleScrollWidth: title ? title.scrollWidth : 0,
+                titleClientWidth: title ? title.clientWidth : 0,
+                linksScrollWidth: links ? links.scrollWidth : 0,
+                linksClientWidth: links ? links.clientWidth : 0,
+              };
+            })"""
+        )
+        assert report_row_boxes
+        assert all(box["scrollWidth"] <= box["clientWidth"] + 1 for box in report_row_boxes)
+        assert min(box["titleWidth"] for box in report_row_boxes) >= 72
+        assert all(box["titleScrollWidth"] <= box["titleClientWidth"] + 1 for box in report_row_boxes)
+        assert all(box["linksScrollWidth"] <= box["linksClientWidth"] + 1 for box in report_row_boxes)
+        action_button_boxes = report_actions.locator("button").evaluate_all(
+            """nodes => nodes.map((node) => ({
+              scrollWidth: node.scrollWidth,
+              clientWidth: node.clientWidth,
+            }))"""
+        )
+        assert action_button_boxes
+        assert all(box["scrollWidth"] <= box["clientWidth"] + 1 for box in action_button_boxes)
         marker_boxes = timeline.locator("[data-replay-marker]").evaluate_all(
             """nodes => nodes.map((node) => {
               const rect = node.getBoundingClientRect();
