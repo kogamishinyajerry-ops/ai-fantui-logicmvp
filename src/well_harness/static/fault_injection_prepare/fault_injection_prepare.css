@@ -388,16 +388,16 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   width: 34px;
 }
 .fault-candidate-matrix[data-blueprint-density="compact-workbench"] col[data-blueprint-col="id"] {
-  width: 64px;
+  width: 76px;
 }
 .fault-candidate-matrix[data-blueprint-density="compact-workbench"] col[data-blueprint-col="injection-position"] {
-  width: 13%;
+  width: 14%;
 }
 .fault-candidate-matrix[data-blueprint-density="compact-workbench"] col[data-blueprint-col="fault-type"] {
   width: 9%;
 }
 .fault-candidate-matrix[data-blueprint-density="compact-workbench"] col[data-blueprint-col="trigger"] {
-  width: 17%;
+  width: 16%;
 }
 .fault-candidate-matrix[data-blueprint-density="compact-workbench"] col[data-blueprint-col="expected-effect"] {
   width: 17%;

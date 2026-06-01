@@ -604,6 +604,12 @@
     return normalized.length > 68 ? `${normalized.slice(0, 65)}...` : normalized;
   }
 
+  function faultMatrixDisplayId(rowId, index) {
+    const normalized = String(rowId == null ? "" : rowId).trim();
+    if (/^F-\d{2,}$/i.test(normalized)) return normalized.toUpperCase();
+    return `F-${String(index + 1).padStart(2, "0")}`;
+  }
+
   function mappedDisplayLabel(value, labels, fallback) {
     const normalized = String(value == null ? "" : value).trim();
     if (!normalized) return fallback;
@@ -1252,6 +1258,7 @@
       const scenario = scenarios[index] || scenarios[0] || {};
       const point = points[index] || points[0] || {};
       const rowId = scenario.id || point.id || `fault_row_${index + 1}`;
+      const displayRowId = faultMatrixDisplayId(rowId, index);
       const risk = faultRiskLabel(scenario.severity);
       const faultTypeText = scenario.fault_type
         ? faultTypeLabel(scenario.fault_type, "故障待确认")
@@ -1287,7 +1294,7 @@
       row.dataset.risk = risk;
       row.innerHTML = `
         <td class="fault-matrix-select" data-blueprint-col="checkbox"><input type="checkbox" aria-label="选择 ${escapeText(rowId)}" checked disabled></td>
-        <td class="fault-matrix-id" data-blueprint-col="id"><code class="blueprint-row-token" data-row-scan-token="id">${escapeText(rowId)}</code></td>
+        <td class="fault-matrix-id" data-blueprint-col="id"><code class="blueprint-row-token" data-row-scan-token="id" data-raw-row-id="${escapeText(rowId)}" title="${escapeText(rowId)}" aria-label="候选编号 ${escapeText(displayRowId)}，原始键 ${escapeText(rowId)}">${escapeText(displayRowId)}</code></td>
         <td class="fault-matrix-injection-cell" data-blueprint-col="injection-position">
           <strong>${escapeText(compactCell(point.node_id || scenario.node_id, "待确认节点"))}</strong>
           <small>${escapeText(compactCell(point.signal_name, "信号待确认"))}</small>

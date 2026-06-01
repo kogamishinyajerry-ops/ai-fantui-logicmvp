@@ -2243,6 +2243,18 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         fault_row_box = page.locator("#fault-candidate-matrix-body [data-blueprint-density='compact-workbench']").first.bounding_box()
         assert fault_row_box
         assert fault_row_box["height"] <= 60
+        id_token_metrics = page.locator("#fault-candidate-matrix-body .fault-matrix-id code").evaluate_all(
+            """nodes => nodes.map((node) => ({
+              text: node.textContent,
+              rawId: node.getAttribute("data-raw-row-id"),
+              clientWidth: node.clientWidth,
+              scrollWidth: node.scrollWidth,
+            }))"""
+        )
+        assert id_token_metrics
+        assert [item["text"] for item in id_token_metrics] == ["F-01", "F-02"]
+        assert [item["rawId"] for item in id_token_metrics] == ["blueprint_fault_ra_low", "blueprint_fault_sw_path"]
+        assert all(item["scrollWidth"] <= item["clientWidth"] + 1 for item in id_token_metrics), id_token_metrics
         expect(page.locator("#fault-candidate-matrix-panel")).to_contain_text("覆盖路径")
         expect(page.locator("#fault-candidate-matrix-body")).to_contain_text("radio_altitude_ft")
         expect(page.locator(".fault-scenario-card")).to_have_count(2)
