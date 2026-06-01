@@ -3708,6 +3708,12 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   pointer-events: none;
 }
 
+.logic-shell[data-ui-skin="codex-minimal"][data-left-rail-state="expanded"] .logic-collapsed-tool-rail {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .logic-shell[data-ui-skin="codex-minimal"][data-right-inspector-state="collapsed"] .logic-object-context-drawer {
   max-height: 1px;
   overflow: hidden;

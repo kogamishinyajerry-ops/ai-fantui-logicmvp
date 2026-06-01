@@ -3098,6 +3098,13 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
 
         page.click('#logic-collapsed-tool-rail [data-panel-toggle="left"]')
         assert shell.evaluate("el => el.classList.contains('is-left-open')")
+        collapsed_left_rail_geometry = page.locator("#logic-collapsed-tool-rail").evaluate(
+            """el => {
+              const style = getComputedStyle(el);
+              return {visibility: style.visibility, opacity: style.opacity, pointerEvents: style.pointerEvents};
+            }"""
+        )
+        assert collapsed_left_rail_geometry == {"visibility": "hidden", "opacity": "0", "pointerEvents": "none"}
         page.click('#logic-right-inspector-rail [data-panel-toggle="right"]')
         assert shell.evaluate("el => el.classList.contains('is-right-open')")
         expect(page.locator("#logic-object-context-drawer")).to_be_visible()
