@@ -1464,6 +1464,23 @@ def test_fault_sandbox_report_strip_prioritizes_review_package_action(
         assert report_strip.evaluate("(element) => element.getBoundingClientRect().height <= 132") is True
         export_action.click()
         expect(page.locator("#sandbox-review-package-panel")).to_be_visible()
+        review_package_rows_box = page.locator("#sandbox-review-package-review-rows").bounding_box()
+        evidence_package_rows_box = page.locator("#sandbox-review-package-evidence-rows").bounding_box()
+        report_package_rows_box = page.locator("#sandbox-review-package-report-rows").bounding_box()
+        assert review_package_rows_box and evidence_package_rows_box and report_package_rows_box
+        assert abs(evidence_package_rows_box["height"] - review_package_rows_box["height"]) <= 4
+        assert abs(evidence_package_rows_box["height"] - report_package_rows_box["height"]) <= 4
+        assert abs(
+            (evidence_package_rows_box["y"] + evidence_package_rows_box["height"])
+            - (report_package_rows_box["y"] + report_package_rows_box["height"])
+        ) <= 4
+        evidence_package_row_heights = page.locator(
+            "#sandbox-review-package-evidence-rows .sandbox-review-package-item"
+        ).evaluate_all("nodes => nodes.map((node) => node.getBoundingClientRect().height)")
+        assert min(evidence_package_row_heights) >= 120
+        assert page.locator("#sandbox-review-package-evidence-rows").evaluate(
+            "element => element.scrollHeight <= element.clientHeight + 1"
+        ) is True
         assert page.evaluate("() => document.scrollingElement.scrollHeight <= window.innerHeight") is True
         assert page.evaluate("() => document.scrollingElement.scrollWidth <= window.innerWidth") is True
     finally:
