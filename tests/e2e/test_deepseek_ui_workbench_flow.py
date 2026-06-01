@@ -1522,22 +1522,43 @@ def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
         timeline = page.locator("#fault-sandbox-replay-timeline")
         report_preview = page.locator("#fault-sandbox-report-preview")
         report_actions = page.locator("#sandbox-report-strip .sandbox-report-actions")
+        report_invariants = page.locator("#sandbox-report-strip .sandbox-report-invariants")
         expect(report_strip).to_be_visible()
         expect(timeline).to_be_visible()
         expect(report_preview).to_be_visible()
         expect(report_actions).to_be_visible()
+        expect(report_invariants).to_be_visible()
         expect(timeline.locator("[data-replay-marker]")).to_have_count(10)
         report_box = report_strip.bounding_box()
         timeline_box = timeline.bounding_box()
         preview_box = report_preview.bounding_box()
         actions_box = report_actions.bounding_box()
+        invariants_box = report_invariants.bounding_box()
         assert report_box is not None
         assert timeline_box is not None
         assert preview_box is not None
         assert actions_box is not None
+        assert invariants_box is not None
         assert report_box["height"] <= 132
         assert timeline_box["height"] <= 58
         assert actions_box["x"] >= preview_box["x"] + preview_box["width"] + 6
+        assert report_actions.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
+        action_button_boxes = report_actions.locator("button").evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              return {
+                bottom: rect.y + rect.height,
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth,
+                scrollHeight: node.scrollHeight,
+                clientHeight: node.clientHeight,
+              };
+            })"""
+        )
+        assert len(action_button_boxes) == 4
+        assert all(box["bottom"] <= invariants_box["y"] - 1 for box in action_button_boxes)
+        assert all(box["scrollWidth"] <= box["clientWidth"] + 1 for box in action_button_boxes)
+        assert all(box["scrollHeight"] <= box["clientHeight"] + 1 for box in action_button_boxes)
         assert timeline.evaluate("el => el.scrollWidth <= el.clientWidth + 1")
         assert timeline.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
         expect(report_preview.locator('[data-blueprint-col="evidence"]:visible')).to_have_count(7)
