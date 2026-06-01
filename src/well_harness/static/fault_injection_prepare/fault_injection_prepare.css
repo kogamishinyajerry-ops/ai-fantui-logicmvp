@@ -1493,30 +1493,46 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
 
   .fault-boundary-list {
     gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: 68px;
     overflow: auto;
   }
 
   .fault-boundary-item {
-    padding: 7px 10px;
+    padding: 6px 8px;
   }
 
   .fault-boundary-item label {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.52fr);
-    gap: 4px 10px;
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 0.42fr);
+    gap: 2px 8px;
     align-items: start;
   }
 
   .fault-boundary-item strong,
   .fault-boundary-item p {
     grid-column: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fault-boundary-item strong {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .fault-boundary-item p {
+    font-size: 11px;
+    line-height: 1.25;
   }
 
   .fault-boundary-item textarea {
     grid-column: 2;
     grid-row: 1 / span 2;
-    min-height: 46px;
-    max-height: 52px;
+    min-height: 38px;
+    max-height: 40px;
+    padding: 6px 8px;
+    line-height: 1.25;
     resize: none;
   }
 

@@ -3088,6 +3088,28 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
 ) -> None:
     page = browser.new_page(viewport={"width": 1366, "height": 768})
     try:
+        fault_for_layout = json.loads(json.dumps(FAULT_PREPARATION))
+        fault_for_layout["fault_scenarios"].append(
+            {
+                "id": "fault_sw2_drop",
+                "label": "SW2 掉线",
+                "node_id": "sw2",
+                "fault_type": "dropout",
+                "severity": "medium",
+                "rationale_zh": "SW2 条件缺失会阻断执行链。",
+                "expected_effect_zh": "应保持 THR_LOCK 不释放。",
+                "observable_signals": ["sw2_valid", "logic2"],
+            }
+        )
+        fault_for_layout["injection_points"].append(
+            {
+                "id": "inject_sw2",
+                "node_id": "sw2",
+                "signal_name": "sw2_valid",
+                "injection_mode": "dropout",
+                "safe_boundary_zh": "仅 dry-run，不写入控制器状态。",
+            }
+        )
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate(
             """([requirements, drawing, fault, sandbox]) => {
@@ -3096,7 +3118,7 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
               localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(fault));
               localStorage.setItem("ai-fantui-fault-injection-sandbox-plan-v1", JSON.stringify(sandbox));
             }""",
-            [REQUIREMENTS_READY, _circuit_view_drawing(), FAULT_PREPARATION, _dense_sandbox_plan()],
+            [REQUIREMENTS_READY, _circuit_view_drawing(), fault_for_layout, _dense_sandbox_plan()],
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
@@ -3124,9 +3146,28 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
         assert process_box["height"] <= 56
         assert matrix_box["y"] <= 320
         assert layout_box["y"] + layout_box["height"] <= action_strip_box["y"]
-        assert boundary_list_box["height"] >= 60
+        assert boundary_list_box["height"] >= 48
         assert boundary_list_box["y"] < action_strip_box["y"]
         assert boundary_list_box["y"] + boundary_list_box["height"] <= action_strip_box["y"] - 4
+        boundary_items = page.locator("#fault-boundary-list .fault-boundary-item")
+        expect(boundary_items).to_have_count(2)
+        boundary_item_boxes = boundary_items.evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              return {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
+            })"""
+        )
+        assert len(boundary_item_boxes) == 2
+        assert abs(boundary_item_boxes[0]["y"] - boundary_item_boxes[1]["y"]) <= 2
+        assert boundary_item_boxes[0]["x"] + boundary_item_boxes[0]["width"] <= boundary_item_boxes[1]["x"]
+        for box in boundary_item_boxes:
+            assert box["width"] >= 420
+            assert boundary_list_box["y"] <= box["y"] <= boundary_list_box["y"] + 1
+            assert box["y"] + box["height"] <= boundary_list_box["y"] + boundary_list_box["height"] + 1
+            assert box["y"] + box["height"] <= action_strip_box["y"] - 4
+        assert page.locator("#fault-boundary-list").evaluate(
+            "el => el.scrollHeight <= el.clientHeight + 2"
+        )
         assert page.locator("#fault-process").evaluate(
             "el => el.scrollHeight <= el.clientHeight + 1"
         )
