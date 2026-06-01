@@ -1469,23 +1469,32 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         decision_box = page.locator("#fault-sandbox-decision-board").bounding_box()
         gates_box = page.locator(".sandbox-review-gate-panel").bounding_box()
         assert topbar_box and process_box and decision_box and gates_box
-        assert topbar_box["height"] <= 74
-        assert process_box["height"] <= 78
-        assert decision_box["height"] <= 54
-        assert gates_box["height"] <= 56
+        assert topbar_box["height"] <= 60
+        assert process_box["height"] <= 44
+        assert decision_box["height"] <= 42
+        assert gates_box["height"] <= 44
 
         primary_surface = page.locator("#failure-path")
+        primary_box = primary_surface.bounding_box()
+        assert primary_box
+        assert primary_box["y"] <= 170
         expect(primary_surface).to_have_attribute(
             "data-blueprint37-layout",
             "replay-canvas-report-rail-default",
         )
         replay_panel = page.locator("#fault-sandbox-review-row-panel")
         expect(replay_panel).to_be_visible()
+        replay_panel_box = replay_panel.bounding_box()
+        assert replay_panel_box
+        assert replay_panel_box["y"] <= 265
         expect(replay_panel).to_have_attribute("data-blueprint37-surface", "replay-main-canvas")
         expect(replay_panel).to_have_attribute("data-default-role", "replay-canvas-primary")
 
         replay_canvas = page.locator("#fault-sandbox-replay-canvas-main")
         expect(replay_canvas).to_be_visible()
+        replay_canvas_box = replay_canvas.bounding_box()
+        assert replay_canvas_box
+        assert replay_canvas_box["y"] <= 310
         expect(replay_canvas).to_have_attribute(
             "data-blueprint37-contract",
             "state-nodes-verified-path-warning-boundary",

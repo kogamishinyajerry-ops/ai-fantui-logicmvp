@@ -2513,9 +2513,9 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] {
-    grid-template-rows: 72px minmax(70px, 74px) minmax(0, 1fr) 128px;
-    gap: 8px;
-    padding: 14px 28px 12px;
+    grid-template-rows: 58px minmax(0, auto) minmax(0, 1fr) 128px;
+    gap: 6px;
+    padding: 10px 28px 12px;
   }
 
   .sandbox-topbar {
@@ -2525,23 +2525,27 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-topbar {
     align-items: center;
-    padding: 8px 0;
+    padding: 5px 0;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-topbar .sandbox-kicker {
+    display: none;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-controls {
-    gap: 7px;
+    gap: 6px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-controls select,
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-controls button {
-    min-height: 30px;
-    padding: 5px 8px;
-    font-size: 12px;
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
     line-height: 1.15;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] h1 {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .sandbox-primary-surface {
@@ -2561,8 +2565,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-surface {
-    grid-template-rows: minmax(44px, 50px) minmax(44px, 52px) minmax(0, 1fr);
-    gap: 8px;
+    grid-template-rows: minmax(36px, 40px) minmax(38px, 42px) minmax(0, 1fr);
+    gap: 6px;
     padding-bottom: 0;
   }
 
@@ -2630,7 +2634,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card,
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-gate,
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-gate-panel {
-    padding: 7px 9px;
+    padding: 5px 8px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card {
@@ -2639,8 +2643,17 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card strong,
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] #fault-sandbox-decision-next-action {
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.24;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] #fault-sandbox-decision-next-action[data-usage-path-cue] {
+    display: block;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-line-clamp: initial;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card .muted,
@@ -2650,6 +2663,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-card[data-sandbox-card="next"] {
     grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
     align-items: center;
   }
 
@@ -2663,7 +2677,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     grid-column: 2;
     align-items: center;
     justify-content: center;
-    min-height: 22px;
+    min-height: 20px;
     padding: 2px 6px;
     font-size: 10px;
   }
@@ -2682,9 +2696,9 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-gate {
     grid-template-columns: 16px minmax(0, 1fr);
-    gap: 7px;
-    min-height: 32px;
-    padding: 5px 8px;
+    gap: 6px;
+    min-height: 28px;
+    padding: 4px 8px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-primary-gate strong {
@@ -2751,6 +2765,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-diagnosis-inspector[data-blueprint37-right-density="layered-report-evidence"] {
+    align-content: start;
     grid-template-rows:
       22px
       minmax(28px, 28px)
@@ -2759,7 +2774,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
       30px
       32px
       16px
-      minmax(76px, 1fr);
+      minmax(76px, 94px);
     overflow: hidden;
   }
 
@@ -3009,6 +3024,13 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     padding: 7px 10px;
   }
 
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process.is-complete {
+    display: grid;
+    gap: 4px;
+    max-height: 42px;
+    padding: 5px 10px;
+  }
+
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process .sandbox-kicker {
     display: none;
   }
@@ -3023,8 +3045,17 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     margin-bottom: 4px;
   }
 
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process.is-complete .sandbox-process-head {
+    align-items: center;
+    margin-bottom: 2px;
+  }
+
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-track {
     height: 6px;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process.is-complete .sandbox-track {
+    height: 4px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-steps {
@@ -3039,6 +3070,10 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] #fault-sandbox-process-detail,
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] #sandbox-stream-chunks {
+    display: none;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process.is-complete .sandbox-steps {
     display: none;
   }
 
