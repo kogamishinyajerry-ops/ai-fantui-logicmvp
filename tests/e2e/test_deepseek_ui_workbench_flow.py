@@ -764,7 +764,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
             "/fault-injection-sandbox",
             "4",
             "第 4/4 步",
-            "沙盒注入",
+            "沙盒审查",
             "#fault-sandbox-revision-next",
             "下一步：生成逻辑修订单",
             '[data-usage-path-cue="sandbox"]',
