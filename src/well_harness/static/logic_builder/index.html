@@ -256,6 +256,19 @@
         <ol id="logic-requirement-trace-list" class="logic-requirement-trace-list" aria-label="逐段生成依据">
           <li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>
         </ol>
+        <div id="logic-current-segment-evidence" class="logic-current-segment-evidence" aria-label="当前段落证据卡" data-current-segment-id="waiting" data-node-count="0" data-wire-count="0" data-condition-count="0">
+          <span>当前段落</span>
+          <strong id="logic-current-segment-title">等待段落</strong>
+          <p id="logic-current-segment-summary">选择需求段后显示原文、动作与落图依据。</p>
+          <dl>
+            <dt>生成动作</dt>
+            <dd id="logic-current-segment-action">等待解析</dd>
+            <dt>逻辑锚点</dt>
+            <dd id="logic-current-segment-anchor">等待节点/连线</dd>
+            <dt>复核状态</dt>
+            <dd id="logic-current-segment-review">等待全局复核</dd>
+          </dl>
+        </div>
         <div class="logic-requirement-trace-review" aria-label="全局复核" data-global-review-summary="doc-to-panel">
           <span>全局复核</span>
           <strong id="logic-requirement-trace-review-state">等待线路图</strong>

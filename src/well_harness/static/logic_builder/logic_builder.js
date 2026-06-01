@@ -191,6 +191,12 @@
   const requirementTracePanel = $("logic-requirement-trace-panel");
   const requirementTraceSource = $("logic-requirement-trace-source");
   const requirementTraceList = $("logic-requirement-trace-list");
+  const currentSegmentEvidence = $("logic-current-segment-evidence");
+  const currentSegmentTitle = $("logic-current-segment-title");
+  const currentSegmentSummary = $("logic-current-segment-summary");
+  const currentSegmentAction = $("logic-current-segment-action");
+  const currentSegmentAnchor = $("logic-current-segment-anchor");
+  const currentSegmentReview = $("logic-current-segment-review");
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
   const globalReviewMatrix = $("logic-global-review-matrix");
@@ -858,6 +864,43 @@
     syncReviewMatrixActions(state.provenanceFilter || "all");
   }
 
+  function renderCurrentSegmentEvidenceCard(trace) {
+    if (!currentSegmentEvidence) return;
+    if (!trace) {
+      currentSegmentEvidence.dataset.currentSegmentId = "waiting";
+      currentSegmentEvidence.dataset.nodeCount = "0";
+      currentSegmentEvidence.dataset.wireCount = "0";
+      currentSegmentEvidence.dataset.conditionCount = "0";
+      if (currentSegmentTitle) currentSegmentTitle.textContent = "等待段落";
+      if (currentSegmentSummary) currentSegmentSummary.textContent = "选择需求段后显示原文、动作与落图依据。";
+      if (currentSegmentAction) currentSegmentAction.textContent = "等待解析";
+      if (currentSegmentAnchor) currentSegmentAnchor.textContent = "等待节点/连线";
+      if (currentSegmentReview) currentSegmentReview.textContent = "等待全局复核";
+      return;
+    }
+    const nodeIds = Array.isArray(trace.nodeIds) ? trace.nodeIds : [];
+    const wireIds = Array.isArray(trace.wireIds) ? trace.wireIds : [];
+    const actions = Array.isArray(trace.actions) ? trace.actions.filter(Boolean) : [];
+    const segmentIndex = trace.displayIndex || "--";
+    const conditionCount = trace.sourceId ? 1 : 0;
+    const anchorParts = [];
+    if (nodeIds.length) anchorParts.push(`${nodeIds.length} 节点`);
+    if (wireIds.length) anchorParts.push(`${wireIds.length} 连线`);
+    if (conditionCount) anchorParts.push("条件锚点已锁定");
+    currentSegmentEvidence.dataset.currentSegmentId = trace.id || trace.sourceId || "active";
+    currentSegmentEvidence.dataset.nodeCount = String(nodeIds.length);
+    currentSegmentEvidence.dataset.wireCount = String(wireIds.length);
+    currentSegmentEvidence.dataset.conditionCount = String(conditionCount);
+    if (currentSegmentTitle) currentSegmentTitle.textContent = `段 ${segmentIndex} · ${anchorParts.length ? "已落图" : "待落图"}`;
+    if (currentSegmentSummary) currentSegmentSummary.textContent = trace.quote || "当前段原文等待解析。";
+    if (currentSegmentAction) currentSegmentAction.textContent = actions.join("；") || "生成候选节点与连线";
+    if (currentSegmentAnchor) currentSegmentAnchor.textContent = anchorParts.join(" · ") || "等待节点/连线";
+    if (currentSegmentReview) {
+      const totalAnchors = nodeIds.length + wireIds.length + conditionCount;
+      currentSegmentReview.textContent = totalAnchors ? `${totalAnchors} 个锚点已进入全局复核` : "等待全局复核";
+    }
+  }
+
   function setActiveRequirementTrace(traceId) {
     if (!requirementTracePanel || !requirementTraceList) return;
     const nextId = traceId || "";
@@ -879,6 +922,7 @@
         }
       }
     });
+    renderCurrentSegmentEvidenceCard(activeTrace);
     applyRequirementTraceHighlight(activeTrace);
   }
 
@@ -896,6 +940,7 @@
       renderGlobalReviewMatrix(evidence);
       if (requirementTraceReviewState) requirementTraceReviewState.textContent = "等待线路图";
       if (requirementTraceReviewSummary) requirementTraceReviewSummary.textContent = "生成完成后会核对节点、连线与边界。";
+      renderCurrentSegmentEvidenceCard(null);
       applyRequirementTraceHighlight(null);
       return;
     }
@@ -911,6 +956,10 @@
       li.dataset.requirementTraceId = item.id;
       li.dataset.sourceAnchorId = item.sourceId;
       li.dataset.traceTargets = JSON.stringify({
+        id: item.id,
+        displayIndex: String(index + 1).padStart(2, "0"),
+        quote: item.quote,
+        actions: item.actions,
         sourceId: item.sourceId,
         nodeIds: item.nodeIds,
         wireIds: item.wireIds,

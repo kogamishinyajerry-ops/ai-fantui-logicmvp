@@ -3221,6 +3221,10 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'data-presentation-mode="workbench"' in html
     assert 'data-logic-interaction-mode="workbench"' in html
     assert 'id="logic-requirement-trace-panel"' in html
+    assert 'id="logic-current-segment-evidence"' in html
+    assert 'id="logic-current-segment-title"' in html
+    assert 'id="logic-current-segment-anchor"' in html
+    assert 'data-current-segment-id="waiting"' in html
     assert 'id="logic-trust-spine"' in html
     assert 'data-trust-stage="source"' in html
     assert 'data-trust-stage="review"' in html
@@ -5706,6 +5710,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".is-provenance-match" in logic_stylesheet
     assert ".logic-trust-spine" in logic_stylesheet
     assert ".logic-trust-spine li.is-active" in logic_stylesheet
+    assert ".logic-current-segment-evidence" in logic_stylesheet
+    assert ".logic-current-segment-evidence dl" in logic_stylesheet
     assert ".logic-global-review-matrix" in logic_stylesheet
     assert ".logic-review-matrix-action" in logic_stylesheet
     assert "[data-review-active]" in logic_stylesheet

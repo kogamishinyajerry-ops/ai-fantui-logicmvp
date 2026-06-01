@@ -3188,6 +3188,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(review_matrix.locator('[data-review-filter-action="all"]')).to_have_attribute("aria-pressed", "true")
         expect(page.locator("#logic-requirement-trace-list [data-requirement-trace-id]")).to_have_count(4)
         expect(page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")).to_have_count(1)
+        segment_card = page.locator("#logic-current-segment-evidence")
+        expect(segment_card).to_be_visible()
+        expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
+        expect(segment_card).to_have_attribute("data-node-count", "5")
+        expect(segment_card).to_have_attribute("data-wire-count", "4")
+        expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
+        expect(page.locator("#logic-current-segment-anchor")).to_contain_text("节点")
+        expect(page.locator("#logic-current-segment-review")).to_contain_text("全局复核")
         active_trace = page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")
         expect(active_trace).to_have_attribute("data-source-anchor-id", "logic1")
         active_text = active_trace.inner_text()
@@ -3200,6 +3208,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert "候选假设" in review_summary
         assert "本地补齐" in review_summary
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
+        page.locator("#logic-requirement-trace-list [data-requirement-trace-id]").nth(1).locator("button").click()
+        expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
+        expect(page.locator("#logic-current-segment-title")).to_contain_text("段 02")
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
+        expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
 
         trace_panel_box = trace_panel.bounding_box()

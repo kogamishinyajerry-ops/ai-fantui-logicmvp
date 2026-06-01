@@ -1578,6 +1578,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-provenance-dot.is-assumption { background: #f5c85b; }
 .logic-provenance-dot.is-local { background: #36c6d8; }
 .logic-trust-spine {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
@@ -1655,15 +1656,21 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   color: #f2f7fc;
 }
 .logic-requirement-trace-list {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 7px;
+  max-height: 100%;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .logic-requirement-trace-item button {
+  position: relative;
+  z-index: 3;
   width: 100%;
   min-width: 0;
   border: 1px solid rgba(54, 198, 216, 0.22);
@@ -1675,6 +1682,66 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   border-color: rgba(245, 200, 91, 0.68);
   background: rgba(245, 200, 91, 0.10);
 }
+.logic-current-segment-evidence {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(245, 200, 91, 0.30);
+  border-radius: 9px;
+  background:
+    linear-gradient(135deg, rgba(245, 200, 91, 0.10), rgba(7, 20, 33, 0.86)),
+    rgba(7, 20, 33, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 6px;
+}
+.logic-current-segment-evidence > span {
+  display: block;
+  color: #f5c85b;
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.logic-current-segment-evidence > strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #f8fbff;
+  font-size: 12px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-current-segment-evidence > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 3px 0 5px;
+  color: #c3d4e5;
+  font-size: 10px;
+  line-height: 1.32;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+.logic-current-segment-evidence dl {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 2px 6px;
+  margin: 0;
+}
+.logic-current-segment-evidence dt {
+  color: #8fd8ec;
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 800;
+}
+.logic-current-segment-evidence dd {
+  overflow: hidden;
+  margin: 0;
+  color: #a8bad0;
+  font-size: 9px;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .logic-requirement-trace-targets,
 .logic-requirement-trace-copy small,
 .logic-requirement-trace-review p {
@@ -1683,8 +1750,8 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-global-review-matrix {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 8px;
+  gap: 5px;
+  margin-top: 5px;
 }
 .logic-global-review-matrix article {
   min-width: 0;
@@ -1692,7 +1759,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   border: 1px solid rgba(54, 198, 216, 0.24);
   border-radius: 7px;
   background: rgba(7, 20, 33, 0.76);
-  padding: 7px;
+  padding: 5px;
 }
 .logic-global-review-matrix article[data-review-status="pass"] {
   border-color: rgba(25, 210, 143, 0.46);
@@ -1726,7 +1793,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   overflow: hidden;
   margin-top: 2px;
   color: #f2f7fc;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1739,11 +1806,11 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 9px;
   line-height: 1.25;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 .logic-review-matrix-action {
   width: 100%;
-  margin-top: 6px;
+  margin-top: 4px;
   border: 1px solid rgba(54, 198, 216, 0.28);
   border-radius: 6px;
   background: rgba(5, 17, 28, 0.78);
@@ -1754,7 +1821,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-weight: 800;
   letter-spacing: 0.05em;
   line-height: 1.1;
-  padding: 5px 6px;
+  padding: 4px 5px;
   text-align: center;
   transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
@@ -4286,8 +4353,10 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-panel {
     grid-column: 1;
     grid-row: 1 / 5;
+    position: relative;
+    z-index: 20;
     display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(128px, 1fr) minmax(0, 92px) minmax(0, 176px);
     gap: 8px;
     overflow: hidden;
     border: 1px solid rgba(54, 198, 216, 0.44);
@@ -4298,6 +4367,39 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     color: #d8e4f2;
     padding: 10px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 28px rgba(0, 0, 0, 0.24);
+    pointer-events: auto;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-list {
+    grid-row: 3;
+    min-height: 128px;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-evidence {
+    grid-row: 4;
+    max-height: 92px;
+    overflow: hidden;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review {
+    grid-row: 5;
+    max-height: 176px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 7px;
+    gap: 3px;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-list,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-item button,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-review-matrix-action {
+    pointer-events: auto;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-trust-spine,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-evidence {
+    pointer-events: none;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-canvas-compact-toolbar {
