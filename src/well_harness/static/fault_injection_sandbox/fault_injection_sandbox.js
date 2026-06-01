@@ -812,7 +812,7 @@
       },
       workflow_notes: [
         "首次进入预览由前端本地构造，保持仅候选态。",
-        "如需真实模型输出，请先从需求和逻辑绘制流程生成正式草稿。",
+        "如需真实模型输出，请先从需求和逻辑复制流程生成正式草稿。",
       ],
       llm: {
         provider: "local-ui",
@@ -940,7 +940,7 @@
       strategy: "ui_template_preview",
     };
     sandboxPayload.workflow_notes = [
-      "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持仅候选态。",
+      "该沙盒计划由逻辑复制页 DOCX 模板候选生成，保持仅候选态。",
       "用于验收故障矩阵、沙盒审查、证据追溯和报告预览界面。",
     ];
     return sandboxPayload;
