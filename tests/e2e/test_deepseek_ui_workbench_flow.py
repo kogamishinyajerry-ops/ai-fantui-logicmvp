@@ -1659,6 +1659,28 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         assert len(diagnosis_path_cards) == 3
         assert min(card["width"] for card in diagnosis_path_cards) >= 280
         assert all(card["scrollWidth"] <= card["clientWidth"] + 1 for card in diagnosis_path_cards)
+        diagnosis_chain_cards = diagnosis_chain.locator(".sandbox-diagnosis-chain-node").evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              const title = node.querySelector(".sandbox-diagnosis-chain-title");
+              const links = node.querySelector(".sandbox-diagnosis-chain-links");
+              return {
+                width: rect.width,
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth,
+                titleScrollWidth: title ? title.scrollWidth : 0,
+                titleClientWidth: title ? title.clientWidth : 0,
+                linksScrollWidth: links ? links.scrollWidth : 0,
+                linksClientWidth: links ? links.clientWidth : 0,
+              };
+            })"""
+        )
+        assert len(diagnosis_chain_cards) == 3
+        assert min(card["width"] for card in diagnosis_chain_cards) >= 142
+        assert all(card["scrollWidth"] <= card["clientWidth"] + 1 for card in diagnosis_chain_cards)
+        assert all(card["titleScrollWidth"] <= card["titleClientWidth"] + 1 for card in diagnosis_chain_cards)
+        assert all(card["linksScrollWidth"] <= card["linksClientWidth"] + 1 for card in diagnosis_chain_cards)
+        assert 66 <= chain_box["height"] <= 80
         assert 26 <= report_rows_box["height"] <= 44
         assert first_report_row_box["height"] >= 26
         assert first_report_title.evaluate("(element) => element.scrollWidth <= element.clientWidth + 1") is True
@@ -1668,7 +1690,7 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         expect(evidence_trace.locator(".sandbox-evidence-trace-row:visible")).to_have_count(1)
         assert evidence_trace_box["x"] >= inspector_box["x"] - 1
         assert evidence_trace_box["x"] + evidence_trace_box["width"] <= inspector_box["x"] + inspector_box["width"] + 1
-        assert evidence_trace_box["y"] > chain_box["y"]
+        assert evidence_trace_box["y"] >= chain_box["y"] + chain_box["height"]
         assert evidence_trace_box["height"] <= 94
         assert 26 <= evidence_rows_box["height"] <= 56
         assert inspector.evaluate("(element) => element.scrollHeight <= element.clientHeight + 1") is True

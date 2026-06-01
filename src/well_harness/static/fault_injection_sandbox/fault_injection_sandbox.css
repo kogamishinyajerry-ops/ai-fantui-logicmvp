@@ -2787,7 +2787,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
       minmax(48px, 52px)
       minmax(80px, 88px)
       minmax(62px, 72px)
-      32px
+      minmax(68px, 76px)
       16px
       minmax(76px, 94px);
     overflow: hidden;
@@ -2934,6 +2934,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] {
     align-self: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
     overflow: hidden;
   }
