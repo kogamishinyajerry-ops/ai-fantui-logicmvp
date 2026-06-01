@@ -3976,6 +3976,8 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         assert bottom_strip_box is not None
         circuit_box = page.locator("#logic-circuit-svg").bounding_box()
         assert circuit_box is not None
+        mode_panel_box = page.locator("#logic-reconstruction-mode-panel").bounding_box()
+        assert mode_panel_box is not None
         fit_scale = float(page.locator("#logic-canvas").get_attribute("data-fit-scale") or "0")
         fit_offset_x = float(page.locator("#logic-canvas").get_attribute("data-fit-offset-x") or "0")
         left_canvas_gap = circuit_box["x"] - canvas_box["x"]
@@ -3985,7 +3987,18 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         assert abs(left_canvas_gap - right_canvas_gap) <= 24
         assert circuit_box["width"] >= 1020
         assert circuit_box["height"] >= 450
+        assert page.evaluate(
+            """() => {
+              const panel = document.querySelector("#logic-reconstruction-mode-panel")?.getBoundingClientRect();
+              const labels = Array.from(document.querySelectorAll("#logic-circuit-svg .logic-circuit-column-label"))
+                .map((label) => label.getBoundingClientRect());
+              return Boolean(panel) && labels.every((label) => (
+                panel.right < label.left || panel.left > label.right || panel.bottom < label.top || panel.top > label.bottom
+              ));
+            }"""
+        ) is True
         assert circuit_box["y"] + circuit_box["height"] < bottom_strip_box["y"]
+        assert mode_panel_box["y"] + mode_panel_box["height"] < bottom_strip_box["y"] - 6
         assert strip_box["height"] <= 84
         assert process_box["height"] <= 82
         assert workflow_box["height"] <= 82

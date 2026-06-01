@@ -3023,6 +3023,11 @@ body[data-logic-presentation-mode="circuit-only"] #logic-presentation-controls {
     max-height: 132px;
   }
 
+  .logic-reconstruction-mode-panel {
+    top: auto;
+    bottom: 74px;
+  }
+
   .logic-stream-events {
     max-height: 96px;
   }
