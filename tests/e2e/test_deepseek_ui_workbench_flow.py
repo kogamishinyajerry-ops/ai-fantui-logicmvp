@@ -2823,7 +2823,7 @@ def test_fault_prepare_closed_reference_summaries_stay_compact_at_1366(
         page.close()
 
 
-def test_fault_prepare_next_action_cue_stays_single_line_at_1280(
+def test_fault_prepare_next_action_cue_fits_at_1280(
     demo_server: str, browser: Any
 ) -> None:
     page = browser.new_page(viewport={"width": 1280, "height": 820})
@@ -2845,8 +2845,10 @@ def test_fault_prepare_next_action_cue_stays_single_line_at_1280(
             page.locator("textarea[data-boundary-id]").nth(index).fill("确认空跑演示边界。")
         expect(next_action).to_be_visible()
         expect(next_action).to_contain_text("可进入沙盒")
-        assert next_action.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
-        assert next_action.evaluate("el => getComputedStyle(el).whiteSpace === 'nowrap'")
+        assert next_action.evaluate(
+            "el => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1"
+        )
+        assert next_action.evaluate("el => getComputedStyle(el).whiteSpace === 'normal'")
         board_box = decision_board.bounding_box()
         assert board_box is not None
         assert board_box["height"] <= 72
