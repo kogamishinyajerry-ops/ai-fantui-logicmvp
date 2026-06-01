@@ -194,6 +194,7 @@
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
   const globalReviewMatrix = $("logic-global-review-matrix");
+  const reviewMatrixActionButtons = Array.from(document.querySelectorAll("[data-review-filter-action]"));
   const reviewSourceCount = $("logic-review-source-count");
   const reviewSourceState = $("logic-review-source-state");
   const reviewLogicCount = $("logic-review-logic-count");
@@ -813,6 +814,18 @@
     if (item) item.dataset.reviewStatus = status || "review";
   }
 
+  function syncReviewMatrixActions(filter) {
+    if (!reviewMatrixActionButtons.length) return;
+    const activeFilter = CIRCUIT_PROVENANCE_FILTERS.has(filter) ? filter : "all";
+    for (const button of reviewMatrixActionButtons) {
+      const actionFilter = CIRCUIT_PROVENANCE_FILTERS.has(button.dataset.reviewFilterAction) ? button.dataset.reviewFilterAction : "all";
+      const isActive = actionFilter === activeFilter;
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      const item = button.closest("[data-review-item]");
+      if (item) item.toggleAttribute("data-review-active", isActive);
+    }
+  }
+
   function renderGlobalReviewMatrix(evidence) {
     if (!globalReviewMatrix) return;
     const safeEvidence = evidence || {
@@ -842,6 +855,7 @@
     setGlobalReviewItemStatus("logic", safeEvidence.nodeCount && safeEvidence.wireCount ? "pass" : "review");
     setGlobalReviewItemStatus("assumption", assumptionCount ? "warn" : "pass");
     setGlobalReviewItemStatus("local", localCount ? "review" : "pass");
+    syncReviewMatrixActions(state.provenanceFilter || "all");
   }
 
   function setActiveRequirementTrace(traceId) {
@@ -3505,6 +3519,7 @@
     for (const button of provenanceFilterButtons) {
       button.setAttribute("aria-pressed", (button.dataset.provenanceFilter || "all") === activeFilter ? "true" : "false");
     }
+    syncReviewMatrixActions(activeFilter);
     const filterIsActive = activeFilter !== "all";
     circuitSvg.querySelectorAll(".logic-circuit-node, .logic-circuit-wire, .logic-circuit-junction").forEach((element) => {
       const kind = element.dataset.provenanceKind || "";
@@ -4956,6 +4971,9 @@
   });
   provenanceFilterButtons.forEach((button) => {
     button.addEventListener("click", () => setCircuitProvenanceFilter(button.dataset.provenanceFilter || "all"));
+  });
+  reviewMatrixActionButtons.forEach((button) => {
+    button.addEventListener("click", () => setCircuitProvenanceFilter(button.dataset.reviewFilterAction || "all"));
   });
   if (canvas) {
     canvas.addEventListener("click", (event) => {

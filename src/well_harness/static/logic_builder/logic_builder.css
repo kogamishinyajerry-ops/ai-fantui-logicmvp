@@ -1704,6 +1704,12 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-global-review-matrix article[data-review-status="review"] {
   border-color: rgba(54, 198, 216, 0.42);
 }
+.logic-global-review-matrix article[data-review-active] {
+  border-color: rgba(118, 228, 255, 0.76);
+  box-shadow:
+    inset 0 0 0 1px rgba(118, 228, 255, 0.22),
+    0 0 14px rgba(54, 198, 216, 0.18);
+}
 .logic-global-review-matrix article > span {
   display: block;
   overflow: hidden;
@@ -1734,6 +1740,36 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   line-height: 1.25;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+.logic-review-matrix-action {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid rgba(54, 198, 216, 0.28);
+  border-radius: 6px;
+  background: rgba(5, 17, 28, 0.78);
+  color: #9ee8ff;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  padding: 5px 6px;
+  text-align: center;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.logic-review-matrix-action:hover,
+.logic-review-matrix-action:focus-visible {
+  border-color: rgba(118, 228, 255, 0.72);
+  background: rgba(16, 54, 76, 0.74);
+  box-shadow: 0 0 10px rgba(54, 198, 216, 0.2);
+  color: #f2fbff;
+  outline: none;
+}
+.logic-review-matrix-action[aria-pressed="true"] {
+  border-color: rgba(25, 210, 143, 0.64);
+  background: rgba(25, 210, 143, 0.14);
+  color: #c9ffe9;
 }
 .logic-canvas {
   position: relative;
