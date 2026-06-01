@@ -2782,6 +2782,22 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     padding: 1px 6px;
   }
 
+  @media (min-height: 960px) {
+    .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] {
+      gap: 2px;
+    }
+
+    .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row-header {
+      min-height: 20px;
+      padding: 2px 7px;
+    }
+
+    .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row {
+      min-height: 56px;
+      padding: 5px 7px;
+    }
+  }
+
   .sandbox-replay-canvas-node {
     min-width: 50px;
     min-height: 24px;

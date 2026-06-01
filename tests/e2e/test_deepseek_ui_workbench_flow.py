@@ -1151,7 +1151,20 @@ def test_fault_sandbox_review_uses_three_primary_gates_for_dense_plan(demo_serve
             assert boundary not in sr07_description.inner_text()
         review_row_box = page.locator("#fault-sandbox-review-rows [data-blueprint-density='compact-workbench']").first.bounding_box()
         assert review_row_box
+        assert review_row_box["height"] >= 52
         assert review_row_box["height"] <= 58
+        review_rows_box = page.locator("#fault-sandbox-review-rows").bounding_box()
+        report_strip_box = page.locator("#sandbox-report-strip").bounding_box()
+        assert review_rows_box and report_strip_box
+        assert review_rows_box["height"] > 400
+        assert review_rows_box["y"] + review_rows_box["height"] <= report_strip_box["y"] - 12
+        review_row_bottoms = page.locator("#fault-sandbox-review-rows .sandbox-review-row").evaluate_all(
+            "nodes => nodes.map((node) => node.getBoundingClientRect().bottom)"
+        )
+        assert report_strip_box["y"] - max(review_row_bottoms) <= 72
+        assert page.locator("#fault-sandbox-review-rows").evaluate(
+            "node => node.scrollHeight <= node.clientHeight + 1"
+        ) is True
         expect(page.locator("#fault-sandbox-diagnosis-inspector")).to_be_visible()
         expect(page.locator("#fault-sandbox-diagnosis-summary")).to_contain_text("空跑")
         expect(page.locator("#fault-sandbox-affected-path")).to_have_text("node 1 -> node 1")
