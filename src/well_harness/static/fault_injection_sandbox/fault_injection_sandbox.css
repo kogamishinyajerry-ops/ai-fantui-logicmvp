@@ -2758,16 +2758,19 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-replay-canvas-node {
     min-width: 50px;
-    min-height: 28px;
-    padding: 3px 5px;
+    min-height: 24px;
+    gap: 1px;
+    padding: 2px 5px;
   }
 
   .sandbox-replay-canvas-node strong {
-    font-size: 10px;
+    font-size: 9px;
+    line-height: 1;
   }
 
   .sandbox-replay-canvas-node code {
     font-size: 8px;
+    line-height: 1;
   }
 
   .sandbox-review-row-list {

@@ -1677,6 +1677,40 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         expect(page.locator("#fault-sandbox-replay-canvas-links .sandbox-replay-canvas-link-badge")).to_have_count(11)
         expect(page.locator("#fault-sandbox-replay-canvas-links [data-replay-canvas-link='latch-l1']")).to_have_attribute("aria-current", "true")
         expect(page.locator("#fault-sandbox-replay-canvas-links [data-replay-canvas-link='latch-l2']")).to_have_attribute("aria-current", "true")
+        replay_node_overlaps = page.locator("#fault-sandbox-replay-canvas-nodes [data-replay-canvas-node]").evaluate_all(
+            """nodes => {
+              const boxes = nodes.map((node) => {
+                const rect = node.getBoundingClientRect();
+                return {
+                  id: node.getAttribute("data-replay-canvas-node"),
+                  left: rect.left,
+                  right: rect.right,
+                  top: rect.top,
+                  bottom: rect.bottom,
+                  scrollHeight: node.scrollHeight,
+                  clientHeight: node.clientHeight,
+                  scrollWidth: node.scrollWidth,
+                  clientWidth: node.clientWidth,
+                };
+              });
+              const overlaps = [];
+              for (let i = 0; i < boxes.length; i += 1) {
+                for (let j = i + 1; j < boxes.length; j += 1) {
+                  const x = Math.min(boxes[i].right, boxes[j].right) - Math.max(boxes[i].left, boxes[j].left);
+                  const y = Math.min(boxes[i].bottom, boxes[j].bottom) - Math.max(boxes[i].top, boxes[j].top);
+                  if (x > 0.5 && y > 0.5) overlaps.push(`${boxes[i].id}->${boxes[j].id}`);
+                }
+              }
+              return {
+                overlaps,
+                clipped: boxes
+                  .filter((box) => box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1)
+                  .map((box) => box.id),
+              };
+            }"""
+        )
+        assert replay_node_overlaps["overlaps"] == []
+        assert replay_node_overlaps["clipped"] == []
         _assert_sandbox_replay_blueprint_geometry(page)
         expect(page.locator("#fault-sandbox-replay-canvas-nodes")).to_contain_text("RA")
         expect(page.locator("#fault-sandbox-replay-canvas-nodes")).to_contain_text("L1 告警")
