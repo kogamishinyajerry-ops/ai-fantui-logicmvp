@@ -1747,19 +1747,25 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         assert path_box["y"] + path_box["height"] <= chain_box["y"] - 2
         assert diagnosis_summary_box["height"] >= 26
         assert diagnosis_summary.evaluate("(element) => element.scrollHeight <= element.clientHeight + 1") is True
+        assert diagnosis_path.evaluate("(element) => element.scrollHeight <= element.clientHeight + 1") is True
         diagnosis_path_cards = page.locator(".sandbox-diagnosis-path[data-blueprint37-right-section='diagnosis-summary'] > div").evaluate_all(
             """nodes => nodes.map((node) => {
               const rect = node.getBoundingClientRect();
               return {
                 width: rect.width,
+                bottom: rect.y + rect.height,
                 scrollWidth: node.scrollWidth,
                 clientWidth: node.clientWidth,
+                scrollHeight: node.scrollHeight,
+                clientHeight: node.clientHeight,
               };
             })"""
         )
         assert len(diagnosis_path_cards) == 3
         assert min(card["width"] for card in diagnosis_path_cards) >= 280
         assert all(card["scrollWidth"] <= card["clientWidth"] + 1 for card in diagnosis_path_cards)
+        assert all(card["scrollHeight"] <= card["clientHeight"] + 1 for card in diagnosis_path_cards)
+        assert max(card["bottom"] for card in diagnosis_path_cards) <= path_box["y"] + path_box["height"] + 1
         diagnosis_chain_cards = diagnosis_chain.locator(".sandbox-diagnosis-chain-node").evaluate_all(
             """nodes => nodes.map((node) => {
               const rect = node.getBoundingClientRect();

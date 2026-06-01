@@ -2919,7 +2919,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-diagnosis-path[data-blueprint37-right-section="diagnosis-summary"] {
     grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
+    gap: 2px;
   }
 
   .sandbox-diagnosis-path[data-blueprint37-right-section="diagnosis-summary"] > div:first-child {
@@ -2927,18 +2927,19 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-diagnosis-path[data-blueprint37-right-section="diagnosis-summary"] > div {
-    gap: 2px;
-    padding: 2px 5px;
+    gap: 1px;
+    padding: 1px 5px;
   }
 
   .sandbox-diagnosis-path[data-blueprint37-right-section="diagnosis-summary"] span {
     font-size: 8px;
     letter-spacing: 0.04em;
+    line-height: 1;
   }
 
   .sandbox-diagnosis-path[data-blueprint37-right-section="diagnosis-summary"] strong {
     font-size: 9px;
-    line-height: 1.16;
+    line-height: 1;
   }
 
   .sandbox-diagnosis-chain[data-blueprint37-right-section="failure-path"] {
