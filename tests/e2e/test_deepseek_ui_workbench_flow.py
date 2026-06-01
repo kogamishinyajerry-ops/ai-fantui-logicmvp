@@ -1587,6 +1587,19 @@ def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
         next_action = page.locator("#fault-sandbox-decision-next-action")
         expect(next_action).to_contain_text("确认后生成修订单")
         assert next_action.evaluate("element => element.scrollWidth <= element.clientWidth + 1") is True
+        review_description_boxes = page.locator(
+            "#fault-sandbox-review-rows .sandbox-review-row-description-text"
+        ).evaluate_all(
+            """nodes => nodes.map((node) => ({
+              scrollWidth: node.scrollWidth,
+              clientWidth: node.clientWidth,
+              scrollHeight: node.scrollHeight,
+              clientHeight: node.clientHeight,
+            }))"""
+        )
+        assert len(review_description_boxes) == 7
+        assert all(box["scrollWidth"] <= box["clientWidth"] + 1 for box in review_description_boxes)
+        assert all(box["scrollHeight"] <= box["clientHeight"] + 1 for box in review_description_boxes)
         expect(timeline.locator("[data-replay-marker]")).to_have_count(10)
         report_box = report_strip.bounding_box()
         timeline_box = timeline.bounding_box()

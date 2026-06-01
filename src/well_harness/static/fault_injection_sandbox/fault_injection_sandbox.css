@@ -511,9 +511,9 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row-header,
 .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row {
-  grid-template-columns: 22px 42px minmax(62px, 0.74fr) 52px minmax(74px, 0.8fr) minmax(66px, 0.68fr) minmax(112px, 1.14fr) minmax(86px, 0.86fr) 36px;
+  grid-template-columns: 22px 42px minmax(62px, 0.68fr) 52px minmax(64px, 0.66fr) minmax(54px, 0.54fr) minmax(166px, 1.5fr) minmax(82px, 0.82fr) 36px;
   gap: 5px;
-  min-height: 40px;
+  min-height: 34px;
   padding: 4px 7px;
 }
 .sandbox-review-row-header {
@@ -590,11 +590,13 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .sandbox-review-row-description-text {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .sandbox-review-row-description-text--boundary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  align-content: center;
   gap: 3px;
   min-width: 0;
 }
