@@ -1336,7 +1336,7 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
                 "stripY": report_strip_box["y"],
             },
         )
-        assert len(fully_visible_review_rows) >= 3
+        assert len(fully_visible_review_rows) >= 4
 
         target_row = page.locator('[data-blueprint-review-row="SR-06"]')
         expect(target_row).to_be_visible()

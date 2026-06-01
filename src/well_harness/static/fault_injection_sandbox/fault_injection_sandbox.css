@@ -2513,7 +2513,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] {
-    grid-template-rows: 58px minmax(0, auto) minmax(0, 1fr) 128px;
+    grid-template-rows: 58px minmax(0, auto) minmax(0, 1fr) 110px;
     gap: 6px;
     padding: 10px 28px 12px;
   }
@@ -2711,7 +2711,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-review-row-panel[data-blueprint37-surface="replay-main-canvas"] {
-    grid-template-rows: auto minmax(154px, clamp(168px, 22vh, 204px)) minmax(96px, 1fr);
+    grid-template-rows: auto minmax(154px, 154px) minmax(112px, 1fr);
     gap: 5px;
     padding-right: 10px;
   }
@@ -2730,6 +2730,20 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-replay-canvas-main {
     min-height: 154px;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] {
+    gap: 3px;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row-header {
+    min-height: 20px;
+    padding: 3px 7px;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row {
+    min-height: 36px;
+    padding: 4px 7px;
   }
 
   .sandbox-replay-canvas-node {
@@ -3109,7 +3123,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     position: static;
     grid-row: 4;
     z-index: 16;
-    min-height: 112px;
+    min-height: 96px;
+    max-height: 110px;
   }
 
   body {
