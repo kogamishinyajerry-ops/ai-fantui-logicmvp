@@ -1425,6 +1425,17 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     padding: 10px;
   }
 
+  .fault-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .fault-main > #fault-decision-board,
+  .fault-main > #fault-candidate-matrix-panel,
+  .fault-main > .fault-panel:not(.fault-reference-details):not(.fault-candidate-matrix-panel) {
+    grid-column: 1 / -1;
+  }
+
   .fault-reference-details {
     overflow: visible;
   }
@@ -1482,7 +1493,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
 
   .fault-boundary-list {
     gap: 8px;
-    max-height: 220px;
+    max-height: 68px;
     overflow: auto;
   }
 

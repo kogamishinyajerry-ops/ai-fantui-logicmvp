@@ -3115,13 +3115,18 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
         layout_box = page.locator(".fault-layout").bounding_box()
         action_strip_box = page.locator("#fault-bottom-action-strip").bounding_box()
         matrix_box = page.locator("#fault-candidate-matrix-panel").bounding_box()
+        boundary_list_box = page.locator("#fault-boundary-list").bounding_box()
         assert process_box is not None
         assert layout_box is not None
         assert action_strip_box is not None
         assert matrix_box is not None
+        assert boundary_list_box is not None
         assert process_box["height"] <= 56
         assert matrix_box["y"] <= 320
         assert layout_box["y"] + layout_box["height"] <= action_strip_box["y"]
+        assert boundary_list_box["height"] >= 60
+        assert boundary_list_box["y"] < action_strip_box["y"]
+        assert boundary_list_box["y"] + boundary_list_box["height"] <= action_strip_box["y"] - 4
         assert page.locator("#fault-process").evaluate(
             "el => el.scrollHeight <= el.clientHeight + 1"
         )
