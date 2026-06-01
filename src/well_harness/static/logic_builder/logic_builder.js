@@ -940,6 +940,9 @@
     outputBacktracePanel.dataset.activeOutput = activeOutputId || "none";
     outputBacktracePanel.dataset.relatedOutputCount = String(relatedOutputIds.size);
     if (outputBacktraceCoverage) {
+      const totalOutputGroups = Number(outputBacktracePanel.dataset.outputTotalCount || "0");
+      const coveredOutputGroups = Number(outputBacktracePanel.dataset.outputCoveredCount || "0");
+      const globalCoverageText = `输出 ${coveredOutputGroups}/${totalOutputGroups}`;
       const relatedLabels = relatedOutputItems
         .map((item) => {
           const label = item.querySelector("strong");
@@ -950,8 +953,8 @@
         ? ` · ${relatedLabels.slice(0, 2).join(" / ")}${relatedLabels.length > 2 ? ` +${relatedLabels.length - 2}` : ""}`
         : "";
       outputBacktraceCoverage.textContent = activeId === "none"
-        ? "当前段覆盖 0 个输出组"
-        : `当前段覆盖 ${relatedOutputIds.size} 个输出组${coverageTail}`;
+        ? `${globalCoverageText} · 当前 0组`
+        : `${globalCoverageText} · 当前 ${relatedOutputIds.size}组${coverageTail}`;
     }
     outputBacktraceList.querySelectorAll("[data-output-backtrace-output]").forEach((item) => {
       item.classList.toggle("is-active", Boolean(activeOutputId) && item.dataset.outputBacktraceOutput === activeOutputId);
@@ -974,6 +977,9 @@
     if (!traces.length) {
       outputBacktracePanel.dataset.outputBacktrace = "waiting";
       outputBacktracePanel.dataset.outputCount = "0";
+      outputBacktracePanel.dataset.outputTotalCount = "0";
+      outputBacktracePanel.dataset.outputCoveredCount = "0";
+      outputBacktracePanel.dataset.outputCoverageStatus = "waiting";
       outputBacktraceList.innerHTML = '<article class="logic-output-backtrace-item is-empty">等待输出映射。</article>';
       syncOutputBacktraceActiveTrace(null);
       return;
@@ -984,7 +990,11 @@
       return { ...group, sources, relatedWireCount: relatedWireIds.size };
     });
     outputBacktracePanel.dataset.outputBacktrace = "ready";
-    outputBacktracePanel.dataset.outputCount = String(groups.filter((group) => group.sources.length).length);
+    const coveredOutputGroupCount = groups.filter((group) => group.sources.length).length;
+    outputBacktracePanel.dataset.outputCount = String(coveredOutputGroupCount);
+    outputBacktracePanel.dataset.outputTotalCount = String(groups.length);
+    outputBacktracePanel.dataset.outputCoveredCount = String(coveredOutputGroupCount);
+    outputBacktracePanel.dataset.outputCoverageStatus = coveredOutputGroupCount === groups.length ? "pass" : "review";
     outputBacktraceList.innerHTML = groups.map((group) => {
       const visibleSources = group.sources.slice(0, 2);
       const hiddenSourceCount = Math.max(0, group.sources.length - visibleSources.length);
