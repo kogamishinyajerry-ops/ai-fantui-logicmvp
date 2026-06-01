@@ -1320,10 +1320,23 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
         first_review_row_box = first_review_row.bounding_box()
         report_strip_box = report_strip.bounding_box()
         assert review_rows_box and first_review_row_box and report_strip_box
-        assert review_rows_box["height"] >= 104
+        assert review_rows_box["height"] >= 168
         assert review_rows_box["y"] < report_strip_box["y"]
         assert review_rows_box["y"] + review_rows_box["height"] <= report_strip_box["y"] - 12
         assert first_review_row_box["y"] + first_review_row_box["height"] <= report_strip_box["y"] - 32
+        fully_visible_review_rows = review_rows.locator(".sandbox-review-row").evaluate_all(
+            """(nodes, bounds) => nodes.filter((node) => {
+              const row = node.getBoundingClientRect();
+              return row.y >= bounds.listY - 1
+                && row.y + row.height <= Math.min(bounds.listBottom, bounds.stripY) - 1;
+            }).map((node) => node.dataset.blueprintReviewRow)""",
+            {
+                "listY": review_rows_box["y"],
+                "listBottom": review_rows_box["y"] + review_rows_box["height"],
+                "stripY": report_strip_box["y"],
+            },
+        )
+        assert len(fully_visible_review_rows) >= 3
 
         target_row = page.locator('[data-blueprint-review-row="SR-06"]')
         expect(target_row).to_be_visible()

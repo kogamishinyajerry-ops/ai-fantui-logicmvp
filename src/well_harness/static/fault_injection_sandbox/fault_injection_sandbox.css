@@ -2711,7 +2711,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-review-row-panel[data-blueprint37-surface="replay-main-canvas"] {
-    grid-template-rows: auto minmax(154px, clamp(220px, 30vh, 260px)) minmax(96px, 1fr);
+    grid-template-rows: auto minmax(154px, clamp(168px, 22vh, 204px)) minmax(96px, 1fr);
     gap: 5px;
     padding-right: 10px;
   }
