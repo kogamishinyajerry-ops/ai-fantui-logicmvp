@@ -3808,6 +3808,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] #logic-stream-chunks {
+    position: static;
     display: flex;
     gap: 3px;
     margin-top: 2px;
