@@ -1488,6 +1488,10 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   }
 
   .fault-decision-card[data-fault-card="next"] .muted {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     -webkit-line-clamp: 1;
     font-size: 11px;
   }

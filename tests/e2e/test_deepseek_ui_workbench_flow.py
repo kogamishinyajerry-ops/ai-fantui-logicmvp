@@ -2486,6 +2486,37 @@ def test_fault_prepare_closed_reference_summaries_stay_compact_at_1366(
         page.close()
 
 
+def test_fault_prepare_next_action_cue_stays_single_line_at_1280(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing, fault]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(fault));
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing(), FAULT_PREPARATION],
+        )
+
+        page.goto(f"{demo_server}/fault-injection-prepare", wait_until="networkidle")
+        next_action = page.locator("#fault-decision-next-action")
+        decision_board = page.locator("#fault-decision-board")
+        for index in range(page.locator("textarea[data-boundary-id]").count()):
+            page.locator("textarea[data-boundary-id]").nth(index).fill("确认空跑演示边界。")
+        expect(next_action).to_be_visible()
+        expect(next_action).to_contain_text("可进入沙盒")
+        assert next_action.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
+        assert next_action.evaluate("el => getComputedStyle(el).whiteSpace === 'nowrap'")
+        board_box = decision_board.bounding_box()
+        assert board_box is not None
+        assert board_box["height"] <= 72
+    finally:
+        page.close()
+
+
 def test_narrow_logic_builder_prioritizes_canvas_and_stream_before_engineering_rail(
     demo_server: str, browser: Any
 ) -> None:
