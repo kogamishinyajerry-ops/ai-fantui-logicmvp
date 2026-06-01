@@ -744,7 +744,7 @@ def test_deepseek_subproject_nav_collapses_legacy_modules(demo_server: str, brow
     page = browser.new_page(viewport={"width": 1440, "height": 900})
     try:
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
-        expect(page.locator("#deepseek-nav-mainline")).to_be_hidden()
+        expect(page.locator("#deepseek-nav-mainline")).to_be_visible()
         _show_logic_builder_workbench(page)
         expect(page.locator("#deepseek-nav-mainline .unified-nav-link")).to_have_count(4)
         expect(page.locator('#deepseek-nav-mainline a[href="/requirements-intake"]')).to_be_visible()
@@ -835,7 +835,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
             strip = page.locator('[data-command-strip="deepseek-step"]')
             if path == "/logic-builder":
-                expect(strip).to_be_hidden()
+                expect(strip).to_be_visible()
                 _show_logic_builder_workbench(page)
             expect(strip).to_be_visible()
             expect(strip).to_have_attribute("data-command-step", step)
@@ -3052,15 +3052,12 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         for path in pages:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
             assert page.evaluate("() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)") <= 768, path
-            if path == "/logic-builder":
-                expect(page.locator("#logic-page-system-strip")).to_be_hidden()
-                continue
             strip_box = page.locator('[data-command-strip="deepseek-step"]').bounding_box()
             assert strip_box is not None
             assert strip_box["height"] <= 118, path
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
-        expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+        expect(page.locator("#logic-page-system-strip")).to_be_visible()
         _show_logic_builder_workbench(page)
         shell = page.locator(".logic-shell")
         expect(shell).to_have_attribute("data-blueprint-phase", "phase-1-shell")
@@ -3072,16 +3069,14 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         expect(page.locator("#logic-mode-dock button")).to_have_count(5)
         expect(page.locator("#logic-mode-dock #logic-command-palette-open")).to_have_count(0)
         expect(page.locator("#logic-command-palette-open")).to_be_visible()
-        expect(page.locator("#logic-command-palette-open")).to_have_attribute(
-            "data-blueprint-advanced-entry", "command-palette"
-        )
-        command_box = page.locator("#logic-command-palette-open").bounding_box()
-        dock_box = page.locator("#logic-mode-dock").bounding_box()
-        assert command_box is not None
-        assert dock_box is not None
-        assert command_box["width"] <= 64
-        assert command_box["height"] <= 34
-        assert dock_box["height"] <= 36
+        expect(page.locator("#logic-mode-dock")).to_be_visible()
+        expect(page.locator("#logic-primary-annotate")).to_be_visible()
+        expect(page.locator("#logic-primary-annotate")).to_have_text("标注")
+        expect(page.locator("#logic-primary-annotate")).to_have_attribute("data-primary-annotation-action", "true")
+        annotate_box = page.locator("#logic-primary-annotate").bounding_box()
+        assert annotate_box is not None
+        assert annotate_box["width"] <= 112
+        assert annotate_box["height"] <= 36
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
         expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
         expect(page.locator("#logic-command-palette")).to_be_hidden()
@@ -3118,23 +3113,76 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         assert shell.evaluate("el => el.classList.contains('is-right-open')")
         expect(page.locator("#logic-object-context-drawer")).to_be_visible()
 
-        page.click("#logic-command-palette-open")
-        expect(page.locator("#logic-command-palette")).to_be_visible()
-        palette_box = page.locator("#logic-command-palette").bounding_box()
+        page.click("#logic-primary-annotate")
+        expect(page.locator("#logic-annotation-submit-bar")).to_be_visible()
+        annotation_bar_box = page.locator("#logic-annotation-submit-bar").bounding_box()
         topbar_box = page.locator("#logic-page-system-strip").bounding_box()
         bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
-        assert palette_box is not None
+        assert annotation_bar_box is not None
         assert topbar_box is not None
         assert bottom_strip_box is not None
-        assert palette_box["y"] >= topbar_box["y"] + topbar_box["height"] + 8
-        assert palette_box["y"] + palette_box["height"] <= bottom_strip_box["y"] - 12
-        for label in ["运行仿真", "打开参数抽屉", "单步回放", "注入故障", "打开失败路径", "生成交付摘要", "主画布专注", "收起全部面板"]:
-            expect(page.locator("#logic-command-palette")).to_contain_text(label)
+        assert annotation_bar_box["y"] >= topbar_box["y"] + topbar_box["height"] + 8
+        assert annotation_bar_box["y"] + annotation_bar_box["height"] <= bottom_strip_box["y"] - 8
+        expect(page.locator("#logic-annotation-submit-state")).to_contain_text("提交给 Agent")
+        page.click("#logic-command-palette-open")
+        expect(page.locator("#logic-command-palette")).to_be_visible()
         page.click('[data-command-close-panels="true"]')
         assert shell.evaluate("el => !el.classList.contains('is-left-open') && !el.classList.contains('is-right-open')")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
         expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
         expect(page.locator("#logic-command-palette")).to_be_hidden()
+    finally:
+        page.close()
+
+
+def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing()],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        trace_panel = page.locator("#logic-requirement-trace-panel")
+        expect(trace_panel).to_be_visible()
+        expect(page.locator("#logic-requirement-trace-source")).to_have_text("deepseek-v4-pro-demo-requirements.md")
+        expect(page.locator("#logic-requirement-trace-list [data-requirement-trace-id]")).to_have_count(4)
+        expect(page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")).to_have_count(1)
+        active_trace = page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")
+        expect(active_trace).to_have_attribute("data-source-anchor-id", "logic1")
+        active_text = active_trace.inner_text()
+        assert "读取" in active_text
+        assert "生成" in active_text
+        for internal_token in ["radio_altitude_ft", "reverser_inhibited", "tls115"]:
+            assert internal_token not in active_text
+        expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
+        expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
+
+        trace_panel_box = trace_panel.bounding_box()
+        canvas_box = page.locator("#logic-canvas").bounding_box()
+        toolbar_box = page.locator("#logic-canvas-compact-toolbar").bounding_box()
+        bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
+        assert trace_panel_box is not None
+        assert canvas_box is not None
+        assert toolbar_box is not None
+        assert bottom_strip_box is not None
+        assert trace_panel_box["x"] + trace_panel_box["width"] <= canvas_box["x"] - 8
+        assert toolbar_box["x"] >= canvas_box["x"] - 1
+        assert bottom_strip_box["x"] >= canvas_box["x"] - 1
+        assert canvas_box["width"] >= 860
+        assert page.evaluate("() => document.scrollingElement.scrollWidth <= window.innerWidth") is True
+
+        page.locator('[data-requirement-trace-id="row-logic3"] button').click()
+        expect(page.locator('[data-requirement-trace-id="row-logic3"]')).to_have_class(re.compile("is-active"))
+        expect(page.locator('[data-demo-node-id="logic3"]')).to_have_class(re.compile("is-requirement-trace-match"))
     finally:
         page.close()
 
@@ -3304,7 +3352,7 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate("() => localStorage.clear()")
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
-        expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+        expect(page.locator("#logic-page-system-strip")).to_be_visible()
         _show_logic_builder_workbench(page)
         expect(page.locator("main.logic-shell")).to_have_attribute("data-blueprint27-rhythm", "compact-canvas")
         expect(page.locator("#logic-page-system-strip")).to_have_attribute("data-blueprint27-rhythm", "compact-topband")
@@ -3638,7 +3686,7 @@ def test_desktop_four_step_pages_prioritize_primary_decision_surfaces(
         for path, primary_selector, max_y, max_height in pages:
             page.goto(f"{demo_server}{path}", wait_until="networkidle")
             if path == "/logic-builder":
-                expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+                expect(page.locator("#logic-page-system-strip")).to_be_visible()
                 _show_logic_builder_workbench(page)
             strip_box = page.locator('[data-command-strip="deepseek-step"]').bounding_box()
             primary_box = page.locator(primary_selector).bounding_box()
@@ -4373,7 +4421,7 @@ def test_deepseek_workflow_streams_chunks_before_model_final_response(
             REQUIREMENTS_READY,
         )
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
-        expect(page.locator("#logic-stream-chunks")).to_be_hidden()
+        expect(page.locator("#logic-stream-chunks")).to_be_visible()
         _show_logic_builder_workbench(page)
         expect(page.locator("#logic-stream-chunks")).to_be_visible()
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="load"]')).to_contain_text("已读取需求")
@@ -4594,7 +4642,7 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
-        expect(page.locator("#logic-page-system-strip")).to_be_hidden()
+        expect(page.locator("#logic-page-system-strip")).to_be_visible()
         _show_logic_builder_workbench(page)
         expect(page.locator("main.logic-shell")).to_have_attribute("data-workstation-shell", "canvas-first")
         expect(page.locator("main.logic-shell")).to_have_attribute("data-workstation-state", "primary")
@@ -4676,11 +4724,12 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         fit_offset_x = float(page.locator("#logic-canvas").get_attribute("data-fit-offset-x") or "0")
         left_canvas_gap = circuit_box["x"] - canvas_box["x"]
         right_canvas_gap = (canvas_box["x"] + canvas_box["width"]) - (circuit_box["x"] + circuit_box["width"])
-        assert 1.34 <= fit_scale <= 1.37
+        assert 1.10 <= fit_scale <= 1.15
         assert fit_offset_x >= 0
-        assert abs(left_canvas_gap - right_canvas_gap) <= 24
-        assert circuit_box["width"] >= 1220
-        assert circuit_box["height"] >= 540
+        assert left_canvas_gap <= 24
+        assert right_canvas_gap >= 64
+        assert circuit_box["width"] >= 1000
+        assert circuit_box["height"] >= 440
         circuit_graph_box = page.locator("#logic-canvas").evaluate(
             """() => {
               const canvas = document.querySelector("#logic-canvas")?.getBoundingClientRect();
@@ -4702,7 +4751,7 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
             }"""
         )
         assert circuit_graph_box is not None
-        assert circuit_graph_box["bottomGap"] <= 190
+        assert circuit_graph_box["bottomGap"] <= 260
         assert circuit_graph_box["rightRailGap"] >= 48
         assert page.evaluate(
             """() => {
@@ -4810,7 +4859,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert stream_box["y"] >= mode_dock_box["y"] + mode_dock_box["height"] - 1
         assert stream_box["y"] + stream_box["height"] <= bottom_strip_box["y"] - 6
         fit_scale = float(page.locator("#logic-canvas").get_attribute("data-fit-scale") or "0")
-        assert 1.20 <= fit_scale <= 1.23
+        assert 0.92 <= fit_scale <= 0.97
         medium_circuit_graph_box = page.locator("#logic-canvas").evaluate(
             """() => {
               const canvas = document.querySelector("#logic-canvas")?.getBoundingClientRect();
@@ -4830,7 +4879,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
             }"""
         )
         assert medium_circuit_graph_box is not None
-        assert medium_circuit_graph_box["bottomGap"] <= 100
+        assert medium_circuit_graph_box["bottomGap"] <= 205
         assert medium_circuit_graph_box["rightRailGap"] >= 40
         stream_toolbar_overlaps = page.evaluate(
             """() => {

@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/logic_builder/logic_builder.css?v=workflow4">
 <script src="/logic_builder/logic_builder.js?v=workflow2" defer></script>
 </head>
-<body class="unified-nav-enabled" data-nav-current="logic-builder" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup" data-logic-presentation-mode="workbench" data-logic-interaction-mode="natural-language">
+<body class="unified-nav-enabled" data-nav-current="logic-builder" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup" data-logic-presentation-mode="workbench" data-logic-interaction-mode="workbench">
 <header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
   <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
   <div class="unified-nav-groups">
@@ -47,7 +47,7 @@
   </div>
 </header>
 
-<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-console-palette="codex-light" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-workbench-input-model="natural-language" data-presentation-mode="workbench" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 30-docx-template-generated-canvas 31-running-signal-propagation 32-parameter-drawer-final 38-panel-state-strategy-final" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
+<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-console-palette="codex-light" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-workbench-input-model="natural-language" data-presentation-mode="workbench" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 30-docx-template-generated-canvas 31-running-signal-propagation 32-parameter-drawer-final 38-panel-state-strategy-final" data-trace-platform="requirements-left" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
   <div class="logic-cockpit-canopy" data-cockpit-role="canopy-frame" aria-hidden="true">
     <span class="logic-cockpit-canopy-window"></span>
     <span class="logic-cockpit-canopy-window"></span>
@@ -224,12 +224,30 @@
       </section>
     </aside>
 
-    <section class="logic-canvas-wrap logic-cockpit-primary-display" data-cockpit-role="primary-display" data-experience="annotation-stream" data-workstation-surface="primary-canvas-stage" data-workstation-stage="primary-canvas" data-blueprint29-rhythm="primary-canvas-stage" data-workbench-drawer-state="closed" data-demo-canvas-reference="src/well_harness/static/demo.html#fan-chain-svg">
-      <div id="logic-canvas-compact-toolbar" class="logic-canvas-compact-toolbar" aria-label="画布工具区">
+    <section class="logic-canvas-wrap logic-cockpit-primary-display" data-cockpit-role="primary-display" data-experience="annotation-stream" data-workstation-surface="primary-canvas-stage" data-workstation-stage="primary-canvas" data-blueprint29-rhythm="primary-canvas-stage" data-workbench-drawer-state="closed" data-trace-platform="requirements-left" data-demo-canvas-reference="src/well_harness/static/demo.html#fan-chain-svg">
+      <section id="logic-requirement-trace-panel" class="logic-requirement-trace-panel" aria-label="需求原文与生成依据" data-trace-platform="requirements-left" data-active-trace-id="waiting">
+        <div class="logic-requirement-trace-head">
+          <p class="logic-kicker">需求走读</p>
+          <h2>原文到图纸</h2>
+          <span id="logic-requirement-trace-source">等待需求来源</span>
+        </div>
+        <ol id="logic-requirement-trace-list" class="logic-requirement-trace-list" aria-label="逐段生成依据">
+          <li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>
+        </ol>
+        <div class="logic-requirement-trace-review" aria-label="全局复核">
+          <span>全局复核</span>
+          <strong id="logic-requirement-trace-review-state">等待线路图</strong>
+          <p id="logic-requirement-trace-review-summary">生成完成后会核对节点、连线与边界。</p>
+        </div>
+      </section>
+      <div id="logic-canvas-compact-toolbar" class="logic-canvas-compact-toolbar" aria-label="画布工具区" data-action-contract="single-annotation">
         <div id="logic-natural-language-control" class="logic-natural-language-control" data-visible-action-limit="3" aria-label="自然语言控制">
           <input id="logic-natural-language-input" type="text" autocomplete="off" placeholder="直接描述你要调整的节点或连线">
           <button id="logic-natural-language-send" type="button" disabled>发送</button>
         </div>
+        <button id="logic-primary-annotate" type="button" class="logic-primary-annotation-button" data-primary-annotation-action="true" aria-controls="logic-annotation-submit-bar logic-annotation-popover">
+          标注
+        </button>
         <span id="logic-canvas-counts" class="logic-canvas-counts">0 个节点 · 0 条连线 · 0 个面板</span>
         <div id="logic-provenance-filter" class="logic-provenance-filter" role="toolbar" aria-label="来源筛选" hidden>
           <button type="button" data-provenance-filter="all" aria-pressed="true">
@@ -260,7 +278,7 @@
         <button id="logic-presentation-zoom-in" type="button" aria-label="放大电路图" title="放大">+</button>
         <button id="logic-presentation-exit" type="button" aria-label="退出纯画布展示模式" title="退出">×</button>
       </div>
-      <nav id="logic-mode-dock" class="logic-mode-dock" data-workstation-surface="default-mode-dock" data-blueprint27-rhythm="five-entry-dock" aria-label="默认五入口">
+      <nav id="logic-mode-dock" class="logic-mode-dock" data-workstation-surface="default-mode-dock" data-blueprint27-rhythm="five-entry-dock" data-action-contract="legacy-drawer-entry" aria-label="旧抽屉入口">
         <button type="button" data-logic-mode="canvas" aria-pressed="true">画布</button>
         <button type="button" data-logic-mode="run" aria-pressed="false">运行</button>
         <button type="button" data-logic-mode="parameters" aria-pressed="false">参数</button>
@@ -552,7 +570,7 @@
           </div>
         </section>
       </section>
-      <section id="logic-annotation-submit-bar" class="logic-annotation-submit-bar" data-annotation-mode="multi-target" aria-label="本次图纸标注意见提交栏">
+      <section id="logic-annotation-submit-bar" class="logic-annotation-submit-bar" data-annotation-mode="multi-target" aria-label="本次图纸标注意见提交栏" hidden>
         <label for="logic-bottom-provider">生成方式</label>
         <select id="logic-bottom-provider" aria-label="选择用于处理标注意见的生成方式">
           <option value="deepseek" selected>标准生成</option>

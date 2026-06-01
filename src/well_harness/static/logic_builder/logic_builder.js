@@ -107,10 +107,17 @@
     revisionHandoff: null,
     annotationPopoverX: 0,
     annotationPopoverY: 0,
+    annotationModeActive: false,
     streamedAuthoringSession: null,
     streamedAuthoringHistory: [],
     streamedAuthoringInFlight: false,
     streamedAuthoringLaunchPrompt: "",
+    activeRequirementTraceId: "",
+    layoutRefreshRaf: 0,
+    lastDrawingLayoutKey: "",
+    layoutObserverReady: false,
+    layoutResizeObserver: null,
+    layoutMutationObserver: null,
     presentationMode: "workbench",
     presentationZoom: 1,
   };
@@ -162,6 +169,7 @@
   const nodeLayer = $("logic-node-layer");
   const panelLayer = $("logic-panel-layer");
   const logicCanvasToolbar = $("logic-canvas-compact-toolbar");
+  const primaryAnnotateButton = $("logic-primary-annotate");
   const counts = $("logic-canvas-counts");
   const source = $("logic-canvas-source");
   const naturalLanguageInput = $("logic-natural-language-input");
@@ -180,6 +188,11 @@
   const demoBridge = $("logic-demo-bridge");
   const drawingStreamTimeline = $("logic-drawing-stream-timeline");
   const drawingStreamEvents = $("logic-drawing-stream-events");
+  const requirementTracePanel = $("logic-requirement-trace-panel");
+  const requirementTraceSource = $("logic-requirement-trace-source");
+  const requirementTraceList = $("logic-requirement-trace-list");
+  const requirementTraceReviewState = $("logic-requirement-trace-review-state");
+  const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
   const streamedAuthoringPanel = $("logic-streamed-authoring-panel");
   const streamedPanelToggle = $("logic-streamed-panel-toggle");
   const streamedAuthoringStatus = $("logic-streamed-status");
@@ -558,6 +571,248 @@
       item.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span><p>${escapeText(event.text)}</p>`;
       drawingStreamEvents.appendChild(item);
     });
+  }
+
+  function circuitWireKey(wire) {
+    return `${wire && wire.source ? wire.source : ""}->${wire && wire.target ? wire.target : ""}`;
+  }
+
+  function sourceAnchorIdentity(anchor, fallback) {
+    const id = String(anchor && anchor.id ? anchor.id : fallback || "source").trim();
+    return id || "source";
+  }
+
+  function sourceAnchorText(anchor) {
+    if (!anchor) return "";
+    return String(anchor.quote_zh || anchor.quote || anchor.text || anchor.id || "").trim();
+  }
+
+  function traceNodeIds(node) {
+    return [node && node.id, node && node.linked_node_id]
+      .filter(Boolean)
+      .map((item) => String(item));
+  }
+
+  function circuitTraceLabel(id, fallback) {
+    const raw = String(id || fallback || "").trim();
+    if (!raw) return "待定";
+    if (CIRCUIT_SHORT_LABELS[raw]) return CIRCUIT_SHORT_LABELS[raw];
+    return compactCircuitLabel(fallback || raw);
+  }
+
+  function addTraceTarget(item, target) {
+    if (!item || !target) return;
+    for (const nodeId of target.nodeIds || []) item.nodeIds.add(nodeId);
+    for (const wireId of target.wireIds || []) item.wireIds.add(wireId);
+    if (target.action) item.actions.add(target.action);
+  }
+
+  function buildAnchorTraceItems(payload, circuitView) {
+    const traceById = new Map();
+    const addAnchorTargets = (anchors, target) => {
+      if (!Array.isArray(anchors) || !anchors.length) return;
+      anchors.forEach((anchor, index) => {
+        const sourceId = sourceAnchorIdentity(anchor, `${target.kind || "trace"}-${index + 1}`);
+        if (!traceById.has(sourceId)) {
+          traceById.set(sourceId, {
+            id: sourceId,
+            sourceId,
+            kind: anchor.kind || "正文条件",
+            quote: sourceAnchorText(anchor) || sourceId,
+            nodeIds: new Set(),
+            wireIds: new Set(),
+            actions: new Set(),
+          });
+        }
+        addTraceTarget(traceById.get(sourceId), target);
+      });
+    };
+    const nodes = circuitView ? (circuitView.nodes || []) : ((payload && payload.nodes) || []);
+    const wires = circuitView ? (circuitView.wires || []) : ((payload && payload.edges) || []);
+    nodes.forEach((node) => addAnchorTargets(node.source_anchors, {
+      kind: "node",
+      nodeIds: traceNodeIds(node),
+      action: `生成节点 ${node.label || node.id || "节点"}`,
+    }));
+    wires.forEach((wire) => addAnchorTargets(wire.source_anchors, {
+      kind: "wire",
+      wireIds: [circuitWireKey(wire)],
+      nodeIds: [wire.source, wire.target].filter(Boolean),
+      action: `连接 ${wire.source || "起点"} → ${wire.target || "终点"}`,
+    }));
+    return Array.from(traceById.values());
+  }
+
+  function buildRowTraceItems(circuitView) {
+    if (!circuitView || !Array.isArray(circuitView.rows) || !circuitView.rows.length) return [];
+    const nodeById = new Map((circuitView.nodes || []).map((node) => [node.id, node]));
+    return circuitView.rows.slice(0, 6).map((row, index) => {
+      const gateId = row.gate && row.gate.id ? row.gate.id : row.id || `row-${index + 1}`;
+      const inputs = Array.isArray(row.inputs) ? row.inputs : [];
+      const outputs = Array.isArray(row.outputs) ? row.outputs : [];
+      const nodeIds = new Set([gateId, ...inputs, ...outputs].filter(Boolean).map(String));
+      const wireIds = new Set([
+        ...inputs.map((id) => `${id}->${gateId}`),
+        ...outputs.map((id) => `${gateId}->${id}`),
+      ]);
+      return {
+        id: `row-${gateId}`,
+        sourceId: row.id || gateId,
+        kind: "结构化需求",
+        quote: `${row.label || circuitTraceLabel(gateId)}：${row.title_zh || "控制条件"}。读取 ${inputs.map((id) => circuitTraceLabel(id, nodeById.get(id) && nodeById.get(id).label)).join("、") || "待定"}，生成 ${outputs.map((id) => circuitTraceLabel(id, nodeById.get(id) && nodeById.get(id).label)).join("、") || "待定"}。`,
+        nodeIds,
+        wireIds,
+        actions: new Set([`生成 ${row.label || gateId} 控制链`]),
+      };
+    });
+  }
+
+  function buildConceptTraceItems() {
+    const requirements = state.requirementsPayload || {};
+    const edges = Array.isArray(requirements.concept_edges) ? requirements.concept_edges : [];
+    if (edges.length) {
+      return edges.slice(0, 7).map((edge, index) => ({
+        id: `edge-${edge.id || index + 1}`,
+        sourceId: edge.id || `edge-${index + 1}`,
+        kind: "结构化需求",
+        quote: `${edge.label || "控制链路"}：${edge.source || "起点"} → ${edge.target || "终点"}。`,
+        nodeIds: new Set([edge.source, edge.target].filter(Boolean).map(String)),
+        wireIds: new Set([circuitWireKey(edge)]),
+        actions: new Set([`生成连线 ${edge.source || "起点"} → ${edge.target || "终点"}`]),
+      }));
+    }
+    const nodes = Array.isArray(requirements.concept_logic_nodes) ? requirements.concept_logic_nodes : [];
+    return nodes.slice(0, 7).map((node, index) => ({
+      id: `node-${node.id || index + 1}`,
+      sourceId: node.id || `node-${index + 1}`,
+      kind: "结构化需求",
+      quote: `${node.label || node.id || "节点"}：${node.description_zh || nodeKindLabel(node.node_kind, "逻辑对象")}。`,
+      nodeIds: new Set([node.id].filter(Boolean).map(String)),
+      wireIds: new Set(),
+      actions: new Set([`生成节点 ${node.label || node.id || "节点"}`]),
+    }));
+  }
+
+  function normalizeTraceItems(items) {
+    return items
+      .filter((item) => item && item.quote)
+      .slice(0, 8)
+      .map((item, index) => ({
+        id: item.id || `trace-${index + 1}`,
+        sourceId: item.sourceId || item.id || `trace-${index + 1}`,
+        kind: item.kind || "需求段",
+        quote: item.quote,
+        nodeIds: Array.from(item.nodeIds || []),
+        wireIds: Array.from(item.wireIds || []),
+        actions: Array.from(item.actions || []).slice(0, 3),
+      }));
+  }
+
+  function buildRequirementTraceItems(payload, circuitView) {
+    const anchored = buildAnchorTraceItems(payload, circuitView);
+    if (anchored.length) return normalizeTraceItems(anchored);
+    const rowItems = buildRowTraceItems(circuitView);
+    if (rowItems.length) return normalizeTraceItems(rowItems);
+    return normalizeTraceItems(buildConceptTraceItems());
+  }
+
+  function targetMatchesTrace(element, trace) {
+    if (!element || !trace) return false;
+    const anchorIds = String(element.dataset.sourceAnchorIds || "").split(/\s+/).filter(Boolean);
+    if (anchorIds.includes(trace.sourceId)) return true;
+    if (element.classList.contains("logic-circuit-node")) {
+      const nodeIds = [element.dataset.demoNodeId, element.dataset.nodeId, element.dataset.technicalId].filter(Boolean);
+      return nodeIds.some((nodeId) => trace.nodeIds.includes(nodeId));
+    }
+    if (element.classList.contains("logic-circuit-wire")) {
+      return trace.wireIds.includes(element.dataset.wireId || "");
+    }
+    return false;
+  }
+
+  function applyRequirementTraceHighlight(trace) {
+    document.querySelectorAll(".logic-circuit-node, .logic-circuit-wire").forEach((element) => {
+      element.classList.toggle("is-requirement-trace-match", targetMatchesTrace(element, trace));
+    });
+  }
+
+  function setActiveRequirementTrace(traceId) {
+    if (!requirementTracePanel || !requirementTraceList) return;
+    const nextId = traceId || "";
+    state.activeRequirementTraceId = nextId;
+    requirementTracePanel.dataset.activeTraceId = nextId || "none";
+    const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));
+    let activeTrace = null;
+    traces.forEach((element) => {
+      const isActive = element.dataset.requirementTraceId === nextId;
+      element.classList.toggle("is-active", isActive);
+      const button = element.querySelector("button");
+      if (button) button.setAttribute("aria-current", isActive ? "step" : "false");
+      if (isActive) {
+        try {
+          activeTrace = JSON.parse(element.dataset.traceTargets || "{}");
+        } catch (error) {
+          activeTrace = null;
+        }
+      }
+    });
+    applyRequirementTraceHighlight(activeTrace);
+  }
+
+  function renderRequirementTracePanel(payload, circuitView) {
+    if (!requirementTracePanel || !requirementTraceList) return;
+    const items = buildRequirementTraceItems(payload, circuitView);
+    const doc = (state.requirementsPayload && state.requirementsPayload.source_document) || {};
+    if (requirementTraceSource) {
+      requirementTraceSource.textContent = doc.name || (payload && payload.source_requirements_sha256 ? "已确认需求来源" : "本地结构化需求");
+    }
+    if (!items.length) {
+      requirementTracePanel.dataset.activeTraceId = "waiting";
+      requirementTraceList.innerHTML = '<li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>';
+      if (requirementTraceReviewState) requirementTraceReviewState.textContent = "等待线路图";
+      if (requirementTraceReviewSummary) requirementTraceReviewSummary.textContent = "生成完成后会核对节点、连线与边界。";
+      applyRequirementTraceHighlight(null);
+      return;
+    }
+    const activeId = items.some((item) => item.id === state.activeRequirementTraceId)
+      ? state.activeRequirementTraceId
+      : items[0].id;
+    state.activeRequirementTraceId = activeId;
+    requirementTracePanel.dataset.activeTraceId = activeId;
+    requirementTraceList.innerHTML = "";
+    items.forEach((item, index) => {
+      const li = document.createElement("li");
+      li.className = "logic-requirement-trace-item";
+      li.dataset.requirementTraceId = item.id;
+      li.dataset.sourceAnchorId = item.sourceId;
+      li.dataset.traceTargets = JSON.stringify({
+        sourceId: item.sourceId,
+        nodeIds: item.nodeIds,
+        wireIds: item.wireIds,
+      });
+      const button = document.createElement("button");
+      button.type = "button";
+      button.innerHTML = `
+        <span class="logic-requirement-trace-index">${String(index + 1).padStart(2, "0")}</span>
+        <span class="logic-requirement-trace-copy">
+          <strong>${escapeText(item.quote)}</strong>
+          <small>${escapeText(item.actions.join("；") || "生成候选节点与连线")}</small>
+        </span>
+        <span class="logic-requirement-trace-targets">${escapeText(`${item.nodeIds.length} 节点 · ${item.wireIds.length} 连线`)}</span>
+      `;
+      button.addEventListener("click", () => setActiveRequirementTrace(item.id));
+      li.appendChild(button);
+      requirementTraceList.appendChild(li);
+    });
+    if (requirementTraceReviewState) {
+      const nodeCount = circuitView ? (circuitView.nodes || []).length : ((payload && payload.nodes) || []).length;
+      const wireCount = circuitView ? (circuitView.wires || []).length : ((payload && payload.edges) || []).length;
+      requirementTraceReviewState.textContent = `${nodeCount} 节点 / ${wireCount} 连线已复核`;
+    }
+    if (requirementTraceReviewSummary) {
+      requirementTraceReviewSummary.textContent = "逐段来源、节点和连线已汇总；当前高亮段会同步标出对应图元。";
+    }
+    setActiveRequirementTrace(activeId);
   }
 
   function activeStreamedAuthoringProposal() {
@@ -1214,6 +1469,52 @@
       restoreWorkbenchDrawingLayout();
     }
     applyLogicPresentationZoom();
+  }
+
+  function drawingLayoutKey() {
+    if (!canvas) return "";
+    const parent = canvas.parentElement;
+    return [
+      Math.round(canvas.clientWidth || 0),
+      Math.round(canvas.clientHeight || 0),
+      logicShell ? logicShell.dataset.bottomDrawerState || "closed" : "closed",
+      parent ? parent.dataset.workbenchDrawerState || "closed" : "closed",
+      document.body ? document.body.dataset.logicInteractionMode || "" : "",
+    ].join(":");
+  }
+
+  function refreshDrawingForCurrentLayout() {
+    if (!state.drawingPayload || !canvas) return;
+    const nextKey = drawingLayoutKey();
+    if (nextKey && nextKey === state.lastDrawingLayoutKey) return;
+    state.lastDrawingLayoutKey = nextKey;
+    renderDrawing(state.drawingPayload);
+  }
+
+  function scheduleDrawingLayoutRefresh() {
+    if (!state.drawingPayload || state.layoutRefreshRaf) return;
+    state.layoutRefreshRaf = window.requestAnimationFrame(() => {
+      state.layoutRefreshRaf = 0;
+      refreshDrawingForCurrentLayout();
+    });
+  }
+
+  function setupDrawingLayoutObservers() {
+    if (state.layoutObserverReady) return;
+    state.layoutObserverReady = true;
+    window.addEventListener("resize", scheduleDrawingLayoutRefresh);
+    if (window.ResizeObserver && canvas && canvas.parentElement) {
+      state.layoutResizeObserver = new ResizeObserver(scheduleDrawingLayoutRefresh);
+      state.layoutResizeObserver.observe(canvas.parentElement);
+      state.layoutResizeObserver.observe(canvas);
+    }
+    if (window.MutationObserver && document.body) {
+      state.layoutMutationObserver = new MutationObserver(scheduleDrawingLayoutRefresh);
+      state.layoutMutationObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-logic-interaction-mode", "data-logic-presentation-mode"],
+      });
+    }
   }
 
   function openCommandPalette() {
@@ -2261,6 +2562,7 @@
     renderCircuitProvenanceLegend(null);
     renderCircuitEvaluationPanel(null);
     renderDrawingStreamTimeline(null, null);
+    renderRequirementTracePanel(null, null);
     renderBurdenSummary(null);
     renderWorkflowOverview();
     updateChangeControls();
@@ -3154,6 +3456,9 @@
       "data-readable-lane": readableLane || null,
       "data-provenance-kind": provenanceKind,
       "data-provenance-label": circuitProvenanceLabel(provenanceKind),
+      "data-source-anchor-ids": Array.isArray(wire.source_anchor_ids) && wire.source_anchor_ids.length
+        ? wire.source_anchor_ids.join(" ")
+        : (Array.isArray(wire.source_anchors) ? wire.source_anchors.map((anchor) => anchor.id).filter(Boolean).join(" ") : null),
       tabindex: 0,
       "marker-end": `url(#logic-circuit-arrow-${wireState === "fault" ? "fault" : wireState === "active" ? "active" : "idle"})`,
     });
@@ -3200,6 +3505,9 @@
       "data-display-label": displayLabel,
       "data-technical-id": node.id || "",
       "data-technical-label": technicalLabel,
+      "data-source-anchor-ids": Array.isArray(node.source_anchor_ids) && node.source_anchor_ids.length
+        ? node.source_anchor_ids.join(" ")
+        : (Array.isArray(node.source_anchors) ? node.source_anchors.map((anchor) => anchor.id).filter(Boolean).join(" ") : null),
       "aria-label": `${displayLabel}${technicalLabel ? `，${technicalLabel}` : ""}`,
       tabindex: 0,
     });
@@ -3756,14 +4064,16 @@
       submitAnnotationsButton.disabled = state.busy || state.annotationDrafts.length === 0;
     }
     if (annotationSubmitState && !state.annotationDrafts.length) {
-      annotationSubmitState.textContent = state.selectedTargetId ? "已选中对象，可添加批注" : "选择节点或连线后添加批注";
+      annotationSubmitState.textContent = state.selectedTargetId
+        ? "已选中对象，可添加批注并提交给 Agent"
+        : (state.annotationModeActive ? "请选择图纸中的节点或连线，写下标注意见后提交给 Agent" : "选择节点或连线后添加批注");
     }
   }
 
   function updateAnnotationControls() {
     const hasTarget = Boolean(state.selectedTargetId);
     const hasText = Boolean(nodeCommentText && nodeCommentText.value.trim());
-    if (annotationSubmitBar) annotationSubmitBar.hidden = !hasTarget && state.annotationDrafts.length === 0;
+    if (annotationSubmitBar) annotationSubmitBar.hidden = !state.annotationModeActive && !hasTarget && state.annotationDrafts.length === 0;
     if (annotationPopover) annotationPopover.hidden = !hasTarget;
     if (selectedTargetLabel) {
       selectedTargetLabel.textContent = annotationTargetLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
@@ -3777,6 +4087,7 @@
   }
 
   function selectAnnotationTarget(type, id, label, event, targetElement) {
+    state.annotationModeActive = true;
     state.selectedTargetType = type || "";
     state.selectedTargetId = id || "";
     state.selectedTargetLabel = annotationTargetLabel(type, id, label);
@@ -3820,6 +4131,21 @@
 
   function submitAnnotationBatch() {
     submitAnnotationBatchToAi();
+  }
+
+  function openAnnotationMode() {
+    state.annotationModeActive = true;
+    if (annotationSubmitState && !state.annotationDrafts.length) {
+      annotationSubmitState.textContent = state.selectedTargetId
+        ? "已选中对象，可添加批注并提交给 Agent"
+        : "请选择图纸中的节点或连线，写下标注意见后提交给 Agent";
+    }
+    updateAnnotationControls();
+    if (nodeCommentText && state.selectedTargetId) {
+      nodeCommentText.focus();
+    } else if (canvas) {
+      canvas.focus({preventScroll: true});
+    }
   }
 
   function renderBatchInterpretation(payload, requestPayload) {
@@ -4067,6 +4393,14 @@
     canvas.style.minHeight = `${size.height}px`;
     canvas.style.width = "100%";
     const viewportWidth = Math.max(320, canvas.clientWidth || canvas.parentElement.clientWidth || size.width);
+    const rightRailReserve = circuitView
+      && document.body
+      && document.body.dataset.logicInteractionMode === "workbench"
+      && logicShell
+      && logicShell.dataset.tracePlatform === "requirements-left"
+        ? 72
+        : 0;
+    const fitViewportWidth = Math.max(320, viewportWidth - rightRailReserve);
     const parentHeight = canvas.parentElement ? canvas.parentElement.clientHeight : size.height;
     const toolbarHeight = logicCanvasToolbar ? logicCanvasToolbar.getBoundingClientRect().height : 0;
     const drawerState = logicShell ? logicShell.dataset.bottomDrawerState : "closed";
@@ -4084,10 +4418,10 @@
       : 1.14;
     const fitScale = Math.min(
       fitScaleCeiling,
-      Math.max(0.48, Math.min((viewportWidth - 18) / size.width, (viewportHeight - 18) / size.height))
+      Math.max(0.48, Math.min((fitViewportWidth - 18) / size.width, (viewportHeight - 18) / size.height))
     );
     const fitOffsetX = circuitView
-      ? Math.max(0, Math.round((viewportWidth - (size.width * fitScale)) / 2))
+      ? Math.max(0, Math.round((fitViewportWidth - (size.width * fitScale)) / 2))
       : 0;
     canvas.dataset.fitScale = String(fitScale.toFixed(3));
     canvas.dataset.fitOffsetX = String(fitOffsetX);
@@ -4106,6 +4440,7 @@
         : `scale(${fitScale})`;
       layer.style.transformOrigin = "0 0";
     });
+    state.lastDrawingLayoutKey = drawingLayoutKey();
     if (circuitView) {
       svg.innerHTML = "";
       nodeLayer.innerHTML = "";
@@ -4127,6 +4462,7 @@
       renderParameterPanels(payload);
     }
     renderDrawingStreamTimeline(payload, circuitView);
+    renderRequirementTracePanel(payload, circuitView);
     renderFlags(payload);
     renderNotes(payload);
     resultState.textContent = circuitView ? "电路图已完成绘制" : "图纸已完成绘制";
@@ -4271,6 +4607,7 @@
   }
 
   function boot() {
+    setupDrawingLayoutObservers();
     activateWorkbenchTab(workbenchDrawer ? workbenchDrawer.dataset.activeTab : "none");
     syncDrawerFromCircuitInputs();
     hydrateDrawerFromHash();
@@ -4412,6 +4749,7 @@
       void handleNaturalLanguageSubmit();
     });
   }
+  if (primaryAnnotateButton) primaryAnnotateButton.addEventListener("click", openAnnotationMode);
   if (addAnnotationButton) addAnnotationButton.addEventListener("click", addAnnotationDraft);
   if (submitAnnotationsButton) submitAnnotationsButton.addEventListener("click", submitAnnotationBatch);
   if (batchConfirmUpdateButton) batchConfirmUpdateButton.addEventListener("click", confirmChange);

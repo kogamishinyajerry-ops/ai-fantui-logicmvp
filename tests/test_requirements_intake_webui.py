@@ -3219,7 +3219,9 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'id="logic-presentation-mode-toggle"' in html
     assert 'id="logic-presentation-controls"' in html
     assert 'data-presentation-mode="workbench"' in html
-    assert 'data-logic-interaction-mode="natural-language"' in html
+    assert 'data-logic-interaction-mode="workbench"' in html
+    assert 'id="logic-requirement-trace-panel"' in html
+    assert 'data-trace-platform="requirements-left"' in html
     assert 'data-workbench-input-model="natural-language"' in html
     assert 'id="logic-natural-language-control"' in html
     assert 'id="logic-natural-language-input"' in html
