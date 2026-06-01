@@ -756,6 +756,12 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 12px;
   line-height: 1.45;
 }
+.logic-circuit-eval-panel > #logic-circuit-status-summary {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  overflow-wrap: anywhere;
+}
 .logic-circuit-core-inputs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

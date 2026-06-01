@@ -3105,6 +3105,15 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
             }"""
         )
         assert collapsed_left_rail_geometry == {"visibility": "hidden", "opacity": "0", "pointerEvents": "none"}
+        status_summary_fit = page.locator("#logic-circuit-status-summary").evaluate(
+            """el => ({
+              scrollHeight: el.scrollHeight,
+              clientHeight: el.clientHeight,
+              overflowY: getComputedStyle(el).overflowY,
+            })"""
+        )
+        assert status_summary_fit["scrollHeight"] <= status_summary_fit["clientHeight"] + 1
+        assert status_summary_fit["overflowY"] == "visible"
         page.click('#logic-right-inspector-rail [data-panel-toggle="right"]')
         assert shell.evaluate("el => el.classList.contains('is-right-open')")
         expect(page.locator("#logic-object-context-drawer")).to_be_visible()
