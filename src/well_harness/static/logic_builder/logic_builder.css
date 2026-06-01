@@ -3813,6 +3813,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     position: static;
     display: flex;
     gap: 3px;
+    justify-content: stretch;
     margin-top: 1px;
     max-height: 12px;
     min-height: 0;
@@ -3825,10 +3826,11 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] #logic-stream-chunks .stream-chunk {
-    flex: 0 1 auto;
+    flex: 1 1 100%;
     min-width: 0;
     overflow: hidden;
     max-width: 100%;
+    width: 100%;
     padding: 1px 4px;
     font-size: 8px;
     line-height: 1;

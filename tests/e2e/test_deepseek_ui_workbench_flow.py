@@ -4372,6 +4372,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         back_box = page.locator("#logic-back").bounding_box()
         generation_stream_box = page.locator("#logic-generation-stream").bounding_box()
         stream_chunks_box = page.locator("#logic-stream-chunks").bounding_box()
+        stream_chunk_box = page.locator("#logic-stream-chunks .stream-chunk").bounding_box()
         toolbar_box = page.locator("#logic-canvas-compact-toolbar").bounding_box()
         command_palette_box = page.locator("#logic-command-palette-open").bounding_box()
         mode_dock_box = page.locator("#logic-mode-dock").bounding_box()
@@ -4386,6 +4387,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert back_box is not None
         assert generation_stream_box is not None
         assert stream_chunks_box is not None
+        assert stream_chunk_box is not None
         assert toolbar_box is not None
         assert command_palette_box is not None
         assert mode_dock_box is not None
@@ -4401,6 +4403,8 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert stream_chunks_box["y"] >= generation_stream_box["y"] + generation_stream_box["height"] - 1
         assert stream_chunks_box["y"] + stream_chunks_box["height"] <= process_box["y"] + process_box["height"] + 1
         assert stream_chunks_box["height"] <= 13
+        assert stream_chunk_box["width"] >= stream_chunks_box["width"] - 2
+        assert page.locator("#logic-stream-chunks .stream-chunk").evaluate("el => el.scrollWidth <= el.clientWidth + 1")
         assert toolbar_box["height"] <= 38
         assert page.locator("#logic-canvas-compact-toolbar").evaluate(
             "el => el.scrollHeight <= el.clientHeight + 1"
