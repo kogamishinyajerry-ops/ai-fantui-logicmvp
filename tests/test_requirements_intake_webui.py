@@ -6253,7 +6253,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
             STATIC_ROOT / "logic_builder" / "index.html",
             "2",
             "第 2/4 步",
-            "逻辑绘制",
+            "逻辑复制",
             "logic-fault-next",
             "下一步：进入故障准备",
             [

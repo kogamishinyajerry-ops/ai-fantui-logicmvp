@@ -736,7 +736,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
             "/logic-builder",
             "2",
             "第 2/4 步",
-            "逻辑绘制",
+            "逻辑复制",
             "#logic-fault-next",
             "下一步：进入故障准备",
             '[data-usage-path-cue="logic"]',
@@ -4166,7 +4166,7 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         assert canvas_box is not None
         assert strip_box["height"] <= 84
         assert strip_box["y"] + strip_box["height"] - main_box["y"] <= 104
-        expect(page.locator("#logic-page-system-strip .logic-command-title h1")).to_have_text("逻辑绘制")
+        expect(page.locator("#logic-page-system-strip .logic-command-title h1")).to_have_text("逻辑复制")
         expect(page.locator("#logic-page-system-strip #logic-process")).to_be_visible()
         expect(page.locator("#logic-page-system-strip #logic-workflow-overview")).to_be_visible()
         expect(page.locator("#logic-page-system-strip .logic-controls")).to_be_visible()
