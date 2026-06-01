@@ -2256,7 +2256,10 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         assert [item["rawId"] for item in id_token_metrics] == ["blueprint_fault_ra_low", "blueprint_fault_sw_path"]
         assert all(item["scrollWidth"] <= item["clientWidth"] + 1 for item in id_token_metrics), id_token_metrics
         expect(page.locator("#fault-candidate-matrix-panel")).to_contain_text("覆盖路径")
-        expect(page.locator("#fault-candidate-matrix-body")).to_contain_text("radio_altitude_ft")
+        expect(page.locator("#fault-candidate-matrix-body")).to_contain_text("无线电高度")
+        expect(page.locator("#fault-candidate-matrix-body .fault-matrix-injection-cell").first).not_to_contain_text("radio_altitude_ft")
+        expect(page.locator("#fault-candidate-matrix-body [data-raw-node-id='radio_altitude_ft']")).to_have_text("RA 高度")
+        expect(page.locator("#fault-candidate-matrix-body [data-raw-signal-name='radio_altitude_ft']")).to_have_text("无线电高度")
         expect(page.locator(".fault-scenario-card")).to_have_count(2)
         expect(page.locator(".fault-point-card")).to_have_count(2)
         expect(page.locator("#fault-coverage-evidence-list .fault-coverage-row")).to_have_count(3)
@@ -2419,7 +2422,9 @@ def test_fault_prepare_defaults_to_candidate_boundary_decision_board(
         expect(page.locator("#fault-candidate-matrix-body [data-blueprint-col]")).to_have_count(9)
         assert page.locator("#fault-candidate-matrix-body .fault-matrix-path-token").count() >= 2
         assert page.locator("#fault-candidate-matrix-body .blueprint-row-token").count() >= 3
-        expect(page.locator("#fault-candidate-matrix-body")).to_contain_text("input_ra")
+        expect(page.locator("#fault-candidate-matrix-body")).to_contain_text("RA 输入")
+        expect(page.locator("#fault-candidate-matrix-body .fault-matrix-injection-cell").first).not_to_contain_text("input_ra")
+        expect(page.locator("#fault-candidate-matrix-body [data-raw-node-id='input_ra']")).to_have_text("RA 输入")
         expect(page.locator("#fault-candidate-details")).to_be_visible()
         expect(page.locator("#fault-injection-point-details")).to_be_visible()
         assert page.locator("#fault-candidate-details").evaluate("element => element.open") is False

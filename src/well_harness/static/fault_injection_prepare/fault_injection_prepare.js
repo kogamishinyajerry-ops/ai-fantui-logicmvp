@@ -109,6 +109,23 @@
     toggle_sequence: "序列切换",
     dry_run_observe: "空跑观测",
   };
+  const FAULT_NODE_LABELS = {
+    radio_altitude_ft: "RA 高度",
+    ra_lt_6ft: "RA<6ft",
+    input_ra: "RA 输入",
+    sw1: "SW1",
+    sw2: "SW2",
+    gate_release: "释放门",
+    thr_lock: "油门锁释放",
+  };
+  const FAULT_SIGNAL_LABELS = {
+    radio_altitude_ft: "无线电高度",
+    ra_ft: "RA 高度",
+    sw2_valid: "SW2 有效",
+    switch_path: "开关路径",
+    release_gate: "释放门",
+    thr_lock: "油门锁释放",
+  };
   const COVERAGE_TOKEN_LABELS = {
     deterministic_dry_run_candidate: "确定性空跑候选",
     deterministic_dry_run_plan: "确定性空跑计划",
@@ -608,6 +625,12 @@
     const normalized = String(rowId == null ? "" : rowId).trim();
     if (/^F-\d{2,}$/i.test(normalized)) return normalized.toUpperCase();
     return `F-${String(index + 1).padStart(2, "0")}`;
+  }
+
+  function faultMatrixDisplayKey(value, labels, fallback) {
+    const normalized = String(value == null ? "" : value).trim();
+    if (!normalized) return fallback;
+    return labels[normalized] || compactCell(normalized, fallback);
   }
 
   function mappedDisplayLabel(value, labels, fallback) {
@@ -1259,6 +1282,10 @@
       const point = points[index] || points[0] || {};
       const rowId = scenario.id || point.id || `fault_row_${index + 1}`;
       const displayRowId = faultMatrixDisplayId(rowId, index);
+      const rawNodeId = point.node_id || scenario.node_id || "";
+      const rawSignalName = point.signal_name || "";
+      const displayNodeId = faultMatrixDisplayKey(rawNodeId, FAULT_NODE_LABELS, "待确认节点");
+      const displaySignalName = faultMatrixDisplayKey(rawSignalName, FAULT_SIGNAL_LABELS, "信号待确认");
       const risk = faultRiskLabel(scenario.severity);
       const faultTypeText = scenario.fault_type
         ? faultTypeLabel(scenario.fault_type, "故障待确认")
@@ -1296,8 +1323,8 @@
         <td class="fault-matrix-select" data-blueprint-col="checkbox"><input type="checkbox" aria-label="选择 ${escapeText(rowId)}" checked disabled></td>
         <td class="fault-matrix-id" data-blueprint-col="id"><code class="blueprint-row-token" data-row-scan-token="id" data-raw-row-id="${escapeText(rowId)}" title="${escapeText(rowId)}" aria-label="候选编号 ${escapeText(displayRowId)}，原始键 ${escapeText(rowId)}">${escapeText(displayRowId)}</code></td>
         <td class="fault-matrix-injection-cell" data-blueprint-col="injection-position">
-          <strong>${escapeText(compactCell(point.node_id || scenario.node_id, "待确认节点"))}</strong>
-          <small>${escapeText(compactCell(point.signal_name, "信号待确认"))}</small>
+          <strong data-raw-node-id="${escapeText(rawNodeId)}" title="${escapeText(rawNodeId)}">${escapeText(displayNodeId)}</strong>
+          <small data-raw-signal-name="${escapeText(rawSignalName)}" title="${escapeText(rawSignalName)}">${escapeText(displaySignalName)}</small>
           <span class="fault-matrix-evidence-token blueprint-row-token" data-row-scan-token="evidence" aria-label="来源证据 ${escapeText(evidenceToken)}">${escapeText(evidenceToken)}</span>
         </td>
         <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(faultTypeText, "故障待确认"))}</span></td>
