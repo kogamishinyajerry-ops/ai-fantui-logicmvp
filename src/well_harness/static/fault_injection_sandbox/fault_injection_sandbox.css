@@ -2792,6 +2792,17 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     padding: 1px 6px;
   }
 
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row-description-text--boundary {
+    gap: 1px 2px;
+    line-height: 1;
+  }
+
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row-description-text--boundary .sandbox-evidence-link-boundary {
+    padding: 1px 4px;
+    font-size: 8.5px;
+    line-height: 1;
+  }
+
   @media (min-height: 960px) {
     .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] {
       gap: 2px;

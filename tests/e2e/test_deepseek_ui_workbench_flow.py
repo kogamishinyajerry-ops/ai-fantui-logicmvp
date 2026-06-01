@@ -1405,6 +1405,14 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
             },
         )
         assert fully_visible_review_rows == ["SR-01", "SR-02", "SR-03", "SR-04", "SR-05", "SR-06", "SR-07"]
+        clipped_review_rows = review_rows.locator(".sandbox-review-row").evaluate_all(
+            """(nodes) => nodes.map((node) => ({
+              id: node.dataset.blueprintReviewRow,
+              clientHeight: node.clientHeight,
+              scrollHeight: node.scrollHeight,
+            })).filter((row) => row.scrollHeight > row.clientHeight + 1)"""
+        )
+        assert clipped_review_rows == []
 
         target_row = page.locator('[data-blueprint-review-row="SR-06"]')
         expect(target_row).to_be_visible()
