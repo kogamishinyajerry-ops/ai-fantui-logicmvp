@@ -2732,6 +2732,48 @@ def test_fault_prepare_defaults_to_candidate_boundary_decision_board(
         page.close()
 
 
+def test_fault_prepare_boundary_confirmation_copy_wraps_at_1280(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing, fault]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(fault));
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing(), FAULT_PREPARATION],
+        )
+
+        page.goto(f"{demo_server}/fault-injection-prepare", wait_until="networkidle")
+        boundary_copy_boxes = page.locator(
+            "#fault-boundary-list .fault-boundary-item strong, "
+            "#fault-boundary-list .fault-boundary-item p"
+        ).evaluate_all(
+            """nodes => nodes.map((node) => ({
+              scrollWidth: node.scrollWidth,
+              clientWidth: node.clientWidth,
+              scrollHeight: node.scrollHeight,
+              clientHeight: node.clientHeight,
+            }))"""
+        )
+        assert len(boundary_copy_boxes) == 4
+        assert all(box["scrollWidth"] <= box["clientWidth"] + 1 for box in boundary_copy_boxes)
+        assert all(box["scrollHeight"] <= box["clientHeight"] + 1 for box in boundary_copy_boxes)
+        assert page.locator("#fault-boundary-list").evaluate(
+            "node => node.scrollHeight <= node.clientHeight + 1"
+        ) is True
+        boundary_list_box = page.locator("#fault-boundary-list").bounding_box()
+        action_strip_box = page.locator("#fault-bottom-action-strip").bounding_box()
+        assert boundary_list_box is not None
+        assert action_strip_box is not None
+        assert boundary_list_box["y"] + boundary_list_box["height"] <= action_strip_box["y"] - 4
+    finally:
+        page.close()
+
+
 def test_fault_prepare_closed_reference_summaries_stay_compact_at_1366(
     demo_server: str, browser: Any
 ) -> None:

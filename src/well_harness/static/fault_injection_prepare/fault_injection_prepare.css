@@ -1532,7 +1532,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   .fault-boundary-list {
     gap: 8px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-height: 68px;
+    max-height: 76px;
     overflow: auto;
   }
 
@@ -1569,11 +1569,11 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   }
 
   .fault-boundary-item {
-    padding: 6px 8px;
+    padding: 5px 8px;
   }
 
   .fault-boundary-item label {
-    grid-template-columns: minmax(0, 1fr) minmax(200px, 0.42fr);
+    grid-template-columns: minmax(0, 1fr) minmax(176px, 0.38fr);
     gap: 2px 8px;
     align-items: start;
   }
@@ -1581,26 +1581,26 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   .fault-boundary-item strong,
   .fault-boundary-item p {
     grid-column: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
   }
 
   .fault-boundary-item strong {
-    font-size: 12px;
-    line-height: 1.25;
+    font-size: 11.5px;
+    line-height: 1.18;
   }
 
   .fault-boundary-item p {
-    font-size: 11px;
-    line-height: 1.25;
+    font-size: 10.5px;
+    line-height: 1.18;
   }
 
   .fault-boundary-item textarea {
     grid-column: 2;
     grid-row: 1 / span 2;
-    min-height: 38px;
-    max-height: 40px;
+    min-height: 42px;
+    max-height: 44px;
     padding: 6px 8px;
     line-height: 1.25;
     resize: none;
