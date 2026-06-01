@@ -1312,6 +1312,19 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
         )
         page.goto(f"{demo_server}/fault-injection-sandbox", wait_until="networkidle")
 
+        review_rows = page.locator("#fault-sandbox-review-rows")
+        first_review_row = review_rows.locator(".sandbox-review-row").first
+        report_strip = page.locator("#sandbox-report-strip")
+        expect(report_strip).to_be_visible()
+        review_rows_box = review_rows.bounding_box()
+        first_review_row_box = first_review_row.bounding_box()
+        report_strip_box = report_strip.bounding_box()
+        assert review_rows_box and first_review_row_box and report_strip_box
+        assert review_rows_box["height"] >= 104
+        assert review_rows_box["y"] < report_strip_box["y"]
+        assert review_rows_box["y"] + review_rows_box["height"] <= report_strip_box["y"] - 12
+        assert first_review_row_box["y"] + first_review_row_box["height"] <= report_strip_box["y"] - 32
+
         target_row = page.locator('[data-blueprint-review-row="SR-06"]')
         expect(target_row).to_be_visible()
         target_row.click()
@@ -1320,7 +1333,6 @@ def test_fault_sandbox_review_rows_remain_pointer_clickable_above_report_strip(
         expect(inspector_summary).to_have_attribute("data-active-review-row", "SR-06")
         expect(inspector_summary).to_have_attribute("data-active-trace-id", "ET-04")
         expect(inspector_summary).to_have_attribute("data-active-report-id", "RP-06")
-        expect(page.locator("#sandbox-report-strip")).to_be_visible()
         page.locator("#sandbox-evidence-close").click()
         page.locator('[data-sandbox-report-action="export"]').click()
         expect(page.locator("#sandbox-review-package-panel")).to_be_visible()
