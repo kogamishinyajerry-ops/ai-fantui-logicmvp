@@ -985,8 +985,10 @@
     outputBacktracePanel.dataset.activeTraceId = activeId;
     outputBacktracePanel.dataset.activeOutput = activeOutputId || "none";
     outputBacktracePanel.dataset.relatedOutputCount = String(relatedOutputIds.size);
+    const outputFocusFeedbackLabel = state.blockedOutputBacktraceId ? "非当前段相关输出" : "";
     outputBacktracePanel.dataset.outputFocusFeedback = state.blockedOutputBacktraceId ? "not-related" : "none";
     outputBacktracePanel.dataset.outputFocusBlocked = state.blockedOutputBacktraceId || "";
+    outputBacktracePanel.dataset.outputFocusFeedbackLabel = outputFocusFeedbackLabel;
     const relatedLabels = Array.from(relatedOutputIds)
       .map((outputId) => outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === outputId))
       .filter(Boolean)
@@ -1021,11 +1023,22 @@
     outputBacktraceItems.forEach((item) => {
       const outputId = item.dataset.outputBacktraceOutput || "";
       const isBlockedOutput = Boolean(state.blockedOutputBacktraceId) && outputId === state.blockedOutputBacktraceId;
+      const outputLabelElement = item.querySelector("strong");
+      const outputLabel = outputLabelElement ? outputLabelElement.textContent.trim() : outputId;
       item.classList.toggle("is-active", Boolean(activeOutputId) && outputId === activeOutputId);
       item.classList.toggle("is-related", relatedOutputIds.has(outputId));
       item.classList.toggle("is-output-focus-blocked", isBlockedOutput);
-      if (isBlockedOutput) item.dataset.outputFocusFeedback = "not-related";
-      else delete item.dataset.outputFocusFeedback;
+      if (isBlockedOutput) {
+        item.dataset.outputFocusFeedback = "not-related";
+        item.dataset.outputFocusFeedbackLabel = outputFocusFeedbackLabel;
+        item.setAttribute("aria-label", `${outputLabel}：${outputFocusFeedbackLabel}`);
+        item.title = `${outputLabel}：${outputFocusFeedbackLabel}`;
+      } else {
+        delete item.dataset.outputFocusFeedback;
+        delete item.dataset.outputFocusFeedbackLabel;
+        item.removeAttribute("aria-label");
+        item.title = outputLabel ? `聚焦 ${outputLabel} 输出组` : "";
+      }
     });
     applyOutputBacktraceFocus(activeOutputId);
     outputBacktraceSources.forEach((button) => {
