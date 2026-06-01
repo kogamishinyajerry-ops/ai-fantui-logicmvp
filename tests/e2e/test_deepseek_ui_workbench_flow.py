@@ -4622,6 +4622,8 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         command_palette_box = page.locator("#logic-command-palette-open").bounding_box()
         mode_dock_box = page.locator("#logic-mode-dock").bounding_box()
         stream_box = page.locator("#logic-drawing-stream-timeline").bounding_box()
+        canvas_box = page.locator("#logic-canvas").bounding_box()
+        right_rail_box = page.locator("#logic-right-inspector-rail").bounding_box()
         bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
         assert strip_box is not None
         assert controls_box is not None
@@ -4637,6 +4639,8 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert command_palette_box is not None
         assert mode_dock_box is not None
         assert stream_box is not None
+        assert canvas_box is not None
+        assert right_rail_box is not None
         assert bottom_strip_box is not None
         assert strip_box["height"] <= 84
         assert actions_box["y"] + actions_box["height"] <= strip_box["y"] + strip_box["height"] - 1
@@ -4661,6 +4665,29 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert toolbar_box["y"] + toolbar_box["height"] <= mode_dock_box["y"] - 4
         assert stream_box["y"] >= mode_dock_box["y"] + mode_dock_box["height"] - 1
         assert stream_box["y"] + stream_box["height"] <= bottom_strip_box["y"] - 6
+        fit_scale = float(page.locator("#logic-canvas").get_attribute("data-fit-scale") or "0")
+        assert 1.20 <= fit_scale <= 1.23
+        medium_circuit_graph_box = page.locator("#logic-canvas").evaluate(
+            """() => {
+              const canvas = document.querySelector("#logic-canvas")?.getBoundingClientRect();
+              const rail = document.querySelector("#logic-right-inspector-rail")?.getBoundingClientRect();
+              const boxes = Array.from(document.querySelectorAll(
+                "#logic-canvas .logic-circuit-node, #logic-canvas .logic-circuit-gate, #logic-canvas .logic-output-node"
+              )).map((node) => node.getBoundingClientRect()).filter((box) => box.width && box.height);
+              if (!canvas || !rail || !boxes.length) return null;
+              const graph = {
+                bottom: Math.max(...boxes.map((box) => box.bottom)),
+                right: Math.max(...boxes.map((box) => box.right)),
+              };
+              return {
+                bottomGap: canvas.bottom - graph.bottom,
+                rightRailGap: rail.left - graph.right,
+              };
+            }"""
+        )
+        assert medium_circuit_graph_box is not None
+        assert medium_circuit_graph_box["bottomGap"] <= 100
+        assert medium_circuit_graph_box["rightRailGap"] >= 40
         stream_toolbar_overlaps = page.evaluate(
             """() => {
               const stream = document.querySelector("#logic-drawing-stream-timeline")?.getBoundingClientRect();
