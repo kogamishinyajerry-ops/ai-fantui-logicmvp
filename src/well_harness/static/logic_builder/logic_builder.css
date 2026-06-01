@@ -1452,6 +1452,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   left: auto;
   right: 36px;
   top: 82px;
+  bottom: auto;
   width: min(226px, calc(100% - 52px));
   max-height: 32px;
   border-color: rgba(25, 210, 143, 0.42);
@@ -3021,6 +3022,15 @@ body[data-logic-presentation-mode="circuit-only"] #logic-presentation-controls {
     top: 92px;
     width: 328px;
     max-height: 132px;
+  }
+
+  .logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] {
+    left: 36px;
+    right: auto;
+    top: auto;
+    bottom: 70px;
+    width: min(226px, calc(100% - 52px));
+    max-height: 32px;
   }
 
   .logic-reconstruction-mode-panel {
