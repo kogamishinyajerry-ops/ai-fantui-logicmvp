@@ -1498,6 +1498,38 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     overflow: auto;
   }
 
+  .fault-boundary-panel {
+    display: grid;
+    grid-template-areas:
+      "head actions"
+      "list list";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .fault-boundary-panel .fault-section-head {
+    grid-area: head;
+    min-width: 0;
+  }
+
+  .fault-boundary-panel .fault-boundary-list {
+    grid-area: list;
+  }
+
+  .fault-boundary-panel .fault-actions {
+    grid-area: actions;
+    align-self: end;
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  .fault-boundary-panel .fault-actions button {
+    min-height: 28px;
+    padding: 4px 9px;
+    font-size: 11px;
+    line-height: 1.15;
+  }
+
   .fault-boundary-item {
     padding: 6px 8px;
   }
