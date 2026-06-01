@@ -499,6 +499,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   border-radius: 8px;
   background: #f0fdf4;
   padding: 9px;
+  pointer-events: auto;
 }
 
 .logic-requirement-trace-review span {
@@ -1819,6 +1820,125 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   cursor: default;
   opacity: 0.48;
 }
+
+.logic-output-backtrace-panel {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 8px;
+  background: #eff6ff;
+  padding: 7px;
+}
+
+.logic-output-backtrace-panel > span {
+  color: var(--logic-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.logic-output-backtrace-list {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.logic-output-backtrace-item {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: minmax(42px, 0.72fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 3px 4px;
+}
+
+.logic-output-backtrace-item strong {
+  overflow: hidden;
+  color: var(--logic-text);
+  font-size: 9px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logic-output-backtrace-sources {
+  position: relative;
+  z-index: 4;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.logic-output-backtrace-source,
+.logic-output-backtrace-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.09);
+  color: #b45309;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+
+.logic-output-backtrace-source {
+  position: relative;
+  z-index: 5;
+  cursor: pointer;
+  min-width: 34px;
+  min-height: 14px;
+  pointer-events: auto !important;
+}
+
+.logic-output-backtrace-more {
+  pointer-events: none;
+}
+
+.logic-output-backtrace-source.is-active,
+.logic-output-backtrace-source[aria-pressed="true"] {
+  border-color: rgba(37, 99, 235, 0.52);
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.logic-output-backtrace-item.is-empty {
+  grid-column: 1 / -1;
+  color: var(--logic-muted);
+  font-size: 10px;
+}
+
 .logic-requirement-trace-targets,
 .logic-requirement-trace-copy small,
 .logic-requirement-trace-review p {
@@ -1836,6 +1956,46 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 8px;
   padding: 2px 5px;
 }
+.logic-output-backtrace-panel {
+  border-color: rgba(245, 200, 91, 0.30);
+  background:
+    linear-gradient(135deg, rgba(245, 200, 91, 0.10), rgba(7, 20, 33, 0.88)),
+    rgba(7, 20, 33, 0.90);
+  padding: 5px;
+}
+.logic-output-backtrace-panel > span {
+  color: #f5c85b;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  line-height: 1;
+}
+.logic-output-backtrace-list {
+  gap: 4px;
+}
+.logic-output-backtrace-item {
+  min-height: 19px;
+  border-color: rgba(54, 198, 216, 0.22);
+  background: rgba(7, 20, 33, 0.72);
+  padding: 3px 4px;
+}
+.logic-output-backtrace-item strong {
+  color: #f2f7fc;
+  font-size: 8px;
+}
+.logic-output-backtrace-source,
+.logic-output-backtrace-more {
+  border-color: rgba(245, 200, 91, 0.34);
+  background: rgba(245, 200, 91, 0.10);
+  color: #f5c85b;
+  font-size: 7px;
+  padding: 2px 4px;
+}
+.logic-output-backtrace-source.is-active,
+.logic-output-backtrace-source[aria-pressed="true"] {
+  border-color: rgba(118, 228, 255, 0.72);
+  background: rgba(54, 198, 216, 0.16);
+  color: #d9f8ff;
+}
 .logic-requirement-trace-review > p {
   display: -webkit-box;
   overflow: hidden;
@@ -1848,6 +2008,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   margin-top: 3px;
+  pointer-events: auto;
 }
 .logic-global-review-matrix article {
   min-width: 0;
@@ -1856,6 +2017,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   border-radius: 7px;
   background: rgba(7, 20, 33, 0.76);
   padding: 3px;
+  pointer-events: auto;
 }
 .logic-global-review-matrix article[data-review-status="pass"] {
   border-color: rgba(25, 210, 143, 0.46);
@@ -1920,6 +2082,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   padding: 2px 4px;
   text-align: center;
   transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+  pointer-events: auto;
 }
 .logic-review-matrix-action:hover,
 .logic-review-matrix-action:focus-visible {
@@ -3613,7 +3776,7 @@ body[data-logic-presentation-mode="circuit-only"] #logic-presentation-controls {
     max-height: none;
     opacity: 1;
     overflow: auto;
-    pointer-events: auto;
+    pointer-events: none;
   }
 
   .logic-collapsed-tool-rail {
@@ -4452,8 +4615,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     position: relative;
     z-index: 20;
     display: grid;
-    grid-template-rows: auto auto minmax(110px, 1fr) minmax(0, 132px) minmax(0, 152px);
-    gap: 8px;
+    grid-template-rows: auto auto minmax(100px, 1fr) minmax(0, 128px) minmax(0, 184px);
+    gap: 7px;
     overflow: hidden;
     border: 1px solid rgba(54, 198, 216, 0.44);
     border-radius: 8px;
@@ -4468,7 +4631,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-list {
     grid-row: 3;
-    min-height: 110px;
+    min-height: 100px;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-evidence {
@@ -4480,7 +4643,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review {
     grid-row: 5;
-    max-height: 152px;
+    max-height: 184px;
     min-height: 0;
     overflow: hidden;
     padding: 7px;
@@ -4489,11 +4652,25 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-list,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-item button,
-  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-anchor-jumps,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-anchor-jumps button,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-review-matrix-action {
     pointer-events: auto;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review {
+    pointer-events: auto;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-panel {
+    pointer-events: auto;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix article,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-review-matrix-action,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-output-backtrace-source {
+    pointer-events: auto !important;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-trust-spine {

@@ -280,6 +280,12 @@
           <span>全局复核</span>
           <strong id="logic-requirement-trace-review-state">等待线路图</strong>
           <p id="logic-requirement-trace-review-summary">生成完成后会核对节点、连线与边界。</p>
+          <div id="logic-output-backtrace-panel" class="logic-output-backtrace-panel" aria-label="最终输出反向追溯" data-output-backtrace="waiting" data-active-trace-id="waiting">
+            <span>输出回溯</span>
+            <div id="logic-output-backtrace-list" class="logic-output-backtrace-list" aria-label="最终输出来源段">
+              <article class="logic-output-backtrace-item is-empty">等待输出映射。</article>
+            </div>
+          </div>
           <div id="logic-global-review-matrix" class="logic-global-review-matrix" aria-label="全局复核矩阵" data-global-review-matrix="circuit-evidence" data-node-count="0" data-wire-count="0">
             <article data-review-item="source" data-review-status="waiting">
               <span>原文锚点</span>

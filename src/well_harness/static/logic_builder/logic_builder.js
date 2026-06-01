@@ -78,6 +78,22 @@
     output: "输出",
     component: "组件",
   };
+  const OUTPUT_IMPACT_DEFINITIONS = [
+    ["tls115", "TLS 供电"],
+    ["tls_unlocked", "TLS 解锁"],
+    ["etrac_540v", "ETRAC 540V"],
+    ["eec_deploy", "EEC 展开"],
+    ["pls_power", "PLS 供电"],
+    ["pdu_motor", "PDU 电机"],
+    ["vdt90", "VDT90"],
+    ["thr_lock", "油门锁"],
+  ];
+  const OUTPUT_BACKTRACE_GROUPS = [
+    { id: "tls", label: "TLS", nodeIds: ["tls115", "tls_unlocked"] },
+    { id: "etrac", label: "ETRAC", nodeIds: ["etrac_540v"] },
+    { id: "deploy", label: "EEC/PLS/PDU", nodeIds: ["eec_deploy", "pls_power", "pdu_motor"] },
+    { id: "lock", label: "油门锁", nodeIds: ["thr_lock"] },
+  ];
   const CIRCUIT_STATE_LABELS = {
     idle: "待命",
     active: "已触发",
@@ -201,6 +217,8 @@
   const currentSegmentOutputLabels = $("logic-current-segment-output-labels");
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
+  const outputBacktracePanel = $("logic-output-backtrace-panel");
+  const outputBacktraceList = $("logic-output-backtrace-list");
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
   const globalReviewMatrix = $("logic-global-review-matrix");
@@ -854,7 +872,7 @@
     }
   }
 
-  function outputImpactsForTrace(trace) {
+  function nodeIdsForTrace(trace) {
     const nodeIds = new Set(Array.isArray(trace && trace.nodeIds) ? trace.nodeIds : []);
     for (const wireId of Array.isArray(trace && trace.wireIds) ? trace.wireIds : []) {
       String(wireId || "")
@@ -863,20 +881,84 @@
         .filter(Boolean)
         .forEach((endpointId) => nodeIds.add(endpointId));
     }
-    const outputLabels = [
-      ["tls115", "TLS 供电"],
-      ["tls_unlocked", "TLS 解锁"],
-      ["etrac_540v", "ETRAC 540V"],
-      ["eec_deploy", "EEC 展开"],
-      ["pls_power", "PLS 供电"],
-      ["pdu_motor", "PDU 电机"],
-      ["vdt90", "VDT90"],
-      ["thr_lock", "油门锁"],
-    ];
-    return outputLabels
+    return nodeIds;
+  }
+
+  function outputImpactsForTrace(trace) {
+    const nodeIds = nodeIdsForTrace(trace);
+    return OUTPUT_IMPACT_DEFINITIONS
       .filter(([id]) => nodeIds.has(id))
       .map(([, label]) => label)
       .slice(0, 3);
+  }
+
+  function syncOutputBacktraceActiveTrace(traceId) {
+    if (!outputBacktracePanel || !outputBacktraceList) return;
+    const activeId = traceId || "none";
+    outputBacktracePanel.dataset.activeTraceId = activeId;
+    outputBacktraceList.querySelectorAll("[data-output-backtrace-source]").forEach((button) => {
+      const isActive = button.dataset.outputBacktraceSource === activeId;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  }
+
+  function renderOutputBacktrace(items) {
+    if (!outputBacktracePanel || !outputBacktraceList) return;
+    const traces = (Array.isArray(items) ? items : []).map((item, index) => ({
+      ...item,
+      displayIndex: String(index + 1).padStart(2, "0"),
+      nodeIdSet: nodeIdsForTrace(item),
+    }));
+    if (!traces.length) {
+      outputBacktracePanel.dataset.outputBacktrace = "waiting";
+      outputBacktracePanel.dataset.outputCount = "0";
+      outputBacktraceList.innerHTML = '<article class="logic-output-backtrace-item is-empty">等待输出映射。</article>';
+      syncOutputBacktraceActiveTrace(null);
+      return;
+    }
+    const groups = OUTPUT_BACKTRACE_GROUPS.map((group) => {
+      const sources = traces.filter((trace) => group.nodeIds.some((nodeId) => trace.nodeIdSet.has(nodeId)));
+      return { ...group, sources };
+    });
+    outputBacktracePanel.dataset.outputBacktrace = "ready";
+    outputBacktracePanel.dataset.outputCount = String(groups.filter((group) => group.sources.length).length);
+    outputBacktraceList.innerHTML = groups.map((group) => {
+      const visibleSources = group.sources.slice(0, 2);
+      const hiddenSourceCount = Math.max(0, group.sources.length - visibleSources.length);
+      const sourceBadges = visibleSources.length
+        ? `${visibleSources.map((source) => `<button type="button" class="logic-output-backtrace-source" data-output-backtrace-source="${escapeText(source.id)}" aria-pressed="false">段 ${escapeText(source.displayIndex)}</button>`).join("")}${hiddenSourceCount ? `<span class="logic-output-backtrace-more">+${hiddenSourceCount}</span>` : ""}`
+        : '<span class="logic-output-backtrace-more">待映射</span>';
+      return `
+        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}">
+          <strong>${escapeText(group.label)}</strong>
+          <span class="logic-output-backtrace-sources">${sourceBadges}</span>
+        </article>
+      `;
+    }).join("");
+    outputBacktraceList.querySelectorAll("[data-output-backtrace-source]").forEach((button) => {
+      button.addEventListener("click", () => setActiveRequirementTrace(button.dataset.outputBacktraceSource || ""));
+    });
+    const activateBacktraceAtPoint = (event) => {
+      const explicitSource = event.target && event.target.closest
+        ? event.target.closest("[data-output-backtrace-source]")
+        : null;
+      if (explicitSource && explicitSource.dataset.outputBacktraceSource) {
+        setActiveRequirementTrace(explicitSource.dataset.outputBacktraceSource);
+        return;
+      }
+      const sourceButtons = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-source]"));
+      const sourceAtPoint = sourceButtons.find((button) => {
+        const rect = button.getBoundingClientRect();
+        return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+      });
+      if (sourceAtPoint && sourceAtPoint.dataset.outputBacktraceSource) {
+        setActiveRequirementTrace(sourceAtPoint.dataset.outputBacktraceSource);
+      }
+    };
+    outputBacktracePanel.onclick = activateBacktraceAtPoint;
+    if (outputBacktracePanel.parentElement) outputBacktracePanel.parentElement.onclick = activateBacktraceAtPoint;
+    syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
   }
 
   function renderGlobalReviewMatrix(evidence) {
@@ -979,6 +1061,7 @@
     });
     renderCurrentSegmentEvidenceCard(activeTrace);
     applyRequirementTraceHighlight(activeTrace);
+    syncOutputBacktraceActiveTrace(nextId);
   }
 
   function renderRequirementTracePanel(payload, circuitView) {
@@ -996,6 +1079,7 @@
       if (requirementTraceReviewState) requirementTraceReviewState.textContent = "等待线路图";
       if (requirementTraceReviewSummary) requirementTraceReviewSummary.textContent = "生成完成后会核对节点、连线与边界。";
       renderCurrentSegmentEvidenceCard(null);
+      renderOutputBacktrace([]);
       applyRequirementTraceHighlight(null);
       return;
     }
@@ -1052,6 +1136,7 @@
     }
     const evidence = renderTrustSpine(payload, circuitView, items);
     renderGlobalReviewMatrix(evidence);
+    renderOutputBacktrace(items);
     if (requirementTraceReviewSummary) {
       const counts = evidence
         ? evidence.sourceCounts
