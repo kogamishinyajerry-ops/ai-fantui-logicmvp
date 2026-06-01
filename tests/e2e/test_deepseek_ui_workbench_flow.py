@@ -2852,6 +2852,14 @@ def test_fault_prepare_next_action_cue_fits_at_1280(
         board_box = decision_board.bounding_box()
         assert board_box is not None
         assert board_box["height"] <= 72
+        effect_boxes = page.locator("#fault-candidate-matrix-body .fault-matrix-effect span").evaluate_all(
+            """nodes => nodes.map((node) => ({
+              scrollHeight: node.scrollHeight,
+              clientHeight: node.clientHeight,
+            }))"""
+        )
+        assert effect_boxes
+        assert all(box["scrollHeight"] <= box["clientHeight"] + 1 for box in effect_boxes)
     finally:
         page.close()
 

@@ -503,6 +503,9 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 10px;
   line-height: 1.25;
 }
+.fault-candidate-matrix[data-blueprint-density="compact-workbench"] .fault-matrix-effect span {
+  -webkit-line-clamp: 3;
+}
 .fault-matrix-pathline {
   display: flex;
   flex-wrap: wrap;
