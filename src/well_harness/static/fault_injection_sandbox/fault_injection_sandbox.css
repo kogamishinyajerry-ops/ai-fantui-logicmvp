@@ -2027,15 +2027,15 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .sandbox-replay-timeline {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(56px, 1fr);
+  grid-auto-columns: minmax(42px, 1fr);
   grid-column: 2;
   grid-row: 2;
   align-items: end;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   overflow: hidden;
   border-bottom: 2px solid rgba(49, 112, 255, 0.62);
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .sandbox-replay-marker {
@@ -2043,23 +2043,23 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   display: grid;
   justify-items: center;
   min-width: 0;
-  min-height: 32px;
+  min-height: 38px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--sandbox-muted);
   cursor: pointer;
-  font-size: 8px;
-  line-height: 1.08;
-  padding: 0 2px;
+  font-size: 7.5px;
+  line-height: 1;
+  padding: 0 1px;
 }
 
 .sandbox-replay-marker::after {
   position: absolute;
   right: 50%;
-  bottom: -6px;
+  bottom: 0;
   width: 1px;
-  height: 8px;
+  height: 4px;
   background: rgba(102, 115, 141, 0.56);
   content: "";
 }
@@ -2068,8 +2068,8 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 13px;
+  width: 13px;
+  height: 12px;
   border-radius: 999px;
   background: #7b879d;
   color: #ffffff;
@@ -2088,7 +2088,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .sandbox-replay-marker code {
   color: var(--sandbox-muted);
   font-family: "Courier New", monospace;
-  font-size: 7px;
+  font-size: 6.5px;
 }
 
 .sandbox-replay-marker[data-replay-level="high"] .sandbox-replay-marker-index,

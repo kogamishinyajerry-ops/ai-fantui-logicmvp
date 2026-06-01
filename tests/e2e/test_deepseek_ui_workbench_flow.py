@@ -1469,6 +1469,52 @@ def test_fault_sandbox_replay_report_workbench_tracks_blueprint37(
         page.close()
 
 
+def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([faultPayload, sandboxPayload]) => {
+              localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(faultPayload));
+              localStorage.setItem("ai-fantui-fault-injection-sandbox-plan-v1", JSON.stringify(sandboxPayload));
+            }""",
+            [FAULT_PREPARATION, _dense_sandbox_plan()],
+        )
+        page.goto(
+            f"{demo_server}/fault-injection-sandbox?review=SR-06&trace=ET-04&report=RP-06",
+            wait_until="networkidle",
+        )
+
+        report_strip = page.locator("#sandbox-report-strip")
+        timeline = page.locator("#fault-sandbox-replay-timeline")
+        expect(report_strip).to_be_visible()
+        expect(timeline).to_be_visible()
+        expect(timeline.locator("[data-replay-marker]")).to_have_count(10)
+        report_box = report_strip.bounding_box()
+        timeline_box = timeline.bounding_box()
+        assert report_box is not None
+        assert timeline_box is not None
+        assert report_box["height"] <= 132
+        assert timeline_box["height"] <= 58
+        assert timeline.evaluate("el => el.scrollWidth <= el.clientWidth + 1")
+        assert timeline.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
+        marker_boxes = timeline.locator("[data-replay-marker]").evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              return {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
+            })"""
+        )
+        assert marker_boxes
+        assert min(box["x"] for box in marker_boxes) >= timeline_box["x"] - 1
+        assert max(box["x"] + box["width"] for box in marker_boxes) <= (
+            timeline_box["x"] + timeline_box["width"] + 1
+        )
+    finally:
+        page.close()
+
+
 def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
     demo_server: str, browser: Any
 ) -> None:
