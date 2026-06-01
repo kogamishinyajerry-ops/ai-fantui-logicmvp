@@ -635,6 +635,13 @@
     return labels[normalized] || compactCell(normalized, fallback);
   }
 
+  function faultMatrixDisplayText(value, fallback) {
+    return compactCell(value, fallback)
+      .replace(/\bdry-run\b/gi, "空跑")
+      .replace(/仅\s+空跑/g, "仅空跑")
+      .replace(/\bTHR_LOCK\b/g, "油门锁");
+  }
+
   function mappedDisplayLabel(value, labels, fallback) {
     const normalized = String(value == null ? "" : value).trim();
     if (!normalized) return fallback;
@@ -1293,6 +1300,10 @@
       const faultTypeText = scenario.fault_type
         ? faultTypeLabel(rawFaultType, "故障待确认")
         : injectionModeLabel(rawFaultType, "故障待确认");
+      const rawTriggerText = point.safe_boundary_zh || scenario.rationale_zh || "";
+      const rawEffectText = scenario.expected_effect_zh || "";
+      const displayTriggerText = faultMatrixDisplayText(rawTriggerText, "空跑条件待确认");
+      const displayEffectText = faultMatrixDisplayText(rawEffectText, "观察路径影响");
       const coveredPathItems = faultCoveredPathItems(scenario, point);
       const coveredPathLabel = faultCoveredPathLabel(scenario, point);
       const evidenceToken = faultMatrixEvidenceToken(scenario, point, index);
@@ -1331,8 +1342,8 @@
           <span class="fault-matrix-evidence-token blueprint-row-token" data-row-scan-token="evidence" aria-label="来源证据 ${escapeText(evidenceToken)}">${escapeText(evidenceToken)}</span>
         </td>
         <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip" data-raw-fault-type="${escapeText(rawFaultType)}" title="${escapeText(rawFaultType)}">${escapeText(compactCell(faultTypeText, "故障待确认"))}</span></td>
-        <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span>${escapeText(compactCell(point.safe_boundary_zh || scenario.rationale_zh, "空跑条件待确认"))}</span></td>
-        <td class="fault-matrix-effect" data-blueprint-col="expected-effect"><span>${escapeText(compactCell(scenario.expected_effect_zh, "观察路径影响"))}</span></td>
+        <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span data-raw-matrix-trigger="${escapeText(rawTriggerText)}" title="${escapeText(rawTriggerText)}">${escapeText(displayTriggerText)}</span></td>
+        <td class="fault-matrix-effect" data-blueprint-col="expected-effect"><span data-raw-matrix-effect="${escapeText(rawEffectText)}" title="${escapeText(rawEffectText)}">${escapeText(displayEffectText)}</span></td>
         <td class="fault-matrix-path" data-blueprint-col="covered-path">
           <span class="fault-matrix-path-summary blueprint-row-token" data-row-scan-token="path-summary">${escapeText(coveredPathItems.length ? `${coveredPathItems.length} 节点路径` : "路径待确认")}</span>
           <span class="fault-matrix-pathline blueprint-row-linkbar" data-blueprint39-detail="selected-only" data-row-scan-token="link" aria-label="${escapeText(coveredPathLabel)}">${renderFaultPathTokens(coveredPathItems)}</span>

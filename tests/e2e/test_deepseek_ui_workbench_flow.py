@@ -3336,6 +3336,12 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
             "nodes => nodes.map((node) => node.textContent.trim())"
         )
         assert "dropout" not in fault_type_texts
+        expect(page.locator("#fault-candidate-matrix-body [data-raw-matrix-trigger='仅 dry-run，不写入控制器状态。']")).to_have_text(
+            "仅空跑，不写入控制器状态。"
+        )
+        expect(page.locator("#fault-candidate-matrix-body [data-raw-matrix-effect='应保持 THR_LOCK 不释放。']")).to_have_text(
+            "应保持 油门锁 不释放。"
+        )
         expect(page.locator("#fault-candidate-details")).to_be_visible()
         expect(page.locator("#fault-injection-point-details")).to_be_visible()
 
