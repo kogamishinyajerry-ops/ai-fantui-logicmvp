@@ -3080,11 +3080,20 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
         )
 
         page.goto(f"{demo_server}/fault-injection-prepare", wait_until="networkidle")
+        process_box = page.locator("#fault-process").bounding_box()
         layout_box = page.locator(".fault-layout").bounding_box()
         action_strip_box = page.locator("#fault-bottom-action-strip").bounding_box()
+        matrix_box = page.locator("#fault-candidate-matrix-panel").bounding_box()
+        assert process_box is not None
         assert layout_box is not None
         assert action_strip_box is not None
+        assert matrix_box is not None
+        assert process_box["height"] <= 56
+        assert matrix_box["y"] <= 320
         assert layout_box["y"] + layout_box["height"] <= action_strip_box["y"]
+        assert page.locator("#fault-process").evaluate(
+            "el => el.scrollHeight <= el.clientHeight + 1"
+        )
         expect(page.locator("#fault-candidate-details")).to_be_visible()
         expect(page.locator("#fault-injection-point-details")).to_be_visible()
 
