@@ -5139,3 +5139,16 @@ body[data-logic-interaction-mode="natural-language"] .logic-shell[data-blueprint
   outline: 1px solid rgba(125, 211, 252, 0.82);
   outline-offset: 2px;
 }
+
+.logic-circuit-node.is-output-backtrace-focus .logic-circuit-node-box,
+.logic-circuit-node.is-output-backtrace-focus .logic-circuit-gate-box {
+  stroke: #f2c94c;
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 8px rgba(242, 201, 76, 0.42));
+}
+
+.logic-circuit-wire.is-output-backtrace-focus {
+  stroke: #f2c94c;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(242, 201, 76, 0.38));
+}

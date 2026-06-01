@@ -788,6 +788,24 @@
     });
   }
 
+  function applyOutputBacktraceFocus(outputId) {
+    const group = OUTPUT_BACKTRACE_GROUPS.find((item) => item.id === outputId);
+    const focusedNodeIds = new Set(group && Array.isArray(group.nodeIds) ? group.nodeIds : []);
+    if (canvas) {
+      canvas.dataset.activeOutputFocus = group ? group.id : "none";
+      canvas.dataset.activeOutputFocusLabel = group ? group.label : "";
+    }
+    document.querySelectorAll(".logic-circuit-node").forEach((element) => {
+      const nodeIds = [element.dataset.demoNodeId, element.dataset.nodeId, element.dataset.technicalId].filter(Boolean);
+      element.classList.toggle("is-output-backtrace-focus", nodeIds.some((nodeId) => focusedNodeIds.has(nodeId)));
+    });
+    document.querySelectorAll(".logic-circuit-wire").forEach((element) => {
+      const sourceId = element.dataset.source || "";
+      const targetId = element.dataset.target || "";
+      element.classList.toggle("is-output-backtrace-focus", focusedNodeIds.has(sourceId) || focusedNodeIds.has(targetId));
+    });
+  }
+
   function requirementTraceEvidence(circuitView, items) {
     const nodes = circuitView && Array.isArray(circuitView.nodes) ? circuitView.nodes : [];
     const wires = circuitView && Array.isArray(circuitView.wires) ? circuitView.wires : [];
@@ -984,6 +1002,7 @@
       item.classList.toggle("is-active", Boolean(activeOutputId) && item.dataset.outputBacktraceOutput === activeOutputId);
       item.classList.toggle("is-related", relatedOutputIds.has(item.dataset.outputBacktraceOutput || ""));
     });
+    applyOutputBacktraceFocus(activeOutputId);
     outputBacktraceSources.forEach((button) => {
       const isActive = button.dataset.outputBacktraceSource === activeId;
       button.classList.toggle("is-active", isActive);
