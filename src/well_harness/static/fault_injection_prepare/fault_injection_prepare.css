@@ -1440,8 +1440,17 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     overflow: visible;
   }
 
+  .fault-reference-details:not([open]) {
+    padding: 6px 8px;
+  }
+
   .fault-reference-details > summary {
     padding: 9px 10px;
+  }
+
+  .fault-reference-details:not([open]) > summary {
+    min-height: 44px;
+    padding: 4px 6px;
   }
 
   .fault-reference-details > .fault-scenario-map,

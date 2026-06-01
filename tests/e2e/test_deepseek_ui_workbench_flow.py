@@ -2391,6 +2391,55 @@ def test_fault_prepare_defaults_to_candidate_boundary_decision_board(
         page.close()
 
 
+def test_fault_prepare_closed_reference_summaries_stay_compact_at_1366(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing, fault]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.setItem("ai-fantui-fault-injection-preparation-v1", JSON.stringify(fault));
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing(), FAULT_PREPARATION],
+        )
+
+        page.goto(f"{demo_server}/fault-injection-prepare", wait_until="networkidle")
+        candidate = page.locator("#fault-candidate-details")
+        injection_points = page.locator("#fault-injection-point-details")
+        boundary_list = page.locator("#fault-boundary-list")
+        action_strip = page.locator("#fault-bottom-action-strip")
+        expect(candidate).to_be_visible()
+        expect(injection_points).to_be_visible()
+        assert candidate.evaluate("element => element.open") is False
+        assert injection_points.evaluate("element => element.open") is False
+        candidate_box = candidate.bounding_box()
+        point_box = injection_points.bounding_box()
+        boundary_box = boundary_list.bounding_box()
+        action_box = action_strip.bounding_box()
+        assert candidate_box is not None
+        assert point_box is not None
+        assert boundary_box is not None
+        assert action_box is not None
+        assert candidate_box["height"] <= 66
+        assert point_box["height"] <= 66
+        assert abs(candidate_box["y"] - point_box["y"]) <= 1
+        assert candidate_box["y"] + candidate_box["height"] <= boundary_box["y"] - 6
+        assert point_box["y"] + point_box["height"] <= boundary_box["y"] - 6
+        assert boundary_box["y"] + boundary_box["height"] <= action_box["y"] - 4
+        for selector in [
+            "#fault-candidate-details > summary",
+            "#fault-injection-point-details > summary",
+        ]:
+            assert page.locator(selector).evaluate(
+                "el => el.scrollHeight <= el.clientHeight + 1"
+            )
+    finally:
+        page.close()
+
+
 def test_narrow_logic_builder_prioritizes_canvas_and_stream_before_engineering_rail(
     demo_server: str, browser: Any
 ) -> None:
