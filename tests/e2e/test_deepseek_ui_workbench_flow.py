@@ -1628,6 +1628,7 @@ def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
               const links = node.querySelector(".sandbox-report-section-links");
               return {
                 width: rect.width,
+                height: rect.height,
                 bottom: rect.y + rect.height,
                 scrollWidth: node.scrollWidth,
                 clientWidth: node.clientWidth,
@@ -1644,6 +1645,7 @@ def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
         assert all(box["bottom"] <= section_rows_box["y"] + section_rows_box["height"] + 1 for box in report_row_boxes)
         assert all(box["bottom"] <= invariants_box["y"] - 1 for box in report_row_boxes)
         assert all(box["scrollWidth"] <= box["clientWidth"] + 1 for box in report_row_boxes)
+        assert min(box["height"] for box in report_row_boxes) >= 14
         assert min(box["titleWidth"] for box in report_row_boxes) >= 72
         assert all(box["titleScrollWidth"] <= box["titleClientWidth"] + 1 for box in report_row_boxes)
         assert all(box["linksScrollWidth"] <= box["linksClientWidth"] + 1 for box in report_row_boxes)
