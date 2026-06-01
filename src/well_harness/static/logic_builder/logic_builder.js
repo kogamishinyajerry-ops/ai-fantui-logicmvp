@@ -103,6 +103,7 @@
   const state = {
     requirementsPayload: null,
     activeOutputBacktraceId: "",
+    outputBacktraceSourceIndex: new Map(),
     drawingPayload: null,
     timer: null,
     circuitEvaluationTimer: null,
@@ -916,24 +917,33 @@
     if (!outputBacktracePanel || !outputBacktraceList) return;
     const activeId = traceId || "none";
     const outputBacktraceSources = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-source]"));
-    const relatedOutputItems = activeId === "none"
+    const outputBacktraceItems = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-output]"));
+    const indexedOutputIds = activeId === "none" || !(state.outputBacktraceSourceIndex instanceof Map)
       ? []
-      : outputBacktraceSources
-          .filter((source) => source.dataset.outputBacktraceSource === activeId)
-          .map((source) => source.closest("[data-output-backtrace-output]"))
-          .filter(Boolean);
-    const relatedOutputIds = new Set(relatedOutputItems.map((item) => item.dataset.outputBacktraceOutput || "").filter(Boolean));
+      : (state.outputBacktraceSourceIndex.get(activeId) || []);
+    const relatedOutputIds = new Set(indexedOutputIds);
+    if (activeId !== "none") {
+      outputBacktraceItems
+        .filter((item) => String(item.dataset.sourceIds || "").split("|").filter(Boolean).includes(activeId))
+        .forEach((item) => {
+          if (item.dataset.outputBacktraceOutput) relatedOutputIds.add(item.dataset.outputBacktraceOutput);
+        });
+    }
+    if (!relatedOutputIds.size && activeId !== "none") {
+      outputBacktraceSources
+        .filter((source) => source.dataset.outputBacktraceSource === activeId)
+        .map((source) => source.closest("[data-output-backtrace-output]"))
+        .filter(Boolean)
+        .forEach((item) => {
+          if (item.dataset.outputBacktraceOutput) relatedOutputIds.add(item.dataset.outputBacktraceOutput);
+        });
+    }
     let activeOutputId = state.activeOutputBacktraceId || "";
-    if (activeOutputId && !outputBacktraceSources.some((source) => {
-      const outputItem = source.closest("[data-output-backtrace-output]");
-      return source.dataset.outputBacktraceSource === activeId && outputItem && outputItem.dataset.outputBacktraceOutput === activeOutputId;
-    })) {
+    if (activeOutputId && !relatedOutputIds.has(activeOutputId)) {
       activeOutputId = "";
     }
     if (!activeOutputId && activeId !== "none") {
-      const activeSource = outputBacktraceSources.find((source) => source.dataset.outputBacktraceSource === activeId);
-      const activeOutputItem = activeSource ? activeSource.closest("[data-output-backtrace-output]") : null;
-      activeOutputId = activeOutputItem ? (activeOutputItem.dataset.outputBacktraceOutput || "") : "";
+      activeOutputId = Array.from(relatedOutputIds)[0] || "";
     }
     state.activeOutputBacktraceId = activeOutputId;
     outputBacktracePanel.dataset.activeTraceId = activeId;
@@ -943,7 +953,9 @@
       const totalOutputGroups = Number(outputBacktracePanel.dataset.outputTotalCount || "0");
       const coveredOutputGroups = Number(outputBacktracePanel.dataset.outputCoveredCount || "0");
       const globalCoverageText = `输出 ${coveredOutputGroups}/${totalOutputGroups}`;
-      const relatedLabels = relatedOutputItems
+      const relatedLabels = Array.from(relatedOutputIds)
+        .map((outputId) => outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === outputId))
+        .filter(Boolean)
         .map((item) => {
           const label = item.querySelector("strong");
           return label ? label.textContent.trim() : "";
@@ -956,7 +968,8 @@
         ? `${globalCoverageText} · 当前 0组`
         : `${globalCoverageText} · 当前 ${relatedOutputIds.size}组${coverageTail}`;
     }
-    outputBacktraceList.querySelectorAll("[data-output-backtrace-output]").forEach((item) => {
+    outputBacktracePanel.dataset.relatedOutputIds = Array.from(relatedOutputIds).join("|");
+    outputBacktraceItems.forEach((item) => {
       item.classList.toggle("is-active", Boolean(activeOutputId) && item.dataset.outputBacktraceOutput === activeOutputId);
       item.classList.toggle("is-related", relatedOutputIds.has(item.dataset.outputBacktraceOutput || ""));
     });
@@ -980,6 +993,7 @@
       outputBacktracePanel.dataset.outputTotalCount = "0";
       outputBacktracePanel.dataset.outputCoveredCount = "0";
       outputBacktracePanel.dataset.outputCoverageStatus = "waiting";
+      state.outputBacktraceSourceIndex = new Map();
       outputBacktraceList.innerHTML = '<article class="logic-output-backtrace-item is-empty">等待输出映射。</article>';
       syncOutputBacktraceActiveTrace(null);
       return;
@@ -995,6 +1009,15 @@
     outputBacktracePanel.dataset.outputTotalCount = String(groups.length);
     outputBacktracePanel.dataset.outputCoveredCount = String(coveredOutputGroupCount);
     outputBacktracePanel.dataset.outputCoverageStatus = coveredOutputGroupCount === groups.length ? "pass" : "review";
+    const sourceIndex = new Map();
+    groups.forEach((group) => {
+      group.sources.forEach((source) => {
+        const outputIds = sourceIndex.get(source.id) || [];
+        if (!outputIds.includes(group.id)) outputIds.push(group.id);
+        sourceIndex.set(source.id, outputIds);
+      });
+    });
+    state.outputBacktraceSourceIndex = sourceIndex;
     outputBacktraceList.innerHTML = groups.map((group) => {
       const visibleSources = group.sources.slice(0, 2);
       const hiddenSourceCount = Math.max(0, group.sources.length - visibleSources.length);
@@ -1003,7 +1026,7 @@
         : '<span class="logic-output-backtrace-more">待映射</span>';
       const evidenceText = `${group.sources.length} 段 · ${group.relatedWireCount || 0} 线索`;
       return `
-        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-wire-count="${group.relatedWireCount || 0}">
+        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-source-ids="${escapeText(group.sources.map((source) => source.id).join("|"))}" data-wire-count="${group.relatedWireCount || 0}">
           <strong>${escapeText(group.label)}</strong>
           <small class="logic-output-backtrace-evidence">${escapeText(evidenceText)}</small>
           <span class="logic-output-backtrace-sources">${sourceBadges}</span>

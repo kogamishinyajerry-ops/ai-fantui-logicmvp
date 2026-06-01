@@ -3304,6 +3304,37 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert bottom_strip_box is not None
         assert trace_list_box["height"] >= 100
         assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-output-backtrace-list [data-output-backtrace-output]")).every((item) => Number(item.dataset.sourceCount || "0") >= 0 && Number(item.dataset.wireCount || "0") >= 0)""") is True
+        hidden_source_index_state = page.evaluate("""() => {
+          const etrac = document.querySelector('[data-output-backtrace-output="etrac"]');
+          if (!etrac) return { ok: false, reason: "missing-etrac" };
+          const clonedSource = document.createElement("button");
+          clonedSource.type = "button";
+          clonedSource.className = "logic-output-backtrace-source";
+          clonedSource.dataset.outputBacktraceSource = "row-logic3";
+          clonedSource.textContent = "段 03";
+          clonedSource.hidden = true;
+          etrac.appendChild(clonedSource);
+          document.querySelector('[data-requirement-trace-id="row-logic3"] button')?.click();
+          const panel = document.querySelector("#logic-output-backtrace-panel");
+          const coverage = document.querySelector("#logic-output-backtrace-coverage");
+          const relatedIds = (panel?.dataset.relatedOutputIds || "").split("|").filter(Boolean);
+          const ok = relatedIds.includes("deploy")
+            && !relatedIds.includes("etrac")
+            && Number(panel?.dataset.relatedOutputCount || "0") >= 1
+            && coverage?.textContent.includes("EEC/PLS/PDU")
+            && !etrac.classList.contains("is-related");
+          const result = {
+            ok,
+            activeOutput: panel?.dataset.activeOutput || "",
+            relatedOutputCount: panel?.dataset.relatedOutputCount || "",
+            relatedOutputIds: panel?.dataset.relatedOutputIds || "",
+            coverage: coverage?.textContent || "",
+            etracClass: etrac.className || "",
+          };
+          clonedSource.remove();
+          return result;
+        }""")
+        assert hidden_source_index_state["ok"] is True, hidden_source_index_state
         assert page.evaluate("""() => {
           const coverage = document.querySelector("#logic-output-backtrace-coverage");
           const panel = document.querySelector("#logic-output-backtrace-panel");
