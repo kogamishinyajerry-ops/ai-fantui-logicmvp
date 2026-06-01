@@ -1742,6 +1742,35 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.logic-current-segment-anchor-jumps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+.logic-current-segment-anchor-jumps button {
+  min-width: 0;
+  border: 1px solid rgba(54, 198, 216, 0.28);
+  border-radius: 5px;
+  background: rgba(5, 17, 28, 0.82);
+  color: #9ee8ff;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.05;
+  padding: 3px 4px;
+  text-align: center;
+}
+.logic-current-segment-anchor-jumps button[aria-pressed="true"] {
+  border-color: rgba(245, 200, 91, 0.70);
+  background: rgba(245, 200, 91, 0.16);
+  color: #fff4bf;
+}
+.logic-current-segment-anchor-jumps button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
 .logic-requirement-trace-targets,
 .logic-requirement-trace-copy small,
 .logic-requirement-trace-review p {
@@ -4356,7 +4385,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     position: relative;
     z-index: 20;
     display: grid;
-    grid-template-rows: auto auto minmax(128px, 1fr) minmax(0, 92px) minmax(0, 176px);
+    grid-template-rows: auto auto minmax(118px, 1fr) minmax(0, 116px) minmax(0, 164px);
     gap: 8px;
     overflow: hidden;
     border: 1px solid rgba(54, 198, 216, 0.44);
@@ -4372,18 +4401,19 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-list {
     grid-row: 3;
-    min-height: 128px;
+    min-height: 118px;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-evidence {
     grid-row: 4;
-    max-height: 92px;
+    max-height: 116px;
     overflow: hidden;
+    pointer-events: auto;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review {
     grid-row: 5;
-    max-height: 176px;
+    max-height: 164px;
     min-height: 0;
     overflow: hidden;
     padding: 7px;
@@ -4393,12 +4423,13 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-list,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-item button,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-anchor-jumps,
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-anchor-jumps button,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-review-matrix-action {
     pointer-events: auto;
   }
 
-  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-trust-spine,
-  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-evidence {
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-trust-spine {
     pointer-events: none;
   }
 

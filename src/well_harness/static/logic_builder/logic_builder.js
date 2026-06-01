@@ -197,6 +197,8 @@
   const currentSegmentAction = $("logic-current-segment-action");
   const currentSegmentAnchor = $("logic-current-segment-anchor");
   const currentSegmentReview = $("logic-current-segment-review");
+  const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
+  const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
   const globalReviewMatrix = $("logic-global-review-matrix");
@@ -832,6 +834,24 @@
     }
   }
 
+  function syncCurrentSegmentJumpActions() {
+    if (!currentSegmentJumpBar || !currentSegmentJumpButtons.length) return;
+    const hasActiveSegment = currentSegmentEvidence && currentSegmentEvidence.dataset.currentSegmentId && currentSegmentEvidence.dataset.currentSegmentId !== "waiting";
+    const activeFilter = CIRCUIT_PROVENANCE_FILTERS.has(state.provenanceFilter) ? state.provenanceFilter : "all";
+    const requestedAction = state.currentSegmentJumpAction || "";
+    const activeAction = requestedAction === "trace"
+      ? "trace"
+      : (activeFilter === "source" ? "source" : "all");
+    currentSegmentJumpBar.dataset.currentSegmentJumps = hasActiveSegment ? "ready" : "waiting";
+    currentSegmentJumpBar.dataset.activeJump = hasActiveSegment ? activeAction : "waiting";
+    currentSegmentJumpBar.dataset.provenanceFilter = activeFilter;
+    for (const button of currentSegmentJumpButtons) {
+      const action = button.dataset.currentSegmentJump || "all";
+      button.disabled = !hasActiveSegment;
+      button.setAttribute("aria-pressed", hasActiveSegment && action === activeAction ? "true" : "false");
+    }
+  }
+
   function renderGlobalReviewMatrix(evidence) {
     if (!globalReviewMatrix) return;
     const safeEvidence = evidence || {
@@ -876,6 +896,8 @@
       if (currentSegmentAction) currentSegmentAction.textContent = "等待解析";
       if (currentSegmentAnchor) currentSegmentAnchor.textContent = "等待节点/连线";
       if (currentSegmentReview) currentSegmentReview.textContent = "等待全局复核";
+      state.currentSegmentJumpAction = "";
+      syncCurrentSegmentJumpActions();
       return;
     }
     const nodeIds = Array.isArray(trace.nodeIds) ? trace.nodeIds : [];
@@ -899,6 +921,7 @@
       const totalAnchors = nodeIds.length + wireIds.length + conditionCount;
       currentSegmentReview.textContent = totalAnchors ? `${totalAnchors} 个锚点已进入全局复核` : "等待全局复核";
     }
+    syncCurrentSegmentJumpActions();
   }
 
   function setActiveRequirementTrace(traceId) {
@@ -3569,6 +3592,7 @@
       button.setAttribute("aria-pressed", (button.dataset.provenanceFilter || "all") === activeFilter ? "true" : "false");
     }
     syncReviewMatrixActions(activeFilter);
+    syncCurrentSegmentJumpActions();
     const filterIsActive = activeFilter !== "all";
     circuitSvg.querySelectorAll(".logic-circuit-node, .logic-circuit-wire, .logic-circuit-junction").forEach((element) => {
       const kind = element.dataset.provenanceKind || "";
@@ -5019,10 +5043,29 @@
     button.addEventListener("click", () => activateWorkbenchTab(button.dataset.workbenchTab || "notes"));
   });
   provenanceFilterButtons.forEach((button) => {
-    button.addEventListener("click", () => setCircuitProvenanceFilter(button.dataset.provenanceFilter || "all"));
+    button.addEventListener("click", () => {
+      state.currentSegmentJumpAction = "";
+      setCircuitProvenanceFilter(button.dataset.provenanceFilter || "all");
+    });
   });
   reviewMatrixActionButtons.forEach((button) => {
-    button.addEventListener("click", () => setCircuitProvenanceFilter(button.dataset.reviewFilterAction || "all"));
+    button.addEventListener("click", () => {
+      state.currentSegmentJumpAction = "";
+      setCircuitProvenanceFilter(button.dataset.reviewFilterAction || "all");
+    });
+  });
+  currentSegmentJumpButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.currentSegmentJump || "all";
+      state.currentSegmentJumpAction = action;
+      if (action === "trace") {
+        setCircuitProvenanceFilter("all");
+        if (state.activeRequirementTraceId) setActiveRequirementTrace(state.activeRequirementTraceId);
+        syncCurrentSegmentJumpActions();
+        return;
+      }
+      setCircuitProvenanceFilter(action === "source" ? "source" : "all");
+    });
   });
   if (canvas) {
     canvas.addEventListener("click", (event) => {
