@@ -1680,6 +1680,61 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-requirement-trace-review p {
   color: #a8bad0;
 }
+.logic-global-review-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.logic-global-review-matrix article {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(54, 198, 216, 0.24);
+  border-radius: 7px;
+  background: rgba(7, 20, 33, 0.76);
+  padding: 7px;
+}
+.logic-global-review-matrix article[data-review-status="pass"] {
+  border-color: rgba(25, 210, 143, 0.46);
+}
+.logic-global-review-matrix article[data-review-status="warn"] {
+  border-color: rgba(245, 200, 91, 0.62);
+  background: rgba(245, 200, 91, 0.08);
+}
+.logic-global-review-matrix article[data-review-status="review"] {
+  border-color: rgba(54, 198, 216, 0.42);
+}
+.logic-global-review-matrix article > span {
+  display: block;
+  overflow: hidden;
+  color: #8fd8ec;
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-global-review-matrix article > strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: #f2f7fc;
+  font-size: 13px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-global-review-matrix article > small {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 2px;
+  color: #a8bad0;
+  font-size: 9px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .logic-canvas {
   position: relative;
   width: 100%;

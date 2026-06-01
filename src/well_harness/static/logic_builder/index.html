@@ -260,6 +260,28 @@
           <span>全局复核</span>
           <strong id="logic-requirement-trace-review-state">等待线路图</strong>
           <p id="logic-requirement-trace-review-summary">生成完成后会核对节点、连线与边界。</p>
+          <div id="logic-global-review-matrix" class="logic-global-review-matrix" aria-label="全局复核矩阵" data-global-review-matrix="circuit-evidence" data-node-count="0" data-wire-count="0">
+            <article data-review-item="source" data-review-status="waiting">
+              <span>原文锚点</span>
+              <strong id="logic-review-source-count">0</strong>
+              <small id="logic-review-source-state">等待来源覆盖</small>
+            </article>
+            <article data-review-item="logic" data-review-status="waiting">
+              <span>逻辑落点</span>
+              <strong id="logic-review-logic-count">0 / 0</strong>
+              <small id="logic-review-logic-state">等待节点与连线</small>
+            </article>
+            <article data-review-item="assumption" data-review-status="waiting">
+              <span>候选假设</span>
+              <strong id="logic-review-assumption-count">0</strong>
+              <small id="logic-review-assumption-state">等待候选补齐项</small>
+            </article>
+            <article data-review-item="local" data-review-status="waiting">
+              <span>本地补齐</span>
+              <strong id="logic-review-local-count">0</strong>
+              <small id="logic-review-local-state">等待完成度</small>
+            </article>
+          </div>
         </div>
       </section>
       <div id="logic-canvas-compact-toolbar" class="logic-canvas-compact-toolbar" aria-label="画布工具区" data-action-contract="single-annotation">

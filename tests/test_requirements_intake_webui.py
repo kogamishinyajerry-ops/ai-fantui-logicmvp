@@ -3225,6 +3225,12 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'data-trust-stage="source"' in html
     assert 'data-trust-stage="review"' in html
     assert 'data-global-review-summary="doc-to-panel"' in html
+    assert 'id="logic-global-review-matrix"' in html
+    assert 'data-global-review-matrix="circuit-evidence"' in html
+    assert 'data-review-item="source"' in html
+    assert 'data-review-item="logic"' in html
+    assert 'data-review-item="assumption"' in html
+    assert 'data-review-item="local"' in html
     assert 'data-trace-platform="requirements-left"' in html
     assert 'data-workbench-input-model="natural-language"' in html
     assert 'id="logic-natural-language-control"' in html
@@ -5696,6 +5702,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".is-provenance-match" in logic_stylesheet
     assert ".logic-trust-spine" in logic_stylesheet
     assert ".logic-trust-spine li.is-active" in logic_stylesheet
+    assert ".logic-global-review-matrix" in logic_stylesheet
+    assert '[data-review-status="warn"]' in logic_stylesheet
     assert ".logic-edit-panel" in logic_stylesheet
     assert ".logic-revision-handoff" in logic_stylesheet
     assert ".logic-burden-summary" in logic_stylesheet

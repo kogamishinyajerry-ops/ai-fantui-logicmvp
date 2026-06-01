@@ -193,6 +193,15 @@
   const requirementTraceList = $("logic-requirement-trace-list");
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
+  const globalReviewMatrix = $("logic-global-review-matrix");
+  const reviewSourceCount = $("logic-review-source-count");
+  const reviewSourceState = $("logic-review-source-state");
+  const reviewLogicCount = $("logic-review-logic-count");
+  const reviewLogicState = $("logic-review-logic-state");
+  const reviewAssumptionCount = $("logic-review-assumption-count");
+  const reviewAssumptionState = $("logic-review-assumption-state");
+  const reviewLocalCount = $("logic-review-local-count");
+  const reviewLocalState = $("logic-review-local-state");
   const trustSpine = $("logic-trust-spine");
   const trustSourceState = $("logic-trust-source-state");
   const trustParseState = $("logic-trust-parse-state");
@@ -798,6 +807,43 @@
     return evidence;
   }
 
+  function setGlobalReviewItemStatus(name, status) {
+    if (!globalReviewMatrix || !name) return;
+    const item = globalReviewMatrix.querySelector(`[data-review-item="${name}"]`);
+    if (item) item.dataset.reviewStatus = status || "review";
+  }
+
+  function renderGlobalReviewMatrix(evidence) {
+    if (!globalReviewMatrix) return;
+    const safeEvidence = evidence || {
+      nodeCount: 0,
+      wireCount: 0,
+      segmentCount: 0,
+      mappedCount: 0,
+      sourceCounts: Object.fromEntries(["source", "assumption", "local"].map((kind) => [kind, 0])),
+    };
+    const counts = safeEvidence.sourceCounts || {};
+    const sourceCount = counts.source || 0;
+    const assumptionCount = counts.assumption || 0;
+    const localCount = counts.local || 0;
+    globalReviewMatrix.dataset.nodeCount = String(safeEvidence.nodeCount || 0);
+    globalReviewMatrix.dataset.wireCount = String(safeEvidence.wireCount || 0);
+    globalReviewMatrix.dataset.segmentCount = String(safeEvidence.segmentCount || 0);
+    globalReviewMatrix.dataset.mappedSegmentCount = String(safeEvidence.mappedCount || 0);
+    if (reviewSourceCount) reviewSourceCount.textContent = String(sourceCount);
+    if (reviewSourceState) reviewSourceState.textContent = sourceCount ? "原文锚点可筛选" : "无显式原文锚点";
+    if (reviewLogicCount) reviewLogicCount.textContent = `${safeEvidence.nodeCount || 0} / ${safeEvidence.wireCount || 0}`;
+    if (reviewLogicState) reviewLogicState.textContent = `${safeEvidence.mappedCount || 0}/${safeEvidence.segmentCount || 0} 段已落图`;
+    if (reviewAssumptionCount) reviewAssumptionCount.textContent = String(assumptionCount);
+    if (reviewAssumptionState) reviewAssumptionState.textContent = assumptionCount ? "保留候选假设待复核" : "无候选假设";
+    if (reviewLocalCount) reviewLocalCount.textContent = String(localCount);
+    if (reviewLocalState) reviewLocalState.textContent = localCount ? "本地补齐已显式标记" : "无本地补齐";
+    setGlobalReviewItemStatus("source", sourceCount ? "pass" : "review");
+    setGlobalReviewItemStatus("logic", safeEvidence.nodeCount && safeEvidence.wireCount ? "pass" : "review");
+    setGlobalReviewItemStatus("assumption", assumptionCount ? "warn" : "pass");
+    setGlobalReviewItemStatus("local", localCount ? "review" : "pass");
+  }
+
   function setActiveRequirementTrace(traceId) {
     if (!requirementTracePanel || !requirementTraceList) return;
     const nextId = traceId || "";
@@ -832,7 +878,8 @@
     if (!items.length) {
       requirementTracePanel.dataset.activeTraceId = "waiting";
       requirementTraceList.innerHTML = '<li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>';
-      renderTrustSpine(payload, circuitView, items);
+      const evidence = renderTrustSpine(payload, circuitView, items);
+      renderGlobalReviewMatrix(evidence);
       if (requirementTraceReviewState) requirementTraceReviewState.textContent = "等待线路图";
       if (requirementTraceReviewSummary) requirementTraceReviewSummary.textContent = "生成完成后会核对节点、连线与边界。";
       applyRequirementTraceHighlight(null);
@@ -874,6 +921,7 @@
       requirementTraceReviewState.textContent = `${nodeCount} 节点 / ${wireCount} 连线已复核`;
     }
     const evidence = renderTrustSpine(payload, circuitView, items);
+    renderGlobalReviewMatrix(evidence);
     if (requirementTraceReviewSummary) {
       const counts = evidence
         ? evidence.sourceCounts
