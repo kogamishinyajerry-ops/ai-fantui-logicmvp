@@ -3882,9 +3882,9 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-palette {
-    top: 48px;
+    top: 10px;
     width: min(520px, calc(100% - 120px));
-    max-height: min(580px, calc(100vh - 144px));
+    max-height: min(520px, calc(100vh - 230px));
     overflow: auto;
   }
 

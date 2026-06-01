@@ -3104,6 +3104,14 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
 
         page.click("#logic-command-palette-open")
         expect(page.locator("#logic-command-palette")).to_be_visible()
+        palette_box = page.locator("#logic-command-palette").bounding_box()
+        topbar_box = page.locator("#logic-page-system-strip").bounding_box()
+        bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
+        assert palette_box is not None
+        assert topbar_box is not None
+        assert bottom_strip_box is not None
+        assert palette_box["y"] >= topbar_box["y"] + topbar_box["height"] + 8
+        assert palette_box["y"] + palette_box["height"] <= bottom_strip_box["y"] - 12
         for label in ["运行仿真", "打开参数抽屉", "单步回放", "注入故障", "打开失败路径", "生成交付摘要", "主画布专注", "收起全部面板"]:
             expect(page.locator("#logic-command-palette")).to_contain_text(label)
         page.click('[data-command-close-panels="true"]')
