@@ -1130,7 +1130,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   position: relative;
   z-index: 12;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr) max-content max-content auto;
+  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr) max-content max-content max-content max-content;
   align-items: center;
   gap: 8px;
   min-height: 34px;
@@ -3845,7 +3845,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-canvas-wrap {
-    grid-template-rows: 28px 30px minmax(0, 1fr) 52px;
+    grid-template-rows: 34px 30px minmax(0, 1fr) 52px;
     gap: 5px;
   }
 

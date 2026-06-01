@@ -4093,18 +4093,33 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         provider_box = page.locator("#logic-provider").bounding_box()
         primary_box = page.locator("#logic-fault-next").bounding_box()
         back_box = page.locator("#logic-back").bounding_box()
+        toolbar_box = page.locator("#logic-canvas-compact-toolbar").bounding_box()
+        command_palette_box = page.locator("#logic-command-palette-open").bounding_box()
+        mode_dock_box = page.locator("#logic-mode-dock").bounding_box()
         assert strip_box is not None
         assert controls_box is not None
         assert actions_box is not None
         assert provider_box is not None
         assert primary_box is not None
         assert back_box is not None
+        assert toolbar_box is not None
+        assert command_palette_box is not None
+        assert mode_dock_box is not None
         assert strip_box["height"] <= 84
         assert actions_box["y"] + actions_box["height"] <= strip_box["y"] + strip_box["height"] - 1
         assert provider_box["y"] >= strip_box["y"] + 1
         assert primary_box["height"] <= 24
         assert primary_box["width"] >= 128
         assert controls_box["width"] >= 340
+        assert toolbar_box["height"] <= 38
+        assert page.locator("#logic-canvas-compact-toolbar").evaluate(
+            "el => el.scrollHeight <= el.clientHeight + 1"
+        )
+        assert toolbar_box["y"] <= command_palette_box["y"] <= toolbar_box["y"] + 4
+        assert command_palette_box["y"] + command_palette_box["height"] <= (
+            toolbar_box["y"] + toolbar_box["height"] + 1
+        )
+        assert toolbar_box["y"] + toolbar_box["height"] <= mode_dock_box["y"] - 4
         action_button_boxes = page.locator("#logic-command-controls button").evaluate_all(
             """nodes => nodes.map((node) => {
               const rect = node.getBoundingClientRect();
