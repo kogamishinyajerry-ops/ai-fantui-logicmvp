@@ -197,6 +197,8 @@
   const currentSegmentAction = $("logic-current-segment-action");
   const currentSegmentAnchor = $("logic-current-segment-anchor");
   const currentSegmentReview = $("logic-current-segment-review");
+  const currentSegmentOutputImpact = $("logic-current-segment-output-impact");
+  const currentSegmentOutputLabels = $("logic-current-segment-output-labels");
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
@@ -852,6 +854,31 @@
     }
   }
 
+  function outputImpactsForTrace(trace) {
+    const nodeIds = new Set(Array.isArray(trace && trace.nodeIds) ? trace.nodeIds : []);
+    for (const wireId of Array.isArray(trace && trace.wireIds) ? trace.wireIds : []) {
+      String(wireId || "")
+        .split("->")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((endpointId) => nodeIds.add(endpointId));
+    }
+    const outputLabels = [
+      ["tls115", "TLS 供电"],
+      ["tls_unlocked", "TLS 解锁"],
+      ["etrac_540v", "ETRAC 540V"],
+      ["eec_deploy", "EEC 展开"],
+      ["pls_power", "PLS 供电"],
+      ["pdu_motor", "PDU 电机"],
+      ["vdt90", "VDT90"],
+      ["thr_lock", "油门锁"],
+    ];
+    return outputLabels
+      .filter(([id]) => nodeIds.has(id))
+      .map(([, label]) => label)
+      .slice(0, 3);
+  }
+
   function renderGlobalReviewMatrix(evidence) {
     if (!globalReviewMatrix) return;
     const safeEvidence = evidence || {
@@ -896,6 +923,8 @@
       if (currentSegmentAction) currentSegmentAction.textContent = "等待解析";
       if (currentSegmentAnchor) currentSegmentAnchor.textContent = "等待节点/连线";
       if (currentSegmentReview) currentSegmentReview.textContent = "等待全局复核";
+      if (currentSegmentOutputImpact) currentSegmentOutputImpact.dataset.outputImpact = "waiting";
+      if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = "等待输出映射";
       state.currentSegmentJumpAction = "";
       syncCurrentSegmentJumpActions();
       return;
@@ -921,6 +950,9 @@
       const totalAnchors = nodeIds.length + wireIds.length + conditionCount;
       currentSegmentReview.textContent = totalAnchors ? `${totalAnchors} 个锚点已进入全局复核` : "等待全局复核";
     }
+    const outputImpacts = outputImpactsForTrace(trace);
+    if (currentSegmentOutputImpact) currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
+    if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpacts.join(" · ") || "未直接触达输出";
     syncCurrentSegmentJumpActions();
   }
 

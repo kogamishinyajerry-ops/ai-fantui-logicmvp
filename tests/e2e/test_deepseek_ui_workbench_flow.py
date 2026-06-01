@@ -3196,6 +3196,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
         expect(page.locator("#logic-current-segment-anchor")).to_contain_text("节点")
         expect(page.locator("#logic-current-segment-review")).to_contain_text("全局复核")
+        output_impact = page.locator("#logic-current-segment-output-impact")
+        expect(output_impact).to_be_visible()
+        expect(output_impact).to_have_attribute("data-output-impact", "ready")
+        expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("TLS")
+        first_output_impact = page.locator("#logic-current-segment-output-labels").inner_text()
         segment_jumps = page.locator("#logic-current-segment-anchor-jumps")
         expect(segment_jumps).to_be_visible()
         expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
@@ -3224,18 +3229,30 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         page.locator("#logic-requirement-trace-list [data-requirement-trace-id]").nth(1).locator("button").click()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 02")
+        expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("ETRAC")
+        assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
 
         trace_panel_box = trace_panel.bounding_box()
+        trace_list_box = page.locator("#logic-requirement-trace-list").bounding_box()
+        segment_card_box = segment_card.bounding_box()
+        review_matrix_box = review_matrix.bounding_box()
         canvas_box = page.locator("#logic-canvas").bounding_box()
         toolbar_box = page.locator("#logic-canvas-compact-toolbar").bounding_box()
         bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
         assert trace_panel_box is not None
+        assert trace_list_box is not None
+        assert segment_card_box is not None
+        assert review_matrix_box is not None
         assert canvas_box is not None
         assert toolbar_box is not None
         assert bottom_strip_box is not None
+        assert trace_list_box["height"] >= 100
+        assert trace_list_box["y"] + trace_list_box["height"] + 4 <= segment_card_box["y"]
+        assert segment_card_box["y"] + segment_card_box["height"] <= review_matrix_box["y"] + 1
+        assert review_matrix_box["y"] + review_matrix_box["height"] <= trace_panel_box["y"] + trace_panel_box["height"] + 1
         assert trace_panel_box["x"] + trace_panel_box["width"] <= canvas_box["x"] - 8
         assert toolbar_box["x"] >= canvas_box["x"] - 1
         assert bottom_strip_box["x"] >= canvas_box["x"] - 1

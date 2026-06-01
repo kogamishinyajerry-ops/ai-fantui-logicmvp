@@ -3224,6 +3224,9 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'id="logic-current-segment-evidence"' in html
     assert 'id="logic-current-segment-title"' in html
     assert 'id="logic-current-segment-anchor"' in html
+    assert 'id="logic-current-segment-output-impact"' in html
+    assert 'id="logic-current-segment-output-labels"' in html
+    assert 'data-output-impact="waiting"' in html
     assert 'id="logic-current-segment-anchor-jumps"' in html
     assert 'data-current-segment-jump="trace"' in html
     assert 'data-current-segment-jump="source"' in html
@@ -5716,6 +5719,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".logic-trust-spine li.is-active" in logic_stylesheet
     assert ".logic-current-segment-evidence" in logic_stylesheet
     assert ".logic-current-segment-evidence dl" in logic_stylesheet
+    assert ".logic-current-segment-output-impact" in logic_stylesheet
     assert ".logic-current-segment-anchor-jumps" in logic_stylesheet
     assert ".logic-global-review-matrix" in logic_stylesheet
     assert ".logic-review-matrix-action" in logic_stylesheet
