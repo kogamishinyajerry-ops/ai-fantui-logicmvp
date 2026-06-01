@@ -1465,19 +1465,19 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         shell = page.locator(".sandbox-shell")
         expect(shell).to_have_attribute("data-blueprint37-top-density", "compressed-progress-gates")
         topbar_box = page.locator(".sandbox-topbar").bounding_box()
-        process_box = page.locator("#fault-sandbox-process").bounding_box()
+        process = page.locator("#fault-sandbox-process")
+        expect(process).to_be_hidden()
         decision_box = page.locator("#fault-sandbox-decision-board").bounding_box()
         gates_box = page.locator(".sandbox-review-gate-panel").bounding_box()
-        assert topbar_box and process_box and decision_box and gates_box
+        assert topbar_box and decision_box and gates_box
         assert topbar_box["height"] <= 60
-        assert process_box["height"] <= 44
         assert decision_box["height"] <= 42
         assert gates_box["height"] <= 44
 
         primary_surface = page.locator("#failure-path")
         primary_box = primary_surface.bounding_box()
         assert primary_box
-        assert primary_box["y"] <= 170
+        assert primary_box["y"] <= 132
         expect(primary_surface).to_have_attribute(
             "data-blueprint37-layout",
             "replay-canvas-report-rail-default",
@@ -1486,7 +1486,7 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         expect(replay_panel).to_be_visible()
         replay_panel_box = replay_panel.bounding_box()
         assert replay_panel_box
-        assert replay_panel_box["y"] <= 265
+        assert replay_panel_box["y"] <= 226
         expect(replay_panel).to_have_attribute("data-blueprint37-surface", "replay-main-canvas")
         expect(replay_panel).to_have_attribute("data-default-role", "replay-canvas-primary")
 
@@ -1494,7 +1494,7 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         expect(replay_canvas).to_be_visible()
         replay_canvas_box = replay_canvas.bounding_box()
         assert replay_canvas_box
-        assert replay_canvas_box["y"] <= 310
+        assert replay_canvas_box["y"] <= 270
         expect(replay_canvas).to_have_attribute(
             "data-blueprint37-contract",
             "state-nodes-verified-path-warning-boundary",

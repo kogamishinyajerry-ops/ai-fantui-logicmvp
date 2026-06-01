@@ -3025,10 +3025,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process.is-complete {
-    display: grid;
-    gap: 4px;
-    max-height: 42px;
-    padding: 5px 10px;
+    display: none;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-process .sandbox-kicker {
