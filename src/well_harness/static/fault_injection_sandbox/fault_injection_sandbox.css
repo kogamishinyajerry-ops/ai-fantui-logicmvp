@@ -2372,6 +2372,13 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-replay-timeline 
   border-bottom-color: rgba(30, 103, 255, 0.68);
 }
 
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-replay-marker strong {
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-replay-marker code,
 body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-replay-metrics span,
 body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-replay-canvas-metrics,
