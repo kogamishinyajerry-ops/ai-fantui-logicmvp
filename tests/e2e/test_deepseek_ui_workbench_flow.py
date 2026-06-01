@@ -4538,11 +4538,34 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         fit_offset_x = float(page.locator("#logic-canvas").get_attribute("data-fit-offset-x") or "0")
         left_canvas_gap = circuit_box["x"] - canvas_box["x"]
         right_canvas_gap = (canvas_box["x"] + canvas_box["width"]) - (circuit_box["x"] + circuit_box["width"])
-        assert 1.12 <= fit_scale <= 1.14
-        assert fit_offset_x >= 120
+        assert 1.34 <= fit_scale <= 1.37
+        assert fit_offset_x >= 0
         assert abs(left_canvas_gap - right_canvas_gap) <= 24
-        assert circuit_box["width"] >= 1020
-        assert circuit_box["height"] >= 450
+        assert circuit_box["width"] >= 1220
+        assert circuit_box["height"] >= 540
+        circuit_graph_box = page.locator("#logic-canvas").evaluate(
+            """() => {
+              const canvas = document.querySelector("#logic-canvas")?.getBoundingClientRect();
+              const rail = document.querySelector("#logic-right-inspector-rail")?.getBoundingClientRect();
+              const boxes = Array.from(document.querySelectorAll(
+                "#logic-canvas .logic-circuit-node, #logic-canvas .logic-circuit-gate, #logic-canvas .logic-output-node"
+              )).map((node) => node.getBoundingClientRect()).filter((box) => box.width && box.height);
+              if (!canvas || !rail || !boxes.length) return null;
+              const graph = {
+                top: Math.min(...boxes.map((box) => box.top)),
+                bottom: Math.max(...boxes.map((box) => box.bottom)),
+                left: Math.min(...boxes.map((box) => box.left)),
+                right: Math.max(...boxes.map((box) => box.right)),
+              };
+              return {
+                bottomGap: canvas.bottom - graph.bottom,
+                rightRailGap: rail.left - graph.right,
+              };
+            }"""
+        )
+        assert circuit_graph_box is not None
+        assert circuit_graph_box["bottomGap"] <= 190
+        assert circuit_graph_box["rightRailGap"] >= 48
         assert page.evaluate(
             """() => {
               const panel = document.querySelector("#logic-reconstruction-mode-panel")?.getBoundingClientRect();

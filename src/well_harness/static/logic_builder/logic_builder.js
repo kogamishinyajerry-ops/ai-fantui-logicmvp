@@ -4079,8 +4079,9 @@
         ? canvasSlotHeight
         : parentHeight - toolbarHeight - 88
     );
+    const fitScaleCeiling = circuitView && !fitToCanvasSlot && window.innerHeight >= 960 ? 1.36 : 1.14;
     const fitScale = Math.min(
-      1.14,
+      fitScaleCeiling,
       Math.max(0.48, Math.min((viewportWidth - 18) / size.width, (viewportHeight - 18) / size.height))
     );
     const fitOffsetX = circuitView
