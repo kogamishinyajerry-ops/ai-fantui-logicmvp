@@ -1845,6 +1845,22 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   text-transform: uppercase;
 }
 
+.logic-output-backtrace-coverage {
+  grid-column: 2;
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .logic-output-backtrace-list {
   position: relative;
   z-index: 3;
@@ -2004,9 +2020,17 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   background: rgba(245, 200, 91, 0.12);
   box-shadow: inset 0 0 0 1px rgba(245, 200, 91, 0.12);
 }
+.logic-output-backtrace-item.is-related:not(.is-active) {
+  border-color: rgba(54, 198, 216, 0.42);
+  background: rgba(54, 198, 216, 0.08);
+}
 .logic-output-backtrace-item strong {
   color: #f2f7fc;
   font-size: 8px;
+}
+.logic-output-backtrace-coverage {
+  color: #a8bad0;
+  font-size: 7px;
 }
 .logic-output-backtrace-evidence {
   color: #a8bad0;

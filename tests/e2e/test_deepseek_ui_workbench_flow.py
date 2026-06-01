@@ -3211,6 +3211,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace.locator(".logic-output-backtrace-evidence")).to_have_count(4)
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"] .logic-output-backtrace-evidence')).to_contain_text("段")
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"] .logic-output-backtrace-evidence')).to_contain_text("线索")
+        output_coverage = page.locator("#logic-output-backtrace-coverage")
+        expect(output_coverage).to_be_visible()
+        expect(output_coverage).to_contain_text("当前段覆盖")
+        expect(output_coverage).to_contain_text("TLS")
+        first_output_coverage_text = output_coverage.inner_text()
         segment_card = page.locator("#logic-current-segment-evidence")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
@@ -3264,10 +3269,18 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(output_backtrace).to_have_attribute("data-active-output", "etrac")
+        expect(output_backtrace).to_have_attribute("data-related-output-count", "1")
+        expect(output_coverage).to_contain_text("ETRAC")
+        assert output_coverage.inner_text() != first_output_coverage_text
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_have_class(re.compile("is-active"))
+        expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_have_class(re.compile("is-related"))
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]')).to_have_attribute("aria-pressed", "true")
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
+        page.locator('[data-requirement-trace-id="row-logic3"] button').click()
+        expect(output_coverage).to_contain_text("EEC/PLS/PDU")
+        expect(output_backtrace.locator('[data-output-backtrace-output="deploy"]')).to_have_class(re.compile("is-related"))
+        expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).not_to_have_class(re.compile("is-active|is-related"))
 
         trace_panel_box = trace_panel.bounding_box()
         trace_list_box = page.locator("#logic-requirement-trace-list").bounding_box()
@@ -3287,6 +3300,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert bottom_strip_box is not None
         assert trace_list_box["height"] >= 100
         assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-output-backtrace-list [data-output-backtrace-output]")).every((item) => Number(item.dataset.sourceCount || "0") >= 0 && Number(item.dataset.wireCount || "0") >= 0)""") is True
+        assert page.evaluate("""() => {
+          const coverage = document.querySelector("#logic-output-backtrace-coverage");
+          const panel = document.querySelector("#logic-output-backtrace-panel");
+          return Boolean(coverage && panel && coverage.scrollWidth <= coverage.clientWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1);
+        }""") is True
         assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-item button")).every((button) => button.scrollWidth <= button.clientWidth + 1 && button.scrollHeight <= button.clientHeight + 1)""") is True
         assert trace_list_box["y"] + trace_list_box["height"] + 4 <= segment_card_box["y"]
         assert segment_card_box["y"] + segment_card_box["height"] + 4 <= output_backtrace_box["y"]

@@ -220,6 +220,7 @@
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
   const outputBacktracePanel = $("logic-output-backtrace-panel");
   const outputBacktraceList = $("logic-output-backtrace-list");
+  const outputBacktraceCoverage = $("logic-output-backtrace-coverage");
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
   const globalReviewMatrix = $("logic-global-review-matrix");
@@ -914,22 +915,49 @@
   function syncOutputBacktraceActiveTrace(traceId) {
     if (!outputBacktracePanel || !outputBacktraceList) return;
     const activeId = traceId || "none";
+    const outputBacktraceSources = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-source]"));
+    const relatedOutputItems = activeId === "none"
+      ? []
+      : outputBacktraceSources
+          .filter((source) => source.dataset.outputBacktraceSource === activeId)
+          .map((source) => source.closest("[data-output-backtrace-output]"))
+          .filter(Boolean);
+    const relatedOutputIds = new Set(relatedOutputItems.map((item) => item.dataset.outputBacktraceOutput || "").filter(Boolean));
     let activeOutputId = state.activeOutputBacktraceId || "";
-    if (activeOutputId && !outputBacktraceList.querySelector(`[data-output-backtrace-output="${escapeSelectorValue(activeOutputId)}"] [data-output-backtrace-source="${escapeSelectorValue(activeId)}"]`)) {
+    if (activeOutputId && !outputBacktraceSources.some((source) => {
+      const outputItem = source.closest("[data-output-backtrace-output]");
+      return source.dataset.outputBacktraceSource === activeId && outputItem && outputItem.dataset.outputBacktraceOutput === activeOutputId;
+    })) {
       activeOutputId = "";
     }
     if (!activeOutputId && activeId !== "none") {
-      const activeSource = outputBacktraceList.querySelector(`[data-output-backtrace-source="${escapeSelectorValue(activeId)}"]`);
+      const activeSource = outputBacktraceSources.find((source) => source.dataset.outputBacktraceSource === activeId);
       const activeOutputItem = activeSource ? activeSource.closest("[data-output-backtrace-output]") : null;
       activeOutputId = activeOutputItem ? (activeOutputItem.dataset.outputBacktraceOutput || "") : "";
     }
     state.activeOutputBacktraceId = activeOutputId;
     outputBacktracePanel.dataset.activeTraceId = activeId;
     outputBacktracePanel.dataset.activeOutput = activeOutputId || "none";
+    outputBacktracePanel.dataset.relatedOutputCount = String(relatedOutputIds.size);
+    if (outputBacktraceCoverage) {
+      const relatedLabels = relatedOutputItems
+        .map((item) => {
+          const label = item.querySelector("strong");
+          return label ? label.textContent.trim() : "";
+        })
+        .filter(Boolean);
+      const coverageTail = relatedLabels.length
+        ? ` · ${relatedLabels.slice(0, 2).join(" / ")}${relatedLabels.length > 2 ? ` +${relatedLabels.length - 2}` : ""}`
+        : "";
+      outputBacktraceCoverage.textContent = activeId === "none"
+        ? "当前段覆盖 0 个输出组"
+        : `当前段覆盖 ${relatedOutputIds.size} 个输出组${coverageTail}`;
+    }
     outputBacktraceList.querySelectorAll("[data-output-backtrace-output]").forEach((item) => {
       item.classList.toggle("is-active", Boolean(activeOutputId) && item.dataset.outputBacktraceOutput === activeOutputId);
+      item.classList.toggle("is-related", relatedOutputIds.has(item.dataset.outputBacktraceOutput || ""));
     });
-    outputBacktraceList.querySelectorAll("[data-output-backtrace-source]").forEach((button) => {
+    outputBacktraceSources.forEach((button) => {
       const isActive = button.dataset.outputBacktraceSource === activeId;
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");

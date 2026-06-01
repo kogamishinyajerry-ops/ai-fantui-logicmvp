@@ -3229,6 +3229,7 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'data-output-impact="waiting"' in html
     assert 'id="logic-output-backtrace-panel"' in html
     assert 'id="logic-output-backtrace-list"' in html
+    assert 'id="logic-output-backtrace-coverage"' in html
     assert 'data-output-backtrace="waiting"' in html
     assert 'id="logic-current-segment-anchor-jumps"' in html
     assert 'data-current-segment-jump="trace"' in html
@@ -5726,6 +5727,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".logic-requirement-trace-output-impacts" in logic_stylesheet
     assert ".logic-output-impact-badge" in logic_stylesheet
     assert ".logic-output-backtrace-panel" in logic_stylesheet
+    assert ".logic-output-backtrace-coverage" in logic_stylesheet
     assert ".logic-output-backtrace-source" in logic_stylesheet
     assert ".logic-output-backtrace-evidence" in logic_stylesheet
     assert ".logic-current-segment-anchor-jumps" in logic_stylesheet
