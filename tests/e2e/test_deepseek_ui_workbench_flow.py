@@ -1584,6 +1584,9 @@ def test_fault_sandbox_replay_timeline_fits_bottom_strip_at_1280(
         expect(report_section_rows).to_be_visible()
         expect(report_actions).to_be_visible()
         expect(report_invariants).to_be_visible()
+        next_action = page.locator("#fault-sandbox-decision-next-action")
+        expect(next_action).to_contain_text("确认后生成修订单")
+        assert next_action.evaluate("element => element.scrollWidth <= element.clientWidth + 1") is True
         expect(timeline.locator("[data-replay-marker]")).to_have_count(10)
         report_box = report_strip.bounding_box()
         timeline_box = timeline.bounding_box()

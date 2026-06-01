@@ -2610,6 +2610,10 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     padding-bottom: 0;
   }
 
+  .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-decision-board {
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 0.76fr) minmax(260px, 1.38fr);
+  }
+
   .sandbox-decision-board {
     grid-area: decision;
   }
