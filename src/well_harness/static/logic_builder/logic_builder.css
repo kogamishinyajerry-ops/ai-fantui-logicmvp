@@ -1451,7 +1451,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] {
   left: auto;
   right: 36px;
-  top: 18px;
+  top: 82px;
   width: min(226px, calc(100% - 52px));
   max-height: 32px;
   border-color: rgba(25, 210, 143, 0.42);

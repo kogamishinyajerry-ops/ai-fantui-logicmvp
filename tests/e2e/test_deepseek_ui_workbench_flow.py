@@ -4283,6 +4283,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         toolbar_box = page.locator("#logic-canvas-compact-toolbar").bounding_box()
         command_palette_box = page.locator("#logic-command-palette-open").bounding_box()
         mode_dock_box = page.locator("#logic-mode-dock").bounding_box()
+        stream_box = page.locator("#logic-drawing-stream-timeline").bounding_box()
         assert strip_box is not None
         assert controls_box is not None
         assert actions_box is not None
@@ -4292,6 +4293,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert toolbar_box is not None
         assert command_palette_box is not None
         assert mode_dock_box is not None
+        assert stream_box is not None
         assert strip_box["height"] <= 84
         assert actions_box["y"] + actions_box["height"] <= strip_box["y"] + strip_box["height"] - 1
         assert provider_box["y"] >= strip_box["y"] + 1
@@ -4307,6 +4309,24 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
             toolbar_box["y"] + toolbar_box["height"] + 1
         )
         assert toolbar_box["y"] + toolbar_box["height"] <= mode_dock_box["y"] - 4
+        assert stream_box["y"] >= mode_dock_box["y"] + mode_dock_box["height"] - 1
+        stream_toolbar_overlaps = page.evaluate(
+            """() => {
+              const stream = document.querySelector("#logic-drawing-stream-timeline")?.getBoundingClientRect();
+              if (!stream) return ["missing-stream"];
+              return Array.from(document.querySelectorAll("#logic-canvas-compact-toolbar button, #logic-canvas-compact-toolbar [id]"))
+                .filter((element) => {
+                  const box = element.getBoundingClientRect();
+                  if (box.width === 0 || box.height === 0) return false;
+                  return stream.left < box.right
+                    && stream.right > box.left
+                    && stream.top < box.bottom
+                    && stream.bottom > box.top;
+                })
+                .map((element) => element.id || element.textContent?.trim() || element.tagName);
+            }"""
+        )
+        assert stream_toolbar_overlaps == []
         action_button_boxes = page.locator("#logic-command-controls button").evaluate_all(
             """nodes => nodes.map((node) => {
               const rect = node.getBoundingClientRect();
