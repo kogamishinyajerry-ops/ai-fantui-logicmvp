@@ -3972,9 +3972,14 @@ def test_logic_builder_page_reframes_around_circuit_workbench_shell(
         circuit_box = page.locator("#logic-circuit-svg").bounding_box()
         assert circuit_box is not None
         fit_scale = float(page.locator("#logic-canvas").get_attribute("data-fit-scale") or "0")
-        assert 1.06 <= fit_scale <= 1.08
-        assert circuit_box["width"] >= 970
-        assert circuit_box["height"] >= 430
+        fit_offset_x = float(page.locator("#logic-canvas").get_attribute("data-fit-offset-x") or "0")
+        left_canvas_gap = circuit_box["x"] - canvas_box["x"]
+        right_canvas_gap = (canvas_box["x"] + canvas_box["width"]) - (circuit_box["x"] + circuit_box["width"])
+        assert 1.12 <= fit_scale <= 1.14
+        assert fit_offset_x >= 120
+        assert abs(left_canvas_gap - right_canvas_gap) <= 24
+        assert circuit_box["width"] >= 1020
+        assert circuit_box["height"] >= 450
         assert circuit_box["y"] + circuit_box["height"] < bottom_strip_box["y"]
         assert strip_box["height"] <= 84
         assert process_box["height"] <= 82

@@ -1139,8 +1139,11 @@
 
   function restoreWorkbenchDrawingLayout() {
     const fitScale = Number.parseFloat(canvas && canvas.dataset.fitScale ? canvas.dataset.fitScale : "1") || 1;
+    const fitOffsetX = Number.parseFloat(canvas && canvas.dataset.fitOffsetX ? canvas.dataset.fitOffsetX : "0") || 0;
     drawingLayers().forEach((layer) => {
-      layer.style.transform = `scale(${fitScale})`;
+      layer.style.transform = fitOffsetX
+        ? `translate(${Math.round(fitOffsetX)}px, 0) scale(${fitScale})`
+        : `scale(${fitScale})`;
       layer.style.transformOrigin = "0 0";
     });
   }
@@ -4010,10 +4013,14 @@
     const toolbarHeight = logicCanvasToolbar ? logicCanvasToolbar.getBoundingClientRect().height : 0;
     const viewportHeight = Math.max(360, parentHeight - toolbarHeight - 88);
     const fitScale = Math.min(
-      1.08,
+      1.14,
       Math.max(0.48, Math.min((viewportWidth - 18) / size.width, (viewportHeight - 18) / size.height))
     );
+    const fitOffsetX = circuitView
+      ? Math.max(0, Math.round((viewportWidth - (size.width * fitScale)) / 2))
+      : 0;
     canvas.dataset.fitScale = String(fitScale.toFixed(3));
+    canvas.dataset.fitOffsetX = String(fitOffsetX);
     canvas.style.minHeight = `${Math.ceil(size.height * fitScale) + 24}px`;
     circuitSvg.style.width = `${size.width}px`;
     circuitSvg.style.height = `${size.height}px`;
@@ -4024,7 +4031,9 @@
     panelLayer.style.width = `${size.width}px`;
     panelLayer.style.height = `${size.height}px`;
     [circuitSvg, svg, nodeLayer, panelLayer].forEach((layer) => {
-      layer.style.transform = `scale(${fitScale})`;
+      layer.style.transform = fitOffsetX
+        ? `translate(${fitOffsetX}px, 0) scale(${fitScale})`
+        : `scale(${fitScale})`;
       layer.style.transformOrigin = "0 0";
     });
     if (circuitView) {
