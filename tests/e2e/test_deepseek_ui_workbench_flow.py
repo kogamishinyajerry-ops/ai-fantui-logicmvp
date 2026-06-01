@@ -4397,8 +4397,10 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert primary_box["height"] <= 24
         assert primary_box["width"] >= 128
         assert controls_box["width"] >= 340
+        assert page.locator("#logic-process").evaluate("el => el.scrollHeight <= el.clientHeight + 1")
         assert stream_chunks_box["y"] >= generation_stream_box["y"] + generation_stream_box["height"] - 1
         assert stream_chunks_box["y"] + stream_chunks_box["height"] <= process_box["y"] + process_box["height"] + 1
+        assert stream_chunks_box["height"] <= 13
         assert toolbar_box["height"] <= 38
         assert page.locator("#logic-canvas-compact-toolbar").evaluate(
             "el => el.scrollHeight <= el.clientHeight + 1"

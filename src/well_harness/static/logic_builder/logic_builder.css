@@ -3788,7 +3788,9 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-step,
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-step {
-    padding: 1px 4px;
+    padding: 1px 3px;
+    font-size: 8.5px;
+    line-height: 1;
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy p:last-child {
@@ -3811,8 +3813,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     position: static;
     display: flex;
     gap: 3px;
-    margin-top: 2px;
-    max-height: 15px;
+    margin-top: 1px;
+    max-height: 12px;
     min-height: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -3826,7 +3828,10 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
+    max-width: 100%;
     padding: 1px 4px;
+    font-size: 8px;
+    line-height: 1;
     text-overflow: ellipsis;
   }
 
