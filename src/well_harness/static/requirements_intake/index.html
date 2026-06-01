@@ -213,6 +213,37 @@
         <p class="clarification-hint">
           先回答下方问题；全部回答后提交，模型会重新判断是否可进入绘图。
         </p>
+        <section id="requirements-logic-handoff" class="requirements-logic-handoff" data-doc-panel-handoff="trust-spine" aria-label="需求到逻辑控制面板可信交接">
+          <div class="requirements-handoff-head">
+            <div>
+              <p class="requirements-kicker">HANDOFF</p>
+              <h4>需求到逻辑控制面板</h4>
+            </div>
+            <strong id="requirements-handoff-state">等待解析</strong>
+          </div>
+          <ol id="requirements-handoff-spine" class="requirements-handoff-spine" aria-label="需求页可信交接阶段" data-current-stage="source">
+            <li data-handoff-stage="source" data-stage-status="active" class="is-active">
+              <span>01</span>
+              <strong>需求来源</strong>
+              <small id="requirements-handoff-source">等待文档</small>
+            </li>
+            <li data-handoff-stage="anchors" data-stage-status="pending">
+              <span>02</span>
+              <strong>锚点覆盖</strong>
+              <small id="requirements-handoff-anchors">等待锚点</small>
+            </li>
+            <li data-handoff-stage="logic" data-stage-status="pending">
+              <span>03</span>
+              <strong>逻辑对象</strong>
+              <small id="requirements-handoff-logic">等待节点/连线</small>
+            </li>
+            <li data-handoff-stage="review" data-stage-status="pending">
+              <span>04</span>
+              <strong>下一页复核</strong>
+              <small id="requirements-handoff-review">进入后逐段核对</small>
+            </li>
+          </ol>
+        </section>
         <div id="clarification-list" class="clarification-list">
           <p class="muted">分析后会在这里出现需要工程师回答的问题和输入框。</p>
         </div>

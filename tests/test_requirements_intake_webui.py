@@ -5482,6 +5482,10 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert 'id="clarification-list"' in html
     assert 'id="clarification-resubmit"' in html
     assert 'id="logic-builder-next"' in html
+    assert 'id="requirements-logic-handoff"' in html
+    assert 'data-doc-panel-handoff="trust-spine"' in html
+    assert 'id="requirements-handoff-spine"' in html
+    assert 'data-handoff-stage="review"' in html
     assert 'id="clarification-trace"' in html
     assert 'id="clarification-trace-list"' in html
     assert 'id="requirements-workflow-overview"' in html
@@ -5503,6 +5507,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "/api/requirements-intake/deepseek-live-demo-replay" in script
     assert "refreshProviderStatus" in script
     assert "hydrateStoredRequirementsDraft" in script
+    assert "renderLogicHandoff" in script
+    assert "collectAnchorIds" in script
     assert "importRequirementsReplay" in script
     assert "runOfflineOnly" in script
     assert "providerLiveReady" in script
@@ -6995,6 +7001,8 @@ def test_requirements_intake_compacts_preflight_and_result_into_decision_board()
     assert ".requirements-decision-board" in stylesheet
     assert ".requirements-decision-card" in stylesheet
     assert ".requirements-path-actions" in stylesheet
+    assert ".requirements-logic-handoff" in stylesheet
+    assert ".requirements-handoff-spine li.is-active" in stylesheet
     assert ".requirements-compact-summary" in stylesheet
     assert '#next-step-copy[data-usage-path-cue]' in stylesheet
     assert "grid-template-rows: 32px 68px 136px minmax(0, 1fr)" in stylesheet

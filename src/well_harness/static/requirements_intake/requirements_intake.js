@@ -82,6 +82,13 @@
   const nextStepCopy = $("next-step-copy");
   const burdenAction = $("requirements-burden-action");
   const burdenOutputs = $("requirements-burden-outputs");
+  const handoffPanel = $("requirements-logic-handoff");
+  const handoffSpine = $("requirements-handoff-spine");
+  const handoffState = $("requirements-handoff-state");
+  const handoffSource = $("requirements-handoff-source");
+  const handoffAnchors = $("requirements-handoff-anchors");
+  const handoffLogic = $("requirements-handoff-logic");
+  const handoffReview = $("requirements-handoff-review");
   const traceCount = $("clarification-trace-count");
   const traceList = $("clarification-trace-list");
   const graph = $("requirements-graph");
@@ -680,6 +687,80 @@
     }
   }
 
+  function collectAnchorIds(payload) {
+    const anchorIds = new Set();
+    const visitAnchors = (anchors) => {
+      if (!Array.isArray(anchors)) return;
+      anchors.forEach((anchor) => {
+        const id = String(anchor && anchor.id || "").trim();
+        if (id) anchorIds.add(id);
+      });
+    };
+    (payload && Array.isArray(payload.concept_logic_nodes) ? payload.concept_logic_nodes : []).forEach((node) => {
+      visitAnchors(node.source_anchors);
+      if (Array.isArray(node.parameters)) {
+        node.parameters.forEach((param) => visitAnchors(param.source_anchors));
+      }
+    });
+    (payload && Array.isArray(payload.concept_edges) ? payload.concept_edges : []).forEach((edge) => {
+      visitAnchors(edge.source_anchors);
+    });
+    return anchorIds;
+  }
+
+  function setHandoffStage(stage) {
+    if (!handoffSpine) return;
+    const activeStage = stage || "source";
+    const order = ["source", "anchors", "logic", "review"];
+    const activeIndex = Math.max(0, order.indexOf(activeStage));
+    handoffSpine.dataset.currentStage = activeStage;
+    handoffSpine.querySelectorAll("[data-handoff-stage]").forEach((element) => {
+      const stageName = element.dataset.handoffStage || "";
+      const stageIndex = order.indexOf(stageName);
+      const isActive = stageName === activeStage;
+      const isComplete = stageIndex >= 0 && stageIndex < activeIndex;
+      element.classList.toggle("is-active", isActive);
+      element.classList.toggle("is-complete", isComplete);
+      element.dataset.stageStatus = isActive ? "active" : (isComplete ? "complete" : "pending");
+    });
+  }
+
+  function documentHandoffName(payload) {
+    const doc = (payload && payload.source_document) || {};
+    return doc.name || (documentName && documentName.value.trim()) || "本地需求文本";
+  }
+
+  function renderLogicHandoff(payload) {
+    if (!handoffPanel || !handoffSpine) return;
+    if (!payload) {
+      handoffPanel.dataset.handoffState = "waiting";
+      if (handoffState) handoffState.textContent = "等待解析";
+      if (handoffSource) handoffSource.textContent = "等待文档";
+      if (handoffAnchors) handoffAnchors.textContent = "等待锚点";
+      if (handoffLogic) handoffLogic.textContent = "等待节点/连线";
+      if (handoffReview) handoffReview.textContent = "进入后逐段核对";
+      setHandoffStage("source");
+      return;
+    }
+    const nodesCount = (payload.concept_logic_nodes || []).length;
+    const edgesCount = (payload.concept_edges || []).length;
+    const anchorsCount = collectAnchorIds(payload).size;
+    const ready = payload.status === "ready_for_logic_builder" && payload.ready_for_logic_builder;
+    const activeStage = ready ? "review" : (nodesCount || edgesCount ? "logic" : (anchorsCount ? "anchors" : "source"));
+    handoffPanel.dataset.handoffState = ready ? "ready" : "needs-clarification";
+    handoffPanel.dataset.anchorCount = String(anchorsCount);
+    handoffPanel.dataset.nodeCount = String(nodesCount);
+    handoffPanel.dataset.edgeCount = String(edgesCount);
+    if (handoffState) handoffState.textContent = ready ? "可交接" : "需澄清";
+    if (handoffSource) handoffSource.textContent = documentHandoffName(payload);
+    if (handoffAnchors) handoffAnchors.textContent = `${anchorsCount} 个原文锚点`;
+    if (handoffLogic) handoffLogic.textContent = `${nodesCount} 节点 / ${edgesCount} 连线候选`;
+    if (handoffReview) {
+      handoffReview.textContent = ready ? "进入后逐段高亮并全局复核" : "完成澄清后进入复核";
+    }
+    setHandoffStage(activeStage);
+  }
+
   function renderBurdenSummary(payload) {
     if (!payload) {
       burdenAction.textContent = "等待分析";
@@ -916,6 +997,7 @@
     renderQuestions(payload.open_questions || []);
     renderClarificationWorkbench(payload);
     renderNextStep(payload);
+    renderLogicHandoff(payload);
     renderBurdenSummary(payload);
     renderWorkflowOverview(payload);
     renderRequirementsChoiceChecklist(payload);

@@ -786,7 +786,7 @@
     trustSpine.dataset.mappedSegmentCount = String(evidence.mappedCount);
     trustSpine.dataset.nodeCount = String(evidence.nodeCount);
     trustSpine.dataset.wireCount = String(evidence.wireCount);
-    if (trustSourceState) trustSourceState.textContent = sourceName;
+    if (trustSourceState) trustSourceState.textContent = `${sourceName} · 需求页交接已接收`;
     if (trustParseState) trustParseState.textContent = items.length ? `${items.length} 段原文已结构化` : "等待解析";
     if (trustMapState) trustMapState.textContent = evidence.mappedCount ? `${evidence.mappedCount} 段落到节点/连线` : "等待落图";
     if (trustReviewState) {
