@@ -1037,7 +1037,7 @@
         : '<span class="logic-output-backtrace-more">待映射</span>';
       const evidenceText = `${group.sources.length} 段 · ${group.relatedWireCount || 0} 线索`;
       return `
-        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-source-ids="${escapeText(group.sources.map((source) => source.id).join("|"))}" data-wire-count="${group.relatedWireCount || 0}">
+        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-source-ids="${escapeText(group.sources.map((source) => source.id).join("|"))}" data-wire-count="${group.relatedWireCount || 0}" role="button" tabindex="0" title="聚焦 ${escapeText(group.label)} 输出组">
           <strong>${escapeText(group.label)}</strong>
           <small class="logic-output-backtrace-evidence">${escapeText(evidenceText)}</small>
           <span class="logic-output-backtrace-sources">${sourceBadges}</span>
@@ -1050,8 +1050,26 @@
       state.activeOutputBacktraceId = outputItem ? (outputItem.dataset.outputBacktraceOutput || "") : "";
       setActiveRequirementTrace(sourceElement.dataset.outputBacktraceSource || "");
     };
+    const activateOutputBacktraceFocus = (outputElement) => {
+      if (!outputElement || !outputElement.dataset.outputBacktraceOutput) return;
+      const outputId = outputElement.dataset.outputBacktraceOutput || "";
+      const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
+      if (!relatedIds.has(outputId)) return;
+      state.activeOutputBacktraceId = outputId;
+      syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
+    };
     outputBacktraceList.querySelectorAll("[data-output-backtrace-source]").forEach((button) => {
-      button.addEventListener("click", () => activateOutputBacktraceSource(button));
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        activateOutputBacktraceSource(button);
+      });
+    });
+    outputBacktraceList.querySelectorAll("[data-output-backtrace-output]").forEach((item) => {
+      item.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        activateOutputBacktraceFocus(item);
+      });
     });
     const activateBacktraceAtPoint = (event) => {
       const explicitSource = event.target && event.target.closest
@@ -1059,6 +1077,7 @@
         : null;
       if (explicitSource && explicitSource.dataset.outputBacktraceSource) {
         activateOutputBacktraceSource(explicitSource);
+        event.stopPropagation();
         return;
       }
       const sourceButtons = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-source]"));
@@ -1068,6 +1087,25 @@
       });
       if (sourceAtPoint && sourceAtPoint.dataset.outputBacktraceSource) {
         activateOutputBacktraceSource(sourceAtPoint);
+        event.stopPropagation();
+        return;
+      }
+      const explicitOutput = event.target && event.target.closest
+        ? event.target.closest("[data-output-backtrace-output]")
+        : null;
+      if (explicitOutput && outputBacktraceList.contains(explicitOutput)) {
+        activateOutputBacktraceFocus(explicitOutput);
+        event.stopPropagation();
+        return;
+      }
+      const outputItems = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-output]"));
+      const outputAtPoint = outputItems.find((item) => {
+        const rect = item.getBoundingClientRect();
+        return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+      });
+      if (outputAtPoint && outputAtPoint.dataset.outputBacktraceOutput) {
+        activateOutputBacktraceFocus(outputAtPoint);
+        event.stopPropagation();
       }
     };
     outputBacktracePanel.onclick = activateBacktraceAtPoint;

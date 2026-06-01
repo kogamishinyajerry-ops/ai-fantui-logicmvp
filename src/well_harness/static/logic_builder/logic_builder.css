@@ -5131,3 +5131,11 @@ body[data-logic-interaction-mode="natural-language"] .logic-shell[data-blueprint
   height: 100%;
   overflow: hidden;
 }
+.logic-output-backtrace-item[role="button"] {
+  cursor: pointer;
+}
+
+.logic-output-backtrace-item[role="button"]:focus-visible {
+  outline: 1px solid rgba(125, 211, 252, 0.82);
+  outline-offset: 2px;
+}

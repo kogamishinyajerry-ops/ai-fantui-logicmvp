@@ -3301,8 +3301,23 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
           };
         }""")
         assert multi_output_state["ok"] is True, multi_output_state
+        deploy_output = output_backtrace.locator('[data-output-backtrace-output="deploy"]')
+        deploy_output_box = deploy_output.bounding_box()
+        assert deploy_output_box is not None
+        page.mouse.click(deploy_output_box["x"] + 12, deploy_output_box["y"] + 12)
+        expect(output_backtrace).to_have_attribute("data-active-output", "deploy")
+        expect(output_backtrace).to_have_attribute("data-related-output-mode", "multi")
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
+        expect(page.locator('[data-requirement-trace-id="row-logic3"]')).to_have_class(re.compile("is-active"))
+        expect(deploy_output).to_have_class(re.compile("is-active"))
+        etrac_output = output_backtrace.locator('[data-output-backtrace-output="etrac"]')
+        etrac_output_box = etrac_output.bounding_box()
+        assert etrac_output_box is not None
+        page.mouse.click(etrac_output_box["x"] + 12, etrac_output_box["y"] + 12)
+        expect(output_backtrace).to_have_attribute("data-active-output", "deploy")
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_have_class(re.compile("is-related"))
-        expect(output_backtrace.locator('[data-output-backtrace-output="deploy"]')).to_have_class(re.compile("is-related"))
+        expect(deploy_output).to_have_class(re.compile("is-related"))
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).not_to_have_class(re.compile("is-active|is-related"))
 
         trace_panel_box = trace_panel.bounding_box()
