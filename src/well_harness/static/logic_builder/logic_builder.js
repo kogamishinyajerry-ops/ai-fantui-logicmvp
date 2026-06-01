@@ -806,6 +806,15 @@
     });
   }
 
+  function focusOutputBacktraceForCircuitNode(nodeId) {
+    if (!nodeId || !outputBacktracePanel) return;
+    const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
+    const group = OUTPUT_BACKTRACE_GROUPS.find((item) => relatedIds.has(item.id) && item.nodeIds.includes(nodeId));
+    if (!group) return;
+    state.activeOutputBacktraceId = group.id;
+    syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
+  }
+
   function requirementTraceEvidence(circuitView, items) {
     const nodes = circuitView && Array.isArray(circuitView.nodes) ? circuitView.nodes : [];
     const wires = circuitView && Array.isArray(circuitView.wires) ? circuitView.wires : [];
@@ -1099,6 +1108,14 @@
         event.stopPropagation();
         return;
       }
+      const explicitOutput = event.target && event.target.closest
+        ? event.target.closest("[data-output-backtrace-output]")
+        : null;
+      if (explicitOutput && outputBacktraceList.contains(explicitOutput)) {
+        activateOutputBacktraceFocus(explicitOutput);
+        event.stopPropagation();
+        return;
+      }
       const sourceButtons = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-source]"));
       const sourceAtPoint = sourceButtons.find((button) => {
         const rect = button.getBoundingClientRect();
@@ -1106,14 +1123,6 @@
       });
       if (sourceAtPoint && sourceAtPoint.dataset.outputBacktraceSource) {
         activateOutputBacktraceSource(sourceAtPoint);
-        event.stopPropagation();
-        return;
-      }
-      const explicitOutput = event.target && event.target.closest
-        ? event.target.closest("[data-output-backtrace-output]")
-        : null;
-      if (explicitOutput && outputBacktraceList.contains(explicitOutput)) {
-        activateOutputBacktraceFocus(explicitOutput);
         event.stopPropagation();
         return;
       }
@@ -4073,10 +4082,14 @@
       }
     }
     renderCircuitNodeDetails(group, node, x, y, width, height);
-    group.addEventListener("click", (event) => selectNode(selectableId, event, group));
+    group.addEventListener("click", (event) => {
+      focusOutputBacktraceForCircuitNode(node.id || selectableId);
+      selectNode(selectableId, event, group);
+    });
     group.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
+        focusOutputBacktraceForCircuitNode(node.id || selectableId);
         selectNode(selectableId, null, group);
       }
     });

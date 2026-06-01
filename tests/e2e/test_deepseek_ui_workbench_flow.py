@@ -3327,6 +3327,37 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator('[data-demo-node-id="tls115"]')).not_to_have_class(re.compile("is-output-backtrace-focus"))
         expect(page.locator('[data-wire-id="logic3->eec_deploy"]')).to_have_class(re.compile("is-output-backtrace-focus"))
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
+        tls_output = output_backtrace.locator('[data-output-backtrace-output="tls"]')
+        tls_output.focus()
+        page.keyboard.press("Enter")
+        expect(output_backtrace).to_have_attribute("data-active-output", "tls")
+        expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "tls")
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
+        eec_node = page.locator('[data-demo-node-id="eec_deploy"]')
+        eec_node_box = eec_node.bounding_box()
+        assert eec_node_box is not None
+        page.mouse.click(eec_node_box["x"] + eec_node_box["width"] / 2, eec_node_box["y"] + eec_node_box["height"] / 2)
+        expect(output_backtrace).to_have_attribute("data-active-output", "deploy")
+        expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "deploy")
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
+        expect(eec_node).to_have_class(re.compile("is-selected"))
+        canvas_backlink_state = page.evaluate("""() => {
+          const panel = document.querySelector("#logic-output-backtrace-panel");
+          const ids = (panel?.dataset.relatedOutputIds || "").split("|").filter(Boolean);
+          return {
+            ok: ids.includes("tls") && ids.includes("deploy") && !ids.includes("etrac"),
+            ids,
+            activeOutput: panel?.dataset.activeOutput || "",
+          };
+        }""")
+        assert canvas_backlink_state["ok"] is True, canvas_backlink_state
+        const_etrac_node = page.locator('[data-demo-node-id="etrac_540v"]')
+        const_etrac_node_box = const_etrac_node.bounding_box()
+        assert const_etrac_node_box is not None
+        page.mouse.click(const_etrac_node_box["x"] + const_etrac_node_box["width"] / 2, const_etrac_node_box["y"] + const_etrac_node_box["height"] / 2)
+        expect(output_backtrace).to_have_attribute("data-active-output", "deploy")
+        expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "deploy")
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_have_class(re.compile("is-related"))
         expect(deploy_output).to_have_class(re.compile("is-related"))
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).not_to_have_class(re.compile("is-active|is-related"))
