@@ -3186,8 +3186,20 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         review_matrix.locator('[data-review-filter-action="all"]').click()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "all")
         expect(review_matrix.locator('[data-review-filter-action="all"]')).to_have_attribute("aria-pressed", "true")
-        expect(page.locator("#logic-requirement-trace-list [data-requirement-trace-id]")).to_have_count(4)
+        trace_items = page.locator("#logic-requirement-trace-list [data-requirement-trace-id]")
+        expect(trace_items).to_have_count(4)
         expect(page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")).to_have_count(1)
+        first_trace_impact = trace_items.nth(0).locator(".logic-requirement-trace-output-impacts")
+        second_trace_impact = trace_items.nth(1).locator(".logic-requirement-trace-output-impacts")
+        expect(first_trace_impact).to_be_visible()
+        expect(second_trace_impact).to_be_visible()
+        expect(first_trace_impact).to_have_attribute("data-output-impact-state", "ready")
+        expect(second_trace_impact).to_have_attribute("data-output-impact-state", "ready")
+        expect(first_trace_impact).to_contain_text("TLS")
+        expect(second_trace_impact).to_contain_text("ETRAC")
+        assert first_trace_impact.inner_text() != second_trace_impact.inner_text()
+        assert first_trace_impact.locator(".logic-output-impact-badge").count() <= 3
+        assert second_trace_impact.locator(".logic-output-impact-badge").count() <= 3
         segment_card = page.locator("#logic-current-segment-evidence")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
@@ -3226,10 +3238,12 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert "候选假设" in review_summary
         assert "本地补齐" in review_summary
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
+        second_trace_labels = second_trace_impact.get_attribute("data-output-impact-labels") or ""
         page.locator("#logic-requirement-trace-list [data-requirement-trace-id]").nth(1).locator("button").click()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 02")
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("ETRAC")
+        assert second_trace_labels.split("|")[0] in page.locator("#logic-current-segment-output-labels").inner_text()
         assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(page.locator("#logic-canvas")).to_be_visible()
@@ -3250,6 +3264,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert toolbar_box is not None
         assert bottom_strip_box is not None
         assert trace_list_box["height"] >= 100
+        assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-item button")).every((button) => button.scrollWidth <= button.clientWidth + 1 && button.scrollHeight <= button.clientHeight + 1)""") is True
         assert trace_list_box["y"] + trace_list_box["height"] + 4 <= segment_card_box["y"]
         assert segment_card_box["y"] + segment_card_box["height"] <= review_matrix_box["y"] + 1
         assert review_matrix_box["y"] + review_matrix_box["height"] <= trace_panel_box["y"] + trace_panel_box["height"] + 1

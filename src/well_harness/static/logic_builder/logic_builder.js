@@ -1008,8 +1008,19 @@
     items.forEach((item, index) => {
       const li = document.createElement("li");
       li.className = "logic-requirement-trace-item";
+      const outputImpacts = outputImpactsForTrace(item);
+      const visibleOutputImpacts = outputImpacts.slice(0, 2);
+      const hiddenOutputImpactCount = Math.max(0, outputImpacts.length - visibleOutputImpacts.length);
+      const outputImpactState = outputImpacts.length ? "ready" : "empty";
+      const outputImpactBadges = outputImpacts.length
+        ? `${visibleOutputImpacts
+            .map((label) => `<span class="logic-output-impact-badge">${escapeText(label)}</span>`)
+            .join("")}${hiddenOutputImpactCount ? `<span class="logic-output-impact-badge">+${hiddenOutputImpactCount}</span>` : ""}`
+        : '<span class="logic-output-impact-badge" data-output-impact-empty="true">无直接输出</span>';
       li.dataset.requirementTraceId = item.id;
       li.dataset.sourceAnchorId = item.sourceId;
+      li.dataset.outputImpactState = outputImpactState;
+      li.dataset.outputImpactLabels = outputImpacts.join("|");
       li.dataset.traceTargets = JSON.stringify({
         id: item.id,
         displayIndex: String(index + 1).padStart(2, "0"),
@@ -1028,6 +1039,7 @@
           <small>${escapeText(item.actions.join("；") || "生成候选节点与连线")}</small>
         </span>
         <span class="logic-requirement-trace-targets">${escapeText(`${item.nodeIds.length} 节点 · ${item.wireIds.length} 连线`)}</span>
+        <span class="logic-requirement-trace-output-impacts" data-output-impact-state="${outputImpactState}" data-output-impact-labels="${escapeText(outputImpacts.join("|"))}" title="${escapeText(outputImpacts.join(" / ") || "无直接输出")}">${outputImpactBadges}</span>
       `;
       button.addEventListener("click", () => setActiveRequirementTrace(item.id));
       li.appendChild(button);

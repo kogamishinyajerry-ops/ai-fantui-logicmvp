@@ -5720,6 +5720,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".logic-current-segment-evidence" in logic_stylesheet
     assert ".logic-current-segment-evidence dl" in logic_stylesheet
     assert ".logic-current-segment-output-impact" in logic_stylesheet
+    assert ".logic-requirement-trace-output-impacts" in logic_stylesheet
+    assert ".logic-output-impact-badge" in logic_stylesheet
     assert ".logic-current-segment-anchor-jumps" in logic_stylesheet
     assert ".logic-global-review-matrix" in logic_stylesheet
     assert ".logic-review-matrix-action" in logic_stylesheet
