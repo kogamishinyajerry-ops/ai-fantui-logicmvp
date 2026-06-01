@@ -2345,6 +2345,16 @@ def test_fault_prepare_defaults_to_candidate_boundary_decision_board(
         board_box = board.bounding_box()
         assert board_box is not None
         assert board_box["height"] <= 132
+        boundary_list_box = page.locator("#fault-boundary-list").bounding_box()
+        action_strip_box = page.locator("#fault-bottom-action-strip").bounding_box()
+        assert boundary_list_box is not None
+        assert action_strip_box is not None
+        assert boundary_list_box["height"] <= 160
+        assert boundary_list_box["y"] + boundary_list_box["height"] <= action_strip_box["y"] - 12
+        textarea_heights = page.locator("textarea[data-boundary-id]").evaluate_all(
+            "nodes => nodes.map((node) => node.getBoundingClientRect().height)"
+        )
+        assert textarea_heights and all(height <= 64 for height in textarea_heights)
 
         for index in range(page.locator("textarea[data-boundary-id]").count()):
             page.locator("textarea[data-boundary-id]").nth(index).fill("确认空跑演示边界。")
