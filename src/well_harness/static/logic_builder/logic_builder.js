@@ -1593,13 +1593,16 @@
     const popoverHeight = 236;
     const fallbackX = wrapWidth - popoverWidth - 24;
     const fallbackY = 58;
+    const anchorToInspectorSide = canvas.dataset.viewMode === "circuit";
+    const desiredX = anchorToInspectorSide ? fallbackX : (state.annotationPopoverX || fallbackX) + 14;
+    const desiredY = anchorToInspectorSide ? fallbackY : (state.annotationPopoverY || fallbackY) + 14;
     const left = clampNumber(
-      (state.annotationPopoverX || fallbackX) + 14,
+      desiredX,
       48,
       Math.max(48, wrapWidth - popoverWidth - 18),
     );
     const top = clampNumber(
-      (state.annotationPopoverY || fallbackY) + 14,
+      desiredY,
       42,
       Math.max(42, wrapHeight - popoverHeight - 82),
     );
@@ -4007,7 +4010,7 @@
     const toolbarHeight = logicCanvasToolbar ? logicCanvasToolbar.getBoundingClientRect().height : 0;
     const viewportHeight = Math.max(360, parentHeight - toolbarHeight - 88);
     const fitScale = Math.min(
-      1,
+      1.08,
       Math.max(0.48, Math.min((viewportWidth - 18) / size.width, (viewportHeight - 18) / size.height))
     );
     canvas.dataset.fitScale = String(fitScale.toFixed(3));
