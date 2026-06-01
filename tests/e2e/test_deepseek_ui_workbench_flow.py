@@ -3331,6 +3331,11 @@ def test_desktop_demo_layout_keeps_primary_surfaces_unclipped(
         assert page.locator("#fault-process").evaluate(
             "el => el.scrollHeight <= el.clientHeight + 1"
         )
+        expect(page.locator("#fault-candidate-matrix-body [data-raw-fault-type='dropout']")).to_have_text("信号丢失")
+        fault_type_texts = page.locator("#fault-candidate-matrix-body .fault-matrix-type").evaluate_all(
+            "nodes => nodes.map((node) => node.textContent.trim())"
+        )
+        assert "dropout" not in fault_type_texts
         expect(page.locator("#fault-candidate-details")).to_be_visible()
         expect(page.locator("#fault-injection-point-details")).to_be_visible()
 

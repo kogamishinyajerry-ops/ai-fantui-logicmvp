@@ -102,12 +102,14 @@
     output_blocked: "输出受阻",
     dry_run_observation_gap: "空跑观测缺口",
     stuck_low: "卡低",
+    dropout: "信号丢失",
   };
   const INJECTION_MODE_LABELS = {
     override: "覆盖注入",
     override_value: "覆盖值注入",
     toggle_sequence: "序列切换",
     dry_run_observe: "空跑观测",
+    dropout: "信号丢失",
   };
   const FAULT_NODE_LABELS = {
     radio_altitude_ft: "RA 高度",
@@ -1286,10 +1288,11 @@
       const rawSignalName = point.signal_name || "";
       const displayNodeId = faultMatrixDisplayKey(rawNodeId, FAULT_NODE_LABELS, "待确认节点");
       const displaySignalName = faultMatrixDisplayKey(rawSignalName, FAULT_SIGNAL_LABELS, "信号待确认");
+      const rawFaultType = scenario.fault_type || point.injection_mode || "";
       const risk = faultRiskLabel(scenario.severity);
       const faultTypeText = scenario.fault_type
-        ? faultTypeLabel(scenario.fault_type, "故障待确认")
-        : injectionModeLabel(point.injection_mode, "故障待确认");
+        ? faultTypeLabel(rawFaultType, "故障待确认")
+        : injectionModeLabel(rawFaultType, "故障待确认");
       const coveredPathItems = faultCoveredPathItems(scenario, point);
       const coveredPathLabel = faultCoveredPathLabel(scenario, point);
       const evidenceToken = faultMatrixEvidenceToken(scenario, point, index);
@@ -1327,7 +1330,7 @@
           <small data-raw-signal-name="${escapeText(rawSignalName)}" title="${escapeText(rawSignalName)}">${escapeText(displaySignalName)}</small>
           <span class="fault-matrix-evidence-token blueprint-row-token" data-row-scan-token="evidence" aria-label="来源证据 ${escapeText(evidenceToken)}">${escapeText(evidenceToken)}</span>
         </td>
-        <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip">${escapeText(compactCell(faultTypeText, "故障待确认"))}</span></td>
+        <td class="fault-matrix-type" data-blueprint-col="fault-type"><span class="fault-matrix-type-pill blueprint-row-chip" data-raw-fault-type="${escapeText(rawFaultType)}" title="${escapeText(rawFaultType)}">${escapeText(compactCell(faultTypeText, "故障待确认"))}</span></td>
         <td class="fault-matrix-trigger" data-blueprint-col="trigger"><span>${escapeText(compactCell(point.safe_boundary_zh || scenario.rationale_zh, "空跑条件待确认"))}</span></td>
         <td class="fault-matrix-effect" data-blueprint-col="expected-effect"><span>${escapeText(compactCell(scenario.expected_effect_zh, "观察路径影响"))}</span></td>
         <td class="fault-matrix-path" data-blueprint-col="covered-path">
