@@ -3066,6 +3066,34 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
     font-size: 8px;
   }
 
+  @media (min-height: 960px) {
+    .sandbox-diagnosis-inspector[data-blueprint37-right-density="layered-report-evidence"] {
+      grid-template-rows:
+        22px
+        minmax(28px, 28px)
+        minmax(48px, 52px)
+        minmax(80px, 88px)
+        minmax(62px, 72px)
+        minmax(68px, 76px)
+        16px
+        minmax(180px, 1fr);
+    }
+
+    .sandbox-diagnosis-inspector .sandbox-evidence-trace[data-blueprint37-right-rail="inspector-companion"] {
+      min-height: 180px;
+    }
+
+    .sandbox-diagnosis-inspector .sandbox-evidence-trace[data-blueprint37-right-rail="inspector-companion"] .sandbox-evidence-trace-rows {
+      max-height: none;
+      min-height: 180px;
+    }
+
+    .sandbox-diagnosis-inspector .sandbox-evidence-trace[data-blueprint37-right-rail="inspector-companion"] .sandbox-evidence-trace-row:not([data-link-state="active"]) {
+      display: grid;
+      opacity: 0.82;
+    }
+  }
+
   .sandbox-review-row-header,
   .sandbox-review-row {
     grid-template-columns: 24px 42px minmax(72px, 0.86fr) 54px minmax(62px, 0.64fr) minmax(70px, 0.72fr) minmax(106px, 1.14fr) minmax(68px, 0.68fr) 38px;

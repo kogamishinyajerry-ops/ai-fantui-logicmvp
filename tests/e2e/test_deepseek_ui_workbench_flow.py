@@ -3790,6 +3790,17 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
         for index in range(page.locator("input[data-sandbox-confirm]").count()):
             page.locator("input[data-sandbox-confirm]").nth(index).check()
         expect(page.locator("#fault-sandbox-review-gate")).to_have_text("可进入逻辑修订")
+        sandbox_inspector_box = page.locator("#fault-sandbox-diagnosis-inspector").bounding_box()
+        sandbox_evidence_trace_box = page.locator("#fault-sandbox-evidence-trace").bounding_box()
+        assert sandbox_inspector_box and sandbox_evidence_trace_box
+        assert sandbox_evidence_trace_box["height"] >= 180
+        assert sandbox_evidence_trace_box["y"] + sandbox_evidence_trace_box["height"] <= (
+            sandbox_inspector_box["y"] + sandbox_inspector_box["height"] + 1
+        )
+        expect(page.locator("#fault-sandbox-evidence-trace .sandbox-evidence-trace-row:visible")).to_have_count(4)
+        assert page.locator("#fault-sandbox-evidence-trace").evaluate(
+            "node => node.scrollHeight <= node.clientHeight + 1"
+        ) is True
         geometry.append(_assert_deepseek_page_contract(page, "fault-injection-sandbox"))
         _screenshot(page, "04-fault-injection-sandbox")
 
