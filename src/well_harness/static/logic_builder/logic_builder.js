@@ -1434,6 +1434,7 @@
       setCircuitVisualState(wire, nextState);
       wire.setAttribute("marker-end", `url(#logic-circuit-arrow-${nextState === "active" ? "active" : "idle"})`);
     });
+    syncCircuitWireRenderOrder();
   }
 
   function appendRunTimeline(action) {
@@ -1940,6 +1941,7 @@
       const junctionState = junction.dataset.fault === "true" && srcActive ? "fault" : (srcActive ? "active" : "idle");
       setCircuitVisualState(junction, junctionState);
     });
+    syncCircuitWireRenderOrder();
     renderCircuitEvaluationHud(snapshot, nodeById);
     renderCircuitEvaluationStatus(nodeById);
   }
@@ -3077,6 +3079,37 @@
     });
   }
 
+  function circuitWireStatePriority(value) {
+    const wireState = visualCircuitState(value);
+    if (wireState === "fault" || wireState === "blocked") return 2;
+    if (wireState === "active") return 1;
+    return 0;
+  }
+
+  function circuitWireRenderPriority(wire) {
+    return circuitWireStatePriority(wire && wire.state);
+  }
+
+  function syncCircuitWireRenderOrder() {
+    const wires = Array.from(circuitSvg.querySelectorAll(".logic-circuit-wire"));
+    if (!wires.length) return;
+    const children = Array.from(circuitSvg.children);
+    const firstWireIndex = children.findIndex((element) => element.classList && element.classList.contains("logic-circuit-wire"));
+    if (firstWireIndex < 0) return;
+    const wireAnchor = children.slice(firstWireIndex).find((element) => (
+      !(element.classList && element.classList.contains("logic-circuit-wire"))
+    )) || null;
+    wires
+      .map((wire, index) => ({ wire, index }))
+      .sort((left, right) => (
+        circuitWireStatePriority(left.wire.dataset.state) - circuitWireStatePriority(right.wire.dataset.state)
+        || left.index - right.index
+      ))
+      .forEach(({ wire }) => {
+        circuitSvg.insertBefore(wire, wireAnchor);
+      });
+  }
+
   function setCircuitProvenanceFilter(filter) {
     state.provenanceFilter = CIRCUIT_PROVENANCE_FILTERS.has(filter) ? filter : "all";
     applyCircuitProvenanceFilter();
@@ -3309,15 +3342,23 @@
     renderCircuitLaneGuides(view, size);
     renderCircuitProvenanceLegend(view);
     const provenanceById = new Map((view.nodes || []).map((node) => [node.id || "", circuitProvenanceKindForNode(node)]));
-    for (const wire of view.wires || []) {
-      renderCircuitWire(wire, provenanceById);
-    }
+    const wires = Array.isArray(view.wires) ? view.wires : [];
+    wires
+      .map((wire, index) => ({ wire, index }))
+      .sort((left, right) => (
+        circuitWireRenderPriority(left.wire) - circuitWireRenderPriority(right.wire)
+        || left.index - right.index
+      ))
+      .forEach(({ wire }) => {
+        renderCircuitWire(wire, provenanceById);
+      });
     renderCircuitJunctions(view, provenanceById);
     for (const node of view.nodes || []) {
       renderCircuitNode(node);
     }
     renderCircuitBadges(view);
     applyCircuitProvenanceFilter();
+    syncCircuitWireRenderOrder();
     syncStreamedAuthoringHighlight();
   }
 

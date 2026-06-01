@@ -588,12 +588,43 @@ def _assert_logic_circuit_blueprint_geometry(page: Any) -> None:
                   || streamBox.top > box.bottom);
               }).map((node) => node.dataset.demoNodeId || node.dataset.nodeId || "")
             : [];
-          return {failures, overflowingLabels, streamOverlaps};
+          const wirePriority = (state) => {
+            if (state === "fault" || state === "blocked") return 2;
+            if (state === "active") return 1;
+            return 0;
+          };
+          const paddedOverlap = (left, right, pad = 2) => (
+            left.left - pad < right.right
+            && left.right + pad > right.left
+            && left.top - pad < right.bottom
+            && left.bottom + pad > right.top
+          );
+          const renderedWires = Array.from(document.querySelectorAll(".logic-circuit-wire")).map((wire, index) => {
+            const box = wire.getBoundingClientRect();
+            return {
+              index,
+              id: wire.dataset.wireId || `${wire.dataset.source || ""}->${wire.dataset.target || ""}`,
+              priority: wirePriority(wire.dataset.state || ""),
+              box: {left: box.left, right: box.right, top: box.top, bottom: box.bottom},
+            };
+          });
+          const wireOrderInversions = [];
+          for (let leftIndex = 0; leftIndex < renderedWires.length; leftIndex += 1) {
+            for (let rightIndex = leftIndex + 1; rightIndex < renderedWires.length; rightIndex += 1) {
+              const left = renderedWires[leftIndex];
+              const right = renderedWires[rightIndex];
+              if (left.priority > right.priority && paddedOverlap(left.box, right.box)) {
+                wireOrderInversions.push(`${left.id} renders before ${right.id}`);
+              }
+            }
+          }
+          return {failures, overflowingLabels, streamOverlaps, wireOrderInversions};
         }"""
     )
     assert geometry["failures"] == []
     assert geometry["overflowingLabels"] == []
     assert geometry["streamOverlaps"] == []
+    assert geometry["wireOrderInversions"] == []
 
 
 def _assert_sandbox_replay_blueprint_geometry(page: Any) -> None:
