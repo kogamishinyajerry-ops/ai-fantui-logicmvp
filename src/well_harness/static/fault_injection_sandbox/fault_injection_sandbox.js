@@ -2134,7 +2134,7 @@
         {id: "latch-l1", fromNodeId: "latch", toNodeId: "l1-alarm", state: "alarm", reviewRowId: "SR-06", reportId: "RP-06", lane: "alarm"},
         {id: "latch-l2", fromNodeId: "latch", toNodeId: "l2-alarm", state: "warn", reviewRowId: "SR-06", reportId: "RP-06", lane: "alarm"},
         {id: "latch-cancel", fromNodeId: "latch", toNodeId: "cancel", state: "boundary", reviewRowId: "SR-07", reportId: "RP-07", lane: "boundary"},
-        {id: "truth-boundary", fromNodeId: "prio", toNodeId: "cancel", state: "muted", reviewRowId: "SR-07", reportId: "RP-07", lane: "boundary"},
+        {id: "truth-boundary", fromNodeId: "prio", toNodeId: "cancel", state: "muted", reviewRowId: "SR-07", reportId: "RP-07", lane: "boundary", route: "elbow"},
       ],
     };
   }
@@ -2183,10 +2183,36 @@
       const dy = end.y - start.y;
       const length = Math.max(1, Math.hypot(dx, dy));
       const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      link.style.setProperty("--x", `${start.x.toFixed(2)}px`);
-      link.style.setProperty("--y", `${(start.y - 1.25).toFixed(2)}px`);
-      link.style.setProperty("--w", `${length.toFixed(2)}px`);
-      link.style.setProperty("--r", `${angle.toFixed(2)}deg`);
+      if (link.dataset.canvasLinkRoute === "elbow" && Math.abs(dx) > 1) {
+        const left = Math.min(start.x, end.x);
+        const right = Math.max(start.x, end.x);
+        const laneY = Math.min(canvasBox.height - 18, Math.max(start.y, end.y) + 1.5);
+        const startLift = Math.max(2.5, laneY - start.y);
+        const endLift = Math.max(2.5, laneY - end.y);
+        link.style.setProperty("--x", `${left.toFixed(2)}px`);
+        link.style.setProperty("--y", `${(laneY - 1.25).toFixed(2)}px`);
+        link.style.setProperty("--w", `${Math.max(1, right - left).toFixed(2)}px`);
+        link.style.setProperty("--r", "0deg");
+        link.style.setProperty("--start-local-x", `${(start.x - left).toFixed(2)}px`);
+        link.style.setProperty("--end-local-x", `${(end.x - left).toFixed(2)}px`);
+        link.style.setProperty("--elbow-lift", `${startLift.toFixed(2)}px`);
+        link.style.setProperty("--elbow-lift-top", `${(-startLift).toFixed(2)}px`);
+        link.style.setProperty("--elbow-end-lift", `${endLift.toFixed(2)}px`);
+        link.style.setProperty("--elbow-end-lift-top", `${(-endLift).toFixed(2)}px`);
+        link.dataset.visualRoute = "elbow";
+      } else {
+        link.style.setProperty("--x", `${start.x.toFixed(2)}px`);
+        link.style.setProperty("--y", `${(start.y - 1.25).toFixed(2)}px`);
+        link.style.setProperty("--w", `${length.toFixed(2)}px`);
+        link.style.setProperty("--r", `${angle.toFixed(2)}deg`);
+        link.style.removeProperty("--start-local-x");
+        link.style.removeProperty("--end-local-x");
+        link.style.removeProperty("--elbow-lift");
+        link.style.removeProperty("--elbow-lift-top");
+        link.style.removeProperty("--elbow-end-lift");
+        link.style.removeProperty("--elbow-end-lift-top");
+        delete link.dataset.visualRoute;
+      }
       link.dataset.startX = start.x.toFixed(2);
       link.dataset.startY = start.y.toFixed(2);
       link.dataset.endX = end.x.toFixed(2);
@@ -2216,6 +2242,10 @@
       link.setAttribute("aria-current", "false");
       link.dataset.canvasLinkState = item.state;
       link.dataset.canvasLinkLane = item.lane || "logic";
+      if (item.route) {
+        link.classList.add(`sandbox-replay-canvas-link--${item.route}`);
+        link.dataset.canvasLinkRoute = item.route;
+      }
       link.dataset.sourceNode = item.fromNodeId || "";
       link.dataset.targetNode = item.toNodeId || "";
       link.dataset.linkedReviewRows = item.reviewRowId || "";

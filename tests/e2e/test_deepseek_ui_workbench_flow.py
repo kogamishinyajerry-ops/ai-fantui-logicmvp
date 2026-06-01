@@ -673,6 +673,30 @@ def _assert_sandbox_replay_blueprint_geometry(page: Any) -> None:
             if (distanceToRectEdge(end, targetRect) > 3.5) failures.push(`${id}: target endpoint floats`);
             if (Math.hypot(end.x - start.x, end.y - start.y) < 12) failures.push(`${id}: link too short`);
           }
+          const linkBox = (id) => {
+            const link = canvas.querySelector(`[data-replay-canvas-link="${id}"]`);
+            if (!link) return null;
+            const box = link.getBoundingClientRect();
+            return {
+              route: link.dataset.visualRoute || "",
+              top: box.top - canvasBox.top,
+              bottom: box.bottom - canvasBox.top,
+              left: box.left - canvasBox.left,
+              right: box.right - canvasBox.left,
+            };
+          };
+          const latchCancel = linkBox("latch-cancel");
+          const truthBoundary = linkBox("truth-boundary");
+          const metricsBox = canvas.querySelector("#fault-sandbox-replay-canvas-metrics")?.getBoundingClientRect();
+          if (!latchCancel || !truthBoundary) {
+            failures.push("missing boundary lane links");
+          } else {
+            if (truthBoundary.route !== "elbow") failures.push("truth-boundary: missing elbow route");
+            if (truthBoundary.top < latchCancel.bottom + 2) failures.push("truth-boundary: overlaps latch-cancel lane");
+            if (metricsBox && truthBoundary.bottom > metricsBox.top - canvasBox.top - 1) {
+              failures.push("truth-boundary: overlaps metrics row");
+            }
+          }
           const textOverflow = Array.from(canvas.querySelectorAll(
             ".sandbox-replay-canvas-node strong, .sandbox-replay-canvas-node code, .sandbox-replay-canvas-metrics span"
           )).filter((element) => element.scrollWidth > element.clientWidth + 1)

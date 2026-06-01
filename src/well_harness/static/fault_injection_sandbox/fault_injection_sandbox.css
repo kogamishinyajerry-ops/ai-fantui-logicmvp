@@ -353,6 +353,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 .sandbox-replay-canvas-link[data-canvas-link-state="muted"] {
   background: rgba(102, 115, 141, 0.5);
+  box-shadow: 0 0 0 1px rgba(102, 115, 141, 0.12);
 }
 .sandbox-replay-canvas-link[data-link-state="active"] {
   height: 3px;
@@ -388,6 +389,31 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 .sandbox-replay-canvas-link[data-link-state="active"] .sandbox-replay-canvas-link-badge {
   background: #1e67ff;
+}
+.sandbox-replay-canvas-link--elbow {
+  overflow: visible;
+  transform: none;
+}
+.sandbox-replay-canvas-link--elbow::before,
+.sandbox-replay-canvas-link--elbow::after {
+  content: "";
+  position: absolute;
+  top: var(--elbow-lift-top, -8px);
+  width: 2.5px;
+  height: var(--elbow-lift, 8px);
+  border-radius: 999px;
+  background: inherit;
+  box-shadow: inherit;
+}
+.sandbox-replay-canvas-link--elbow::before {
+  left: var(--start-local-x, 0px);
+  transform: translateX(-50%);
+}
+.sandbox-replay-canvas-link--elbow::after {
+  left: var(--end-local-x, var(--w));
+  top: var(--elbow-end-lift-top, -8px);
+  height: var(--elbow-end-lift, 8px);
+  transform: translateX(-50%);
 }
 .sandbox-replay-canvas-node {
   position: absolute;
