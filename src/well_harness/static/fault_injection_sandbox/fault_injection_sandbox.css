@@ -2747,7 +2747,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-review-row-panel[data-blueprint37-surface="replay-main-canvas"] {
-    grid-template-rows: auto minmax(124px, 124px) minmax(112px, 1fr);
+    grid-template-rows: auto minmax(140px, 140px) minmax(112px, 1fr);
     gap: 5px;
     padding-right: 10px;
   }
@@ -2761,11 +2761,11 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-replay-canvas-main {
-    min-height: 124px;
+    min-height: 140px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-replay-canvas-main {
-    min-height: 124px;
+    min-height: 140px;
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] {
@@ -2778,8 +2778,8 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .sandbox-review-item p {
   }
 
   .sandbox-shell[data-blueprint37-top-density="compressed-progress-gates"] .sandbox-review-row-list[data-blueprint-density="compact-workbench"] .sandbox-review-row {
-    min-height: 30px;
-    padding: 2px 6px;
+    min-height: 28px;
+    padding: 1px 6px;
   }
 
   .sandbox-replay-canvas-node {

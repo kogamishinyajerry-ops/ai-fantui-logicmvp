@@ -693,8 +693,8 @@ def _assert_sandbox_replay_blueprint_geometry(page: Any) -> None:
           } else {
             if (truthBoundary.route !== "elbow") failures.push("truth-boundary: missing elbow route");
             if (truthBoundary.top < latchCancel.bottom + 2) failures.push("truth-boundary: overlaps latch-cancel lane");
-            if (metricsBox && truthBoundary.bottom > metricsBox.top - canvasBox.top - 1) {
-              failures.push("truth-boundary: overlaps metrics row");
+            if (metricsBox && truthBoundary.bottom > metricsBox.top - canvasBox.top - 4) {
+              failures.push("truth-boundary: crowds metrics row");
             }
           }
           const textOverflow = Array.from(canvas.querySelectorAll(
@@ -1797,7 +1797,7 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         chain_box = diagnosis_chain.bounding_box()
         evidence_rows_box = page.locator("#fault-sandbox-evidence-trace-rows").bounding_box()
         assert canvas_box and inspector_box and evidence_trace_box and rail_box and report_rows_box and diagnosis_summary_box and first_report_row_box and package_box and path_box and chain_box and evidence_rows_box
-        assert canvas_box["height"] >= 124
+        assert canvas_box["height"] >= 140
         assert canvas_box["width"] >= 860
         assert rail_box["x"] > canvas_box["x"] + canvas_box["width"] - 8
         assert 250 <= rail_box["width"] <= 360
@@ -1911,7 +1911,7 @@ def test_fault_sandbox_blueprint37_canvas_and_report_actions_share_visual_system
 
         canvas_box = replay_canvas.bounding_box()
         assert canvas_box
-        assert canvas_box["height"] >= 124
+        assert canvas_box["height"] >= 140
         assert canvas_box["width"] >= 600
         assert canvas_box["width"] / canvas_box["height"] >= 3.0
 
