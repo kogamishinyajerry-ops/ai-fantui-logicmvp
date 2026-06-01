@@ -3173,6 +3173,13 @@ def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
         expect(page.locator("#logic-object-context-drawer")).to_be_visible()
         expect(page.locator("#logic-object-context-drawer")).to_have_attribute("data-unified-panel-state", "open")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
+        right_rail_geometry = page.locator("#logic-right-inspector-rail").evaluate(
+            """el => {
+              const style = getComputedStyle(el);
+              return {visibility: style.visibility, opacity: style.opacity, pointerEvents: style.pointerEvents};
+            }"""
+        )
+        assert right_rail_geometry == {"visibility": "hidden", "opacity": "0", "pointerEvents": "none"}
 
         page.click('#logic-mode-dock [data-logic-mode="parameters"]')
         expect(logic_shell).to_have_attribute("data-active-aux-panel", "bottom-drawer")

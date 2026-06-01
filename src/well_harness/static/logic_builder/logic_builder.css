@@ -3715,6 +3715,12 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   pointer-events: none;
 }
 
+.logic-shell[data-ui-skin="codex-minimal"][data-right-inspector-state="expanded"] .logic-right-inspector-rail {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .logic-shell[data-ui-skin="codex-minimal"][data-bottom-drawer-state="closed"] .logic-run-parameter-drawer,
 .logic-shell[data-ui-skin="codex-minimal"][data-command-palette-state="closed"] .logic-command-palette {
   pointer-events: none;
