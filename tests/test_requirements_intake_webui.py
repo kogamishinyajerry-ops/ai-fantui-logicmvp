@@ -3221,6 +3221,10 @@ def test_logic_builder_static_page_exposes_streamed_authoring_controls():
     assert 'data-presentation-mode="workbench"' in html
     assert 'data-logic-interaction-mode="workbench"' in html
     assert 'id="logic-requirement-trace-panel"' in html
+    assert 'id="logic-trust-spine"' in html
+    assert 'data-trust-stage="source"' in html
+    assert 'data-trust-stage="review"' in html
+    assert 'data-global-review-summary="doc-to-panel"' in html
     assert 'data-trace-platform="requirements-left"' in html
     assert 'data-workbench-input-model="natural-language"' in html
     assert 'id="logic-natural-language-control"' in html
@@ -5684,6 +5688,8 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".logic-provenance-dot" in logic_stylesheet
     assert ".is-provenance-muted" in logic_stylesheet
     assert ".is-provenance-match" in logic_stylesheet
+    assert ".logic-trust-spine" in logic_stylesheet
+    assert ".logic-trust-spine li.is-active" in logic_stylesheet
     assert ".logic-edit-panel" in logic_stylesheet
     assert ".logic-revision-handoff" in logic_stylesheet
     assert ".logic-burden-summary" in logic_stylesheet

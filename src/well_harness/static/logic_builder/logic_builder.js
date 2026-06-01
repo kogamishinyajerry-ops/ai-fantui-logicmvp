@@ -193,6 +193,11 @@
   const requirementTraceList = $("logic-requirement-trace-list");
   const requirementTraceReviewState = $("logic-requirement-trace-review-state");
   const requirementTraceReviewSummary = $("logic-requirement-trace-review-summary");
+  const trustSpine = $("logic-trust-spine");
+  const trustSourceState = $("logic-trust-source-state");
+  const trustParseState = $("logic-trust-parse-state");
+  const trustMapState = $("logic-trust-map-state");
+  const trustReviewState = $("logic-trust-review-state");
   const streamedAuthoringPanel = $("logic-streamed-authoring-panel");
   const streamedPanelToggle = $("logic-streamed-panel-toggle");
   const streamedAuthoringStatus = $("logic-streamed-status");
@@ -736,11 +741,69 @@
     });
   }
 
+  function requirementTraceEvidence(circuitView, items) {
+    const nodes = circuitView && Array.isArray(circuitView.nodes) ? circuitView.nodes : [];
+    const wires = circuitView && Array.isArray(circuitView.wires) ? circuitView.wires : [];
+    const sourceCounts = Object.fromEntries(["source", "assumption", "local"].map((kind) => [kind, 0]));
+    nodes.forEach((node) => {
+      const kind = circuitProvenanceKindForNode(node);
+      sourceCounts[kind] = (sourceCounts[kind] || 0) + 1;
+    });
+    return {
+      nodeCount: nodes.length,
+      wireCount: wires.length,
+      segmentCount: items.length,
+      mappedCount: items.filter((item) => item.nodeIds.length || item.wireIds.length).length,
+      sourceCounts,
+    };
+  }
+
+  function setTrustSpineStage(stage) {
+    if (!trustSpine) return;
+    const activeStage = stage || "source";
+    const order = ["source", "parse", "map", "review"];
+    const activeIndex = Math.max(0, order.indexOf(activeStage));
+    trustSpine.dataset.currentStage = activeStage;
+    trustSpine.querySelectorAll("[data-trust-stage]").forEach((element) => {
+      const stageName = element.dataset.trustStage || "";
+      const stageIndex = order.indexOf(stageName);
+      const isActive = stageName === activeStage;
+      const isComplete = stageIndex >= 0 && stageIndex < activeIndex;
+      element.classList.toggle("is-active", isActive);
+      element.classList.toggle("is-complete", isComplete);
+      element.dataset.stageStatus = isActive ? "active" : (isComplete ? "complete" : "pending");
+    });
+  }
+
+  function renderTrustSpine(payload, circuitView, items) {
+    if (!trustSpine) return;
+    const doc = (payload && payload.source_document) || {};
+    const evidence = requirementTraceEvidence(circuitView, items);
+    const sourceName = doc.name || (payload && payload.source_requirements_sha256 ? "已确认需求来源" : "本地结构化需求");
+    const currentStage = evidence.nodeCount && evidence.wireCount ? "review" : (items.length ? "map" : "source");
+    trustSpine.dataset.activeTraceId = state.activeRequirementTraceId || "waiting";
+    trustSpine.dataset.segmentCount = String(evidence.segmentCount);
+    trustSpine.dataset.mappedSegmentCount = String(evidence.mappedCount);
+    trustSpine.dataset.nodeCount = String(evidence.nodeCount);
+    trustSpine.dataset.wireCount = String(evidence.wireCount);
+    if (trustSourceState) trustSourceState.textContent = sourceName;
+    if (trustParseState) trustParseState.textContent = items.length ? `${items.length} 段原文已结构化` : "等待解析";
+    if (trustMapState) trustMapState.textContent = evidence.mappedCount ? `${evidence.mappedCount} 段落到节点/连线` : "等待落图";
+    if (trustReviewState) {
+      trustReviewState.textContent = evidence.nodeCount
+        ? `${evidence.nodeCount} 节点 / ${evidence.wireCount} 连线`
+        : "等待复核";
+    }
+    setTrustSpineStage(currentStage);
+    return evidence;
+  }
+
   function setActiveRequirementTrace(traceId) {
     if (!requirementTracePanel || !requirementTraceList) return;
     const nextId = traceId || "";
     state.activeRequirementTraceId = nextId;
     requirementTracePanel.dataset.activeTraceId = nextId || "none";
+    if (trustSpine) trustSpine.dataset.activeTraceId = nextId || "none";
     const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));
     let activeTrace = null;
     traces.forEach((element) => {
@@ -769,6 +832,7 @@
     if (!items.length) {
       requirementTracePanel.dataset.activeTraceId = "waiting";
       requirementTraceList.innerHTML = '<li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>';
+      renderTrustSpine(payload, circuitView, items);
       if (requirementTraceReviewState) requirementTraceReviewState.textContent = "等待线路图";
       if (requirementTraceReviewSummary) requirementTraceReviewSummary.textContent = "生成完成后会核对节点、连线与边界。";
       applyRequirementTraceHighlight(null);
@@ -809,8 +873,12 @@
       const wireCount = circuitView ? (circuitView.wires || []).length : ((payload && payload.edges) || []).length;
       requirementTraceReviewState.textContent = `${nodeCount} 节点 / ${wireCount} 连线已复核`;
     }
+    const evidence = renderTrustSpine(payload, circuitView, items);
     if (requirementTraceReviewSummary) {
-      requirementTraceReviewSummary.textContent = "逐段来源、节点和连线已汇总；当前高亮段会同步标出对应图元。";
+      const counts = evidence
+        ? evidence.sourceCounts
+        : Object.fromEntries(["source", "assumption", "local"].map((kind) => [kind, 0]));
+      requirementTraceReviewSummary.textContent = `逐段来源、节点和连线已汇总；原文锚点 ${counts.source || 0} · 候选假设 ${counts.assumption || 0} · 本地补齐 ${counts.local || 0}。`;
     }
     setActiveRequirementTrace(activeId);
   }

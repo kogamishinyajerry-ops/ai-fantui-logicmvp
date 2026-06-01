@@ -231,10 +231,32 @@
           <h2>原文到图纸</h2>
           <span id="logic-requirement-trace-source">等待需求来源</span>
         </div>
+        <ol id="logic-trust-spine" class="logic-trust-spine" aria-label="需求文档到最终控制面板信任脊柱" data-current-stage="source" data-active-trace-id="waiting">
+          <li data-trust-stage="source" data-stage-status="active" class="is-active">
+            <span>01</span>
+            <strong>需求原文</strong>
+            <small id="logic-trust-source-state">等待来源</small>
+          </li>
+          <li data-trust-stage="parse" data-stage-status="pending">
+            <span>02</span>
+            <strong>解析动作</strong>
+            <small id="logic-trust-parse-state">等待解析</small>
+          </li>
+          <li data-trust-stage="map" data-stage-status="pending">
+            <span>03</span>
+            <strong>逻辑落点</strong>
+            <small id="logic-trust-map-state">等待落图</small>
+          </li>
+          <li data-trust-stage="review" data-stage-status="pending">
+            <span>04</span>
+            <strong>全局复核</strong>
+            <small id="logic-trust-review-state">等待复核</small>
+          </li>
+        </ol>
         <ol id="logic-requirement-trace-list" class="logic-requirement-trace-list" aria-label="逐段生成依据">
           <li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>
         </ol>
-        <div class="logic-requirement-trace-review" aria-label="全局复核">
+        <div class="logic-requirement-trace-review" aria-label="全局复核" data-global-review-summary="doc-to-panel">
           <span>全局复核</span>
           <strong id="logic-requirement-trace-review-state">等待线路图</strong>
           <p id="logic-requirement-trace-review-summary">生成完成后会核对节点、连线与边界。</p>

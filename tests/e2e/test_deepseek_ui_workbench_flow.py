@@ -3154,6 +3154,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         trace_panel = page.locator("#logic-requirement-trace-panel")
         expect(trace_panel).to_be_visible()
         expect(page.locator("#logic-requirement-trace-source")).to_have_text("deepseek-v4-pro-demo-requirements.md")
+        trust_spine = page.locator("#logic-trust-spine")
+        expect(trust_spine).to_be_visible()
+        expect(trust_spine).to_have_attribute("data-current-stage", "review")
+        expect(page.locator("#logic-trust-spine [data-trust-stage]")).to_have_count(4)
+        expect(page.locator('#logic-trust-spine [data-trust-stage="review"]')).to_have_class(re.compile("is-active"))
+        expect(page.locator("#logic-trust-parse-state")).to_contain_text("段原文已结构化")
+        expect(page.locator("#logic-trust-map-state")).to_contain_text("段落到节点/连线")
+        expect(page.locator("#logic-trust-review-state")).to_contain_text("节点 /")
         expect(page.locator("#logic-requirement-trace-list [data-requirement-trace-id]")).to_have_count(4)
         expect(page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")).to_have_count(1)
         active_trace = page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")
@@ -3163,6 +3171,10 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert "生成" in active_text
         for internal_token in ["radio_altitude_ft", "reverser_inhibited", "tls115"]:
             assert internal_token not in active_text
+        review_summary = page.locator("#logic-requirement-trace-review-summary").inner_text()
+        assert "原文锚点" in review_summary
+        assert "候选假设" in review_summary
+        assert "本地补齐" in review_summary
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
         expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
 
@@ -3182,6 +3194,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
 
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         expect(page.locator('[data-requirement-trace-id="row-logic3"]')).to_have_class(re.compile("is-active"))
+        expect(trust_spine).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(page.locator('[data-demo-node-id="logic3"]')).to_have_class(re.compile("is-requirement-trace-match"))
     finally:
         page.close()
