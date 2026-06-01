@@ -1265,6 +1265,19 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
   color: var(--fault-text);
 }
 
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix tr[data-blueprint33-row="fault-matrix"] td {
+  background:
+    linear-gradient(90deg, rgba(30, 103, 255, 0.035), transparent 56px),
+    #ffffff;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix tr[data-blueprint33-row="fault-matrix"].is-linked-active td,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix tr[data-blueprint33-row="fault-matrix"][aria-selected="true"] td {
+  background:
+    linear-gradient(90deg, rgba(30, 103, 255, 0.12), transparent 96px),
+    #f7fbff;
+}
+
 @media (min-width: 1081px) {
   .fault-shell {
     display: flex;

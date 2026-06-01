@@ -2244,6 +2244,19 @@ def test_source_deferred_fault_path_can_load_blueprint_candidate_sandbox_preview
         fault_row_box = page.locator("#fault-candidate-matrix-body [data-blueprint-density='compact-workbench']").first.bounding_box()
         assert fault_row_box
         assert fault_row_box["height"] <= 60
+        fault_row_style = page.locator(
+            "#fault-candidate-matrix-body [data-blueprint33-row='fault-matrix']"
+        ).first.locator("td").nth(1).evaluate(
+            """(element) => {
+              const style = getComputedStyle(element);
+              return {
+                backgroundColor: style.backgroundColor,
+                backgroundImage: style.backgroundImage,
+              };
+            }"""
+        )
+        assert fault_row_style["backgroundColor"] in {"rgb(255, 255, 255)", "rgb(247, 251, 255)"}
+        assert "30, 103, 255" in fault_row_style["backgroundImage"]
         id_token_metrics = page.locator("#fault-candidate-matrix-body .fault-matrix-id code").evaluate_all(
             """nodes => nodes.map((node) => ({
               text: node.textContent,
