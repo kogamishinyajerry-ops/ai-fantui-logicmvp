@@ -247,7 +247,7 @@
         id: "DOCX-L1-L4",
         kind: "DOCX 模板",
         origin: "logic-builder-template-entry",
-        quote_zh: "从逻辑绘制页载入的本地 DOCX L1-L4 模板候选。",
+        quote_zh: "从逻辑复制页载入的本地 DOCX L1-L4 模板候选。",
         requirement_level: "candidate-template",
         confidence: "local_template",
       },
@@ -518,7 +518,7 @@
       faultPayload.source_scope = {
         fault_injection: {
           status: "ui_template_preview",
-          reason_zh: "来自逻辑绘制页的 DOCX L1-L4 模板候选，作为本地仅候选态演示路径。",
+          reason_zh: "来自逻辑复制页的 DOCX L1-L4 模板候选，作为本地仅候选态演示路径。",
           source_anchors: templatePreviewSourceAnchors(),
         },
       };
@@ -526,7 +526,7 @@
         state.drawingPayload && state.drawingPayload.source_requirements_sha256
       ) || "local-docx-l1-l4-template";
       faultPayload.workflow_notes = [
-        "DOCX L1-L4 模板从逻辑绘制页进入故障矩阵；不调用模型和控制器。",
+        "DOCX L1-L4 模板从逻辑复制页进入故障矩阵；不调用模型和控制器。",
         "进入沙盒后只呈现空跑计划、证据链、审查行和报告预览。",
       ];
     }
@@ -540,7 +540,7 @@
         strategy: "ui_template_preview",
       };
       sandboxPayload.workflow_notes = [
-        "该沙盒计划由逻辑绘制页 DOCX 模板候选生成，保持仅候选态。",
+        "该沙盒计划由逻辑复制页 DOCX 模板候选生成，保持仅候选态。",
         "用于验收故障矩阵、沙盒审查、证据追溯和报告预览界面。",
       ];
     }
@@ -577,7 +577,7 @@
     renderBlueprintCandidatePreview({
       templateDrawing: true,
       title: "载入 DOCX 模板候选",
-      detail: "已发现逻辑绘制页 DOCX L1-L4 模板；正在构造仅候选态故障矩阵与沙盒入口。",
+      detail: "已发现逻辑复制页 DOCX L1-L4 模板；正在构造仅候选态故障矩阵与沙盒入口。",
       finishTitle: "DOCX 模板候选已接入",
       finishDetail: "已基于本地模板候选生成故障矩阵、边界确认和沙盒入口；未调用模型或控制器。",
       statusText: "DOCX L1-L4 模板已接入沙盒候选，不改变控制真值",
@@ -1054,7 +1054,7 @@
   function renderWorkflowOverview() {
     if (state.faultPayload && state.faultPayload.template_preview) {
       workflowStage.textContent = "DOCX 模板候选";
-      workflowDetail.textContent = "来自逻辑绘制页的 DOCX L1-L4 模板；当前已生成仅候选态故障矩阵和沙盒入口。";
+      workflowDetail.textContent = "来自逻辑复制页的 DOCX L1-L4 模板；当前已生成仅候选态故障矩阵和沙盒入口。";
       setWorkflowSteps("fault", ["requirements", "drawing"]);
       return;
     }
@@ -1067,14 +1067,14 @@
     if (state.drawingPayload && !state.requirementsPayload) {
       workflowStage.textContent = isDocxTemplateDrawing() ? "DOCX 模板候选" : "本地图纸候选";
       workflowDetail.textContent = isDocxTemplateDrawing()
-        ? "已载入逻辑绘制页 DOCX L1-L4 模板，可生成本地仅候选态故障矩阵和沙盒入口。"
+        ? "已载入逻辑复制页 DOCX L1-L4 模板，可生成本地仅候选态故障矩阵和沙盒入口。"
         : "已载入本地逻辑图纸；如需模型重算，请先回到需求理解页载入原需求。";
       setWorkflowSteps("drawing", ["requirements"]);
       return;
     }
     if (!state.requirementsPayload || !state.drawingPayload) {
       workflowStage.textContent = "等待逻辑图纸";
-      workflowDetail.textContent = "先完成需求澄清和初版逻辑绘制，再让模型准备故障候选。";
+      workflowDetail.textContent = "先完成需求澄清和初版逻辑复制，再让模型准备故障候选。";
       setWorkflowSteps("drawing", ["requirements"]);
       return;
     }
@@ -1100,7 +1100,7 @@
       const drawing = state.drawingPayload || {};
       sourceTitle.textContent = isDocxTemplateDrawing() ? "DOCX L1-L4 模板候选" : "本地逻辑图纸";
       sourceSummary.textContent = isDocxTemplateDrawing()
-        ? "来自逻辑绘制页的 DOCX L1-L4 本地候选；不会调用模型、仿真节拍或控制器真值。"
+        ? "来自逻辑复制页的 DOCX L1-L4 本地候选；不会调用模型、仿真节拍或控制器真值。"
         : (drawing.summary_zh || "已读取本地保存的模型图纸；缺少需求数据时仅保持候选态展示。");
       sourceMetrics.textContent = `${(drawing.nodes || []).length} 节点 · ${(drawing.edges || []).length} 连线 · ${(drawing.parameter_panels || []).length} 面板`;
       renderSourceDeferral();
@@ -1111,7 +1111,7 @@
       sourceTitle.textContent = state.faultPayload && state.faultPayload.first_visit_preview ? "蓝图候选预览" : "尚未载入";
       sourceSummary.textContent = state.faultPayload && state.faultPayload.first_visit_preview
         ? "首次进入空态使用本地仅候选态预览；不会调用模型、仿真节拍或控制器真值。"
-        : "需要先从逻辑绘制页生成图纸。";
+        : "需要先从逻辑复制页生成图纸。";
       sourceMetrics.textContent = state.faultPayload && state.faultPayload.first_visit_preview
         ? "2 场景 · 2 注入点 · 试运行"
         : "0 节点 · 0 连线 · 0 面板";
@@ -1583,7 +1583,7 @@
 
   async function generateFaultPreparation() {
     if (!state.requirementsPayload || !state.drawingPayload) {
-      failTask("缺少逻辑图纸", "请先回到逻辑绘制页生成模型图纸。");
+      failTask("缺少逻辑图纸", "请先回到逻辑复制页生成模型图纸。");
       return;
     }
     beginTask("读取逻辑图纸", "正在读取已澄清需求、模型图纸和修改历史。");

@@ -3052,7 +3052,7 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         expect(page.locator("#fault-result-state")).to_have_text("候选已生成")
         expect(page.locator("#fault-result-summary")).to_contain_text("DOCX L1-L4 模板候选")
         expect(page.locator("#fault-source-title")).to_have_text("DOCX L1-L4 模板候选")
-        expect(page.locator("#fault-source-summary")).to_contain_text("来自逻辑绘制页")
+        expect(page.locator("#fault-source-summary")).to_contain_text("来自逻辑复制页")
         expect(page.locator("#fault-source-summary")).not_to_contain_text("未发现已保存图纸")
         expect(page.locator("#fault-injection-workflow-stage")).to_have_text("DOCX 模板候选")
         expect(page.locator("#fault-injection-workflow-detail")).to_contain_text("仅候选态故障矩阵和沙盒入口")
