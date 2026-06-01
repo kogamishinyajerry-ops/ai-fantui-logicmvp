@@ -4103,11 +4103,19 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         assert actions_box["y"] + actions_box["height"] <= strip_box["y"] + strip_box["height"] - 1
         assert provider_box["y"] >= strip_box["y"] + 1
         assert primary_box["height"] <= 24
-        assert primary_box["width"] >= 88
+        assert primary_box["width"] >= 128
+        assert controls_box["width"] >= 340
         action_button_boxes = page.locator("#logic-command-controls button").evaluate_all(
             """nodes => nodes.map((node) => {
               const rect = node.getBoundingClientRect();
-              return {y: rect.y, bottom: rect.y + rect.height, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight};
+              return {
+                y: rect.y,
+                bottom: rect.y + rect.height,
+                scrollHeight: node.scrollHeight,
+                clientHeight: node.clientHeight,
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth
+              };
             })"""
         )
         assert len(action_button_boxes) == 3
@@ -4115,6 +4123,7 @@ def test_logic_builder_compact_topbar_controls_fit_at_1280(
         for box in action_button_boxes:
             assert box["bottom"] <= strip_box["y"] + strip_box["height"] - 1
             assert box["scrollHeight"] <= box["clientHeight"] + 1
+            assert box["scrollWidth"] <= box["clientWidth"] + 1
         expect(page.locator("#logic-fault-next")).to_be_visible()
         expect(page.locator("#logic-back")).to_have_text("更多：返回需求")
     finally:

@@ -3724,7 +3724,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-strip {
-    grid-template-columns: minmax(118px, 0.14fr) minmax(284px, 0.28fr) minmax(300px, 1fr) minmax(220px, 0.28fr);
+    grid-template-columns: minmax(118px, 0.14fr) minmax(284px, 0.28fr) minmax(220px, 1fr) minmax(348px, 0.34fr);
     gap: 6px;
     max-height: 82px;
     padding: 5px 7px;
@@ -3832,7 +3832,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   }
 
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-control-actions {
-    grid-template-columns: minmax(58px, 0.72fr) minmax(92px, 1.16fr) minmax(58px, 0.72fr);
+    grid-template-columns: minmax(94px, 0.86fr) minmax(134px, 1.22fr) minmax(94px, 0.86fr);
     gap: 3px;
   }
 
