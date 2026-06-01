@@ -2149,7 +2149,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .sandbox-report-strip .sandbox-report-preview-head {
-  margin-bottom: 3px;
+  margin-bottom: 1px;
 }
 
 .sandbox-report-strip .sandbox-report-preview-head .sandbox-kicker {
@@ -2157,25 +2157,30 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .sandbox-report-strip .sandbox-report-preview-head h2 {
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+.sandbox-report-strip #fault-sandbox-report-preview-count {
+  font-size: 9px;
 }
 
 .sandbox-report-strip .sandbox-report-section-rows {
   display: grid;
-  grid-auto-rows: 15px;
+  grid-auto-rows: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  max-height: 66px;
+  max-height: 51px;
   overflow: hidden;
 }
 
 .sandbox-report-strip .sandbox-report-section-row {
-  grid-template-columns: 27px minmax(72px, 1fr) 32px 42px 46px;
+  grid-template-columns: 25px minmax(60px, 1fr) 28px 38px 40px;
   gap: 2px;
-  min-height: 15px;
+  min-height: 12px;
   overflow: hidden;
-  padding: 1px 2px;
+  padding: 0 2px;
 }
 
 .sandbox-report-strip .sandbox-report-section-row [data-blueprint-col="source"],
@@ -2184,13 +2189,15 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .sandbox-report-strip .sandbox-report-section-row strong {
-  font-size: 10px;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .sandbox-report-strip .sandbox-report-section-decision,
 .sandbox-report-strip .sandbox-report-link-token {
-  padding: 2px 3px;
-  font-size: 8px;
+  padding: 1px 2px;
+  font-size: 7px;
+  line-height: 1;
 }
 
 .sandbox-report-actions,
