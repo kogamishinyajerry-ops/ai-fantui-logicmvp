@@ -1594,6 +1594,32 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     resize: none;
   }
 
+  @media (min-height: 960px) {
+    .fault-boundary-panel {
+      grid-template-rows: auto minmax(0, 1fr);
+      align-content: stretch;
+      min-height: 280px;
+    }
+
+    .fault-boundary-panel .fault-boundary-list {
+      align-content: stretch;
+      max-height: none;
+      height: 100%;
+    }
+
+    .fault-boundary-panel .fault-boundary-item label {
+      height: 100%;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 0.44fr);
+      align-items: stretch;
+    }
+
+    .fault-boundary-panel .fault-boundary-item textarea {
+      min-height: 160px;
+      max-height: none;
+      height: 100%;
+    }
+  }
+
   .fault-process {
     position: relative;
     right: auto;
