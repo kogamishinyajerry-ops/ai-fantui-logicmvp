@@ -1598,7 +1598,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     .fault-boundary-panel {
       grid-template-rows: auto minmax(0, 1fr);
       align-content: stretch;
-      min-height: 280px;
+      min-height: 360px;
     }
 
     .fault-boundary-panel .fault-boundary-list {
@@ -1614,7 +1614,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .fault-candidate-matrix t
     }
 
     .fault-boundary-panel .fault-boundary-item textarea {
-      min-height: 160px;
+      min-height: 240px;
       max-height: none;
       height: 100%;
     }

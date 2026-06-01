@@ -3763,8 +3763,8 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
         fault_boundary_list_box = page.locator("#fault-boundary-list").bounding_box()
         fault_action_strip_box = page.locator("#fault-bottom-action-strip").bounding_box()
         assert fault_boundary_panel_box and fault_boundary_list_box and fault_action_strip_box
-        assert fault_boundary_panel_box["height"] >= 270
-        assert fault_action_strip_box["y"] - (fault_boundary_panel_box["y"] + fault_boundary_panel_box["height"]) <= 168
+        assert fault_boundary_panel_box["height"] >= 350
+        assert fault_action_strip_box["y"] - (fault_boundary_panel_box["y"] + fault_boundary_panel_box["height"]) <= 96
         assert page.locator("#fault-boundary-list").evaluate(
             "node => node.scrollHeight <= node.clientHeight + 1"
         ) is True
@@ -3775,7 +3775,7 @@ def test_deepseek_v4_pro_ui_workbench_demo_flow_without_canvas_mainline(demo_ser
             })"""
         )
         assert fault_boundary_textarea_boxes
-        assert min(box["height"] for box in fault_boundary_textarea_boxes) >= 150
+        assert min(box["height"] for box in fault_boundary_textarea_boxes) >= 230
         assert all(box["scrollHeight"] <= box["clientHeight"] + 1 for box in fault_boundary_textarea_boxes)
         geometry.append(_assert_deepseek_page_contract(page, "fault-injection-prepare"))
         _screenshot(page, "03-fault-injection-prepare")
