@@ -1591,6 +1591,7 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         evidence_trace = page.locator("#fault-sandbox-evidence-trace")
         diagnosis_summary = page.locator("#fault-sandbox-diagnosis-summary")
         expect(report_rail).to_be_visible()
+        expect(page.locator("#fault-sandbox-diagnosis-title")).to_have_text("审查结果")
         expect(inspector).to_have_attribute("data-blueprint37-right-density", "layered-report-evidence")
         expect(inspector).to_have_attribute("data-blueprint37-report-mode", "replay-report-final")
         expect(report_rail).to_have_attribute("data-blueprint37-panel", "right-report-rail")
