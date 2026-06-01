@@ -1826,7 +1826,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   z-index: 2;
   pointer-events: auto;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr);
   gap: 4px;
   min-height: 0;
   overflow: hidden;
@@ -1848,6 +1848,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-output-backtrace-list {
   position: relative;
   z-index: 3;
+  grid-column: 2;
   pointer-events: auto;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1861,7 +1862,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   z-index: 3;
   pointer-events: auto;
   display: grid;
-  grid-template-columns: minmax(42px, 0.72fr) minmax(0, 1fr);
+  grid-template-columns: clamp(38px, 22%, 56px) minmax(0, 1fr);
   align-items: center;
   gap: 4px;
   min-width: 0;
@@ -1882,9 +1883,29 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   white-space: nowrap;
 }
 
+.logic-output-backtrace-evidence {
+  grid-column: 1;
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logic-output-backtrace-evidence {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+}
+
 .logic-output-backtrace-sources {
   position: relative;
   z-index: 4;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
@@ -1978,9 +1999,18 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   background: rgba(7, 20, 33, 0.72);
   padding: 3px 4px;
 }
+.logic-output-backtrace-item.is-active {
+  border-color: rgba(245, 200, 91, 0.66);
+  background: rgba(245, 200, 91, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(245, 200, 91, 0.12);
+}
 .logic-output-backtrace-item strong {
   color: #f2f7fc;
   font-size: 8px;
+}
+.logic-output-backtrace-evidence {
+  color: #a8bad0;
+  font-size: 6.5px;
 }
 .logic-output-backtrace-source,
 .logic-output-backtrace-more {

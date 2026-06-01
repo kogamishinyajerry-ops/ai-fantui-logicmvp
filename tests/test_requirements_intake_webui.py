@@ -5727,6 +5727,7 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert ".logic-output-impact-badge" in logic_stylesheet
     assert ".logic-output-backtrace-panel" in logic_stylesheet
     assert ".logic-output-backtrace-source" in logic_stylesheet
+    assert ".logic-output-backtrace-evidence" in logic_stylesheet
     assert ".logic-current-segment-anchor-jumps" in logic_stylesheet
     assert ".logic-global-review-matrix" in logic_stylesheet
     assert ".logic-review-matrix-action" in logic_stylesheet

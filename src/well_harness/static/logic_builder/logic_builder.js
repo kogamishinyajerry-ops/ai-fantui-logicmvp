@@ -102,6 +102,7 @@
   };
   const state = {
     requirementsPayload: null,
+    activeOutputBacktraceId: "",
     drawingPayload: null,
     timer: null,
     circuitEvaluationTimer: null,
@@ -417,6 +418,12 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function escapeSelectorValue(value) {
+    const raw = String(value == null ? "" : value);
+    if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(raw);
+    return raw.replace(/["\\]/g, "\\$&");
   }
 
   function renderBoundaryTokenValue(target, value) {
@@ -892,10 +899,36 @@
       .slice(0, 3);
   }
 
+  function relatedWireIdsForOutputGroup(sources, group) {
+    const outputNodeIds = new Set(Array.isArray(group && group.nodeIds) ? group.nodeIds : []);
+    const relatedWireIds = new Set();
+    for (const source of Array.isArray(sources) ? sources : []) {
+      for (const wireId of Array.isArray(source && source.wireIds) ? source.wireIds : []) {
+        const endpoints = String(wireId || "").split("->").map((part) => part.trim()).filter(Boolean);
+        if (endpoints.some((endpointId) => outputNodeIds.has(endpointId))) relatedWireIds.add(wireId);
+      }
+    }
+    return relatedWireIds;
+  }
+
   function syncOutputBacktraceActiveTrace(traceId) {
     if (!outputBacktracePanel || !outputBacktraceList) return;
     const activeId = traceId || "none";
+    let activeOutputId = state.activeOutputBacktraceId || "";
+    if (activeOutputId && !outputBacktraceList.querySelector(`[data-output-backtrace-output="${escapeSelectorValue(activeOutputId)}"] [data-output-backtrace-source="${escapeSelectorValue(activeId)}"]`)) {
+      activeOutputId = "";
+    }
+    if (!activeOutputId && activeId !== "none") {
+      const activeSource = outputBacktraceList.querySelector(`[data-output-backtrace-source="${escapeSelectorValue(activeId)}"]`);
+      const activeOutputItem = activeSource ? activeSource.closest("[data-output-backtrace-output]") : null;
+      activeOutputId = activeOutputItem ? (activeOutputItem.dataset.outputBacktraceOutput || "") : "";
+    }
+    state.activeOutputBacktraceId = activeOutputId;
     outputBacktracePanel.dataset.activeTraceId = activeId;
+    outputBacktracePanel.dataset.activeOutput = activeOutputId || "none";
+    outputBacktraceList.querySelectorAll("[data-output-backtrace-output]").forEach((item) => {
+      item.classList.toggle("is-active", Boolean(activeOutputId) && item.dataset.outputBacktraceOutput === activeOutputId);
+    });
     outputBacktraceList.querySelectorAll("[data-output-backtrace-source]").forEach((button) => {
       const isActive = button.dataset.outputBacktraceSource === activeId;
       button.classList.toggle("is-active", isActive);
@@ -919,7 +952,8 @@
     }
     const groups = OUTPUT_BACKTRACE_GROUPS.map((group) => {
       const sources = traces.filter((trace) => group.nodeIds.some((nodeId) => trace.nodeIdSet.has(nodeId)));
-      return { ...group, sources };
+      const relatedWireIds = relatedWireIdsForOutputGroup(sources, group);
+      return { ...group, sources, relatedWireCount: relatedWireIds.size };
     });
     outputBacktracePanel.dataset.outputBacktrace = "ready";
     outputBacktracePanel.dataset.outputCount = String(groups.filter((group) => group.sources.length).length);
@@ -929,22 +963,30 @@
       const sourceBadges = visibleSources.length
         ? `${visibleSources.map((source) => `<button type="button" class="logic-output-backtrace-source" data-output-backtrace-source="${escapeText(source.id)}" aria-pressed="false">段 ${escapeText(source.displayIndex)}</button>`).join("")}${hiddenSourceCount ? `<span class="logic-output-backtrace-more">+${hiddenSourceCount}</span>` : ""}`
         : '<span class="logic-output-backtrace-more">待映射</span>';
+      const evidenceText = `${group.sources.length} 段 · ${group.relatedWireCount || 0} 线索`;
       return `
-        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}">
+        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-wire-count="${group.relatedWireCount || 0}">
           <strong>${escapeText(group.label)}</strong>
+          <small class="logic-output-backtrace-evidence">${escapeText(evidenceText)}</small>
           <span class="logic-output-backtrace-sources">${sourceBadges}</span>
         </article>
       `;
     }).join("");
+    const activateOutputBacktraceSource = (sourceElement) => {
+      if (!sourceElement || !sourceElement.dataset.outputBacktraceSource) return;
+      const outputItem = sourceElement.closest("[data-output-backtrace-output]");
+      state.activeOutputBacktraceId = outputItem ? (outputItem.dataset.outputBacktraceOutput || "") : "";
+      setActiveRequirementTrace(sourceElement.dataset.outputBacktraceSource || "");
+    };
     outputBacktraceList.querySelectorAll("[data-output-backtrace-source]").forEach((button) => {
-      button.addEventListener("click", () => setActiveRequirementTrace(button.dataset.outputBacktraceSource || ""));
+      button.addEventListener("click", () => activateOutputBacktraceSource(button));
     });
     const activateBacktraceAtPoint = (event) => {
       const explicitSource = event.target && event.target.closest
         ? event.target.closest("[data-output-backtrace-source]")
         : null;
       if (explicitSource && explicitSource.dataset.outputBacktraceSource) {
-        setActiveRequirementTrace(explicitSource.dataset.outputBacktraceSource);
+        activateOutputBacktraceSource(explicitSource);
         return;
       }
       const sourceButtons = Array.from(outputBacktraceList.querySelectorAll("[data-output-backtrace-source]"));
@@ -953,7 +995,7 @@
         return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
       });
       if (sourceAtPoint && sourceAtPoint.dataset.outputBacktraceSource) {
-        setActiveRequirementTrace(sourceAtPoint.dataset.outputBacktraceSource);
+        activateOutputBacktraceSource(sourceAtPoint);
       }
     };
     outputBacktracePanel.onclick = activateBacktraceAtPoint;

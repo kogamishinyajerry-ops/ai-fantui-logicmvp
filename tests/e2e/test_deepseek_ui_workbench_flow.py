@@ -3208,6 +3208,9 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_contain_text("段 01")
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_contain_text("段 02")
         expect(output_backtrace.locator('[data-output-backtrace-output="deploy"]')).to_contain_text("段 03")
+        expect(output_backtrace.locator(".logic-output-backtrace-evidence")).to_have_count(4)
+        expect(output_backtrace.locator('[data-output-backtrace-output="tls"] .logic-output-backtrace-evidence')).to_contain_text("段")
+        expect(output_backtrace.locator('[data-output-backtrace-output="tls"] .logic-output-backtrace-evidence')).to_contain_text("线索")
         segment_card = page.locator("#logic-current-segment-evidence")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
@@ -3260,6 +3263,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert second_trace_labels.split("|")[0] in page.locator("#logic-current-segment-output-labels").inner_text()
         assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
+        expect(output_backtrace).to_have_attribute("data-active-output", "etrac")
+        expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_have_class(re.compile("is-active"))
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]')).to_have_attribute("aria-pressed", "true")
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator(".logic-circuit-wire.is-requirement-trace-match")).not_to_have_count(0)
@@ -3281,6 +3286,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert toolbar_box is not None
         assert bottom_strip_box is not None
         assert trace_list_box["height"] >= 100
+        assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-output-backtrace-list [data-output-backtrace-output]")).every((item) => Number(item.dataset.sourceCount || "0") >= 0 && Number(item.dataset.wireCount || "0") >= 0)""") is True
         assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-item button")).every((button) => button.scrollWidth <= button.clientWidth + 1 && button.scrollHeight <= button.clientHeight + 1)""") is True
         assert trace_list_box["y"] + trace_list_box["height"] + 4 <= segment_card_box["y"]
         assert segment_card_box["y"] + segment_card_box["height"] + 4 <= output_backtrace_box["y"]
