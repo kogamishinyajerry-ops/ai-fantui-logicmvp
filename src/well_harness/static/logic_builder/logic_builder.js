@@ -1045,10 +1045,12 @@
 
   function activateBottomDrawer(tabName) {
     const activeTab = ["parameters", "run", "evidence", "report"].includes(tabName) ? tabName : "none";
+    const previousActiveTab = bottomDrawer ? bottomDrawer.dataset.activeTab || "none" : "none";
     if (activeTab !== "none") {
       if (logicShell) logicShell.classList.remove("is-left-open", "is-right-open");
       hideObjectContextDrawer();
       closeCommandPalette();
+      activateWorkbenchTab("none");
       setActiveAuxPanel("bottom-drawer");
     } else if (logicShell && logicShell.dataset.activeAuxPanel === "bottom-drawer") {
       setActiveAuxPanel("none");
@@ -1069,6 +1071,11 @@
       button.setAttribute("aria-pressed", (activeTab === "none" ? mode === "canvas" : mode === activeTab) ? "true" : "false");
     });
     syncPanelStateContract();
+    if (previousActiveTab !== activeTab && state.drawingPayload) {
+      window.requestAnimationFrame(() => {
+        if (state.drawingPayload) renderDrawing(state.drawingPayload);
+      });
+    }
   }
 
   function closeAuxiliaryPanels() {
@@ -4062,7 +4069,16 @@
     const viewportWidth = Math.max(320, canvas.clientWidth || canvas.parentElement.clientWidth || size.width);
     const parentHeight = canvas.parentElement ? canvas.parentElement.clientHeight : size.height;
     const toolbarHeight = logicCanvasToolbar ? logicCanvasToolbar.getBoundingClientRect().height : 0;
-    const viewportHeight = Math.max(360, parentHeight - toolbarHeight - 88);
+    const drawerState = logicShell ? logicShell.dataset.bottomDrawerState : "closed";
+    const workbenchDrawerState = canvas.parentElement ? canvas.parentElement.dataset.workbenchDrawerState : "closed";
+    const fitToCanvasSlot = drawerState === "open" || workbenchDrawerState === "open";
+    const canvasSlotHeight = fitToCanvasSlot ? canvas.clientHeight : 0;
+    const viewportHeight = Math.max(
+      220,
+      fitToCanvasSlot && canvasSlotHeight
+        ? canvasSlotHeight
+        : parentHeight - toolbarHeight - 88
+    );
     const fitScale = Math.min(
       1.14,
       Math.max(0.48, Math.min((viewportWidth - 18) / size.width, (viewportHeight - 18) / size.height))

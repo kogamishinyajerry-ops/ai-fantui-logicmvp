@@ -3938,6 +3938,68 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-canvas-wrap[data-workbench-drawer-state="open"] #logic-bottom-run-strip {
     grid-row: 5;
   }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] .logic-canvas-wrap {
+    grid-template-rows: 34px 30px minmax(0, 1fr) clamp(174px, 24vh, 206px) 52px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-canvas {
+    grid-row: 3;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer:not([hidden]) {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-column: 1 / -1;
+    grid-row: 4;
+    gap: 6px 8px;
+    min-height: 0;
+    max-height: 100%;
+    overflow: auto;
+    margin: 0;
+    padding: 8px 10px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer .logic-bottom-drawer-tabbar {
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(60px, 0.44fr) minmax(60px, 0.44fr);
+    gap: 6px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer .logic-drawer-actions {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer .logic-bottom-drawer-panel {
+    grid-column: 1 / -1;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer .logic-parameter-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer .logic-parameter-grid label {
+    grid-template-columns: minmax(30px, 0.46fr) minmax(44px, 0.34fr) minmax(0, 1fr);
+    gap: 5px;
+    padding: 5px 6px;
+    font-size: 10px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-run-parameter-drawer .logic-drawer-mode-toggle {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"][data-bottom-drawer-state="open"] #logic-bottom-run-strip {
+    grid-row: 5;
+  }
 }
 
 @media (max-width: 1080px) {

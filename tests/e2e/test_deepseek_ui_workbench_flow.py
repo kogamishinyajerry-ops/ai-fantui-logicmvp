@@ -3388,6 +3388,41 @@ def test_logic_builder_run_and_parameter_drawer_match_selected_final_31_32(
         drawer = page.locator("#logic-run-parameter-drawer")
         expect(drawer).to_be_visible()
         expect(drawer).to_have_attribute("data-blueprint32-surface", "parameter-drawer-final")
+        page.wait_for_function(
+            """() => {
+              const canvas = document.querySelector("#logic-canvas")?.getBoundingClientRect();
+              const drawer = document.querySelector("#logic-run-parameter-drawer")?.getBoundingClientRect();
+              const bottom = document.querySelector("#logic-bottom-run-strip")?.getBoundingClientRect();
+              return Boolean(canvas && drawer && bottom
+                && canvas.bottom <= drawer.top - 4
+                && drawer.bottom <= bottom.top - 4);
+            }"""
+        )
+        canvas_box = page.locator("#logic-canvas").bounding_box()
+        drawer_box = drawer.bounding_box()
+        bottom_strip_box = page.locator("#logic-bottom-run-strip").bounding_box()
+        assert canvas_box is not None
+        assert drawer_box is not None
+        assert bottom_strip_box is not None
+        assert canvas_box["y"] + canvas_box["height"] <= drawer_box["y"] - 4
+        assert drawer_box["y"] + drawer_box["height"] <= bottom_strip_box["y"] - 4
+        drawer_covered_nodes = page.evaluate(
+            """() => {
+              const drawer = document.querySelector("#logic-run-parameter-drawer")?.getBoundingClientRect();
+              if (!drawer) return ["missing-drawer"];
+              return Array.from(document.querySelectorAll(".logic-circuit-node"))
+                .filter((node) => {
+                  const box = node.getBoundingClientRect();
+                  if (box.width === 0 || box.height === 0) return false;
+                  return drawer.left < box.right
+                    && drawer.right > box.left
+                    && drawer.top < box.bottom
+                    && drawer.bottom > box.top;
+                })
+                .map((node) => node.dataset.demoNodeId || node.dataset.nodeId || node.textContent.trim());
+            }"""
+        )
+        assert drawer_covered_nodes == []
         expect(page.locator("#logic-drawer-tra-threshold")).to_be_visible()
         expect(drawer.locator('label:has(#logic-drawer-tra-threshold) span')).to_have_text("TRA 门限")
         expect(page.locator("#logic-drawer-tra-threshold-value")).to_have_text("350 ft")
