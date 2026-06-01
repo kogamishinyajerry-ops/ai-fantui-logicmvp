@@ -1643,8 +1643,22 @@ def test_fault_sandbox_default_main_area_uses_replay_canvas_and_report_rail(
         assert rail_box["x"] > canvas_box["x"] + canvas_box["width"] - 8
         assert 250 <= rail_box["width"] <= 360
         assert package_box["y"] < rail_box["y"] < path_box["y"] < chain_box["y"]
+        assert path_box["y"] + path_box["height"] <= chain_box["y"] - 2
         assert diagnosis_summary_box["height"] >= 26
         assert diagnosis_summary.evaluate("(element) => element.scrollHeight <= element.clientHeight + 1") is True
+        diagnosis_path_cards = page.locator(".sandbox-diagnosis-path[data-blueprint37-right-section='diagnosis-summary'] > div").evaluate_all(
+            """nodes => nodes.map((node) => {
+              const rect = node.getBoundingClientRect();
+              return {
+                width: rect.width,
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth,
+              };
+            })"""
+        )
+        assert len(diagnosis_path_cards) == 3
+        assert min(card["width"] for card in diagnosis_path_cards) >= 280
+        assert all(card["scrollWidth"] <= card["clientWidth"] + 1 for card in diagnosis_path_cards)
         assert 26 <= report_rows_box["height"] <= 44
         assert first_report_row_box["height"] >= 26
         assert first_report_title.evaluate("(element) => element.scrollWidth <= element.clientWidth + 1") is True
