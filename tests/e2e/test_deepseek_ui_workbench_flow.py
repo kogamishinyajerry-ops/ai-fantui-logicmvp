@@ -757,7 +757,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta(demo_serv
             "候选矩阵",
             [
                 ("#fault-generate", "检查：生成候选"),
-                ("#fault-back", "更多：返回绘图"),
+                ("#fault-back", "更多：返回逻辑复制"),
             ],
         ),
         (

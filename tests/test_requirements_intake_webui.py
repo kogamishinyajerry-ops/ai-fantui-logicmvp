@@ -6270,7 +6270,7 @@ def test_deepseek_four_page_command_strips_use_single_primary_next_cta():
             "下一步：进入沙盒审查",
             [
                 ("fault-generate", "检查：生成候选", "生成故障候选"),
-                ("fault-back", "更多：返回绘图", "返回逻辑绘制"),
+                ("fault-back", "更多：返回逻辑复制", "返回逻辑复制"),
             ],
         ),
         (
