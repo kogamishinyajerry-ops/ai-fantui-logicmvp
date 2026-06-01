@@ -103,6 +103,7 @@
   const state = {
     requirementsPayload: null,
     activeOutputBacktraceId: "",
+    blockedOutputBacktraceId: "",
     outputBacktraceSourceIndex: new Map(),
     drawingPayload: null,
     timer: null,
@@ -809,8 +810,16 @@
   function focusOutputBacktraceForCircuitNode(nodeId) {
     if (!nodeId || !outputBacktracePanel) return;
     const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
+    const candidateGroup = OUTPUT_BACKTRACE_GROUPS.find((item) => item.nodeIds.includes(nodeId));
     const group = OUTPUT_BACKTRACE_GROUPS.find((item) => relatedIds.has(item.id) && item.nodeIds.includes(nodeId));
-    if (!group) return;
+    if (!group) {
+      if (candidateGroup) {
+        state.blockedOutputBacktraceId = candidateGroup.id;
+        syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
+      }
+      return;
+    }
+    state.blockedOutputBacktraceId = "";
     state.activeOutputBacktraceId = group.id;
     syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
   }
@@ -976,6 +985,8 @@
     outputBacktracePanel.dataset.activeTraceId = activeId;
     outputBacktracePanel.dataset.activeOutput = activeOutputId || "none";
     outputBacktracePanel.dataset.relatedOutputCount = String(relatedOutputIds.size);
+    outputBacktracePanel.dataset.outputFocusFeedback = state.blockedOutputBacktraceId ? "not-related" : "none";
+    outputBacktracePanel.dataset.outputFocusBlocked = state.blockedOutputBacktraceId || "";
     const relatedLabels = Array.from(relatedOutputIds)
       .map((outputId) => outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === outputId))
       .filter(Boolean)
@@ -1008,8 +1019,13 @@
     }
     outputBacktracePanel.dataset.relatedOutputIds = Array.from(relatedOutputIds).join("|");
     outputBacktraceItems.forEach((item) => {
-      item.classList.toggle("is-active", Boolean(activeOutputId) && item.dataset.outputBacktraceOutput === activeOutputId);
-      item.classList.toggle("is-related", relatedOutputIds.has(item.dataset.outputBacktraceOutput || ""));
+      const outputId = item.dataset.outputBacktraceOutput || "";
+      const isBlockedOutput = Boolean(state.blockedOutputBacktraceId) && outputId === state.blockedOutputBacktraceId;
+      item.classList.toggle("is-active", Boolean(activeOutputId) && outputId === activeOutputId);
+      item.classList.toggle("is-related", relatedOutputIds.has(outputId));
+      item.classList.toggle("is-output-focus-blocked", isBlockedOutput);
+      if (isBlockedOutput) item.dataset.outputFocusFeedback = "not-related";
+      else delete item.dataset.outputFocusFeedback;
     });
     applyOutputBacktraceFocus(activeOutputId);
     outputBacktraceSources.forEach((button) => {
@@ -1076,13 +1092,19 @@
       if (!sourceElement || !sourceElement.dataset.outputBacktraceSource) return;
       const outputItem = sourceElement.closest("[data-output-backtrace-output]");
       state.activeOutputBacktraceId = outputItem ? (outputItem.dataset.outputBacktraceOutput || "") : "";
+      state.blockedOutputBacktraceId = "";
       setActiveRequirementTrace(sourceElement.dataset.outputBacktraceSource || "");
     };
     const activateOutputBacktraceFocus = (outputElement) => {
       if (!outputElement || !outputElement.dataset.outputBacktraceOutput) return;
       const outputId = outputElement.dataset.outputBacktraceOutput || "";
       const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
-      if (!relatedIds.has(outputId)) return;
+      if (!relatedIds.has(outputId)) {
+        state.blockedOutputBacktraceId = outputId;
+        syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
+        return;
+      }
+      state.blockedOutputBacktraceId = "";
       state.activeOutputBacktraceId = outputId;
       syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
     };
@@ -1222,6 +1244,7 @@
     if (!requirementTracePanel || !requirementTraceList) return;
     const nextId = traceId || "";
     state.activeRequirementTraceId = nextId;
+    state.blockedOutputBacktraceId = "";
     requirementTracePanel.dataset.activeTraceId = nextId || "none";
     if (trustSpine) trustSpine.dataset.activeTraceId = nextId || "none";
     const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));

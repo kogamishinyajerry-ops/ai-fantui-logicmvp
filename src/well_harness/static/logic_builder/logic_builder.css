@@ -5152,3 +5152,8 @@ body[data-logic-interaction-mode="natural-language"] .logic-shell[data-blueprint
   stroke-width: 3;
   filter: drop-shadow(0 0 8px rgba(242, 201, 76, 0.38));
 }
+
+.logic-output-backtrace-item.is-output-focus-blocked {
+  border-color: rgba(224, 85, 85, 0.72);
+  box-shadow: inset 2px 0 0 rgba(224, 85, 85, 0.58);
+}
