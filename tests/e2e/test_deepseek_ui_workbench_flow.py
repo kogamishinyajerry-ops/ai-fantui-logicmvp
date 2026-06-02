@@ -4814,6 +4814,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_id="none",
             selected_source="none",
             source_anchor_id="logic1",
+            inspector_state="waiting",
         )
         expect(page.locator("#logic-canvas")).to_be_visible()
         _assert_current_segment_trust_chain_layout(page)
@@ -5499,6 +5500,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             current_id="row-logic3",
             selected_id="row-logic2",
             selected_source="canvas-node",
+            inspector_state="matched",
         )
         _expect_canvas_selected_trace_state_badge(
             page,
@@ -5551,6 +5553,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             current_id="row-logic2",
             selected_id="row-logic2",
             selected_source="canvas-node",
+            inspector_state="matched",
         )
         _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
@@ -5722,6 +5725,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             current_id="row-logic1",
             selected_id="row-logic1",
             selected_source="canvas-wire",
+            inspector_state="matched",
         )
         _expect_trace_identity_coherence_across_surfaces(page)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
@@ -5750,6 +5754,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             current_id="row-logic1",
             selected_id="none",
             selected_source="none",
+            inspector_state="unbound",
         )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
         _expect_inspector_trace_state_badge(page, "未绑定")
