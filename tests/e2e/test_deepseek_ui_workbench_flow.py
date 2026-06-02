@@ -8831,6 +8831,100 @@ def test_logic_builder_streamed_candidate_copy_uses_readable_targets(
         page.close()
 
 
+def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1440, "height": 960})
+    captured_requests: list[dict[str, Any]] = []
+
+    def streamed_session_payload(revised: bool, feedback_text: str = "") -> dict[str, Any]:
+        proposal = {
+            "id": "proposal-wire-sw1-logic1-revised" if revised else "proposal-wire-sw1-logic1",
+            "target_type": "wire",
+            "target_id": "sw1->logic1",
+            "display_label": "sw1->logic1",
+            "sequence_index": 1,
+            "proposal_status": "candidate_awaiting_confirmation",
+            "requires_user_confirmation": True,
+            "source_excerpt": "按 sw1->logic1 建立 logic1 输入说明。",
+            "source_anchor_ids": ["logic1"],
+            "upstream": ["sw1"],
+            "downstream": ["logic1"],
+            "interpreted_logic": "候选会补充 sw1->logic1 与 logic1 输入解释。",
+            "confirmation_question_zh": "是否确认 sw1->logic1？",
+        }
+        if revised:
+            proposal["proposal_status"] = "revised_proposal_ready"
+            proposal["revision_of"] = "proposal-wire-sw1-logic1"
+            proposal["feedback_applied"] = {
+                "status": "revision_candidate_ready",
+                "feedback_text": feedback_text,
+            }
+        return {
+            "kind": "ai-fantui-streamed-authoring-session",
+            "status": "awaiting_confirmation",
+            "proposal_count": 1,
+            "source_requirements_sha256": "req-sha",
+            "source_drawing_sha256": "drawing-sha",
+            "active_proposal": proposal,
+            "candidate_queue": {
+                "status": "candidate_queue_active",
+                "active_target_key": "sw1->logic1",
+                "active_sequence_index": 1,
+                "total_candidate_count": 1,
+                "accepted_count": 0,
+                "pending_count": 1,
+                "next_candidate_kind": "wire",
+            },
+            "stream_replay": [],
+        }
+
+    def fulfill_streamed_candidate(route: Any) -> None:
+        request_payload = json.loads(route.request.post_data or "{}")
+        captured_requests.append(request_payload)
+        history = request_payload.get("decision_history") or []
+        feedback_text = history[-1].get("feedback_text", "") if history else ""
+        _fulfill_json(route, streamed_session_payload(bool(history), feedback_text))
+
+    try:
+        page.route("**/api/requirements-intake/streamed-authoring/proposal", fulfill_streamed_candidate)
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-logic-builder-streamed-authoring-v1");
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing()],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        page.click("#logic-streamed-panel-toggle")
+        expect(page.locator("#logic-streamed-authoring-panel")).to_be_visible()
+        page.click("#logic-streamed-start")
+        expect(page.locator("#logic-streamed-title")).to_have_text("连线 SW1 到 L1")
+        page.fill("#logic-streamed-feedback", "请重算 sw1->logic1 与 logic1 输入解释")
+        expect(page.locator("#logic-streamed-revise")).to_be_enabled()
+        page.click("#logic-streamed-revise")
+
+        receipt = page.locator("#logic-streamed-revision-receipt")
+        expect(receipt).to_be_visible()
+        expect(receipt).to_have_attribute("data-feedback-applied", "true")
+        expect(page.locator("#logic-streamed-revision-status")).to_have_text("反馈已重算候选")
+        expect(page.locator("#logic-streamed-revision-feedback")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-streamed-revision-feedback")).to_contain_text("L1")
+        revision_feedback_state = page.evaluate("""() => ({
+          feedback: document.querySelector("#logic-streamed-revision-feedback")?.textContent || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(revision_feedback_state, "feedback")
+        assert len(captured_requests) >= 2
+        assert captured_requests[-1]["decision_history"][0]["target_id"] == "sw1->logic1"
+        assert captured_requests[-1]["decision_history"][0]["feedback_text"] == "请重算 sw1->logic1 与 logic1 输入解释"
+    finally:
+        page.close()
+
+
 def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
     demo_server: str, browser: Any
 ) -> None:

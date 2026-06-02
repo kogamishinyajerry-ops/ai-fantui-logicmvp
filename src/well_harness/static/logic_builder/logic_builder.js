@@ -2324,7 +2324,7 @@
       const feedbackText = feedbackApplied && feedbackApplied.feedback_text
         ? feedbackApplied.feedback_text
         : "反馈后会在这里显示重算依据。";
-      streamedRevisionFeedback.textContent = feedbackText;
+      streamedRevisionFeedback.textContent = readableLogicReferenceText(feedbackText);
     }
     if (streamedRevisionBoundary) {
       streamedRevisionBoundary.dataset.boundaryToken = "truth_effect:none";
