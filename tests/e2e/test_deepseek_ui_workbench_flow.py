@@ -4241,6 +4241,33 @@ def test_logic_builder_node_label_fallback_uses_readable_concept_anchor(
         page.close()
 
 
+def test_logic_builder_generation_stream_prefers_node_label_over_backend_id(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    drawing = json.loads(json.dumps(LOGIC_DRAWING))
+    drawing.pop("circuit_view", None)
+    drawing["nodes"][0]["id"] = "backend_input_raw"
+    drawing["nodes"][0]["label"] = "RA 自定义高度"
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        stream_events = page.locator("#logic-drawing-stream-events")
+        expect(stream_events).to_contain_text("生成节点 RA 自定义高度")
+        expect(stream_events).not_to_contain_text("backend_input_raw")
+    finally:
+        page.close()
+
+
 def test_logic_builder_parameter_panel_fallback_copy_uses_readable_label(
     demo_server: str, browser: Any
 ) -> None:

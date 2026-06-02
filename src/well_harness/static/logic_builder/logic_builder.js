@@ -681,7 +681,9 @@
       text: `读取来源：${sourceAnchorLabel(firstAnchor ? firstAnchor.source_anchors : [])}`,
     });
     nodes.slice(0, 3).forEach((node) => {
-      const nodeLabel = readableLogicReferenceText(node.id || node.label || "节点");
+      const nodeLabel = circuitView
+        ? (circuitDisplayLabel(node) || readableLogicReferenceText(node.label || node.id || "节点"))
+        : readableDrawingNodeLabel(node, node.label || node.id || "节点");
       events.push({
         kind: "node",
         text: `生成节点 ${nodeLabel} · 来源：${sourceAnchorLabel(node.source_anchors)}`,
@@ -810,11 +812,16 @@
     };
     const nodes = circuitView ? (circuitView.nodes || []) : ((payload && payload.nodes) || []);
     const wires = circuitView ? (circuitView.wires || []) : ((payload && payload.edges) || []);
-    nodes.forEach((node) => addAnchorTargets(node.source_anchors, {
-      kind: "node",
-      nodeIds: traceNodeIds(node),
-      action: `生成节点 ${readableLogicReferenceText(node.label || node.id || "节点")}`,
-    }));
+    nodes.forEach((node) => {
+      const nodeLabel = circuitView
+        ? (circuitDisplayLabel(node) || readableLogicReferenceText(node.label || node.id || "节点"))
+        : readableDrawingNodeLabel(node, node.label || node.id || "节点");
+      addAnchorTargets(node.source_anchors, {
+        kind: "node",
+        nodeIds: traceNodeIds(node),
+        action: `生成节点 ${nodeLabel}`,
+      });
+    });
     wires.forEach((wire) => addAnchorTargets(wire.source_anchors, {
       kind: "wire",
       wireIds: [circuitWireKey(wire)],
