@@ -1101,6 +1101,7 @@
       nodeIdSet: nodeIdsForTrace(item),
     }));
     if (!traces.length) {
+      clearCurrentSegmentOutputBacktraceReveal();
       outputBacktracePanel.dataset.outputBacktrace = "waiting";
       outputBacktracePanel.dataset.outputCount = "0";
       outputBacktracePanel.dataset.outputTotalCount = "0";
@@ -1148,6 +1149,7 @@
     }).join("");
     const activateOutputBacktraceSource = (sourceElement) => {
       if (!sourceElement || !sourceElement.dataset.outputBacktraceSource) return;
+      clearCurrentSegmentOutputBacktraceReveal();
       const outputItem = sourceElement.closest("[data-output-backtrace-output]");
       state.activeOutputBacktraceId = outputItem ? (outputItem.dataset.outputBacktraceOutput || "") : "";
       state.blockedOutputBacktraceId = "";
@@ -1156,6 +1158,7 @@
     };
     const activateOutputBacktraceFocus = (outputElement) => {
       if (!outputElement || !outputElement.dataset.outputBacktraceOutput) return;
+      clearCurrentSegmentOutputBacktraceReveal();
       const outputId = outputElement.dataset.outputBacktraceOutput || "";
       const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
       if (!relatedIds.has(outputId)) {
@@ -1413,6 +1416,7 @@
       requirementTraceSource.textContent = doc.name || (payload && payload.source_requirements_sha256 ? "已确认需求来源" : "本地结构化需求");
     }
     if (!items.length) {
+      clearCurrentSegmentOutputBacktraceReveal();
       requirementTracePanel.dataset.activeTraceId = "waiting";
       requirementTraceList.innerHTML = '<li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>';
       const evidence = renderTrustSpine(payload, circuitView, items);
@@ -5531,6 +5535,7 @@
   currentSegmentJumpButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const action = button.dataset.currentSegmentJump || "all";
+      clearCurrentSegmentOutputBacktraceReveal();
       state.currentSegmentJumpAction = action;
       if (action === "trace") {
         setCircuitProvenanceFilter("all");
