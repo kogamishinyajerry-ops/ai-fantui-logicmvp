@@ -78,6 +78,45 @@ def _expect_trace_consistency(
         expect(locator).to_have_attribute("data-trace-consistency-align-source", align_source)
 
 
+def _assert_current_segment_consistency_cue_layout(page: Any, *, align_visible: bool) -> None:
+    assert page.evaluate(
+        """(alignVisible) => {
+          const cell = document.querySelector("#logic-current-segment-consistency");
+          const cue = document.querySelector("#logic-current-segment-consistency-cue");
+          const text = document.querySelector("#logic-current-segment-consistency-text");
+          const align = document.querySelector("#logic-current-segment-consistency-align");
+          const canvas = document.querySelector("#logic-canvas");
+          if (!cell || !cue || !text || !canvas) return false;
+          const cellBox = cell.getBoundingClientRect();
+          const cueBox = cue.getBoundingClientRect();
+          const textStyle = window.getComputedStyle(text);
+          const cueStyle = window.getComputedStyle(cue);
+          const cueRects = Array.from(cue.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+          const canvasBox = canvas.getBoundingClientRect();
+          const cueInsideCell = cueBox.left >= cellBox.left - 1
+            && cueBox.right <= cellBox.right + 1
+            && cueBox.top >= cellBox.top - 1
+            && cueBox.bottom <= cellBox.bottom + 1;
+          const cueSingleLine = cueRects.length === 1 && cueStyle.whiteSpace === "nowrap";
+          const textKeepsOneLine = textStyle.whiteSpace === "nowrap"
+            && textStyle.overflowX === "hidden"
+            && textStyle.textOverflow === "ellipsis";
+          const canvasRemainsVisible = canvasBox.width >= 360 && canvasBox.height >= 220;
+          if (!cueInsideCell || !cueSingleLine || !textKeepsOneLine || !canvasRemainsVisible) return false;
+          if (!alignVisible) return true;
+          if (!align || align.hidden) return false;
+          const alignStyle = window.getComputedStyle(align);
+          if (alignStyle.display === "none" || alignStyle.visibility === "hidden") return false;
+          const alignBox = align.getBoundingClientRect();
+          return !(cueBox.left < alignBox.right
+            && cueBox.right > alignBox.left
+            && cueBox.top < alignBox.bottom
+            && cueBox.bottom > alignBox.top);
+        }""",
+        align_visible,
+    ) is True
+
+
 def _expect_trust_review_consistency(
     locator: Any,
     *,
@@ -3527,6 +3566,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         )
         expect(segment_consistency_cue).to_be_visible()
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "segment-only")
+        _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(segment_card).to_have_attribute("data-node-count", "5")
         expect(segment_card).to_have_attribute("data-wire-count", "4")
@@ -4176,6 +4216,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         )
         expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "diverged")
+        _assert_current_segment_consistency_cue_layout(page, align_visible=True)
         expect(trust_review_state).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
         expect(trust_spine).to_have_attribute("data-trace-consistency-review-label", "证据分叉")
         _expect_consistency_align_button(
@@ -4288,6 +4329,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_target_id="row-logic1",
             align_source="canvas-wire",
         )
+        _assert_current_segment_consistency_cue_layout(page, align_visible=True)
         _expect_consistency_align_button(
             segment_consistency_align,
             visible=True,
