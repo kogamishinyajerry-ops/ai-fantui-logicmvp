@@ -9377,6 +9377,10 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
 
         page.click("#logic-batch-confirm-update")
         expect(page.locator("#logic-process-title")).to_have_text("更新完成")
+        expect(page.locator("#logic-process-title")).to_have_attribute("aria-label", "更新完成")
+        expect(page.locator("#logic-process-title")).to_have_attribute("title", "更新完成")
+        expect(page.locator("#logic-process-detail")).to_have_attribute("aria-label", re.compile("确认意见更新"))
+        expect(page.locator("#logic-process-detail")).to_have_attribute("title", re.compile("确认意见更新"))
         expect(page.locator("#logic-batch-interpretation-panel")).to_be_hidden()
         assert len(captured_updates) == 1
         update_body = captured_updates[0]

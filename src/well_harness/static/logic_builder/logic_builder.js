@@ -650,6 +650,15 @@
     element.removeAttribute("aria-label");
   }
 
+  function setReadableStatusText(element, text) {
+    if (!element) return "";
+    const readableText = String(text || "").replace(/\s+/g, " ").trim();
+    element.textContent = readableText;
+    element.title = readableText;
+    element.setAttribute("aria-label", readableText);
+    return readableText;
+  }
+
   function setSourceTrustSummary(text) {
     const value = text || "来源待确认";
     if (sourceTrustSummary) sourceTrustSummary.textContent = value;
@@ -4252,8 +4261,8 @@
   function setProgress(percent, title, detail, activeStep) {
     state.percent = Math.max(state.percent, percent);
     process.classList.remove("is-complete", "is-error");
-    processTitle.textContent = title;
-    processDetail.textContent = detail;
+    setReadableStatusText(processTitle, title);
+    setReadableStatusText(processDetail, detail);
     processFill.style.width = `${Math.min(state.percent, 96)}%`;
     setStep(activeStep);
     syncStreamChunks(activeStep);
@@ -4279,8 +4288,8 @@
     clearInterval(state.timer);
     state.timer = null;
     state.percent = 100;
-    processTitle.textContent = title;
-    processDetail.textContent = detail;
+    setReadableStatusText(processTitle, title);
+    setReadableStatusText(processDetail, detail);
     processElapsed.textContent = formatElapsed(Date.now() - state.startedAt);
     processFill.style.width = "100%";
     process.classList.add("is-complete");
@@ -4295,8 +4304,8 @@
   function failTask(title, detail) {
     clearInterval(state.timer);
     state.timer = null;
-    processTitle.textContent = title;
-    processDetail.textContent = detail;
+    setReadableStatusText(processTitle, title);
+    setReadableStatusText(processDetail, detail);
     processElapsed.textContent = state.startedAt ? formatElapsed(Date.now() - state.startedAt) : "00:00";
     process.classList.add("is-error");
     process.classList.remove("is-complete");
