@@ -1192,6 +1192,7 @@
       trustReviewState.textContent = evidence.nodeCount
         ? `${evidence.nodeCount} 节点 / ${evidence.wireCount} 连线`
         : "等待复核";
+      trustReviewState.dataset.traceConsistencyReviewBase = trustReviewState.textContent.trim();
     }
     setTrustSpineStage(currentStage);
     return evidence;
@@ -2982,6 +2983,24 @@
     currentSegmentConsistencyStatus.dataset.traceConsistencyId = idValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencySurfaces = surfaces;
     currentSegmentConsistencyStatus.textContent = text;
+    syncTraceConsistencyReviewState(stateValue, idValue, surfaces);
+  }
+
+  function syncTraceConsistencyReviewState(stateValue, idValue, surfaces) {
+    if (!trustReviewState) return;
+    const labels = {
+      waiting: "等待复核",
+      "segment-only": "待锚点",
+      consistent: "证据一致",
+      diverged: "证据分叉",
+      unbound: "锚点未绑定",
+    };
+    const label = labels[stateValue] || labels.waiting;
+    const baseText = trustReviewState.dataset.traceConsistencyReviewBase || trustReviewState.textContent.trim() || "等待复核";
+    trustReviewState.dataset.traceConsistencyReviewState = stateValue || "waiting";
+    trustReviewState.dataset.traceConsistencyReviewId = idValue || "waiting";
+    trustReviewState.dataset.traceConsistencyReviewSurfaces = surfaces || "left";
+    trustReviewState.textContent = `${baseText} · ${label}`;
   }
 
   function clampNumber(value, min, max) {

@@ -1860,6 +1860,19 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   color: #ffb4a8;
 }
 
+#logic-trust-review-state[data-trace-consistency-review-state="consistent"] {
+  color: #a7f3d0;
+}
+
+#logic-trust-review-state[data-trace-consistency-review-state="segment-only"] {
+  color: #f5c85b;
+}
+
+#logic-trust-review-state[data-trace-consistency-review-state="unbound"],
+#logic-trust-review-state[data-trace-consistency-review-state="diverged"] {
+  color: #ffb4a8;
+}
+
 .logic-current-segment-output-impact {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
