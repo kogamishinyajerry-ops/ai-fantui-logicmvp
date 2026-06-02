@@ -8799,6 +8799,34 @@ def test_logic_builder_streamed_candidate_copy_uses_readable_targets(
         assert captured_requests, "streamed authoring proposal request was not sent"
         assert captured_requests[0]["natural_language_prompt"] == ""
         assert captured_requests[0]["decision_history"] == []
+        page.click("#logic-streamed-confirm")
+        page.wait_for_function(
+            """() => {
+              try {
+                const saved = JSON.parse(localStorage.getItem("ai-fantui-logic-builder-streamed-authoring-v1") || "{}");
+                return Array.isArray(saved.decisions) && saved.decisions.length === 1;
+              } catch (error) {
+                return false;
+              }
+            }"""
+        )
+        stored_history = page.evaluate(
+            """() => JSON.parse(localStorage.getItem("ai-fantui-logic-builder-streamed-authoring-v1") || "{}")"""
+        )
+        assert stored_history["decisions"][0]["target_type"] == "wire"
+        assert stored_history["decisions"][0]["target_id"] == "sw1->logic1"
+        assert stored_history["decisions"][0]["target_label"] == "sw1->logic1"
+        assert stored_history["decisions"][0]["decision"] == "confirm"
+        assert stored_history["decisions"][0]["truth_effect"] == "none"
+        expect(page.locator("#logic-streamed-history")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-streamed-history")).not_to_contain_text("sw1->logic1")
+        history_copy_state = page.evaluate("""() => ({
+          history: document.querySelector("#logic-streamed-history")?.textContent || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(history_copy_state, "history")
+        assert len(captured_requests) >= 2
+        assert captured_requests[-1]["decision_history"][0]["target_id"] == "sw1->logic1"
+        assert captured_requests[-1]["decision_history"][0]["target_label"] == "sw1->logic1"
     finally:
         page.close()
 
