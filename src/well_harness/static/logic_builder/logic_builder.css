@@ -2097,6 +2097,48 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 8px;
   line-height: 1.1;
 }
+.logic-current-segment-global-review {
+  position: relative;
+  z-index: 1;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  min-height: 18px;
+  padding: 3px 6px;
+  overflow: hidden;
+  border: 1px solid rgba(104, 234, 186, 0.24);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(13, 48, 62, 0.76), rgba(4, 24, 38, 0.88)),
+    repeating-linear-gradient(90deg, rgba(104, 234, 186, 0.075) 0 1px, transparent 1px 10px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+.logic-current-segment-global-review span,
+.logic-current-segment-global-review strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-current-segment-global-review span {
+  flex: 0 0 auto;
+  color: rgba(174, 218, 245, 0.72);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.logic-current-segment-global-review strong {
+  flex: 1 1 auto;
+  color: rgba(210, 255, 241, 0.94);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 900;
+  text-align: right;
+}
 .logic-current-segment-trust-step small {
   margin-top: 0;
   color: rgba(185, 225, 245, 0.70);

@@ -123,11 +123,13 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
         """() => {
           const card = document.querySelector("#logic-current-segment-evidence");
           const chain = document.querySelector("#logic-current-segment-trust-chain");
+          const globalReview = document.querySelector("#logic-current-segment-global-review");
           const jumps = document.querySelector("#logic-current-segment-anchor-jumps");
           const canvas = document.querySelector("#logic-canvas");
-          if (!card || !chain || !jumps || !canvas) return { ok: false, missing: true };
+          if (!card || !chain || !globalReview || !jumps || !canvas) return { ok: false, missing: true };
           const cardBox = card.getBoundingClientRect();
           const chainBox = chain.getBoundingClientRect();
+          const globalReviewBox = globalReview.getBoundingClientRect();
           const jumpsBox = jumps.getBoundingClientRect();
           const canvasBox = canvas.getBoundingClientRect();
           const chainInsideCard = card.contains(chain)
@@ -143,6 +145,19 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
           const jumpsRemainVisible = jumpsBox.width > 0
             && jumpsBox.height > 0
             && jumpsBox.top >= chainBox.top;
+          const globalReviewInsideChain = chain.contains(globalReview)
+            && globalReviewBox.left >= chainBox.left - 1
+            && globalReviewBox.right <= chainBox.right + 1
+            && globalReviewBox.top >= chainBox.top - 1
+            && globalReviewBox.bottom <= chainBox.bottom + 1;
+          const globalReviewText = globalReview.textContent || "";
+          const globalReviewScope = globalReview.dataset.globalReviewScope || "";
+          const globalReviewState = globalReview.dataset.globalReviewState || "";
+          const globalReviewReadable = globalReviewBox.width > 0
+            && globalReviewBox.height > 0
+            && globalReviewText.includes("全局")
+            && globalReviewText.includes("复核")
+            && globalReviewScope === "current-segment-to-global";
           const chainTitle = chain.getAttribute("title") || "";
           const chainAriaLabel = chain.getAttribute("aria-label") || "";
           const titleHasCurrentSegment = chainTitle.includes("当前段");
@@ -180,6 +195,8 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             && chainDoesNotCoverJumps
             && jumpsRemainVisible
             && canvasRemainsVisible
+            && globalReviewInsideChain
+            && globalReviewReadable
             && stepsStayInside;
           return {
             ok,
@@ -188,6 +205,13 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             chainDoesNotCoverJumps,
             jumpsRemainVisible,
             canvasRemainsVisible,
+            globalReviewInsideChain,
+            globalReviewReadable,
+            globalReviewText,
+            globalReviewScope,
+            globalReviewState,
+            globalReviewWidth: globalReviewBox.width,
+            globalReviewHeight: globalReviewBox.height,
             chainAccessible,
             chainTitle,
             chainAriaLabel,
@@ -4104,6 +4128,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         segment_consistency_cue = page.locator("#logic-current-segment-consistency-cue")
         segment_consistency_align = page.locator("#logic-current-segment-consistency-align")
         segment_trust_chain = page.locator("#logic-current-segment-trust-chain")
+        segment_global_review = page.locator("#logic-current-segment-global-review")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
         expect(segment_card).to_have_attribute("data-current-segment-selection-label", re.compile("段落"))
@@ -4143,6 +4168,16 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain.locator('[data-trust-chain-step="map"]')).to_contain_text("4 连线")
         expect(segment_trust_chain.locator('[data-trust-chain-step="output"]')).to_contain_text("TLS")
         expect(segment_trust_chain.locator('[data-trust-chain-step="review"]')).to_contain_text("10 锚点复核")
+        expect(segment_global_review).to_be_visible()
+        expect(segment_global_review).to_have_attribute("data-global-review-state", "ready")
+        expect(segment_global_review).to_have_attribute("data-global-review-scope", "current-segment-to-global")
+        expect(segment_global_review).to_have_attribute("data-current-segment-id", "row-logic1")
+        expect(segment_global_review).to_have_attribute("data-output-count", re.compile(r"^[1-9]"))
+        expect(segment_global_review).to_have_attribute("data-review-anchor-count", re.compile(r"^[1-9]"))
+        expect(segment_global_review).to_have_attribute("title", re.compile("全局复核.*全局矩阵"))
+        expect(segment_global_review).to_have_attribute("aria-label", re.compile("全局复核.*当前段"))
+        expect(segment_global_review).to_contain_text("全局复核闭环")
+        expect(segment_global_review).to_contain_text("全局矩阵")
         expect(page.locator("#logic-canvas")).to_be_visible()
         _assert_current_segment_trust_chain_layout(page)
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
@@ -4411,6 +4446,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("段 02")
         expect(segment_trust_chain.locator('[data-trust-chain-step="output"]')).to_contain_text("ETRAC")
         expect(segment_trust_chain.locator('[data-trust-chain-step="review"]')).to_contain_text("锚点复核")
+        expect(segment_global_review).to_have_attribute("data-current-segment-id", "row-logic2")
+        expect(segment_global_review).to_contain_text("全局矩阵")
         _assert_current_segment_trust_chain_layout(page)
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
         assert (output_impact.get_attribute("data-output-impact-labels") or "") != first_output_impact_labels

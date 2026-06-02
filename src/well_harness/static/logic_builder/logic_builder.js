@@ -237,6 +237,8 @@
   const currentSegmentChainOutputAnchor = $("logic-current-segment-chain-output-anchor");
   const currentSegmentChainReview = $("logic-current-segment-chain-review");
   const currentSegmentChainReviewAnchor = $("logic-current-segment-chain-review-anchor");
+  const currentSegmentGlobalReview = $("logic-current-segment-global-review");
+  const currentSegmentGlobalReviewSummary = $("logic-current-segment-global-review-summary");
   const currentSegmentTrustSteps = Array.from(document.querySelectorAll("#logic-current-segment-trust-chain [data-trust-chain-step]"));
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
@@ -1657,6 +1659,16 @@
       if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = "等待输出影响";
       if (currentSegmentChainReview) currentSegmentChainReview.textContent = "等待复核";
       if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = "等待全局矩阵";
+      if (currentSegmentGlobalReview) {
+        currentSegmentGlobalReview.dataset.globalReviewState = "waiting";
+        currentSegmentGlobalReview.dataset.globalReviewScope = "current-segment-to-global";
+        currentSegmentGlobalReview.dataset.currentSegmentId = "waiting";
+        currentSegmentGlobalReview.dataset.outputCount = "0";
+        currentSegmentGlobalReview.dataset.reviewAnchorCount = "0";
+        currentSegmentGlobalReview.setAttribute("aria-label", "全局复核口径：等待段落");
+        currentSegmentGlobalReview.setAttribute("title", "全局复核口径：等待段落");
+      }
+      if (currentSegmentGlobalReviewSummary) currentSegmentGlobalReviewSummary.textContent = "等待全局矩阵";
       syncCurrentSegmentTrustChainInspectorSurfaces();
       if (currentSegmentOutputReveal) {
         currentSegmentOutputReveal.hidden = true;
@@ -1725,6 +1737,18 @@
     if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = outputImpacts.length ? `${outputImpacts.length} 个输出影响` : "无直接输出影响";
     if (currentSegmentChainReview) currentSegmentChainReview.textContent = totalAnchors ? `${totalAnchors} 锚点复核` : "等待复核";
     if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = totalAnchors ? "进入全局矩阵" : "等待全局矩阵";
+    if (currentSegmentGlobalReview) {
+      const traceId = trace.id || trace.sourceId || "active";
+      const globalReviewSummary = `${outputImpacts.length} 输出影响 · ${totalAnchors} 复核锚点 · 全局矩阵`;
+      currentSegmentGlobalReview.dataset.globalReviewState = totalAnchors ? "ready" : "waiting";
+      currentSegmentGlobalReview.dataset.globalReviewScope = "current-segment-to-global";
+      currentSegmentGlobalReview.dataset.currentSegmentId = traceId;
+      currentSegmentGlobalReview.dataset.outputCount = String(outputImpacts.length);
+      currentSegmentGlobalReview.dataset.reviewAnchorCount = String(totalAnchors);
+      currentSegmentGlobalReview.setAttribute("aria-label", `全局复核口径：当前段 ${traceId}，${globalReviewSummary}`);
+      currentSegmentGlobalReview.setAttribute("title", `全局复核口径：当前段 ${traceId}，${globalReviewSummary}`);
+      if (currentSegmentGlobalReviewSummary) currentSegmentGlobalReviewSummary.textContent = globalReviewSummary;
+    }
     syncCurrentSegmentTrustChainInspectorSurfaces();
     if (currentSegmentOutputImpact) {
       currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
