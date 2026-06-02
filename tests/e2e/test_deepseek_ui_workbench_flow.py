@@ -5772,6 +5772,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert "原文锚点" in review_summary
         assert "候选假设" in review_summary
         assert "本地补齐" in review_summary
+        expect(page.locator("#logic-requirement-trace-review-summary")).to_have_attribute("aria-label", re.compile("原文锚点"))
+        expect(page.locator("#logic-requirement-trace-review-summary")).to_have_attribute("title", re.compile("候选假设"))
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
         second_trace_labels = second_trace_impact.get_attribute("data-output-impact-labels") or ""
         etrac_backtrace_source = output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]')
@@ -5793,6 +5795,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_global_review).to_contain_text("全局矩阵")
         _assert_current_segment_trust_chain_layout(page)
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
+        expect(page.locator("#logic-current-segment-output-labels")).to_have_attribute("aria-label", re.compile("ETRAC"))
+        expect(page.locator("#logic-current-segment-output-labels")).to_have_attribute("title", re.compile("ETRAC"))
+        output_copy_state = page.evaluate("""() => ({
+          outputLabels: document.querySelector("#logic-current-segment-output-labels")?.textContent || "",
+          outputLabelsAria: document.querySelector("#logic-current-segment-output-labels")?.getAttribute("aria-label") || "",
+          outputLabelsTitle: document.querySelector("#logic-current-segment-output-labels")?.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(output_copy_state, "outputLabels", "outputLabelsAria", "outputLabelsTitle")
         assert (output_impact.get_attribute("data-output-impact-labels") or "") != first_output_impact_labels
         assert (output_impact.get_attribute("data-output-impact-visible-labels") or "") != first_output_impact_visible_labels
         second_output_impact_label_list = [label for label in (output_impact.get_attribute("data-output-impact-labels") or "").split("|") if label]

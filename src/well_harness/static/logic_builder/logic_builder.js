@@ -1989,7 +1989,7 @@
         currentSegmentOutputImpact.setAttribute("aria-label", "最终输出影响摘要：等待输出映射");
         currentSegmentOutputImpact.setAttribute("title", "最终输出影响摘要：等待输出映射");
       }
-      if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = "等待输出映射";
+      setReadableEvidenceText(currentSegmentOutputLabels, "等待输出映射");
       if (currentSegmentTrustChain) {
         currentSegmentTrustChain.dataset.currentSegmentTrustChain = "waiting";
         currentSegmentTrustChain.dataset.currentSegmentTraceId = "waiting";
@@ -2009,8 +2009,8 @@
       if (currentSegmentChainSourceAnchor) currentSegmentChainSourceAnchor.textContent = "等待段落锚点";
       if (currentSegmentChainMap) currentSegmentChainMap.textContent = "0 节点 · 0 连线";
       if (currentSegmentChainMapAnchor) currentSegmentChainMapAnchor.textContent = "等待逻辑锚点";
-      if (currentSegmentChainOutput) currentSegmentChainOutput.textContent = "等待输出";
-      if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = "等待输出影响";
+      setReadableEvidenceText(currentSegmentChainOutput, "等待输出");
+      setReadableEvidenceText(currentSegmentChainOutputAnchor, "等待输出影响");
       if (currentSegmentChainReview) currentSegmentChainReview.textContent = "等待复核";
       if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = "等待全局矩阵";
       if (currentSegmentGlobalReview) {
@@ -2087,8 +2087,8 @@
     if (currentSegmentChainSourceAnchor) currentSegmentChainSourceAnchor.textContent = trace.quote || "原文已结构化";
     if (currentSegmentChainMap) currentSegmentChainMap.textContent = `${nodeIds.length} 节点 · ${wireIds.length} 连线`;
     if (currentSegmentChainMapAnchor) currentSegmentChainMapAnchor.textContent = anchorParts.join(" · ") || "等待逻辑锚点";
-    if (currentSegmentChainOutput) currentSegmentChainOutput.textContent = outputImpacts.length ? outputImpactVisibleLabel : "未直接触达输出";
-    if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = outputImpacts.length ? `${outputImpacts.length} 个输出影响` : "无直接输出影响";
+    setReadableEvidenceText(currentSegmentChainOutput, outputImpacts.length ? outputImpactVisibleLabel : "未直接触达输出");
+    setReadableEvidenceText(currentSegmentChainOutputAnchor, outputImpacts.length ? `${outputImpacts.length} 个输出影响` : "无直接输出影响");
     if (currentSegmentChainReview) currentSegmentChainReview.textContent = totalAnchors ? `${totalAnchors} 锚点复核` : "等待复核";
     if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = totalAnchors ? "进入全局矩阵" : "等待全局矩阵";
     if (currentSegmentGlobalReview) {
@@ -2101,7 +2101,7 @@
       currentSegmentGlobalReview.dataset.reviewAnchorCount = String(totalAnchors);
       currentSegmentGlobalReview.setAttribute("aria-label", `全局复核口径：段 ${segmentIndex}，${globalReviewSummary}`);
       currentSegmentGlobalReview.setAttribute("title", `全局复核口径：段 ${segmentIndex}，${globalReviewSummary}`);
-      if (currentSegmentGlobalReviewSummary) currentSegmentGlobalReviewSummary.textContent = globalReviewSummary;
+      setReadableEvidenceText(currentSegmentGlobalReviewSummary, globalReviewSummary);
     }
     syncCurrentSegmentTrustChainInspectorSurfaces();
     if (currentSegmentOutputImpact) {
@@ -2115,7 +2115,7 @@
       currentSegmentOutputImpact.setAttribute("aria-label", `最终输出影响摘要：${outputImpactLabel}`);
       currentSegmentOutputImpact.setAttribute("title", `最终输出影响摘要：${outputImpactLabel}`);
     }
-    if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpactVisibleLabel;
+    setReadableEvidenceText(currentSegmentOutputLabels, outputImpactVisibleLabel);
     if (currentSegmentOutputReveal) {
       const hasHiddenOutputImpacts = hiddenOutputImpactCount > 0;
       currentSegmentOutputReveal.hidden = !hasHiddenOutputImpacts;
@@ -2216,7 +2216,7 @@
     const items = buildRequirementTraceItems(payload, circuitView);
     const doc = (state.requirementsPayload && state.requirementsPayload.source_document) || {};
     if (requirementTraceSource) {
-      requirementTraceSource.textContent = doc.name || (payload && payload.source_requirements_sha256 ? "已确认需求来源" : "本地结构化需求");
+      setReadableEvidenceText(requirementTraceSource, doc.name || (payload && payload.source_requirements_sha256 ? "已确认需求来源" : "本地结构化需求"));
     }
     if (!items.length) {
       clearCurrentSegmentOutputBacktraceReveal();
@@ -2226,7 +2226,7 @@
       const evidence = renderTrustSpine(payload, circuitView, items);
       renderGlobalReviewMatrix(evidence);
       if (requirementTraceReviewState) requirementTraceReviewState.textContent = "等待线路图";
-      if (requirementTraceReviewSummary) requirementTraceReviewSummary.textContent = "生成完成后会核对节点、连线与边界。";
+      setReadableEvidenceText(requirementTraceReviewSummary, "生成完成后会核对节点、连线与边界。");
       renderCurrentSegmentEvidenceCard(null);
       renderOutputBacktrace([]);
       applyRequirementTraceHighlight(null);
@@ -2291,7 +2291,7 @@
       const counts = evidence
         ? evidence.sourceCounts
         : Object.fromEntries(["source", "assumption", "local"].map((kind) => [kind, 0]));
-      requirementTraceReviewSummary.textContent = `逐段来源、节点和连线已汇总；原文锚点 ${counts.source || 0} · 候选假设 ${counts.assumption || 0} · 本地补齐 ${counts.local || 0}。`;
+      setReadableEvidenceText(requirementTraceReviewSummary, `逐段来源、节点和连线已汇总；原文锚点 ${counts.source || 0} · 候选假设 ${counts.assumption || 0} · 本地补齐 ${counts.local || 0}。`);
     }
     setActiveRequirementTrace(activeId, "initial");
   }
