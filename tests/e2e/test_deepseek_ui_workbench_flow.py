@@ -5630,8 +5630,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         active_text = active_trace.inner_text()
         assert "读取" in active_text
         assert "生成" in active_text
+        assert "sw1 → logic1" not in active_text
+        assert "sw1->logic1" not in active_text
         for internal_token in ["radio_altitude_ft", "reverser_inhibited", "tls115"]:
             assert internal_token not in active_text
+        trace_copy_state = {
+            "activeTrace": active_text,
+            "currentAction": page.locator("#logic-current-segment-action").inner_text(),
+        }
+        _assert_no_machine_tokens_in_accessible_state(trace_copy_state, "activeTrace", "currentAction")
         review_summary = page.locator("#logic-requirement-trace-review-summary").inner_text()
         assert "原文锚点" in review_summary
         assert "候选假设" in review_summary
@@ -8605,7 +8612,12 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
         expect(page.locator("#logic-drawing-stream-timeline .logic-stream-event")).to_have_count(8)
         expect(page.locator("#logic-drawing-stream-timeline")).to_contain_text("生成节点")
         expect(page.locator("#logic-drawing-stream-timeline")).to_contain_text("生成连线")
+        expect(page.locator("#logic-drawing-stream-timeline")).to_contain_text("SW1 到 L1")
         expect(page.locator("#logic-drawing-stream-timeline")).to_contain_text("来源")
+        drawing_stream_copy_state = page.evaluate("""() => ({
+          stream: document.querySelector("#logic-drawing-stream-timeline")?.textContent || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(drawing_stream_copy_state, "stream")
         stream_box = page.locator("#logic-drawing-stream-timeline").bounding_box()
         assert stream_box is not None
         assert stream_box["height"] <= 34

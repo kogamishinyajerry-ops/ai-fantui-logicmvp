@@ -663,17 +663,20 @@
       text: `读取来源：${sourceAnchorLabel(firstAnchor ? firstAnchor.source_anchors : [])}`,
     });
     nodes.slice(0, 3).forEach((node) => {
+      const nodeLabel = readableLogicReferenceText(node.id || node.label || "节点");
       events.push({
         kind: "node",
-        text: `生成节点 ${node.id || node.label || "节点"} · 来源：${sourceAnchorLabel(node.source_anchors)}`,
+        text: `生成节点 ${nodeLabel} · 来源：${sourceAnchorLabel(node.source_anchors)}`,
       });
     });
     wires.slice(0, 3).forEach((wire) => {
       const sourceId = wire.source || "";
       const targetId = wire.target || "";
+      const wireLabel = readableAnnotationTargetDisplayLabel("wire", `${sourceId}->${targetId}`, `${sourceId}->${targetId}`);
+      const sourceLabel = readableLogicReferenceText(wire.label || sourceId || "候选链路");
       events.push({
         kind: "wire",
-        text: `生成连线 ${sourceId} → ${targetId} · 来源：${wire.label || sourceId || "候选链路"}`,
+        text: `生成连线 ${wireLabel} · 来源：${sourceLabel}`,
       });
     });
     events.push({
@@ -790,13 +793,13 @@
     nodes.forEach((node) => addAnchorTargets(node.source_anchors, {
       kind: "node",
       nodeIds: traceNodeIds(node),
-      action: `生成节点 ${node.label || node.id || "节点"}`,
+      action: `生成节点 ${readableLogicReferenceText(node.label || node.id || "节点")}`,
     }));
     wires.forEach((wire) => addAnchorTargets(wire.source_anchors, {
       kind: "wire",
       wireIds: [circuitWireKey(wire)],
       nodeIds: [wire.source, wire.target].filter(Boolean),
-      action: `连接 ${wire.source || "起点"} → ${wire.target || "终点"}`,
+      action: `连接 ${readableAnnotationTargetDisplayLabel("wire", circuitWireKey(wire), "候选链路")}`,
     }));
     return Array.from(traceById.values());
   }
@@ -829,25 +832,29 @@
     const requirements = state.requirementsPayload || {};
     const edges = Array.isArray(requirements.concept_edges) ? requirements.concept_edges : [];
     if (edges.length) {
-      return edges.slice(0, 7).map((edge, index) => ({
-        id: `edge-${edge.id || index + 1}`,
-        sourceId: edge.id || `edge-${index + 1}`,
-        kind: "结构化需求",
-        quote: `${edge.label || "控制链路"}：${edge.source || "起点"} → ${edge.target || "终点"}。`,
-        nodeIds: new Set([edge.source, edge.target].filter(Boolean).map(String)),
-        wireIds: new Set([circuitWireKey(edge)]),
-        actions: new Set([`生成连线 ${edge.source || "起点"} → ${edge.target || "终点"}`]),
-      }));
+      return edges.slice(0, 7).map((edge, index) => {
+        const readableEdgeLabel = readableLogicReferenceText(edge.label || "控制链路");
+        const readableWireLabel = readableAnnotationTargetDisplayLabel("wire", circuitWireKey(edge), `${edge.source || "起点"}->${edge.target || "终点"}`);
+        return {
+          id: `edge-${edge.id || index + 1}`,
+          sourceId: edge.id || `edge-${index + 1}`,
+          kind: "结构化需求",
+          quote: `${readableEdgeLabel}：${readableWireLabel}。`,
+          nodeIds: new Set([edge.source, edge.target].filter(Boolean).map(String)),
+          wireIds: new Set([circuitWireKey(edge)]),
+          actions: new Set([`生成连线 ${readableWireLabel}`]),
+        };
+      });
     }
     const nodes = Array.isArray(requirements.concept_logic_nodes) ? requirements.concept_logic_nodes : [];
     return nodes.slice(0, 7).map((node, index) => ({
       id: `node-${node.id || index + 1}`,
       sourceId: node.id || `node-${index + 1}`,
       kind: "结构化需求",
-      quote: `${node.label || node.id || "节点"}：${node.description_zh || nodeKindLabel(node.node_kind, "逻辑对象")}。`,
+      quote: `${readableLogicReferenceText(node.label || node.id || "节点")}：${readableLogicReferenceText(node.description_zh || nodeKindLabel(node.node_kind, "逻辑对象"))}。`,
       nodeIds: new Set([node.id].filter(Boolean).map(String)),
       wireIds: new Set(),
-      actions: new Set([`生成节点 ${node.label || node.id || "节点"}`]),
+      actions: new Set([`生成节点 ${readableLogicReferenceText(node.label || node.id || "节点")}`]),
     }));
   }
 
