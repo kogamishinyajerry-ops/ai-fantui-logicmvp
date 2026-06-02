@@ -1006,6 +1006,29 @@ def _expect_output_coverage_current_source(
     return source_chip_label
 
 
+def _expect_output_coverage_source_label_set(output_coverage: Any, *sources: Any) -> None:
+    coverage_state = output_coverage.evaluate(
+        """(element) => ({
+          accessibleLabel: element.dataset.outputCoverageAccessibleLabel || "",
+          currentSourceFullLabel: element.dataset.currentSourceFullLabel || "",
+        })"""
+    )
+    assert coverage_state["accessibleLabel"], coverage_state
+    assert coverage_state["currentSourceFullLabel"], coverage_state
+    for source in sources:
+        source_state = source.evaluate(
+            """(element) => ({
+              fullLabel: element.dataset.outputBacktraceCurrentLabel
+                || element.dataset.outputBacktraceActionLabel
+                || element.dataset.outputBacktraceCurrentChipLabel
+                || "",
+            })"""
+        )
+        assert source_state["fullLabel"], source_state
+        assert source_state["fullLabel"] in coverage_state["currentSourceFullLabel"], coverage_state
+        assert source_state["fullLabel"] in coverage_state["accessibleLabel"], coverage_state
+
+
 def _expect_output_source_visual_difference(
     page: Any,
     *,
@@ -5561,11 +5584,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_coverage).to_contain_text("多输出")
         expect(output_coverage).to_contain_text("TLS")
         expect(output_coverage).to_contain_text("EEC/PLS/PDU")
+        row_logic3_tls_source = output_backtrace.locator('[data-output-backtrace-output="tls"] [data-output-backtrace-source="row-logic3"]').first
+        row_logic3_deploy_source = output_backtrace.locator('[data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]').first
         _expect_output_coverage_current_source(
             output_coverage,
-            source=output_backtrace.locator('[data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]').first,
+            source=row_logic3_deploy_source,
             output_backtrace=output_backtrace,
         )
+        _expect_output_coverage_source_label_set(output_coverage, row_logic3_tls_source, row_logic3_deploy_source)
         multi_output_state = page.evaluate("""() => {
           const panel = document.querySelector("#logic-output-backtrace-panel");
           const ids = (panel?.dataset.relatedOutputIds || "").split("|").filter(Boolean);
