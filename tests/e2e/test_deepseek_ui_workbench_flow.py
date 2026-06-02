@@ -860,6 +860,74 @@ def _expect_current_segment_identity_loop_state(
         expect(loop).to_contain_text(expected_inspector_state)
 
 
+def _expect_active_requirement_text_identity_path(page: Any) -> None:
+    path_state = page.evaluate(
+        """() => {
+          const active = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
+          const summary = document.querySelector("#logic-current-segment-summary");
+          const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
+          const selected = document.querySelector("#logic-selected-target-label");
+          const source = document.querySelector("#logic-canvas-source");
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!active || !summary || !identityLoop || !selected || !source || !context || !annotation) {
+            return { ok: false, reason: "missing-surface" };
+          }
+          let trace = {};
+          try {
+            trace = JSON.parse(active.dataset.traceTargets || "{}");
+          } catch (error) {
+            return { ok: false, reason: "invalid-trace-targets", raw: active.dataset.traceTargets || "" };
+          }
+          const activeId = active.dataset.requirementTraceId || "";
+          const quote = String(trace.quote || active.querySelector("strong")?.textContent || "").trim();
+          const segmentLabel = trace.displayIndex ? `段 ${trace.displayIndex}` : "";
+          const nodeIds = Array.isArray(trace.nodeIds) ? trace.nodeIds : [];
+          const wireIds = Array.isArray(trace.wireIds) ? trace.wireIds : [];
+          const findNode = (nodeId) => Array.from(document.querySelectorAll(".logic-circuit-node"))
+            .find((node) => [node.dataset.demoNodeId, node.dataset.nodeId, node.dataset.technicalId].includes(nodeId));
+          const findWire = (wireId) => Array.from(document.querySelectorAll(".logic-circuit-wire"))
+            .find((wire) => wire.dataset.wireId === wireId || `${wire.dataset.source || ""}->${wire.dataset.target || ""}` === wireId);
+          const nodeTargets = nodeIds.map(findNode).filter(Boolean);
+          const wireTargets = wireIds.map(findWire).filter(Boolean);
+          const targetMatchesActive = (target) => target.classList.contains("is-requirement-trace-match")
+            && target.dataset.canvasRequirementTraceId === activeId;
+          const nodeMatches = nodeTargets.filter(targetMatchesActive).length;
+          const wireMatches = wireTargets.filter(targetMatchesActive).length;
+          const hasCanvasEvidence = nodeMatches + wireMatches > 0;
+          const quoteMatchesSummary = quote.length > 0 && (summary.textContent || "").includes(quote);
+          const rightTextMatches = !segmentLabel
+            || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
+          const checks = [
+            { key: "identity-highlighted", ok: identityLoop.dataset.highlightedTraceId === activeId, actual: identityLoop.dataset.highlightedTraceId || "", expected: activeId },
+            { key: "identity-current", ok: identityLoop.dataset.currentSegmentId === activeId, actual: identityLoop.dataset.currentSegmentId || "", expected: activeId },
+            { key: "selected-current", ok: selected.dataset.canvasTraceConsistencyCurrentId === activeId, actual: selected.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
+            { key: "source-current", ok: source.dataset.canvasTraceConsistencyCurrentId === activeId, actual: source.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
+            { key: "context-current", ok: context.dataset.contextRequirementTraceCurrentSegmentId === activeId, actual: context.dataset.contextRequirementTraceCurrentSegmentId || "", expected: activeId },
+            { key: "annotation-current", ok: annotation.dataset.annotationRequirementTraceCurrentSegmentId === activeId, actual: annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected: activeId },
+            { key: "quote-summary", ok: quoteMatchesSummary, actual: summary.textContent || "", expected: quote },
+            { key: "right-text-segment", ok: rightTextMatches, actual: `${context.textContent || ""} | ${annotation.textContent || ""}`, expected: segmentLabel },
+            { key: "canvas-highlight", ok: hasCanvasEvidence, actual: `${nodeMatches} nodes/${wireMatches} wires`, expected: `${nodeIds.length} nodes/${wireIds.length} wires` },
+          ];
+          return {
+            ok: activeId.length > 0
+              && quote.length > 0
+              && nodeIds.length + wireIds.length > 0
+              && checks.every((check) => check.ok),
+            activeId,
+            quote,
+            segmentLabel,
+            nodeIds,
+            wireIds,
+            nodeMatches,
+            wireMatches,
+            checks,
+          };
+        }"""
+    )
+    assert path_state["ok"] is True, path_state
+
+
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
     badge_state = page.evaluate(
         """(label) => {
@@ -5474,6 +5542,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         _expect_bridge_token_across_trace_surfaces(page)
         _expect_global_review_counts_across_trace_surfaces(page)
         _expect_trace_identity_coherence_across_surfaces(page)
+        _expect_active_requirement_text_identity_path(page)
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
