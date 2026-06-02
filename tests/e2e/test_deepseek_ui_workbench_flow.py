@@ -224,6 +224,29 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             globalReviewOutputCount,
             globalReviewAnchorCount,
             globalReviewCountsMatch,
+            globalReviewCounts: {
+              visibleCounts: {
+                output: globalReviewOutputCount,
+                reviewAnchor: globalReviewAnchorCount,
+              },
+              dataCounts: {
+                output: chainOutputCount,
+                reviewAnchor: chainReviewAnchorCount,
+              },
+              countsMatch: globalReviewCountsMatch,
+            },
+            countAudit: {
+              visibleCounts: {
+                output: globalReviewOutputCount,
+                reviewAnchor: globalReviewAnchorCount,
+              },
+              dataCounts: {
+                output: chainOutputCount,
+                reviewAnchor: chainReviewAnchorCount,
+              },
+              countsMatch: globalReviewCountsMatch,
+              countsSource: "left-global-review",
+            },
             globalReviewWidth: globalReviewBox.width,
             globalReviewHeight: globalReviewBox.height,
             chainAccessible,
@@ -510,6 +533,29 @@ def _expect_canvas_selected_trace_state_badge(
             tailOutputCount,
             tailReviewCount,
             tailCountsMatch,
+            globalReviewCounts: {
+              visibleCounts: {
+                output: tailOutputCount,
+                reviewAnchor: tailReviewCount,
+              },
+              dataCounts: {
+                output: outputCount,
+                reviewAnchor: reviewCount,
+              },
+              countsMatch: tailCountsMatch,
+            },
+            countAudit: {
+              visibleCounts: {
+                output: tailOutputCount,
+                reviewAnchor: tailReviewCount,
+              },
+              dataCounts: {
+                output: outputCount,
+                reviewAnchor: reviewCount,
+              },
+              countsMatch: tailCountsMatch,
+              countsSource: "canvas-selected-tail",
+            },
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -657,6 +703,18 @@ def _expect_canvas_source_trace_state_badge(
             badge,
             title,
             ariaLabel,
+            countAudit: {
+              visibleCounts: {
+                output: null,
+                reviewAnchor: null,
+              },
+              dataCounts: {
+                output: outputCount,
+                reviewAnchor: reviewCount,
+              },
+              countsMatch: null,
+              countsSource: "canvas-source-data-only",
+            },
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -783,6 +841,29 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               tailOutputCount,
               tailReviewCount,
               tailCountsMatch,
+              globalReviewCounts: {
+                visibleCounts: {
+                  output: tailOutputCount,
+                  reviewAnchor: tailReviewCount,
+                },
+                dataCounts: {
+                  output: outputCount,
+                  reviewAnchor: reviewAnchorCount,
+                },
+                countsMatch: tailCountsMatch,
+              },
+              countAudit: {
+                visibleCounts: {
+                  output: tailOutputCount,
+                  reviewAnchor: tailReviewCount,
+                },
+                dataCounts: {
+                  output: outputCount,
+                  reviewAnchor: reviewAnchorCount,
+                },
+                countsMatch: tailCountsMatch,
+                countsSource: `${prefix}-tail`,
+              },
               title,
               ariaLabel,
               text,
