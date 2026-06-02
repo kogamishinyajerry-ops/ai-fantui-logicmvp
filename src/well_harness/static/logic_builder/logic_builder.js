@@ -1269,7 +1269,14 @@
       if (currentSegmentAction) currentSegmentAction.textContent = "等待解析";
       if (currentSegmentAnchor) currentSegmentAnchor.textContent = "等待节点/连线";
       if (currentSegmentReview) currentSegmentReview.textContent = "等待全局复核";
-      if (currentSegmentOutputImpact) currentSegmentOutputImpact.dataset.outputImpact = "waiting";
+      if (currentSegmentOutputImpact) {
+        currentSegmentOutputImpact.dataset.outputImpact = "waiting";
+        currentSegmentOutputImpact.dataset.outputImpactCount = "0";
+        currentSegmentOutputImpact.dataset.outputImpactLabels = "";
+        currentSegmentOutputImpact.dataset.outputImpactSource = "trace-output-map";
+        currentSegmentOutputImpact.setAttribute("aria-label", "最终输出影响摘要：等待输出映射");
+        currentSegmentOutputImpact.setAttribute("title", "最终输出影响摘要：等待输出映射");
+      }
       if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = "等待输出映射";
       state.currentSegmentJumpAction = "";
       syncCurrentSegmentJumpActions();
@@ -1297,8 +1304,16 @@
       currentSegmentReview.textContent = totalAnchors ? `${totalAnchors} 个锚点已进入全局复核` : "等待全局复核";
     }
     const outputImpacts = outputImpactsForTrace(trace);
-    if (currentSegmentOutputImpact) currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
-    if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpacts.join(" · ") || "未直接触达输出";
+    const outputImpactLabel = outputImpacts.join(" · ") || "未直接触达输出";
+    if (currentSegmentOutputImpact) {
+      currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
+      currentSegmentOutputImpact.dataset.outputImpactCount = String(outputImpacts.length);
+      currentSegmentOutputImpact.dataset.outputImpactLabels = outputImpacts.join("|");
+      currentSegmentOutputImpact.dataset.outputImpactSource = "trace-output-map";
+      currentSegmentOutputImpact.setAttribute("aria-label", `最终输出影响摘要：${outputImpactLabel}`);
+      currentSegmentOutputImpact.setAttribute("title", `最终输出影响摘要：${outputImpactLabel}`);
+    }
+    if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpactLabel;
     syncCurrentSegmentJumpActions();
   }
 

@@ -3249,8 +3249,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         output_impact = page.locator("#logic-current-segment-output-impact")
         expect(output_impact).to_be_visible()
         expect(output_impact).to_have_attribute("data-output-impact", "ready")
+        expect(output_impact).to_have_attribute("data-output-impact-count", re.compile(r"^[1-9]"))
+        expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("TLS"))
+        expect(output_impact).to_have_attribute("data-output-impact-source", "trace-output-map")
+        expect(output_impact).to_have_attribute("aria-label", re.compile("最终输出影响摘要"))
+        expect(output_impact).to_have_attribute("title", re.compile("TLS"))
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("TLS")
         first_output_impact = page.locator("#logic-current-segment-output-labels").inner_text()
+        first_output_impact_labels = output_impact.get_attribute("data-output-impact-labels") or ""
         segment_jumps = page.locator("#logic-current-segment-anchor-jumps")
         expect(segment_jumps).to_be_visible()
         expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
@@ -3286,6 +3292,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         )
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 02")
+        expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
+        assert (output_impact.get_attribute("data-output-impact-labels") or "") != first_output_impact_labels
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("ETRAC")
         assert second_trace_labels.split("|")[0] in page.locator("#logic-current-segment-output-labels").inner_text()
         assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
