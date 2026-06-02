@@ -604,7 +604,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && text.includes("段")
               && element.scrollWidth <= element.clientWidth + 2
               && box.height <= lineHeight * 2 + 8
-              && element.dataset[`${prefix}TrustChainSurface`] === "current-segment";
+              && element.dataset[`${prefix}TrustChainSurface`] === "current-segment"
+              && element.dataset[`${prefix}TrustChainScope`] === "current-segment";
             return {
               ok,
               prefix,
@@ -618,6 +619,7 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               scrollWidth: element.scrollWidth,
               clientWidth: element.clientWidth,
               surface: element.dataset[`${prefix}TrustChainSurface`] || "",
+              scope: element.dataset[`${prefix}TrustChainScope`] || "",
             };
           });
           return { ok: checks.every((check) => check.ok), checks };
