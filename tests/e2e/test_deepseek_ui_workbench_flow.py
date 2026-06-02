@@ -3208,9 +3208,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace).to_have_attribute("data-output-coverage-status", "pass")
         output_focus_status = page.locator("#logic-output-focus-status")
         expect(output_focus_status).to_have_count(1)
+        expect(output_focus_status).to_have_class(re.compile("logic-output-focus-status"))
         expect(output_focus_status).to_have_attribute("aria-live", "polite")
         expect(output_focus_status).to_have_attribute("aria-atomic", "true")
         expect(output_focus_status).to_have_attribute("role", "status")
+        assert page.evaluate("""() => {
+          const panel = document.querySelector("#logic-output-backtrace-panel");
+          const status = document.querySelector("#logic-output-focus-status");
+          return Boolean(panel && status && status.parentElement === panel);
+        }""") is True
         assert page.evaluate("""() => {
           const status = document.querySelector("#logic-output-focus-status");
           if (!status) return false;

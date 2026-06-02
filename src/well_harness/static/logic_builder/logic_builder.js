@@ -816,20 +816,11 @@
       status = document.createElement("p");
       status.id = "logic-output-focus-status";
       status.className = "logic-output-focus-status";
-      status.setAttribute("role", "status");
-      status.setAttribute("aria-live", "polite");
-      status.setAttribute("aria-atomic", "true");
-      status.style.position = "absolute";
-      status.style.width = "1px";
-      status.style.height = "1px";
-      status.style.padding = "0";
-      status.style.margin = "-1px";
-      status.style.overflow = "hidden";
-      status.style.clip = "rect(0 0 0 0)";
-      status.style.whiteSpace = "nowrap";
-      status.style.border = "0";
       outputBacktracePanel.appendChild(status);
     }
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.setAttribute("aria-atomic", "true");
     return status;
   }
 
