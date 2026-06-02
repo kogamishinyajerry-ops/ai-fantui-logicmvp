@@ -9127,6 +9127,17 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(page.locator("#logic-batch-proposed-changes")).not_to_contain_text("sw1→logic1")
         expect(page.locator("#logic-batch-confirmation-question")).to_contain_text("是否确认")
         expect(page.locator("#logic-batch-confirm-update")).to_be_enabled()
+        batch_copy_state = page.evaluate("""() => ({
+          summary: document.querySelector("#logic-batch-summary")?.textContent || "",
+          proposedChanges: document.querySelector("#logic-batch-proposed-changes")?.textContent || "",
+          confirmationQuestion: document.querySelector("#logic-batch-confirmation-question")?.textContent || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(
+            batch_copy_state,
+            "summary",
+            "proposedChanges",
+            "confirmationQuestion",
+        )
 
         assert len(captured_requests) == 1
         body = captured_requests[0]
@@ -9137,6 +9148,7 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         assert body["selected_nodes"] == ["sw1"]
         assert body["selected_edges"] == ["sw1->logic1"]
         assert "批量标注意见" in body["annotation_text"]
+        assert "sw1 → logic1" in body["annotation_text"]
 
         history_before = page.evaluate(
             """() => JSON.parse(localStorage.getItem("ai-fantui-logic-builder-change-history-v1") || "[]")"""
