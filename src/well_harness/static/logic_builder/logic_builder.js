@@ -3310,6 +3310,10 @@
   function syncTraceEvidenceConsistency() {
     if (!currentSegmentConsistencyStatus || !currentSegmentEvidence) return;
     const currentId = currentSegmentEvidence.dataset.currentSegmentId || "waiting";
+    const highlightedTrace = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
+    const originalTextMatch = currentSegmentOriginalTextMatch(highlightedTrace);
+    currentSegmentEvidence.dataset.currentSegmentTextMatch = originalTextMatch.mode;
+    currentSegmentEvidence.dataset.currentSegmentTextMatchToken = originalTextMatch.token;
     const contextState = logicContextRequirementTrace ? (logicContextRequirementTrace.dataset.contextRequirementTrace || "waiting") : "missing";
     const contextId = logicContextRequirementTrace ? (logicContextRequirementTrace.dataset.contextRequirementTraceId || "waiting") : "missing";
     const annotationState = annotationRequirementTrace ? (annotationRequirementTrace.dataset.annotationRequirementTrace || "waiting") : "missing";
@@ -3409,18 +3413,31 @@
     }
     syncTraceConsistencyReviewState(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
     syncCanvasSelectedTargetTraceAuditSurface(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource, cueLabel, text);
-    syncRequirementTraceAuditSurface(logicContextRequirementTrace, "context", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
-    syncRequirementTraceAuditSurface(annotationRequirementTrace, "annotation", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
+    syncRequirementTraceAuditSurface(logicContextRequirementTrace, "context", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource, originalTextMatch);
+    syncRequirementTraceAuditSurface(annotationRequirementTrace, "annotation", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource, originalTextMatch);
     syncCurrentSegmentIdentityLoop();
   }
 
-  function syncRequirementTraceAuditSurface(element, attrPrefix, stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource) {
+  function syncRequirementTraceAuditSurface(element, attrPrefix, stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource, originalTextMatch) {
     if (!element) return;
     const chainSnapshot = currentSegmentTrustChainSnapshot();
     const chainLabel = chainSnapshot.state === "ready"
       ? `当前段到全局矩阵：当前段链路 ${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}全局复核`
       : "当前段到全局矩阵：当前段链路等待";
-    const auditLabel = `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}；${chainLabel}`;
+    const originalTextMatchMode = originalTextMatch && originalTextMatch.mode
+      ? originalTextMatch.mode
+      : (currentSegmentEvidence ? (currentSegmentEvidence.dataset.currentSegmentTextMatch || "waiting") : "waiting");
+    const originalTextMatchToken = originalTextMatch && originalTextMatch.token
+      ? originalTextMatch.token
+      : (currentSegmentEvidence ? (currentSegmentEvidence.dataset.currentSegmentTextMatchToken || "none") : "none");
+    const originalTextMatchLabels = {
+      "full-quote": "全句",
+      "meaningful-token": "关键词",
+      missing: "未命中",
+      waiting: "等待",
+    };
+    const originalTextMatchLabel = originalTextMatchLabels[originalTextMatchMode] || originalTextMatchLabels.waiting;
+    const auditLabel = `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}；原文命中：${originalTextMatchLabel}；${chainLabel}`;
     element.dataset[`${attrPrefix}TraceConsistencyState`] = stateValue || "waiting";
     element.dataset[`${attrPrefix}TraceConsistencyId`] = idValue || "waiting";
     element.dataset[`${attrPrefix}TraceConsistencySurfaces`] = surfaces || "left";
@@ -3430,6 +3447,8 @@
     element.dataset[`${attrPrefix}RequirementTraceCurrentSegmentId`] = currentId || "waiting";
     element.dataset[`${attrPrefix}RequirementTraceSelectedCanvasTraceId`] = selectedEvidenceId || "none";
     element.dataset[`${attrPrefix}RequirementTraceSelectedSource`] = selectedEvidenceSource || "none";
+    element.dataset[`${attrPrefix}OriginalTextMatch`] = originalTextMatchMode;
+    element.dataset[`${attrPrefix}OriginalTextMatchToken`] = originalTextMatchToken;
     element.setAttribute("aria-label", auditLabel);
     element.setAttribute("title", auditLabel);
   }
