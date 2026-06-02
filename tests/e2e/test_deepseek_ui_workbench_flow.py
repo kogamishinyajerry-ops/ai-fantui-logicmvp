@@ -614,6 +614,18 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
             const text = element.textContent || "";
             const title = element.getAttribute("title") || "";
             const ariaLabel = element.getAttribute("aria-label") || "";
+            const titleHasCurrentSegment = title.includes("当前段");
+            const titleHasLink = title.includes("链路");
+            const ariaHasCurrentSegment = ariaLabel.includes("当前段");
+            const ariaHasLink = ariaLabel.includes("链路");
+            const scope = element.dataset[`${prefix}TrustChainScope`] || "";
+            const expectedScope = "current-segment";
+            const scopeIsCurrentSegment = scope === expectedScope;
+            const chainAccessible = titleHasCurrentSegment
+              && titleHasLink
+              && ariaHasCurrentSegment
+              && ariaHasLink
+              && scopeIsCurrentSegment;
             const ok = box.width > 0
               && box.height > 0
               && style.visibility !== "hidden"
@@ -621,15 +633,12 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && tailContent.includes("段链")
               && tailContent.includes("输出")
               && tailContent.includes("复核")
-              && title.includes("当前段")
-              && title.includes("链路")
-              && ariaLabel.includes("当前段")
-              && ariaLabel.includes("链路")
+              && chainAccessible
               && text.includes("段")
               && element.scrollWidth <= element.clientWidth + 2
               && box.height <= lineHeight * 2 + 8
               && element.dataset[`${prefix}TrustChainSurface`] === "current-segment"
-              && element.dataset[`${prefix}TrustChainScope`] === "current-segment";
+              && scopeIsCurrentSegment;
             return {
               ok,
               prefix,
@@ -638,12 +647,19 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               title,
               ariaLabel,
               text,
+              titleHasCurrentSegment,
+              titleHasLink,
+              ariaHasCurrentSegment,
+              ariaHasLink,
+              chainAccessible,
               height: box.height,
               lineHeight,
               scrollWidth: element.scrollWidth,
               clientWidth: element.clientWidth,
               surface: element.dataset[`${prefix}TrustChainSurface`] || "",
-              scope: element.dataset[`${prefix}TrustChainScope`] || "",
+              scope,
+              expectedScope,
+              scopeIsCurrentSegment,
             };
           });
           return { ok: checks.every((check) => check.ok), checks };
