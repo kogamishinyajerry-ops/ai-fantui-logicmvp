@@ -786,9 +786,54 @@
     return false;
   }
 
+  function directSvgTitle(element) {
+    if (!element) return null;
+    return Array.from(element.children || []).find((child) => child.tagName && child.tagName.toLowerCase() === "title") || null;
+  }
+
+  function requirementTraceEvidenceLabel(trace) {
+    if (!trace) return "";
+    const segmentLabel = trace.displayIndex ? `段 ${trace.displayIndex}` : "当前段";
+    const actions = Array.isArray(trace.actions) ? trace.actions.filter(Boolean) : [];
+    const actionLabel = actions.join("；") || "生成候选节点与连线";
+    return `${segmentLabel} 生成依据：${actionLabel}`;
+  }
+
+  function syncRequirementTraceEvidenceTarget(element, trace, isMatch) {
+    if (!element) return;
+    const title = directSvgTitle(element);
+    if (title && !element.dataset.baseTitle) element.dataset.baseTitle = title.textContent || "";
+    if (!element.dataset.baseAriaLabel) {
+      element.dataset.baseAriaLabel = element.getAttribute("aria-label") || (title ? title.textContent || "" : "");
+    }
+    if (!isMatch || !trace) {
+      delete element.dataset.canvasRequirementTraceId;
+      delete element.dataset.canvasRequirementTraceEvidence;
+      if (title && element.dataset.baseTitle) title.textContent = element.dataset.baseTitle;
+      const baseAriaLabel = element.dataset.baseAriaLabel || "";
+      if (baseAriaLabel) {
+        element.setAttribute("aria-label", baseAriaLabel);
+      } else {
+        element.removeAttribute("aria-label");
+      }
+      return;
+    }
+    const evidenceLabel = requirementTraceEvidenceLabel(trace);
+    element.dataset.canvasRequirementTraceId = trace.id || trace.sourceId || "active";
+    element.dataset.canvasRequirementTraceEvidence = evidenceLabel;
+    if (title) {
+      const baseTitle = element.dataset.baseTitle || title.textContent || "";
+      title.textContent = `${baseTitle} · ${evidenceLabel}`;
+    }
+    const baseAriaLabel = element.dataset.baseAriaLabel || "";
+    element.setAttribute("aria-label", baseAriaLabel ? `${baseAriaLabel}，${evidenceLabel}` : evidenceLabel);
+  }
+
   function applyRequirementTraceHighlight(trace) {
     document.querySelectorAll(".logic-circuit-node, .logic-circuit-wire").forEach((element) => {
-      element.classList.toggle("is-requirement-trace-match", targetMatchesTrace(element, trace));
+      const isMatch = targetMatchesTrace(element, trace);
+      element.classList.toggle("is-requirement-trace-match", isMatch);
+      syncRequirementTraceEvidenceTarget(element, trace, isMatch);
     });
   }
 
@@ -4328,6 +4373,8 @@
     const faultWire = wire.source === "reverser_inhibited";
     const readableLane = circuitReadableLaneForWire(wire);
     const provenanceKind = circuitProvenanceKindForWire(wire, provenanceById);
+    const baseWireLabel = wire.label || `${wire.source || ""} → ${wire.target || ""}`;
+    const baseWireTitle = `${baseWireLabel} · 来源：${circuitProvenanceLabel(provenanceKind)}`;
     const polyline = createSvgElement("polyline", {
       points: route.map((point) => `${Number(point.x) || 0},${Number(point.y) || 0}`).join(" "),
       class: isFinal ? `logic-circuit-wire is-final${stateClass}${selectedClass}` : `logic-circuit-wire${stateClass}${selectedClass}`,
@@ -4339,14 +4386,17 @@
       "data-readable-lane": readableLane || null,
       "data-provenance-kind": provenanceKind,
       "data-provenance-label": circuitProvenanceLabel(provenanceKind),
+      "data-base-title": baseWireTitle,
+      "data-base-aria-label": baseWireTitle,
       "data-source-anchor-ids": Array.isArray(wire.source_anchor_ids) && wire.source_anchor_ids.length
         ? wire.source_anchor_ids.join(" ")
         : (Array.isArray(wire.source_anchors) ? wire.source_anchors.map((anchor) => anchor.id).filter(Boolean).join(" ") : null),
+      "aria-label": baseWireTitle,
       tabindex: 0,
       "marker-end": `url(#logic-circuit-arrow-${wireState === "fault" ? "fault" : wireState === "active" ? "active" : "idle"})`,
     });
     const title = createSvgElement("title");
-    title.textContent = `${wire.label || `${wire.source || ""} → ${wire.target || ""}`} · 来源：${circuitProvenanceLabel(provenanceKind)}`;
+    title.textContent = baseWireTitle;
     polyline.appendChild(title);
     polyline.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -4375,6 +4425,8 @@
     const technicalLabel = circuitTechnicalLabel(node);
     const readableLane = circuitReadableLaneForNode(node);
     const provenanceKind = circuitProvenanceKindForNode(node);
+    const baseNodeAriaLabel = `${displayLabel}${technicalLabel ? `，${technicalLabel}` : ""}`;
+    const baseNodeTitle = circuitNodeHoverTitle(node);
     const group = createSvgElement("g", {
       class: `logic-circuit-node${isSelected ? " is-selected" : ""}`,
       "data-node-id": selectableId,
@@ -4388,14 +4440,16 @@
       "data-display-label": displayLabel,
       "data-technical-id": node.id || "",
       "data-technical-label": technicalLabel,
+      "data-base-title": baseNodeTitle,
+      "data-base-aria-label": baseNodeAriaLabel,
       "data-source-anchor-ids": Array.isArray(node.source_anchor_ids) && node.source_anchor_ids.length
         ? node.source_anchor_ids.join(" ")
         : (Array.isArray(node.source_anchors) ? node.source_anchors.map((anchor) => anchor.id).filter(Boolean).join(" ") : null),
-      "aria-label": `${displayLabel}${technicalLabel ? `，${technicalLabel}` : ""}`,
+      "aria-label": baseNodeAriaLabel,
       tabindex: 0,
     });
     const title = createSvgElement("title");
-    title.textContent = circuitNodeHoverTitle(node);
+    title.textContent = baseNodeTitle;
     group.appendChild(title);
 
     if (role === "gate") {
