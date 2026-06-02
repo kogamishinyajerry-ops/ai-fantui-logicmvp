@@ -8243,7 +8243,7 @@ def test_logic_builder_detail_area_defaults_to_three_decision_cards(
         expect(board.locator("#logic-detail-selected-node")).to_have_text("sw1")
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
-        expect(page.locator("#logic-selected-target-label")).to_contain_text("sw1")
+        expect(page.locator("#logic-selected-target-label")).to_contain_text("SW1")
     finally:
         page.close()
 
@@ -8624,14 +8624,22 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
         expect(page.locator("#logic-bottom-provider")).to_be_visible()
         expect(page.locator("#logic-submit-annotations")).to_have_text("提交此次标注意见")
         expect(page.locator("#logic-submit-annotations")).to_be_disabled()
-        expect(page.locator("#logic-selected-target-label")).to_contain_text("sw1")
+        expect(page.locator("#logic-selected-target-label")).to_contain_text("SW1")
         page.fill("#logic-node-comment-text", "SW1 节点需要补充来源锚点。")
         page.click("#logic-add-annotation")
         expect(page.locator("#logic-annotation-count")).to_have_text("1 条标注意见")
         expect(page.locator("#logic-annotation-list .logic-annotation-item")).to_have_count(1)
 
         page.click('.logic-circuit-wire[data-source="sw1"][data-target="logic1"]')
-        expect(page.locator("#logic-selected-target-label")).to_contain_text("sw1 → logic1")
+        selected_target_label = page.locator("#logic-selected-target-label")
+        expect(selected_target_label).to_contain_text("SW1 到 L1")
+        expect(selected_target_label).not_to_contain_text("sw1 → logic1")
+        selected_target_state = selected_target_label.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+          text: element.textContent || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(selected_target_state, "ariaLabel", "title", "text")
         page.fill("#logic-node-comment-text", "这条连线需要说明 SW1 如何进入 L1。")
         page.click("#logic-add-annotation")
         expect(page.locator("#logic-annotation-count")).to_have_text("2 条标注意见")

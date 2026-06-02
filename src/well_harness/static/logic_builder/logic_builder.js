@@ -569,6 +569,34 @@
     return "未选择";
   }
 
+  function annotationEndpointDisplayLabel(endpointId, fallback) {
+    const normalized = String(endpointId || "").trim();
+    const circuitNode = normalized ? circuitNodeBySelectableId(normalized) : null;
+    if (circuitNode) return circuitDisplayLabel(circuitNode) || fallback || normalized;
+    const drawingNode = normalized ? drawingNodeById(normalized) : null;
+    if (drawingNode) {
+      return compactCircuitLabel(drawingNode.label || drawingNode.title || drawingNode.id) || fallback || normalized;
+    }
+    return fallback || normalized || "未选择";
+  }
+
+  function readableAnnotationTargetDisplayLabel(type, id, fallback) {
+    if (type === "wire") {
+      const rawWireId = String(id || "").trim();
+      const fallbackWire = String(fallback || "").replace(/\s*→\s*/g, "->").trim();
+      const wireParts = (rawWireId || fallbackWire).split("->");
+      const sourceId = String(wireParts[0] || "").trim();
+      const targetId = String(wireParts[1] || "").trim();
+      if (sourceId || targetId) {
+        const sourceLabel = annotationEndpointDisplayLabel(sourceId, sourceId || "起点");
+        const targetLabel = annotationEndpointDisplayLabel(targetId, targetId || "终点");
+        return `${sourceLabel} 到 ${targetLabel}`;
+      }
+    }
+    if (type === "node") return annotationEndpointDisplayLabel(id, fallback || id || "节点");
+    return fallback || annotationTargetLabel(type, id, "") || "未选择";
+  }
+
   function setSourceTrustSummary(text) {
     const value = text || "来源待确认";
     if (sourceTrustSummary) sourceTrustSummary.textContent = value;
@@ -3251,7 +3279,10 @@
       const sourceText = sourceAnchorQuote(anchors)
         || (edge.provenance ? `${edge.provenance}` : "")
         || sourceAnchorLabel(anchors);
-      const wireLabel = `${edge.source || state.selectedTargetId.split("->")[0] || "起点"} → ${edge.target || state.selectedTargetId.split("->")[1] || "终点"}`;
+      const fallbackWireSource = state.selectedTargetId.split("->")[0] || "起点";
+      const fallbackWireTarget = state.selectedTargetId.split("->")[1] || "终点";
+      const fallbackWireLabel = `${fallbackWireSource}->${fallbackWireTarget}`;
+      const wireLabel = readableAnnotationTargetDisplayLabel("wire", state.selectedTargetId, state.selectedTargetLabel || fallbackWireLabel);
       return {
         sourceText,
         paramText: `${wireLabel}${edge.state ? ` · 状态：${circuitStateLabel(edge.state)}` : ""}`,
@@ -3370,7 +3401,10 @@
       waiting: "等待",
     };
     const originalTextMatchLabel = originalTextMatchLabels[originalTextMatchMode] || originalTextMatchLabels.waiting;
-    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}；原文命中：${originalTextMatchLabel}${chainLabel}`;
+    const currentReadableLabel = readableTraceIdentity(currentId, "等待当前段");
+    const selectedReadableLabel = readableTraceIdentity(selectedId, "未选择");
+    const sourceReadableLabel = currentSegmentSelectionSourceLabel(sourceValue);
+    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${sourceReadableLabel}；原文命中：${originalTextMatchLabel}${chainLabel}`;
     const clearCanvasTraceDataset = (element) => {
       traceDatasetKeys.forEach((key) => {
         delete element.dataset[key];
@@ -3711,7 +3745,7 @@
       return;
     }
     objectContextDrawer.hidden = false;
-    const title = annotationTargetLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
+    const title = readableAnnotationTargetDisplayLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
     const context = selectedTargetContext();
     if (logicContextTitle) logicContextTitle.textContent = title;
     if (logicContextSource) logicContextSource.textContent = context.sourceText;
@@ -5848,7 +5882,7 @@
       state.annotationDrafts.slice(-3).forEach((item) => {
         const li = document.createElement("li");
         li.className = "logic-annotation-item";
-        li.innerHTML = `<strong>${escapeText(annotationTargetLabel(item.target_type, item.target_id, item.target_label))}</strong><span>${escapeText(item.text)}</span>`;
+        li.innerHTML = `<strong>${escapeText(readableAnnotationTargetDisplayLabel(item.target_type, item.target_id, item.target_label))}</strong><span>${escapeText(item.text)}</span>`;
         annotationList.appendChild(li);
       });
     }
@@ -5868,7 +5902,7 @@
     if (annotationSubmitBar) annotationSubmitBar.hidden = !state.annotationModeActive && !hasTarget && state.annotationDrafts.length === 0;
     if (annotationPopover) annotationPopover.hidden = !hasTarget;
     if (selectedTargetLabel) {
-      selectedTargetLabel.textContent = annotationTargetLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
+      selectedTargetLabel.textContent = readableAnnotationTargetDisplayLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
     }
     const context = selectedTargetContext();
     if (annotationSource) annotationSource.textContent = context.sourceText;
