@@ -745,7 +745,9 @@
 
   function sourceAnchorText(anchor) {
     if (!anchor) return "";
-    return String(anchor.quote_zh || anchor.quote || anchor.text || anchor.id || "").trim();
+    const text = String(anchor.quote_zh || anchor.quote || anchor.text || "").trim();
+    if (text) return text;
+    return readableSourceAnchorListIdentity(anchor.id, anchor.id || "");
   }
 
   function traceNodeIds(node) {

@@ -8796,6 +8796,8 @@ def test_logic_builder_source_anchor_fallback_copy_uses_readable_identity(
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
         _show_logic_builder_workbench(page)
+        expect(page.locator("#logic-requirement-trace-list")).to_contain_text("逻辑锚点 01")
+        expect(page.locator("#logic-requirement-trace-list")).not_to_contain_text("logic1")
         page.click('[data-demo-node-id="sw1"]')
 
         expect(page.locator("#logic-object-context-drawer")).to_be_visible()
