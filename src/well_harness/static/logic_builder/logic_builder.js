@@ -2987,12 +2987,33 @@
       ? (state.selectedTargetType === "wire" ? "canvas-wire" : (state.selectedTargetType === "node" ? "canvas-node" : "trace-list"))
       : "none";
     const canAlign = stateValue === "diverged" && Boolean(alignTrace);
+    let selectedEvidenceId = "none";
+    if (stateValue === "consistent") {
+      selectedEvidenceId = currentId || "waiting";
+    } else if (canAlign) {
+      selectedEvidenceId = alignTraceId;
+    } else if (contextState === "matched" && contextId && contextId !== "waiting") {
+      selectedEvidenceId = contextId;
+    } else if (annotationState === "matched" && annotationId && annotationId !== "waiting") {
+      selectedEvidenceId = annotationId;
+    }
+    const selectedEvidenceSource = selectedEvidenceId === "none"
+      ? "none"
+      : (state.selectedTargetType === "wire" ? "canvas-wire" : (state.selectedTargetType === "node" ? "canvas-node" : "trace-list"));
+    const auditLabel = `证据一致性状态：${stateValue}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId}；来源：${selectedEvidenceSource}`;
     currentSegmentConsistencyStatus.dataset.traceConsistencyState = stateValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencyId = idValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencySurfaces = surfaces;
+    currentSegmentConsistencyStatus.dataset.traceConsistencyCurrentId = currentId || "waiting";
+    currentSegmentConsistencyStatus.dataset.traceConsistencyCurrentSegmentId = currentId || "waiting";
+    currentSegmentConsistencyStatus.dataset.traceConsistencySelectedId = selectedEvidenceId;
+    currentSegmentConsistencyStatus.dataset.traceConsistencySelectedCanvasTraceId = selectedEvidenceId;
+    currentSegmentConsistencyStatus.dataset.traceConsistencySelectedSource = selectedEvidenceSource;
     currentSegmentConsistencyStatus.dataset.traceConsistencyAlignable = canAlign ? "true" : "false";
     currentSegmentConsistencyStatus.dataset.traceConsistencyAlignTargetId = canAlign ? alignTraceId : "none";
     currentSegmentConsistencyStatus.dataset.traceConsistencyAlignSource = canAlign ? alignSource : "none";
+    currentSegmentConsistencyStatus.setAttribute("aria-label", auditLabel);
+    currentSegmentConsistencyStatus.setAttribute("title", auditLabel);
     if (currentSegmentConsistencyText) {
       currentSegmentConsistencyText.textContent = text;
     } else {
@@ -3004,8 +3025,13 @@
       currentSegmentConsistencyAlign.dataset.traceConsistencyAlign = canAlign ? "ready" : "hidden";
       currentSegmentConsistencyAlign.dataset.traceConsistencyAlignTargetId = canAlign ? alignTraceId : "none";
       currentSegmentConsistencyAlign.dataset.traceConsistencyAlignSource = canAlign ? alignSource : "none";
+      const alignLabel = canAlign
+        ? `对齐到选中对象证据段：${alignTraceId}；来源：${alignSource}`
+        : "对齐到选中对象证据段";
+      currentSegmentConsistencyAlign.setAttribute("aria-label", alignLabel);
+      currentSegmentConsistencyAlign.setAttribute("title", alignLabel);
     }
-    syncTraceConsistencyReviewState(stateValue, idValue, surfaces);
+    syncTraceConsistencyReviewState(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
   }
 
   function alignCurrentSegmentToSelectedTargetTrace() {
@@ -3020,7 +3046,7 @@
     syncObjectContextRequirementTrace();
   }
 
-  function syncTraceConsistencyReviewState(stateValue, idValue, surfaces) {
+  function syncTraceConsistencyReviewState(stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource) {
     if (!trustReviewState) return;
     const labels = {
       waiting: "等待复核",
@@ -3034,7 +3060,14 @@
     trustReviewState.dataset.traceConsistencyReviewState = stateValue || "waiting";
     trustReviewState.dataset.traceConsistencyReviewId = idValue || "waiting";
     trustReviewState.dataset.traceConsistencyReviewSurfaces = surfaces || "left";
+    trustReviewState.dataset.traceConsistencyReviewCurrentId = currentId || "waiting";
+    trustReviewState.dataset.traceConsistencyReviewCurrentSegmentId = currentId || "waiting";
+    trustReviewState.dataset.traceConsistencyReviewSelectedId = selectedEvidenceId || "none";
+    trustReviewState.dataset.traceConsistencyReviewSelectedCanvasTraceId = selectedEvidenceId || "none";
+    trustReviewState.dataset.traceConsistencyReviewSelectedSource = selectedEvidenceSource || "none";
     trustReviewState.textContent = `${baseText} · ${label}`;
+    trustReviewState.setAttribute("aria-label", `${baseText}；一致性状态：${stateValue || "waiting"}；${label}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
+    trustReviewState.setAttribute("title", `${baseText}；一致性状态：${stateValue || "waiting"}；${label}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
   }
 
   function clampNumber(value, min, max) {
