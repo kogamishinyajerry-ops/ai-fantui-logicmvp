@@ -482,6 +482,8 @@ def _expect_canvas_selected_trace_state_badge(
           const ariaHasLink = ariaLabel.includes("链路");
           const titleHasGlobalReview = title.includes("全局复核");
           const ariaHasGlobalReview = ariaLabel.includes("全局复核");
+          const titleHasGlobalBridge = title.includes("当前段到全局矩阵");
+          const ariaHasGlobalBridge = ariaLabel.includes("当前段到全局矩阵");
           const selectedTrustScope = selected.dataset.canvasTrustChainScope || "";
           const expectedTrustScope = "current-segment";
           const scopeIsCurrentSegment = selectedTrustScope === expectedTrustScope;
@@ -491,6 +493,8 @@ def _expect_canvas_selected_trace_state_badge(
             && ariaHasLink
             && titleHasGlobalReview
             && ariaHasGlobalReview
+            && titleHasGlobalBridge
+            && ariaHasGlobalBridge
             && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(selected.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
@@ -565,6 +569,8 @@ def _expect_canvas_selected_trace_state_badge(
               ariaHasLink,
               titleHasGlobalReview,
               ariaHasGlobalReview,
+              titleHasGlobalBridge,
+              ariaHasGlobalBridge,
               scopeIsCurrentSegment,
               chainAccessible,
             },
@@ -655,6 +661,8 @@ def _expect_canvas_source_trace_state_badge(
           const ariaHasLink = ariaLabel.includes("链路");
           const titleHasGlobalReview = title.includes("全局复核");
           const ariaHasGlobalReview = ariaLabel.includes("全局复核");
+          const titleHasGlobalBridge = title.includes("当前段到全局矩阵");
+          const ariaHasGlobalBridge = ariaLabel.includes("当前段到全局矩阵");
           const sourceTrustScope = source.dataset.canvasTrustChainScope || "";
           const expectedTrustScope = "current-segment";
           const scopeIsCurrentSegment = sourceTrustScope === expectedTrustScope;
@@ -664,6 +672,8 @@ def _expect_canvas_source_trace_state_badge(
             && ariaHasLink
             && titleHasGlobalReview
             && ariaHasGlobalReview
+            && titleHasGlobalBridge
+            && ariaHasGlobalBridge
             && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(source.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(source.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
@@ -724,6 +734,8 @@ def _expect_canvas_source_trace_state_badge(
               ariaHasLink,
               titleHasGlobalReview,
               ariaHasGlobalReview,
+              titleHasGlobalBridge,
+              ariaHasGlobalBridge,
               scopeIsCurrentSegment,
               chainAccessible,
             },

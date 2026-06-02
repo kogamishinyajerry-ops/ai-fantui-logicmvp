@@ -3108,7 +3108,9 @@
     const sourceValue = selectedEvidenceSource || "none";
     const chainSnapshot = currentSegmentTrustChainSnapshot();
     const chainReady = chainSnapshot.state === "ready";
-    const chainLabel = chainReady ? `；当前段链路：${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}全局复核` : "";
+    const chainLabel = chainReady
+      ? `；当前段到全局矩阵：当前段链路 ${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}全局复核`
+      : "；当前段到全局矩阵：当前段链路等待";
     const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}${chainLabel}`;
     const clearCanvasTraceDataset = (element) => {
       traceDatasetKeys.forEach((key) => {
