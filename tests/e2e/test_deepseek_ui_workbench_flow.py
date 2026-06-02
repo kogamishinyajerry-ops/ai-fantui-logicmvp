@@ -153,11 +153,20 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
           const globalReviewText = globalReview.textContent || "";
           const globalReviewScope = globalReview.dataset.globalReviewScope || "";
           const globalReviewState = globalReview.dataset.globalReviewState || "";
+          const chainOutputCount = chain.dataset.outputCount || "";
+          const chainReviewAnchorCount = chain.dataset.reviewAnchorCount || "";
+          const globalReviewOutputCount = globalReview.dataset.outputCount || "";
+          const globalReviewAnchorCount = globalReview.dataset.reviewAnchorCount || "";
+          const globalReviewCountsMatch = globalReviewOutputCount === chainOutputCount
+            && globalReviewAnchorCount === chainReviewAnchorCount
+            && globalReviewText.includes(`${globalReviewOutputCount} 输出`)
+            && globalReviewText.includes(`${globalReviewAnchorCount} 复核`);
           const globalReviewReadable = globalReviewBox.width > 0
             && globalReviewBox.height > 0
             && globalReviewText.includes("全局")
             && globalReviewText.includes("复核")
-            && globalReviewScope === "current-segment-to-global";
+            && globalReviewScope === "current-segment-to-global"
+            && globalReviewCountsMatch;
           const chainTitle = chain.getAttribute("title") || "";
           const chainAriaLabel = chain.getAttribute("aria-label") || "";
           const titleHasCurrentSegment = chainTitle.includes("当前段");
@@ -210,6 +219,11 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             globalReviewText,
             globalReviewScope,
             globalReviewState,
+            chainOutputCount,
+            chainReviewAnchorCount,
+            globalReviewOutputCount,
+            globalReviewAnchorCount,
+            globalReviewCountsMatch,
             globalReviewWidth: globalReviewBox.width,
             globalReviewHeight: globalReviewBox.height,
             chainAccessible,
@@ -455,9 +469,14 @@ def _expect_canvas_selected_trace_state_badge(
             && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(selected.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
+          const tailCounts = tail.match(/段链(\\d+)\\/(\\d+)全局/) || [];
+          const tailOutputCount = Number.parseInt(tailCounts[1] || "-1", 10);
+          const tailReviewCount = Number.parseInt(tailCounts[2] || "-1", 10);
+          const tailCountsMatch = tailOutputCount === outputCount && tailReviewCount === reviewCount;
           const ok = badge.includes(label)
             && tail.includes("段链")
             && tail.includes("全局")
+            && tailCountsMatch
             && chainAccessible
             && box.width > 0
             && box.height > 0
@@ -488,6 +507,9 @@ def _expect_canvas_selected_trace_state_badge(
             tail,
             title,
             ariaLabel,
+            tailOutputCount,
+            tailReviewCount,
+            tailCountsMatch,
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -710,6 +732,12 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
             const tail = window.getComputedStyle(element, "::after");
             const badgeContent = badge.content || "";
             const tailContent = tail.content || "";
+            const outputCount = Number.parseInt(element.dataset[`${prefix}TrustChainOutputCount`] || "0", 10);
+            const reviewAnchorCount = Number.parseInt(element.dataset[`${prefix}TrustChainReviewAnchorCount`] || "0", 10);
+            const tailCounts = tailContent.match(/段链\\s*(\\d+)输出\\/(\\d+)全局复核/) || [];
+            const tailOutputCount = Number.parseInt(tailCounts[1] || "-1", 10);
+            const tailReviewCount = Number.parseInt(tailCounts[2] || "-1", 10);
+            const tailCountsMatch = tailOutputCount === outputCount && tailReviewCount === reviewAnchorCount;
             const lineHeight = Number.parseFloat(style.lineHeight || "0") || 16;
             const text = element.textContent || "";
             const title = element.getAttribute("title") || "";
@@ -738,6 +766,7 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && tailContent.includes("输出")
               && tailContent.includes("复核")
               && tailContent.includes("全局复核")
+              && tailCountsMatch
               && chainAccessible
               && text.includes("段")
               && element.scrollWidth <= element.clientWidth + 2
@@ -749,6 +778,11 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               prefix,
               badgeContent,
               tailContent,
+              outputCount,
+              reviewAnchorCount,
+              tailOutputCount,
+              tailReviewCount,
+              tailCountsMatch,
               title,
               ariaLabel,
               text,
@@ -4998,14 +5032,18 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
           if (!context || !annotation) return false;
-          const contextBadge = window.getComputedStyle(context, "::after").content || "";
-          const annotationBadge = window.getComputedStyle(annotation, "::after").content || "";
-          return contextBadge.includes("段链")
-            && contextBadge.includes("输出")
-            && contextBadge.includes("复核")
-            && annotationBadge.includes("段链")
-            && annotationBadge.includes("输出")
-            && annotationBadge.includes("复核");
+          const check = (element, prefix) => {
+            const tail = window.getComputedStyle(element, "::after").content || "";
+            const outputCount = Number.parseInt(element.dataset[`${prefix}TrustChainOutputCount`] || "0", 10);
+            const reviewAnchorCount = Number.parseInt(element.dataset[`${prefix}TrustChainReviewAnchorCount`] || "0", 10);
+            const counts = tail.match(/段链\\s*(\\d+)输出\\/(\\d+)全局复核/) || [];
+            return tail.includes("段链")
+              && tail.includes("输出")
+              && tail.includes("全局复核")
+              && Number.parseInt(counts[1] || "-1", 10) === outputCount
+              && Number.parseInt(counts[2] || "-1", 10) === reviewAnchorCount;
+          };
+          return check(context, "context") && check(annotation, "annotation");
         }""") is True
         _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic1")
         _assert_current_segment_consistency_cue_layout(page, align_visible=False)
