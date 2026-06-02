@@ -5860,22 +5860,27 @@
       card.dataset.status = item.status || "needs_confirmation";
       const metrics = item.updated_metrics || {};
       const proposed = item.proposed_changes || [];
+      const targetNodeLabel = annotationEndpointDisplayLabel(item.target_node_id, item.target_node_id || "未选择");
+      const annotationText = readableLogicReferenceText(item.annotation_text || "");
+      const understandingText = readableLogicReferenceText(item.understanding_zh || "等待系统理解。");
+      const confirmationText = readableLogicReferenceText(item.confirmation_question_zh || "");
+      const updatedSummaryText = readableLogicReferenceText(item.updated_summary_zh || "");
       card.innerHTML = `
         <div class="logic-change-card-head">
           <strong>记录 ${escapeText(item.index)}</strong>
           <span>${escapeText(changeStatusText(item.status))}</span>
         </div>
         <div class="logic-change-meta">
-          <span>节点：${escapeText(item.target_node_id || "未选择")}</span>
+          <span>节点：${escapeText(targetNodeLabel)}</span>
           <span>${escapeText(item.provider || provider.value)}</span>
           ${item.annotation_batch_count ? `<span>${escapeText(item.annotation_batch_count)} 条批注</span>` : ""}
         </div>
-        <p class="logic-change-annotation">${escapeText(item.annotation_text || "")}</p>
-        <p class="logic-change-understanding">${escapeText(item.understanding_zh || "等待系统理解。")}</p>
-        ${item.confirmation_question_zh ? `<p class="logic-change-question">${escapeText(item.confirmation_question_zh)}</p>` : ""}
-        ${item.updated_summary_zh ? `<p class="logic-change-updated">${escapeText(item.updated_summary_zh)}</p>` : ""}
+        <p class="logic-change-annotation">${escapeText(annotationText)}</p>
+        <p class="logic-change-understanding">${escapeText(understandingText)}</p>
+        ${item.confirmation_question_zh ? `<p class="logic-change-question">${escapeText(confirmationText)}</p>` : ""}
+        ${item.updated_summary_zh ? `<p class="logic-change-updated">${escapeText(updatedSummaryText)}</p>` : ""}
         ${metrics.nodes != null ? `<div class="logic-change-meta"><span>${escapeText(metrics.nodes)} 个节点</span><span>${escapeText(metrics.edges)} 条连线</span><span>${escapeText(metrics.panels)} 个面板</span></div>` : ""}
-        ${proposed.length ? `<details><summary>建议修改项</summary><ul>${proposed.map((entry) => `<li>${escapeText(entry)}</li>`).join("")}</ul></details>` : ""}
+        ${proposed.length ? `<details><summary>建议修改项</summary><ul>${proposed.map((entry) => `<li>${escapeText(readableLogicReferenceText(entry))}</li>`).join("")}</ul></details>` : ""}
       `;
       historyList.appendChild(card);
     }

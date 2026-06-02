@@ -9229,6 +9229,13 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         )
         assert history_before[-1]["annotation_batch_count"] == 2
         assert history_before[-1]["status"] == "needs_confirmation"
+        assert history_before[-1]["target_node_id"] == "sw1"
+        history_card = page.locator("#logic-change-history-list .logic-change-card").last
+        expect(history_card).to_contain_text("节点：SW1")
+        expect(history_card).to_contain_text("SW1 到 L1")
+        expect(history_card).not_to_contain_text("节点：sw1")
+        expect(history_card).not_to_contain_text("sw1 → logic1")
+        expect(history_card).not_to_contain_text("sw1→logic1")
 
         page.click("#logic-batch-confirm-update")
         expect(page.locator("#logic-process-title")).to_have_text("更新完成")
