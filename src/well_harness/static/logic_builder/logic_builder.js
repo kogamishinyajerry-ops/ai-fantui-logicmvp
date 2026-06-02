@@ -1645,8 +1645,8 @@
         currentSegmentTrustChain.dataset.outputCount = "0";
         currentSegmentTrustChain.dataset.reviewAnchorCount = "0";
         currentSegmentTrustChain.dataset.currentSegmentTrustChainScope = "current-segment";
-        currentSegmentTrustChain.setAttribute("aria-label", "当前段链路证据：等待段落");
-        currentSegmentTrustChain.setAttribute("title", "当前段链路证据：等待段落");
+        currentSegmentTrustChain.setAttribute("aria-label", "当前段到全局矩阵：当前段链路证据等待段落");
+        currentSegmentTrustChain.setAttribute("title", "当前段到全局矩阵：当前段链路证据等待段落");
       }
       currentSegmentTrustSteps.forEach((step) => {
         step.dataset.stepState = "waiting";
@@ -1723,8 +1723,8 @@
       currentSegmentTrustChain.dataset.outputCount = String(outputImpacts.length);
       currentSegmentTrustChain.dataset.reviewAnchorCount = String(totalAnchors);
       currentSegmentTrustChain.dataset.currentSegmentTrustChainScope = "current-segment";
-      currentSegmentTrustChain.setAttribute("aria-label", `当前段链路证据：段 ${segmentIndex}，${nodeIds.length} 节点 ${wireIds.length} 连线，${outputImpacts.length} 个输出影响，${totalAnchors} 个复核锚点`);
-      currentSegmentTrustChain.setAttribute("title", `当前段链路证据：段 ${segmentIndex}，原文到 ${nodeIds.length} 节点 / ${wireIds.length} 连线 / ${outputImpacts.length} 输出 / ${totalAnchors} 复核锚点`);
+      currentSegmentTrustChain.setAttribute("aria-label", `当前段到全局矩阵：当前段链路证据，段 ${segmentIndex}，${nodeIds.length} 节点 ${wireIds.length} 连线，${outputImpacts.length} 个输出影响，${totalAnchors} 个复核锚点`);
+      currentSegmentTrustChain.setAttribute("title", `当前段到全局矩阵：当前段链路证据，段 ${segmentIndex}，原文到 ${nodeIds.length} 节点 / ${wireIds.length} 连线 / ${outputImpacts.length} 输出 / ${totalAnchors} 复核锚点`);
     }
     currentSegmentTrustSteps.forEach((step) => {
       step.dataset.stepState = "ready";

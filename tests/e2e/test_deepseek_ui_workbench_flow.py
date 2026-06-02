@@ -208,15 +208,19 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
           const chainAriaLabel = chain.getAttribute("aria-label") || "";
           const titleHasCurrentSegment = chainTitle.includes("当前段");
           const titleHasLink = chainTitle.includes("链路");
+          const chainTitleHasBridge = chainTitle.includes(bridgeToken);
           const ariaHasCurrentSegment = chainAriaLabel.includes("当前段");
           const ariaHasLink = chainAriaLabel.includes("链路");
+          const chainAriaHasBridge = chainAriaLabel.includes(bridgeToken);
           const chainScope = chain.dataset.currentSegmentTrustChainScope || "";
           const expectedChainScope = "current-segment";
           const scopeIsCurrentSegment = chainScope === expectedChainScope;
           const chainAccessible = titleHasCurrentSegment
             && titleHasLink
+            && chainTitleHasBridge
             && ariaHasCurrentSegment
             && ariaHasLink
+            && chainAriaHasBridge
             && scopeIsCurrentSegment;
           const canvasRemainsVisible = canvasBox.width > 0 && canvasBox.height > 0 && chainAccessible;
           const steps = Array.from(chain.querySelectorAll("[data-trust-chain-step]"));
@@ -275,8 +279,10 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             expectedChainScope,
             titleHasCurrentSegment,
             titleHasLink,
+            chainTitleHasBridge,
             ariaHasCurrentSegment,
             ariaHasLink,
+            chainAriaHasBridge,
             scopeIsCurrentSegment,
             stepsStayInside,
             stepCount: steps.length,
