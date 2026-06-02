@@ -3916,6 +3916,60 @@ def test_logic_builder_requirement_trace_panel_stays_readable_at_1280(
         expect(output_list).to_be_visible()
         expect(segment_card).to_be_visible()
         expect(review_matrix).to_be_visible()
+        review_readability = page.evaluate("""() => {
+          const shell = document.querySelector(".logic-requirement-trace-review");
+          const title = document.querySelector(".logic-requirement-trace-review > strong");
+          const matrixCard = document.querySelector('#logic-global-review-matrix [data-review-item="logic"]');
+          const matrixValue = document.querySelector("#logic-review-logic-count");
+          const matrixAction = document.querySelector('#logic-global-review-matrix [data-review-filter-action="all"]');
+          const parseRgb = (value) => {
+            const match = String(value || "").match(/rgba?\\(([^)]+)\\)/);
+            if (!match) return null;
+            const parts = match[1].split(",").map((part) => Number.parseFloat(part.trim()));
+            const alpha = Number.isFinite(parts[3]) ? parts[3] : 1;
+            return [parts[0], parts[1], parts[2], alpha];
+          };
+          const compose = (foreground, background) => [
+            foreground[0] * foreground[3] + background[0] * (1 - foreground[3]),
+            foreground[1] * foreground[3] + background[1] * (1 - foreground[3]),
+            foreground[2] * foreground[3] + background[2] * (1 - foreground[3]),
+            1,
+          ];
+          const effectiveBackground = (element) => {
+            const stack = [];
+            let current = element;
+            while (current && current.nodeType === 1) {
+              const color = parseRgb(window.getComputedStyle(current).backgroundColor);
+              if (color && color[3] > 0) stack.push(color);
+              current = current.parentElement;
+            }
+            return stack.reverse().reduce((background, foreground) => compose(foreground, background), [255, 255, 255, 1]);
+          };
+          const luminance = (rgb) => {
+            const channels = rgb.slice(0, 3).map((value) => {
+              const channel = value / 255;
+              return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+            });
+            return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+          };
+          const contrast = (foreground, background) => {
+            const lighter = Math.max(luminance(foreground), luminance(background));
+            const darker = Math.min(luminance(foreground), luminance(background));
+            return (lighter + 0.05) / (darker + 0.05);
+          };
+          const sampleContrast = (textElement, backgroundElement) => {
+            const foreground = parseRgb(window.getComputedStyle(textElement).color);
+            const background = effectiveBackground(backgroundElement || textElement);
+            return foreground && background ? contrast(foreground, background) : 0;
+          };
+          const ratios = {
+            title: sampleContrast(title, shell),
+            matrixValue: sampleContrast(matrixValue, matrixCard),
+            matrixAction: sampleContrast(matrixAction, matrixAction),
+          };
+          return { ok: Object.values(ratios).every((ratio) => ratio >= 4.5), ratios };
+        }""")
+        assert review_readability["ok"] is True, review_readability
         expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
         expect(canvas).to_be_visible()
 

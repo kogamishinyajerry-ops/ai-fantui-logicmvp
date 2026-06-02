@@ -18,6 +18,15 @@
   --logic-demo-chain-active: #0f9f6e;
   --logic-demo-chain-fault: #d92d20;
   --logic-demo-chain-accent: #2563eb;
+  --logic-trace-review-border: rgba(54, 198, 216, 0.28);
+  --logic-trace-review-bg: rgba(7, 20, 33, 0.88);
+  --logic-trace-review-bg-image:
+    linear-gradient(135deg, rgba(25, 210, 143, 0.12), rgba(7, 20, 33, 0.78)),
+    radial-gradient(circle at 12% 0%, rgba(54, 198, 216, 0.18), transparent 42%);
+  --logic-trace-review-shadow: inset 0 0 0 1px rgba(118, 228, 255, 0.08);
+  --logic-trace-review-label: #c9ffe9;
+  --logic-trace-review-title: #f2f7fc;
+  --logic-trace-review-copy: #a8bad0;
 }
 
 * { box-sizing: border-box; }
@@ -496,27 +505,29 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-requirement-trace-review {
   display: grid;
   gap: 4px;
-  border: 1px solid rgba(15, 159, 110, 0.24);
+  border: 1px solid var(--logic-trace-review-border);
   border-radius: 8px;
-  background: #f0fdf4;
+  background-color: var(--logic-trace-review-bg);
+  background-image: var(--logic-trace-review-bg-image);
+  box-shadow: var(--logic-trace-review-shadow);
   padding: 9px;
   pointer-events: auto;
 }
 
 .logic-requirement-trace-review span {
-  color: var(--logic-ok);
+  color: var(--logic-trace-review-label);
   font-size: 10px;
   font-weight: 700;
 }
 
 .logic-requirement-trace-review strong {
-  color: var(--logic-text);
+  color: var(--logic-trace-review-title);
   font-size: 12px;
 }
 
 .logic-requirement-trace-review p {
   margin: 0;
-  color: var(--logic-muted);
+  color: var(--logic-trace-review-copy);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -2166,7 +2177,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   margin-top: 2px;
   border: 1px solid rgba(54, 198, 216, 0.28);
   border-radius: 6px;
-  background: rgba(5, 17, 28, 0.78);
+  background: rgba(5, 17, 28, 0.92);
   color: #9ee8ff;
   cursor: pointer;
   font-family: "Courier New", monospace;
@@ -2189,8 +2200,8 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 .logic-review-matrix-action[aria-pressed="true"] {
   border-color: rgba(25, 210, 143, 0.64);
-  background: rgba(25, 210, 143, 0.14);
-  color: #c9ffe9;
+  background: rgba(4, 48, 39, 0.94);
+  color: #eafff4;
 }
 .logic-canvas {
   position: relative;
@@ -4992,6 +5003,15 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   --logic-ok: #0f9f6e;
   --logic-warn: #b7791f;
   --logic-danger: #d92d20;
+  --logic-trace-review-border: rgba(54, 198, 216, 0.28);
+  --logic-trace-review-bg: rgba(7, 20, 33, 0.88);
+  --logic-trace-review-bg-image:
+    linear-gradient(135deg, rgba(25, 210, 143, 0.12), rgba(7, 20, 33, 0.78)),
+    radial-gradient(circle at 12% 0%, rgba(54, 198, 216, 0.18), transparent 42%);
+  --logic-trace-review-shadow: inset 0 0 0 1px rgba(118, 228, 255, 0.08);
+  --logic-trace-review-label: #c9ffe9;
+  --logic-trace-review-title: #f2f7fc;
+  --logic-trace-review-copy: #a8bad0;
   color-scheme: light;
 }
 
@@ -5050,6 +5070,18 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 .logic-shell[data-console-palette="codex-light"] button {
   border-color: rgba(37, 99, 235, 0.32);
   background: rgba(37, 99, 235, 0.08);
+}
+
+.logic-shell[data-console-palette="codex-light"] .logic-review-matrix-action {
+  border-color: rgba(54, 198, 216, 0.28);
+  background: rgba(5, 17, 28, 0.92);
+  color: #9ee8ff;
+}
+
+.logic-shell[data-console-palette="codex-light"] .logic-review-matrix-action[aria-pressed="true"] {
+  border-color: rgba(25, 210, 143, 0.64);
+  background: rgba(4, 48, 39, 0.94);
+  color: #eafff4;
 }
 
 .logic-shell[data-console-palette="codex-light"] button.secondary {
