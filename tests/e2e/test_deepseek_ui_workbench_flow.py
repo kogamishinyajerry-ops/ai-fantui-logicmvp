@@ -373,10 +373,16 @@ def _expect_canvas_selected_trace_state_badge(
           const box = selected.getBoundingClientRect();
           const popoverBox = popover.getBoundingClientRect();
           const labelText = selected.textContent || "";
+          const title = selected.getAttribute("title") || "";
+          const ariaLabel = selected.getAttribute("aria-label") || "";
           const outputCount = Number.parseInt(selected.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const ok = badge.includes(label)
-            && tail.includes("链")
+            && tail.includes("段链")
+            && title.includes("当前段")
+            && title.includes("链路")
+            && ariaLabel.includes("当前段")
+            && ariaLabel.includes("链路")
             && box.width > 0
             && box.height > 0
             && popoverBox.width > 0
@@ -408,6 +414,8 @@ def _expect_canvas_selected_trace_state_badge(
             selectedSource,
             badge,
             tail,
+            title,
+            ariaLabel,
             labelText,
             selectedState: selected.dataset.canvasTraceConsistencyState || "",
             selectedCurrentId: selected.dataset.canvasTraceConsistencyCurrentId || "",
@@ -462,6 +470,8 @@ def _expect_canvas_source_trace_state_badge(
           }
           const badge = window.getComputedStyle(source, "::before").content || "";
           const box = source.getBoundingClientRect();
+          const title = source.getAttribute("title") || "";
+          const ariaLabel = source.getAttribute("aria-label") || "";
           const outputCount = Number.parseInt(source.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(source.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const childReadable = (element) => {
@@ -483,6 +493,10 @@ def _expect_canvas_source_trace_state_badge(
             && source.dataset.canvasTraceConsistencySelectedSource === selectedSource
             && source.dataset.canvasTraceConsistencyCueLabel
             && source.dataset.canvasTraceConsistencySurface === "canvas-source"
+            && title.includes("当前段")
+            && title.includes("链路")
+            && ariaLabel.includes("当前段")
+            && ariaLabel.includes("链路")
             && source.dataset.canvasTrustChainState === "ready"
             && source.dataset.canvasTrustChainTraceId === currentId
             && source.dataset.canvasTrustChainSurface === "canvas-source"
@@ -503,6 +517,8 @@ def _expect_canvas_source_trace_state_badge(
             selectedId,
             selectedSource,
             badge,
+            title,
+            ariaLabel,
             width: box.width,
             sourceStateText: sourceState.textContent || "",
             sourceStateClientWidth: sourceState.clientWidth,
