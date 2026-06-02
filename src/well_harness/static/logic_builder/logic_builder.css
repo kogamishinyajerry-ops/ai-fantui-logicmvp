@@ -1391,10 +1391,30 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 
 .logic-canvas-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   max-width: 176px;
 }
 
-.logic-canvas-source[data-canvas-trace-legend="ready"] {
+.logic-canvas-source-state,
+.logic-canvas-trace-legend {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logic-canvas-source-state {
+  flex: 0 1 auto;
+}
+
+.logic-canvas-trace-legend {
+  flex: 0 0 auto;
+  max-width: 82px;
+}
+
+.logic-canvas-trace-legend[data-canvas-trace-legend="ready"] {
   color: #a7f3d0;
 }
 

@@ -193,6 +193,8 @@
   const primaryAnnotateButton = $("logic-primary-annotate");
   const counts = $("logic-canvas-counts");
   const source = $("logic-canvas-source");
+  const canvasSourceState = $("logic-canvas-source-state");
+  const canvasTraceLegend = $("logic-canvas-trace-legend");
   const naturalLanguageInput = $("logic-natural-language-input");
   const naturalLanguageSend = $("logic-natural-language-send");
   const logicPresentationModeToggle = $("logic-presentation-mode-toggle");
@@ -3537,7 +3539,13 @@
     if (nodeLayer) nodeLayer.innerHTML = "";
     if (panelLayer) panelLayer.innerHTML = "";
     if (counts) counts.textContent = "0 个节点 · 0 条连线 · 0 个面板";
-    if (source) source.textContent = "来源待确认";
+    if (canvasSourceState) canvasSourceState.textContent = "来源待确认";
+    if (canvasTraceLegend) {
+      canvasTraceLegend.dataset.canvasTraceLegend = "none";
+      canvasTraceLegend.hidden = true;
+      canvasTraceLegend.setAttribute("title", "等待可反选需求段");
+    }
+    if (source) source.setAttribute("title", "来源待确认");
     if (bottomRunNodeCount) bottomRunNodeCount.textContent = "节点 0/0";
     if (bottomRunEdgeCount) bottomRunEdgeCount.textContent = "连线 0/0";
     renderCircuitProvenanceLegend(null);
@@ -5492,9 +5500,14 @@
       bottomRunEdgeCount.textContent = `连线 ${edgeTotal}/${edgeTotal}`;
     }
     const sourceLabel = payload.source_requirements_sha256 ? "来源已确认" : "来源待确认";
-    source.dataset.canvasTraceLegend = circuitView ? "ready" : "none";
-    source.textContent = circuitView ? `${sourceLabel} · 青色=可反选` : sourceLabel;
-    source.setAttribute("title", circuitView ? `${sourceLabel}；青色焦点表示可反选回需求段` : sourceLabel);
+    if (canvasSourceState) canvasSourceState.textContent = sourceLabel;
+    if (canvasTraceLegend) {
+      canvasTraceLegend.dataset.canvasTraceLegend = circuitView ? "ready" : "none";
+      canvasTraceLegend.hidden = !circuitView;
+      canvasTraceLegend.textContent = "青色=可反选";
+      canvasTraceLegend.setAttribute("title", circuitView ? "青色焦点表示可反选回需求段" : "等待可反选需求段");
+    }
+    if (source) source.setAttribute("title", circuitView ? `${sourceLabel}；青色焦点表示可反选回需求段` : sourceLabel);
     renderBurdenSummary(payload);
     renderObjectContextDrawer();
     updateChangeControls();

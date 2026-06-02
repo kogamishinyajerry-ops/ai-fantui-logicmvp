@@ -344,7 +344,10 @@
             本地补齐 <span data-provenance-count>0</span>
           </button>
         </div>
-        <span id="logic-canvas-source" class="logic-canvas-source">来源待确认</span>
+        <span id="logic-canvas-source" class="logic-canvas-source">
+          <span id="logic-canvas-source-state">来源待确认</span>
+          <span id="logic-canvas-trace-legend" class="logic-canvas-trace-legend" data-canvas-trace-legend="none" hidden>青色=可反选</span>
+        </span>
         <button id="logic-presentation-mode-toggle" type="button" class="logic-presentation-mode-toggle" aria-controls="logic-canvas logic-presentation-controls" aria-pressed="false" aria-label="进入纯画布展示模式" title="纯画布">⛶</button>
         <button id="logic-streamed-panel-toggle" type="button" class="logic-streamed-panel-toggle" aria-controls="logic-streamed-authoring-panel" aria-expanded="false" aria-label="打开候选确认面板" title="候选确认">✓</button>
         <button id="logic-command-palette-open" type="button" class="logic-command-palette-trigger" data-blueprint-advanced-entry="command-palette" aria-haspopup="dialog" aria-controls="logic-command-palette" aria-label="打开命令面板">⌘K</button>

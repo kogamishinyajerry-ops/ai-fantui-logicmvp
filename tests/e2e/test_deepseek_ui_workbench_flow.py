@@ -3155,11 +3155,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-status", "idle")
         trace_panel = page.locator("#logic-requirement-trace-panel")
         canvas_source = page.locator("#logic-canvas-source")
+        canvas_source_state = page.locator("#logic-canvas-source-state")
+        canvas_trace_legend = page.locator("#logic-canvas-trace-legend")
         expect(trace_panel).to_be_visible()
         expect(page.locator("#logic-requirement-trace-source")).to_have_text("deepseek-v4-pro-demo-requirements.md")
         expect(canvas_source).to_be_visible()
-        expect(canvas_source).to_have_attribute("data-canvas-trace-legend", "ready")
-        expect(canvas_source).to_have_attribute("title", re.compile("反选"))
+        expect(canvas_source_state).to_contain_text("来源")
+        expect(canvas_trace_legend).to_be_visible()
+        expect(canvas_trace_legend).to_have_attribute("data-canvas-trace-legend", "ready")
         canvas_source_box = canvas_source.bounding_box()
         assert canvas_source_box is not None
         assert canvas_source_box["width"] <= 180
