@@ -2816,12 +2816,50 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   margin: 0;
 }
 #logic-selected-target-label {
+  display: inline-block;
+  max-width: 100%;
   overflow: hidden;
   color: var(--logic-ok);
   font-family: "Courier New", monospace;
   font-size: 12px;
   text-overflow: ellipsis;
+  vertical-align: middle;
   white-space: nowrap;
+}
+
+#logic-selected-target-label[data-canvas-trace-consistency-state]::before {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 5px;
+  border: 1px solid rgba(94, 234, 212, 0.42);
+  border-radius: 999px;
+  background: rgba(4, 48, 39, 0.72);
+  color: #d7fff4;
+  font-family: "Courier New", monospace;
+  font-size: 0.82em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 1px 5px;
+  vertical-align: 1px;
+}
+
+#logic-selected-target-label[data-canvas-trace-consistency-state="consistent"]::before {
+  content: "一致";
+}
+
+#logic-selected-target-label[data-canvas-trace-consistency-state="diverged"]::before {
+  content: "分叉";
+  border-color: rgba(245, 200, 91, 0.62);
+  background: rgba(88, 54, 10, 0.72);
+  color: #fff4bf;
+}
+
+#logic-selected-target-label[data-canvas-trace-consistency-state="unbound"]::before {
+  content: "未绑定";
+  border-color: rgba(255, 180, 168, 0.56);
+  background: rgba(89, 24, 34, 0.72);
+  color: #ffd8d1;
 }
 .logic-annotation-popover label {
   color: var(--logic-muted);

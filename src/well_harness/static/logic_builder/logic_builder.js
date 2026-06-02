@@ -3053,6 +3053,41 @@
     syncTraceEvidenceConsistency();
   }
 
+  function syncCanvasSelectedTargetTraceAuditSurface(stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource, cueLabel, text) {
+    if (!selectedTargetLabel) return;
+    if (!state.selectedTargetId) {
+      [
+        "canvasTraceConsistencyState",
+        "canvasTraceConsistencyId",
+        "canvasTraceConsistencySurfaces",
+        "canvasTraceConsistencyCurrentId",
+        "canvasTraceConsistencySelectedId",
+        "canvasTraceConsistencySelectedSource",
+        "canvasTraceConsistencyCueLabel",
+        "canvasTraceConsistencySurface",
+      ].forEach((key) => {
+        delete selectedTargetLabel.dataset[key];
+      });
+      selectedTargetLabel.setAttribute("title", "未选择画布对象");
+      selectedTargetLabel.setAttribute("aria-label", "未选择画布对象");
+      return;
+    }
+    const targetText = selectedTargetLabel.textContent || state.selectedTargetLabel || "选中对象";
+    const selectedId = selectedEvidenceId || "none";
+    const sourceValue = selectedEvidenceSource || "none";
+    const auditLabel = `画布选中对象证据：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}`;
+    selectedTargetLabel.dataset.canvasTraceConsistencyState = stateValue;
+    selectedTargetLabel.dataset.canvasTraceConsistencyId = idValue || "waiting";
+    selectedTargetLabel.dataset.canvasTraceConsistencySurfaces = surfaces || "left canvas";
+    selectedTargetLabel.dataset.canvasTraceConsistencyCurrentId = currentId || "waiting";
+    selectedTargetLabel.dataset.canvasTraceConsistencySelectedId = selectedId;
+    selectedTargetLabel.dataset.canvasTraceConsistencySelectedSource = sourceValue;
+    selectedTargetLabel.dataset.canvasTraceConsistencyCueLabel = cueLabel || stateValue;
+    selectedTargetLabel.dataset.canvasTraceConsistencySurface = "selected-target";
+    selectedTargetLabel.setAttribute("title", auditLabel);
+    selectedTargetLabel.setAttribute("aria-label", `${targetText}；${auditLabel}`);
+  }
+
   function syncTraceEvidenceConsistency() {
     if (!currentSegmentConsistencyStatus || !currentSegmentEvidence) return;
     const currentId = currentSegmentEvidence.dataset.currentSegmentId || "waiting";
@@ -3154,6 +3189,7 @@
       currentSegmentConsistencyAlign.setAttribute("title", alignLabel);
     }
     syncTraceConsistencyReviewState(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
+    syncCanvasSelectedTargetTraceAuditSurface(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource, cueLabel, text);
     syncRequirementTraceAuditSurface(logicContextRequirementTrace, "context", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
     syncRequirementTraceAuditSurface(annotationRequirementTrace, "annotation", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
   }
