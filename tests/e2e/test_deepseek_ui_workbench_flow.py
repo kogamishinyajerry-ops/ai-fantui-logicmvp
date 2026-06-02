@@ -4268,6 +4268,11 @@ def test_logic_builder_generation_stream_prefers_node_label_over_backend_id(
         expect(stream_events).to_contain_text("生成节点 RA 自定义高度")
         expect(stream_events).to_contain_text("来源：RA 自定义高度 到 释放门")
         expect(stream_events).not_to_contain_text("backend_input_raw")
+        node_event = stream_events.locator('.logic-stream-event[data-stream-event="node"]').first
+        expect(node_event).to_have_attribute("aria-label", re.compile("生成节点 RA 自定义高度"))
+        expect(node_event).to_have_attribute("title", re.compile("生成节点 RA 自定义高度"))
+        expect(node_event).not_to_have_attribute("aria-label", re.compile("backend_input_raw"))
+        expect(node_event).not_to_have_attribute("title", re.compile("backend_input_raw"))
     finally:
         page.close()
 

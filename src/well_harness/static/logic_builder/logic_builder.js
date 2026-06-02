@@ -741,17 +741,24 @@
     drawingStreamTimeline.dataset.blueprint39Stream = events.length ? "compact-complete" : "empty";
     const streamTitle = drawingStreamTimeline.querySelector(".logic-stream-head strong");
     if (!events.length) {
-      if (streamTitle) streamTitle.textContent = "等待生成过程";
-      drawingStreamEvents.innerHTML = '<li class="logic-stream-event is-empty">等待图纸生成过程。</li>';
+      setReadableStatusText(streamTitle, "等待生成过程");
+      drawingStreamEvents.innerHTML = "";
+      const emptyItem = document.createElement("li");
+      emptyItem.className = "logic-stream-event is-empty";
+      setReadableStatusText(emptyItem, "等待图纸生成过程。");
+      drawingStreamEvents.appendChild(emptyItem);
       return;
     }
-    if (streamTitle) streamTitle.textContent = `生成过程已完成 · ${events.length} 步`;
+    setReadableStatusText(streamTitle, `生成过程已完成 · ${events.length} 步`);
     drawingStreamEvents.innerHTML = "";
     events.forEach((event, index) => {
       const item = document.createElement("li");
       item.className = "logic-stream-event";
       item.dataset.streamEvent = event.kind;
-      item.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span><p>${escapeText(event.text)}</p>`;
+      const eventText = String(event.text || "").replace(/\s+/g, " ").trim();
+      item.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span><p>${escapeText(eventText)}</p>`;
+      item.title = eventText;
+      item.setAttribute("aria-label", eventText);
       drawingStreamEvents.appendChild(item);
     });
   }
