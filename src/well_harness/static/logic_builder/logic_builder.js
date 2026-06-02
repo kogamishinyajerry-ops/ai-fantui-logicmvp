@@ -835,6 +835,12 @@
     return "idle";
   }
 
+  function currentSegmentReadableLabel() {
+    const title = document.getElementById("logic-current-segment-title");
+    const titleText = title ? title.textContent.trim() : "";
+    return titleText || "当前需求段";
+  }
+
   function outputVisibleStatusTarget(text, mode, explicitTarget) {
     if (explicitTarget && explicitTarget.kind && explicitTarget.id) {
       return explicitTarget;
@@ -927,8 +933,7 @@
     const countHint = outputImpactCount > 0
       ? `${outputImpactCount} 个输出锚点`
       : `补充 ${hiddenOutputCount} 个隐藏输出锚点`;
-    const traceHint = traceId && traceId !== "none" ? `（${traceId}）` : "";
-    setOutputFocusStatus(`已展开当前需求段全部输出依据${traceHint}，${countHint}`);
+    setOutputFocusStatus(`已展开 ${currentSegmentReadableLabel()} 的全部输出依据，${countHint}`);
   }
 
   function setCurrentSegmentJumpStatus(action) {

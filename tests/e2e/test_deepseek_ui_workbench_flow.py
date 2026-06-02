@@ -3329,11 +3329,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "none")
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
-            expect(output_focus_status).to_contain_text("row-logic1")
+            expect(output_focus_status).to_contain_text("段 01")
+            assert "row-logic" not in output_focus_status.inner_text()
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_contain_text("已展开当前需求段全部输出依据")
+            expect(output_visible_status).to_contain_text("段 01")
+            assert "row-logic" not in output_visible_status.inner_text()
             assert page.evaluate("""() => {
               const visibleStatus = document.querySelector("#logic-output-visible-status");
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
@@ -3381,9 +3384,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             output_reveal.click()
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "active")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
+            expect(output_focus_status).to_contain_text("段 01")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
+            assert "row-logic" not in output_visible_status.inner_text()
             expect(related_output_focus).to_be_focused()
         else:
             expect(output_reveal).to_be_hidden()
@@ -3429,9 +3434,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "none")
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
+            expect(output_focus_status).to_contain_text("段 01")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
+            assert "row-logic" not in output_visible_status.inner_text()
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
         segment_jumps.locator('[data-current-segment-jump="trace"]').click()
@@ -3457,9 +3464,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-reveal-trace-id", "row-logic1")
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
+            expect(output_focus_status).to_contain_text("段 01")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
+            assert "row-logic" not in output_visible_status.inner_text()
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
