@@ -4306,10 +4306,27 @@
     markStreamChunksFailed();
   }
 
+  function syncFaultNextActionLabel() {
+    if (!faultNext) return;
+    let label = "下一步：进入故障准备";
+    let actionState = "ready";
+    if (state.busy) {
+      label = "下一步暂不可用：正在绘制或更新候选逻辑图";
+      actionState = "busy";
+    } else if (!state.drawingPayload) {
+      label = "下一步暂不可用：等待候选逻辑图";
+      actionState = "waiting-drawing";
+    }
+    faultNext.dataset.nextActionState = actionState;
+    faultNext.setAttribute("aria-label", label);
+    faultNext.setAttribute("title", label);
+  }
+
   function setBusy(isBusy) {
     state.busy = isBusy;
     regenerate.disabled = isBusy;
     faultNext.disabled = isBusy || !state.drawingPayload;
+    syncFaultNextActionLabel();
     provider.disabled = isBusy;
     if (logicBottomProvider) logicBottomProvider.disabled = isBusy;
     regenerate.textContent = isBusy ? "绘制中..." : "检查：重新绘制";
@@ -6255,6 +6272,7 @@
     if (naturalLanguageSend) naturalLanguageSend.disabled = state.busy || !hasDraft || !hasRequirements || !naturalLanguageText;
     confirmChangeButton.disabled = state.busy || !state.interpretationPayload || !hasDraft;
     faultNext.disabled = state.busy || !hasDraft;
+    syncFaultNextActionLabel();
     changeText.disabled = state.busy || !hasDraft || !hasRequirements;
     clearChangeButton.disabled = state.busy;
     cancelChangeButton.disabled = state.busy;
