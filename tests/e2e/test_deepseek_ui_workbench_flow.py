@@ -127,6 +127,23 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
           const jumps = document.querySelector("#logic-current-segment-anchor-jumps");
           const canvas = document.querySelector("#logic-canvas");
           if (!card || !chain || !globalReview || !jumps || !canvas) return { ok: false, missing: true };
+          const bridgeToken = "当前段到全局矩阵";
+          const buildCountAudit = (visibleCounts, dataCounts, countsMatch, countsSource) => ({
+            visibleCounts,
+            dataCounts,
+            countsMatch,
+            countsSource,
+          });
+          const buildBridgeAudit = ({ visibleHasBridge, titleHasBridge, ariaHasBridge, scope, expectedScope, visibleHasGlobalMarker = null }) => ({
+            token: bridgeToken,
+            visibleHasBridge,
+            visibleHasGlobalMarker,
+            titleHasBridge,
+            ariaHasBridge,
+            scope,
+            expectedScope,
+            scopeMatch: scope === expectedScope,
+          });
           const cardBox = card.getBoundingClientRect();
           const chainBox = chain.getBoundingClientRect();
           const globalReviewBox = globalReview.getBoundingClientRect();
@@ -155,9 +172,9 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
           const globalReviewAriaLabel = globalReview.getAttribute("aria-label") || "";
           const globalReviewScope = globalReview.dataset.globalReviewScope || "";
           const globalReviewState = globalReview.dataset.globalReviewState || "";
-          const globalReviewHasBridge = globalReviewText.includes("当前段到全局矩阵");
-          const globalReviewTitleHasBridge = globalReviewTitle.includes("当前段到全局矩阵");
-          const globalReviewAriaHasBridge = globalReviewAriaLabel.includes("当前段到全局矩阵");
+          const globalReviewHasBridge = globalReviewText.includes(bridgeToken);
+          const globalReviewTitleHasBridge = globalReviewTitle.includes(bridgeToken);
+          const globalReviewAriaHasBridge = globalReviewAriaLabel.includes(bridgeToken);
           const chainOutputCount = chain.dataset.outputCount || "";
           const chainReviewAnchorCount = chain.dataset.reviewAnchorCount || "";
           const globalReviewOutputCount = globalReview.dataset.outputCount || "";
@@ -166,6 +183,19 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             && globalReviewAnchorCount === chainReviewAnchorCount
             && globalReviewText.includes(`${globalReviewOutputCount} 输出`)
             && globalReviewText.includes(`${globalReviewAnchorCount} 复核`);
+          const globalReviewCountAudit = buildCountAudit(
+            { output: globalReviewOutputCount, reviewAnchor: globalReviewAnchorCount },
+            { output: chainOutputCount, reviewAnchor: chainReviewAnchorCount },
+            globalReviewCountsMatch,
+            "left-global-review",
+          );
+          const globalReviewBridgeAudit = buildBridgeAudit({
+            visibleHasBridge: globalReviewHasBridge,
+            titleHasBridge: globalReviewTitleHasBridge,
+            ariaHasBridge: globalReviewAriaHasBridge,
+            scope: globalReviewScope,
+            expectedScope: "current-segment-to-global",
+          });
           const globalReviewReadable = globalReviewBox.width > 0
             && globalReviewBox.height > 0
             && globalReviewText.includes("全局")
@@ -228,43 +258,14 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             globalReviewAriaLabel,
             globalReviewScope,
             globalReviewState,
-            bridgeAudit: {
-              token: "当前段到全局矩阵",
-              visibleHasBridge: globalReviewHasBridge,
-              titleHasBridge: globalReviewTitleHasBridge,
-              ariaHasBridge: globalReviewAriaHasBridge,
-              scope: globalReviewScope,
-              expectedScope: "current-segment-to-global",
-              scopeMatch: globalReviewScope === "current-segment-to-global",
-            },
+            bridgeAudit: globalReviewBridgeAudit,
             chainOutputCount,
             chainReviewAnchorCount,
             globalReviewOutputCount,
             globalReviewAnchorCount,
             globalReviewCountsMatch,
-            globalReviewCounts: {
-              visibleCounts: {
-                output: globalReviewOutputCount,
-                reviewAnchor: globalReviewAnchorCount,
-              },
-              dataCounts: {
-                output: chainOutputCount,
-                reviewAnchor: chainReviewAnchorCount,
-              },
-              countsMatch: globalReviewCountsMatch,
-            },
-            countAudit: {
-              visibleCounts: {
-                output: globalReviewOutputCount,
-                reviewAnchor: globalReviewAnchorCount,
-              },
-              dataCounts: {
-                output: chainOutputCount,
-                reviewAnchor: chainReviewAnchorCount,
-              },
-              countsMatch: globalReviewCountsMatch,
-              countsSource: "left-global-review",
-            },
+            globalReviewCounts: globalReviewCountAudit,
+            countAudit: globalReviewCountAudit,
             globalReviewWidth: globalReviewBox.width,
             globalReviewHeight: globalReviewBox.height,
             chainAccessible,
@@ -485,6 +486,23 @@ def _expect_canvas_selected_trace_state_badge(
           if (!selected || !popover || !left || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
+          const bridgeToken = "当前段到全局矩阵";
+          const buildCountAudit = (visibleCounts, dataCounts, countsMatch, countsSource) => ({
+            visibleCounts,
+            dataCounts,
+            countsMatch,
+            countsSource,
+          });
+          const buildBridgeAudit = ({ visibleHasBridge, visibleHasGlobalMarker = null, titleHasBridge, ariaHasBridge, scope, expectedScope }) => ({
+            token: bridgeToken,
+            visibleHasBridge,
+            visibleHasGlobalMarker,
+            titleHasBridge,
+            ariaHasBridge,
+            scope,
+            expectedScope,
+            scopeMatch: scope === expectedScope,
+          });
           const badge = window.getComputedStyle(selected, "::before").content || "";
           const tail = window.getComputedStyle(selected, "::after").content || "";
           const box = selected.getBoundingClientRect();
@@ -498,8 +516,8 @@ def _expect_canvas_selected_trace_state_badge(
           const ariaHasLink = ariaLabel.includes("链路");
           const titleHasGlobalReview = title.includes("全局复核");
           const ariaHasGlobalReview = ariaLabel.includes("全局复核");
-          const titleHasGlobalBridge = title.includes("当前段到全局矩阵");
-          const ariaHasGlobalBridge = ariaLabel.includes("当前段到全局矩阵");
+          const titleHasGlobalBridge = title.includes(bridgeToken);
+          const ariaHasGlobalBridge = ariaLabel.includes(bridgeToken);
           const selectedTrustScope = selected.dataset.canvasTrustChainScope || "";
           const expectedTrustScope = "current-segment";
           const scopeIsCurrentSegment = selectedTrustScope === expectedTrustScope;
@@ -518,6 +536,20 @@ def _expect_canvas_selected_trace_state_badge(
           const tailOutputCount = Number.parseInt(tailCounts[1] || "-1", 10);
           const tailReviewCount = Number.parseInt(tailCounts[2] || "-1", 10);
           const tailCountsMatch = tailOutputCount === outputCount && tailReviewCount === reviewCount;
+          const selectedCountAudit = buildCountAudit(
+            { output: tailOutputCount, reviewAnchor: tailReviewCount },
+            { output: outputCount, reviewAnchor: reviewCount },
+            tailCountsMatch,
+            "canvas-selected-tail",
+          );
+          const selectedBridgeAudit = buildBridgeAudit({
+            visibleHasBridge: null,
+            visibleHasGlobalMarker: tail.includes("全局"),
+            titleHasBridge: titleHasGlobalBridge,
+            ariaHasBridge: ariaHasGlobalBridge,
+            scope: selectedTrustScope,
+            expectedScope: expectedTrustScope,
+          });
           const ok = badge.includes(label)
             && tail.includes("段链")
             && tail.includes("全局")
@@ -555,39 +587,9 @@ def _expect_canvas_selected_trace_state_badge(
             tailOutputCount,
             tailReviewCount,
             tailCountsMatch,
-            globalReviewCounts: {
-              visibleCounts: {
-                output: tailOutputCount,
-                reviewAnchor: tailReviewCount,
-              },
-              dataCounts: {
-                output: outputCount,
-                reviewAnchor: reviewCount,
-              },
-              countsMatch: tailCountsMatch,
-            },
-            countAudit: {
-              visibleCounts: {
-                output: tailOutputCount,
-                reviewAnchor: tailReviewCount,
-              },
-              dataCounts: {
-                output: outputCount,
-                reviewAnchor: reviewCount,
-              },
-              countsMatch: tailCountsMatch,
-              countsSource: "canvas-selected-tail",
-            },
-            bridgeAudit: {
-              token: "当前段到全局矩阵",
-              visibleHasBridge: null,
-              visibleHasGlobalMarker: tail.includes("全局"),
-              titleHasBridge: titleHasGlobalBridge,
-              ariaHasBridge: ariaHasGlobalBridge,
-              scope: selectedTrustScope,
-              expectedScope: expectedTrustScope,
-              scopeMatch: scopeIsCurrentSegment,
-            },
+            globalReviewCounts: selectedCountAudit,
+            countAudit: selectedCountAudit,
+            bridgeAudit: selectedBridgeAudit,
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -677,6 +679,23 @@ def _expect_canvas_source_trace_state_badge(
           if (!source || !sourceState || !traceLegend || !selected || !left || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
+          const bridgeToken = "当前段到全局矩阵";
+          const buildCountAudit = (visibleCounts, dataCounts, countsMatch, countsSource) => ({
+            visibleCounts,
+            dataCounts,
+            countsMatch,
+            countsSource,
+          });
+          const buildBridgeAudit = ({ visibleHasBridge, visibleHasGlobalMarker = null, titleHasBridge, ariaHasBridge, scope, expectedScope }) => ({
+            token: bridgeToken,
+            visibleHasBridge,
+            visibleHasGlobalMarker,
+            titleHasBridge,
+            ariaHasBridge,
+            scope,
+            expectedScope,
+            scopeMatch: scope === expectedScope,
+          });
           const badge = window.getComputedStyle(source, "::before").content || "";
           const box = source.getBoundingClientRect();
           const title = source.getAttribute("title") || "";
@@ -687,8 +706,8 @@ def _expect_canvas_source_trace_state_badge(
           const ariaHasLink = ariaLabel.includes("链路");
           const titleHasGlobalReview = title.includes("全局复核");
           const ariaHasGlobalReview = ariaLabel.includes("全局复核");
-          const titleHasGlobalBridge = title.includes("当前段到全局矩阵");
-          const ariaHasGlobalBridge = ariaLabel.includes("当前段到全局矩阵");
+          const titleHasGlobalBridge = title.includes(bridgeToken);
+          const ariaHasGlobalBridge = ariaLabel.includes(bridgeToken);
           const sourceTrustScope = source.dataset.canvasTrustChainScope || "";
           const expectedTrustScope = "current-segment";
           const scopeIsCurrentSegment = sourceTrustScope === expectedTrustScope;
@@ -736,33 +755,27 @@ def _expect_canvas_source_trace_state_badge(
             && left.dataset.traceConsistencyState === state
             && context.dataset.contextTraceConsistencyState === state
             && annotation.dataset.annotationTraceConsistencyState === state;
+          const sourceCountAudit = buildCountAudit(
+            { output: null, reviewAnchor: null },
+            { output: outputCount, reviewAnchor: reviewCount },
+            null,
+            "canvas-source-data-only",
+          );
+          const sourceBridgeAudit = buildBridgeAudit({
+            visibleHasBridge: null,
+            visibleHasGlobalMarker: null,
+            titleHasBridge: titleHasGlobalBridge,
+            ariaHasBridge: ariaHasGlobalBridge,
+            scope: sourceTrustScope,
+            expectedScope: expectedTrustScope,
+          });
           return {
             ok,
             badge,
             title,
             ariaLabel,
-            countAudit: {
-              visibleCounts: {
-                output: null,
-                reviewAnchor: null,
-              },
-              dataCounts: {
-                output: outputCount,
-                reviewAnchor: reviewCount,
-              },
-              countsMatch: null,
-              countsSource: "canvas-source-data-only",
-            },
-            bridgeAudit: {
-              token: "当前段到全局矩阵",
-              visibleHasBridge: null,
-              visibleHasGlobalMarker: null,
-              titleHasBridge: titleHasGlobalBridge,
-              ariaHasBridge: ariaHasGlobalBridge,
-              scope: sourceTrustScope,
-              expectedScope: expectedTrustScope,
-              scopeMatch: scopeIsCurrentSegment,
-            },
+            countAudit: sourceCountAudit,
+            bridgeAudit: sourceBridgeAudit,
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -828,6 +841,23 @@ def _expect_canvas_source_trace_state_badge(
 def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None:
     layout_state = page.evaluate(
         """(label) => {
+          const bridgeToken = "当前段到全局矩阵";
+          const buildCountAudit = (visibleCounts, dataCounts, countsMatch, countsSource) => ({
+            visibleCounts,
+            dataCounts,
+            countsMatch,
+            countsSource,
+          });
+          const buildBridgeAudit = ({ visibleHasBridge, visibleHasGlobalMarker = null, titleHasBridge, ariaHasBridge, scope, expectedScope }) => ({
+            token: bridgeToken,
+            visibleHasBridge,
+            visibleHasGlobalMarker,
+            titleHasBridge,
+            ariaHasBridge,
+            scope,
+            expectedScope,
+            scopeMatch: scope === expectedScope,
+          });
           const surfaces = [
             { element: document.querySelector("#logic-context-requirement-trace"), prefix: "context" },
             { element: document.querySelector("#logic-annotation-requirement-trace"), prefix: "annotation" },
@@ -856,8 +886,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
             const ariaHasLink = ariaLabel.includes("链路");
             const titleHasGlobalReview = title.includes("全局复核");
             const ariaHasGlobalReview = ariaLabel.includes("全局复核");
-            const titleHasGlobalBridge = title.includes("当前段到全局矩阵");
-            const ariaHasGlobalBridge = ariaLabel.includes("当前段到全局矩阵");
+            const titleHasGlobalBridge = title.includes(bridgeToken);
+            const ariaHasGlobalBridge = ariaLabel.includes(bridgeToken);
             const scope = element.dataset[`${prefix}TrustChainScope`] || "";
             const expectedScope = "current-segment";
             const scopeIsCurrentSegment = scope === expectedScope;
@@ -885,6 +915,20 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && box.height <= lineHeight * 2 + 8
               && element.dataset[`${prefix}TrustChainSurface`] === "current-segment"
               && scopeIsCurrentSegment;
+            const rightCountAudit = buildCountAudit(
+              { output: tailOutputCount, reviewAnchor: tailReviewCount },
+              { output: outputCount, reviewAnchor: reviewAnchorCount },
+              tailCountsMatch,
+              `${prefix}-tail`,
+            );
+            const rightBridgeAudit = buildBridgeAudit({
+              visibleHasBridge: null,
+              visibleHasGlobalMarker: tailContent.includes("全局复核"),
+              titleHasBridge: titleHasGlobalBridge,
+              ariaHasBridge: ariaHasGlobalBridge,
+              scope,
+              expectedScope,
+            });
             return {
               ok,
               prefix,
@@ -895,39 +939,9 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               tailOutputCount,
               tailReviewCount,
               tailCountsMatch,
-              globalReviewCounts: {
-                visibleCounts: {
-                  output: tailOutputCount,
-                  reviewAnchor: tailReviewCount,
-                },
-                dataCounts: {
-                  output: outputCount,
-                  reviewAnchor: reviewAnchorCount,
-                },
-                countsMatch: tailCountsMatch,
-              },
-              countAudit: {
-                visibleCounts: {
-                  output: tailOutputCount,
-                  reviewAnchor: tailReviewCount,
-                },
-                dataCounts: {
-                  output: outputCount,
-                  reviewAnchor: reviewAnchorCount,
-                },
-                countsMatch: tailCountsMatch,
-                countsSource: `${prefix}-tail`,
-              },
-              bridgeAudit: {
-                token: "当前段到全局矩阵",
-                visibleHasBridge: null,
-                visibleHasGlobalMarker: tailContent.includes("全局复核"),
-                titleHasBridge: titleHasGlobalBridge,
-                ariaHasBridge: ariaHasGlobalBridge,
-                scope,
-                expectedScope,
-                scopeMatch: scopeIsCurrentSegment,
-              },
+              globalReviewCounts: rightCountAudit,
+              countAudit: rightCountAudit,
+              bridgeAudit: rightBridgeAudit,
               title,
               ariaLabel,
               text,
