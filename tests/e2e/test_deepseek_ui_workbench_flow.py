@@ -1033,6 +1033,64 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
         assert path_state["tokenMatches"], path_state
 
 
+def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
+    row_state = page.evaluate(
+        """() => {
+          const active = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
+          const evidence = document.querySelector("#logic-current-segment-evidence");
+          const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
+          const badge = active ? active.querySelector(".logic-requirement-trace-text-match") : null;
+          const button = active ? active.querySelector("button") : null;
+          if (!active || !evidence || !identityLoop || !badge || !button) {
+            return { ok: false, reason: "missing-row-text-match-surface" };
+          }
+          const mode = active.dataset.originalTextMatch || "";
+          const identityMode = identityLoop.dataset.identityLoopTextMatch || "";
+          const evidenceMode = evidence.dataset.currentSegmentTextMatch || "";
+          const badgeMode = badge.dataset.originalTextMatch || "";
+          const buttonBox = button.getBoundingClientRect();
+          const badgeBox = badge.getBoundingClientRect();
+          const style = window.getComputedStyle(badge);
+          const insideButton = badgeBox.left >= buttonBox.left - 1
+            && badgeBox.right <= buttonBox.right + 1
+            && badgeBox.top >= buttonBox.top - 1
+            && badgeBox.bottom <= buttonBox.bottom + 1;
+          const compact = badgeBox.width > 0
+            && badgeBox.width <= 58
+            && badgeBox.height > 0
+            && badgeBox.height <= 18;
+          const clipped = badge.scrollWidth <= badge.clientWidth + 1
+            && badge.scrollHeight <= badge.clientHeight + 1;
+          return {
+            ok: ["full-quote", "meaningful-token"].includes(mode)
+              && mode === identityMode
+              && mode === evidenceMode
+              && mode === badgeMode
+              && (badge.textContent || "").includes("原文")
+              && insideButton
+              && compact
+              && clipped
+              && style.pointerEvents === "none",
+            activeId: active.dataset.requirementTraceId || "",
+            mode,
+            identityMode,
+            evidenceMode,
+            badgeMode,
+            badgeText: badge.textContent || "",
+            insideButton,
+            compact,
+            clipped,
+            pointerEvents: style.pointerEvents,
+            badgeBox: {
+              width: badgeBox.width,
+              height: badgeBox.height,
+            },
+          };
+        }"""
+    )
+    assert row_state["ok"] is True, row_state
+
+
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
     badge_state = page.evaluate(
         """(label) => {
@@ -5679,6 +5737,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_source="canvas-node",
             inspector_state="matched",
         )
+        _expect_active_requirement_row_text_match_badge(page)
         _expect_canvas_selected_trace_state_badge(
             page,
             "分叉",
@@ -5935,6 +5994,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             inspector_state="unbound",
         )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
+        _expect_active_requirement_row_text_match_badge(page)
         _expect_inspector_trace_state_badge(page, "未绑定")
         _expect_canvas_selected_trace_state_badge(
             page,
