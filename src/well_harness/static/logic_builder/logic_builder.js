@@ -604,6 +604,14 @@
     });
   }
 
+  function readableLogicReferenceItem(value) {
+    const raw = String(value || "");
+    const readableText = readableLogicReferenceText(raw);
+    if (readableText !== raw) return readableText;
+    if (/^[A-Za-z0-9_]+$/.test(raw)) return annotationEndpointDisplayLabel(raw, raw);
+    return readableText;
+  }
+
   function setSourceTrustSummary(text) {
     const value = text || "来源待确认";
     if (sourceTrustSummary) sourceTrustSummary.textContent = value;
@@ -2240,10 +2248,10 @@
   function streamedNeighborhoodText(proposal) {
     if (!proposal) return "等待候选对象。";
     const upstream = Array.isArray(proposal.upstream) && proposal.upstream.length
-      ? proposal.upstream.join(" / ")
+      ? proposal.upstream.map(readableLogicReferenceItem).join(" / ")
       : "无显式上游";
     const downstream = Array.isArray(proposal.downstream) && proposal.downstream.length
-      ? proposal.downstream.join(" / ")
+      ? proposal.downstream.map(readableLogicReferenceItem).join(" / ")
       : "无显式下游";
     return `上游：${upstream}；下游：${downstream}`;
   }
@@ -2383,7 +2391,7 @@
         li.dataset.requirementsPatchStatus = event.requirements_document_patch_status || "not_requested";
         const decision = event.event_type === "candidate_edit_committed" ? "已提交" : "已反馈重算";
         const target = readableAnnotationTargetDisplayLabel(event.target_type, event.target_id, event.display_label);
-        const sourceExcerpt = event.source_excerpt ? ` · 来源：${String(event.source_excerpt).slice(0, 56)}` : "";
+        const sourceExcerpt = event.source_excerpt ? ` · 来源：${readableLogicReferenceText(String(event.source_excerpt)).slice(0, 56)}` : "";
         const recalculation = event.event_type === "candidate_edit_revision_requested"
           ? ` · ${streamedCandidateRecalculationStatusLabel(event.candidate_recalculation && event.candidate_recalculation.status)}`
           : "";
@@ -2590,7 +2598,7 @@
       const anchorIds = Array.isArray(proposal.source_anchor_ids) && proposal.source_anchor_ids.length
         ? ` · ${proposal.source_anchor_ids.map((id) => readableSourceAnchorIdentity(id, id)).join(" / ")}`
         : "";
-      streamedAuthoringSource.textContent = `${proposal.source_excerpt || "来源片段待补齐"}${anchorIds}`;
+      streamedAuthoringSource.textContent = `${readableLogicReferenceText(proposal.source_excerpt || "来源片段待补齐")}${anchorIds}`;
       streamedAuthoringSource.dataset.sourceHighlight = "active";
     }
     if (streamedAuthoringNeighborhood) {
