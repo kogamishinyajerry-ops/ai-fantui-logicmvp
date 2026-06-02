@@ -3528,6 +3528,30 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         if len(second_output_impact_label_list) > 2:
             expect(output_reveal).to_be_visible()
             expect(output_reveal).to_have_attribute("data-target-trace-id", "row-logic2")
+            output_reveal.click()
+            expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "active")
+            expect(output_backtrace).to_have_attribute("data-reveal-trace-id", "row-logic2")
+            expect(output_backtrace).to_have_attribute("data-reveal-source", "current-segment-output-summary")
+            expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "none")
+            expect(output_reveal).to_have_attribute("aria-expanded", "true")
+            expect(output_focus_status).to_contain_text("已展开")
+            expect(output_focus_status).to_contain_text("全部输出依据")
+            expect(output_focus_status).to_contain_text("段 02")
+            expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic2")
+            expect(output_visible_status).to_contain_text("全部输出依据")
+            expect(output_visible_status).to_contain_text("段 02")
+            assert "row-logic" not in output_focus_status.inner_text()
+            assert "row-logic" not in output_visible_status.inner_text()
+            assert page.evaluate("""() => {
+              const visibleStatus = document.querySelector("#logic-output-visible-status");
+              const hiddenStatus = document.querySelector("#logic-output-focus-status");
+              const panel = document.querySelector("#logic-output-backtrace-panel");
+              return Boolean(visibleStatus && hiddenStatus && panel
+                && visibleStatus.textContent === hiddenStatus.textContent
+                && visibleStatus.dataset.outputVisibleTargetId === panel.dataset.revealTraceId);
+            }""") is True
         else:
             expect(output_reveal).to_be_hidden()
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("ETRAC")
