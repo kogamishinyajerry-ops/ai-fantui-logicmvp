@@ -118,6 +118,29 @@ def _assert_current_segment_consistency_cue_layout(page: Any, *, align_visible: 
     ) is True
 
 
+def _assert_layout_target_uncovered(page: Any, selector: str) -> None:
+    assert page.evaluate(
+        """(targetSelector) => {
+          const target = document.querySelector(targetSelector);
+          if (!target) return false;
+          const box = target.getBoundingClientRect();
+          if (box.width <= 0 || box.height <= 0) return false;
+          const targetStyle = window.getComputedStyle(target);
+          const targetIsVisible = targetStyle.display !== "none"
+            && targetStyle.visibility !== "hidden"
+            && Number(targetStyle.opacity || "1") > 0;
+          if (!targetIsVisible) return false;
+          const x = box.left + box.width / 2;
+          const y = box.top + box.height / 2;
+          if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return false;
+          if (targetStyle.pointerEvents === "none") return true;
+          const hit = document.elementFromPoint(x, y);
+          return Boolean(hit && (hit === target || target.contains(hit) || hit.closest(targetSelector) === target));
+        }""",
+        selector,
+    ) is True
+
+
 def _expect_trust_review_consistency(
     locator: Any,
     *,
@@ -3406,6 +3429,9 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         trust_review_state = page.locator("#logic-trust-review-state")
         expect(trust_spine).to_be_visible()
         expect(trust_spine).to_have_attribute("data-current-stage", "review")
+        _assert_layout_target_uncovered(page, "#logic-requirement-trace-panel")
+        _assert_layout_target_uncovered(page, "#logic-canvas")
+        _assert_layout_target_uncovered(page, "#logic-trust-spine")
         expect(page.locator("#logic-trust-spine [data-trust-stage]")).to_have_count(4)
         expect(page.locator('#logic-trust-spine [data-trust-stage="review"]')).to_have_class(re.compile("is-active"))
         expect(page.locator("#logic-trust-parse-state")).to_contain_text("段原文已结构化")
