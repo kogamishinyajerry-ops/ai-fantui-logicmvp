@@ -693,7 +693,7 @@
       const sourceId = wire.source || "";
       const targetId = wire.target || "";
       const wireLabel = readableAnnotationTargetDisplayLabel("wire", `${sourceId}->${targetId}`, `${sourceId}->${targetId}`);
-      const sourceLabel = readableLogicReferenceText(wire.label || sourceId || "候选链路");
+      const sourceLabel = readableLogicReferenceText(wire.label || wireLabel || sourceId || "候选链路");
       events.push({
         kind: "wire",
         text: `生成连线 ${wireLabel} · 来源：${sourceLabel}`,

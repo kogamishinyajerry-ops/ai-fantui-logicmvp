@@ -4249,6 +4249,9 @@ def test_logic_builder_generation_stream_prefers_node_label_over_backend_id(
     drawing.pop("circuit_view", None)
     drawing["nodes"][0]["id"] = "backend_input_raw"
     drawing["nodes"][0]["label"] = "RA 自定义高度"
+    drawing["edges"][0]["source"] = "backend_input_raw"
+    drawing["edges"][0]["target"] = "gate_release"
+    drawing["edges"][0].pop("label", None)
     try:
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate(
@@ -4263,6 +4266,7 @@ def test_logic_builder_generation_stream_prefers_node_label_over_backend_id(
         _show_logic_builder_workbench(page)
         stream_events = page.locator("#logic-drawing-stream-events")
         expect(stream_events).to_contain_text("生成节点 RA 自定义高度")
+        expect(stream_events).to_contain_text("来源：RA 自定义高度 到 释放门")
         expect(stream_events).not_to_contain_text("backend_input_raw")
     finally:
         page.close()
