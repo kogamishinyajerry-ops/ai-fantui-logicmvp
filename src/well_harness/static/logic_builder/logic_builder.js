@@ -827,7 +827,7 @@
 
   function outputVisibleStatusMode(text) {
     if (!text) return "idle";
-    if (text.includes("已展开当前需求段全部输出依据")) return "expanded";
+    if (text.includes("已展开") && text.includes("全部输出依据")) return "expanded";
     if (text.includes("已聚焦")) return "focused";
     if (text.includes("非当前段相关输出")) return "blocked";
     if (text.includes("已收起")) return "closed";
@@ -888,6 +888,45 @@
     return { kind: "none", id: "none" };
   }
 
+  function outputVisibleStatusVerification(mode, target, text) {
+    if (!outputBacktracePanel) return "waiting";
+    const targetKind = target && target.kind ? target.kind : "none";
+    const targetId = target && target.id ? target.id : "none";
+    if (mode === "idle") {
+      return targetKind === "none" && targetId === "none" ? "waiting" : "unverified";
+    }
+    const hiddenStatus = document.getElementById("logic-output-focus-status");
+    if (hiddenStatus && hiddenStatus.textContent !== (text || "")) return "unverified";
+    if (mode === "expanded") {
+      return targetKind === "requirement-trace"
+        && targetId !== "none"
+        && targetId === (outputBacktracePanel.dataset.revealTraceId || "")
+        ? "verified"
+        : "unverified";
+    }
+    if (mode === "focused") {
+      return targetKind === "output"
+        && targetId !== "none"
+        && targetId === (outputBacktracePanel.dataset.activeOutput || "")
+        ? "verified"
+        : "unverified";
+    }
+    if (mode === "blocked") {
+      return targetKind === "output"
+        && targetId !== "none"
+        && targetId === (outputBacktracePanel.dataset.outputFocusBlocked || "")
+        ? "verified"
+        : "unverified";
+    }
+    if (mode === "view") {
+      return targetKind === "view" && ["source", "trace", "all"].includes(targetId) ? "verified" : "unverified";
+    }
+    if (mode === "closed") {
+      return targetKind === "requirement-trace" && targetId !== "none" ? "verified" : "unverified";
+    }
+    return "unverified";
+  }
+
   function setVisibleOutputStatus(text, explicitTarget) {
     if (!outputBacktracePanel) return;
     let visibleStatus = document.getElementById("logic-output-visible-status");
@@ -910,6 +949,7 @@
     visibleStatus.dataset.outputVisibleTargetKind = target.kind || "none";
     visibleStatus.dataset.outputVisibleTargetId = target.id || "none";
     visibleStatus.textContent = nextText;
+    visibleStatus.dataset.outputVisibleVerification = outputVisibleStatusVerification(mode, target, nextText);
   }
 
   function setOutputFocusStatus(text, explicitTarget) {
@@ -1502,7 +1542,7 @@
     outputBacktracePanel.classList.remove("is-current-segment-output-revealed");
     if (currentSegmentOutputReveal) currentSegmentOutputReveal.setAttribute("aria-expanded", "false");
     const status = ensureOutputFocusStatus();
-    if (wasRevealed && status && status.textContent.includes("已展开当前需求段全部输出依据")) {
+    if (wasRevealed && status && status.textContent.includes("已展开") && status.textContent.includes("全部输出依据")) {
       setOutputFocusStatus("已收起当前需求段全部输出依据");
     }
   }
