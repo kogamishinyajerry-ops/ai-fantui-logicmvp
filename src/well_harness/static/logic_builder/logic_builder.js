@@ -3068,6 +3068,22 @@
     trustReviewState.textContent = `${baseText} · ${label}`;
     trustReviewState.setAttribute("aria-label", `${baseText}；一致性状态：${stateValue || "waiting"}；${label}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
     trustReviewState.setAttribute("title", `${baseText}；一致性状态：${stateValue || "waiting"}；${label}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
+    if (trustSpine) {
+      trustSpine.dataset.traceConsistencyState = stateValue || "waiting";
+      trustSpine.dataset.traceConsistencyId = idValue || "waiting";
+      trustSpine.dataset.traceConsistencySurfaces = surfaces || "left";
+      trustSpine.dataset.traceConsistencyCurrentSegmentId = currentId || "waiting";
+      trustSpine.dataset.traceConsistencySelectedCanvasTraceId = selectedEvidenceId || "none";
+      trustSpine.dataset.traceConsistencySelectedSource = selectedEvidenceSource || "none";
+      trustSpine.dataset.traceConsistencyReviewState = stateValue || "waiting";
+      trustSpine.dataset.traceConsistencyReviewId = idValue || "waiting";
+      trustSpine.dataset.traceConsistencyReviewSurfaces = surfaces || "left";
+      trustSpine.dataset.traceConsistencyReviewCurrentId = currentId || "waiting";
+      trustSpine.dataset.traceConsistencyReviewCurrentSegmentId = currentId || "waiting";
+      trustSpine.dataset.traceConsistencyReviewSelectedId = selectedEvidenceId || "none";
+      trustSpine.dataset.traceConsistencyReviewSelectedCanvasTraceId = selectedEvidenceId || "none";
+      trustSpine.dataset.traceConsistencyReviewSelectedSource = selectedEvidenceSource || "none";
+    }
   }
 
   function clampNumber(value, min, max) {
