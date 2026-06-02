@@ -667,6 +667,23 @@
     return id || "source";
   }
 
+  function readableTraceIdentity(id, fallback = "未选择") {
+    const raw = String(id || "").trim();
+    if (!raw || raw === "none") return fallback;
+    if (raw === "waiting") return "等待";
+    const match = raw.match(/^row-logic(\d+)$/);
+    if (match) return `段 ${String(match[1]).padStart(2, "0")}`;
+    return fallback;
+  }
+
+  function readableSourceAnchorIdentity(id, fallback = "等待锚点") {
+    const raw = String(id || "").trim();
+    if (!raw || raw === "none" || raw === "waiting") return fallback;
+    const match = raw.match(/^logic(\d+)$/);
+    if (match) return `逻辑锚点 ${String(match[1]).padStart(2, "0")}`;
+    return fallback;
+  }
+
   function sourceAnchorText(anchor) {
     if (!anchor) return "";
     return String(anchor.quote_zh || anchor.quote || anchor.text || anchor.id || "").trim();
@@ -1119,19 +1136,23 @@
     currentSegmentIdentityLoop.dataset.originalTextMatch = originalTextMatch.mode;
     currentSegmentIdentityLoop.dataset.originalTextMatchToken = originalTextMatch.token;
     currentSegmentIdentityLoop.dataset.identityLoopScope = "current-segment";
+    const currentLabel = readableTraceIdentity(currentId, "等待当前段");
+    const highlightedLabel = readableTraceIdentity(highlightedTraceId, currentLabel);
+    const selectedLabel = readableTraceIdentity(selectedId, "未选择");
+    const sourceAnchorLabel = readableSourceAnchorIdentity(sourceAnchorId);
     currentSegmentIdentityLoop.setAttribute(
       "aria-label",
-      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId}，当前段 ${currentId}，源锚点 ${sourceAnchorId}，画布依据 ${selectedId}，来源 ${selectedSourceLabel}，检查器 ${inspectorSurfaceState}，原文命中 ${originalTextMatch.label}`
+      `身份闭环：${stateLabel}，高亮 ${highlightedLabel}，当前 ${currentLabel}，源锚点 ${sourceAnchorLabel}，画布依据 ${selectedLabel}，来源 ${selectedSourceLabel}，检查器 ${inspectorSurfaceState}，原文命中 ${originalTextMatch.label}`
     );
     currentSegmentIdentityLoop.setAttribute(
       "title",
-      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId} -> 源锚点 ${sourceAnchorId} -> 画布依据 ${selectedId} -> 检查器 ${inspectorSurfaceState}；当前段 ${currentId}；来源 ${selectedSourceLabel}；原文命中 ${originalTextMatch.label}；token ${originalTextMatch.token}`
+      `身份闭环：${stateLabel}，高亮 ${highlightedLabel}，源锚点 ${sourceAnchorLabel}，画布依据 ${selectedLabel}，检查器 ${inspectorSurfaceState}；当前 ${currentLabel}；来源 ${selectedSourceLabel}；原文命中 ${originalTextMatch.label}`
     );
     if (currentSegmentIdentityState) currentSegmentIdentityState.textContent = stateLabel;
-    if (currentSegmentIdentityCurrent) currentSegmentIdentityCurrent.textContent = `高亮段 ${highlightedTraceId}`;
-    if (currentSegmentIdentitySelected) currentSegmentIdentitySelected.textContent = `选中 ${selectedId}`;
+    if (currentSegmentIdentityCurrent) currentSegmentIdentityCurrent.textContent = `高亮 ${highlightedLabel}`;
+    if (currentSegmentIdentitySelected) currentSegmentIdentitySelected.textContent = `选中 ${selectedLabel}`;
     if (currentSegmentIdentitySource) currentSegmentIdentitySource.textContent = `来源 ${selectedSourceLabel}`;
-    if (currentSegmentIdentityAnchor) currentSegmentIdentityAnchor.textContent = `锚点 ${sourceAnchorId}`;
+    if (currentSegmentIdentityAnchor) currentSegmentIdentityAnchor.textContent = `锚点 ${sourceAnchorLabel}`;
     if (currentSegmentIdentityInspector) currentSegmentIdentityInspector.textContent = `检查器 ${inspectorSurfaceState}`;
     if (currentSegmentIdentityTextMatch) {
       currentSegmentIdentityTextMatch.dataset.originalTextMatch = originalTextMatch.mode;
@@ -3463,7 +3484,9 @@
     const selectedEvidenceSource = selectedEvidenceId === "none"
       ? "none"
       : (state.selectedTargetType === "wire" ? "canvas-wire" : (state.selectedTargetType === "node" ? "canvas-node" : "trace-list"));
-    const auditLabel = `证据一致性状态：${stateValue}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId}；来源：${selectedEvidenceSource}`;
+    const currentReadableLabel = readableTraceIdentity(currentId, "等待当前段");
+    const selectedReadableLabel = readableTraceIdentity(selectedEvidenceId, "未选择");
+    const auditLabel = `证据一致性状态：${cueLabel}；${text}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSource}`;
     currentSegmentConsistencyStatus.dataset.traceConsistencyState = stateValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencyId = idValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencySurfaces = surfaces;
@@ -3497,7 +3520,7 @@
       currentSegmentConsistencyAlign.dataset.traceConsistencyAlignTargetId = canAlign ? alignTraceId : "none";
       currentSegmentConsistencyAlign.dataset.traceConsistencyAlignSource = canAlign ? alignSource : "none";
       const alignLabel = canAlign
-        ? `对齐到选中对象证据段：${alignTraceId}；来源：${alignSource}`
+        ? `对齐到选中对象证据段：${readableTraceIdentity(alignTraceId, "选中段")}；来源：${alignSource}`
         : "对齐到选中对象证据段";
       currentSegmentConsistencyAlign.setAttribute("aria-label", alignLabel);
       currentSegmentConsistencyAlign.setAttribute("title", alignLabel);
@@ -3577,8 +3600,10 @@
     trustReviewState.dataset.traceConsistencyReviewSelectedSource = selectedEvidenceSource || "none";
     trustReviewState.dataset.traceConsistencyReviewLabel = label;
     trustReviewState.textContent = `${baseText} · ${label}`;
-    trustReviewState.setAttribute("aria-label", `${baseText}；一致性状态：${stateValue || "waiting"}；${label}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
-    trustReviewState.setAttribute("title", `${baseText}；一致性状态：${stateValue || "waiting"}；${label}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
+    const currentReadableLabel = readableTraceIdentity(currentId, "等待当前段");
+    const selectedReadableLabel = readableTraceIdentity(selectedEvidenceId, "未选择");
+    trustReviewState.setAttribute("aria-label", `${baseText}；一致性状态：${label}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSource || "none"}`);
+    trustReviewState.setAttribute("title", `${baseText}；一致性状态：${label}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSource || "none"}`);
     if (trustSpine) {
       trustSpine.dataset.traceConsistencyState = stateValue || "waiting";
       trustSpine.dataset.traceConsistencyId = idValue || "waiting";

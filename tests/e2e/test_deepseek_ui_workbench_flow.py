@@ -76,6 +76,12 @@ def _expect_trace_consistency(
         expect(locator).to_have_attribute("data-trace-consistency-align-target-id", align_target_id)
     if align_source is not None:
         expect(locator).to_have_attribute("data-trace-consistency-align-source", align_source)
+    consistency_accessible_state = locator.evaluate("""(element) => ({
+      ariaLabel: element.getAttribute("aria-label") || "",
+      title: element.getAttribute("title") || "",
+      text: element.textContent || "",
+    })""")
+    _assert_no_machine_tokens_in_accessible_state(consistency_accessible_state, "ariaLabel", "title", "text")
 
 
 def _assert_current_segment_consistency_cue_layout(page: Any, *, align_visible: bool) -> None:
@@ -514,6 +520,12 @@ def _expect_trust_review_consistency(
     if selected_id is not None:
         expect(locator).to_have_attribute("data-trace-consistency-review-selected-id", selected_id)
         expect(locator).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", selected_id)
+    review_accessible_state = locator.evaluate("""(element) => ({
+      ariaLabel: element.getAttribute("aria-label") || "",
+      title: element.getAttribute("title") || "",
+      text: element.textContent || "",
+    })""")
+    _assert_no_machine_tokens_in_accessible_state(review_accessible_state, "ariaLabel", "title", "text")
 
 
 def _expect_trust_spine_consistency(
@@ -783,12 +795,16 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
               && identityBox.width > 0
               && identityBox.height > 0
               && identityText.includes("身份闭环")
-              && identityText.includes("高亮段")
+              && identityText.includes("高亮")
+              && identityText.includes("段")
               && identityText.includes("选中")
               && identityText.includes("来源")
               && identityText.includes("锚点")
               && identityText.includes("检查器")
               && identityText.includes("原文")
+              && !identityText.includes("row-logic")
+              && !identityText.includes("->")
+              && !/\\blogic\\d+\\b/.test(identityText)
               && identityChildrenClip
               && identityInsideCard
               && identityDoesNotCoverJumps
@@ -878,24 +894,18 @@ def _expect_current_segment_identity_loop_state(
         expect(loop).to_have_attribute("data-inspector-surface-state", expected_inspector_state)
     expect(loop).to_have_attribute("data-identity-loop-text-match", re.compile("full-quote|meaningful-token"))
     expect(loop).to_have_attribute("data-identity-loop-scope", "current-segment")
-    expect(loop).to_have_attribute("aria-label", re.compile(current_id))
-    expect(loop).to_have_attribute("aria-label", re.compile(expected_highlighted_id))
-    expect(loop).to_have_attribute("aria-label", re.compile(selected_id))
-    expect(loop).to_have_attribute("aria-label", re.compile(expected_source_anchor_id))
     expect(loop).to_have_attribute("aria-label", re.compile("原文命中"))
-    expect(loop).to_have_attribute("title", re.compile(current_id))
-    expect(loop).to_have_attribute("title", re.compile(expected_highlighted_id))
-    expect(loop).to_have_attribute("title", re.compile(selected_id))
-    expect(loop).to_have_attribute("title", re.compile(expected_source_anchor_id))
     expect(loop).to_have_attribute("title", re.compile("原文命中"))
+    identity_loop_accessible_state = loop.evaluate("""(element) => ({
+      ariaLabel: element.getAttribute("aria-label") || "",
+      title: element.getAttribute("title") || "",
+      text: element.textContent || "",
+    })""")
+    _assert_no_machine_tokens_in_accessible_state(identity_loop_accessible_state, "ariaLabel", "title", "text")
     if expected_inspector_state is not None:
         expect(loop).to_have_attribute("aria-label", re.compile(expected_inspector_state))
         expect(loop).to_have_attribute("title", re.compile(expected_inspector_state))
     expect(loop).to_contain_text("身份闭环")
-    expect(loop).to_contain_text(current_id)
-    expect(loop).to_contain_text(expected_highlighted_id)
-    expect(loop).to_contain_text(selected_id)
-    expect(loop).to_contain_text(expected_source_anchor_id)
     expect(loop).to_contain_text("原文")
     if expected_inspector_state is not None:
         expect(loop).to_contain_text(expected_inspector_state)
@@ -1925,6 +1935,12 @@ def _expect_consistency_align_button(
         expect(locator).to_have_attribute("data-trace-consistency-align-target-id", target_id)
     if source is not None:
         expect(locator).to_have_attribute("data-trace-consistency-align-source", source)
+    if visible:
+        align_accessible_state = locator.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(align_accessible_state, "ariaLabel", "title")
 
 
 REQUIREMENTS_READY = {
@@ -6158,10 +6174,20 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_id="row-logic2",
             selected_source="canvas-node",
         )
-        expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
+        expect(segment_consistency).to_have_attribute("aria-label", re.compile("证据分叉"))
+        segment_consistency_label_state = segment_consistency.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(segment_consistency_label_state, "ariaLabel", "title")
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "diverged")
         _assert_current_segment_consistency_cue_layout(page, align_visible=True)
-        expect(trust_review_state).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
+        expect(trust_review_state).to_have_attribute("aria-label", re.compile("证据分叉"))
+        trust_review_label_state = trust_review_state.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(trust_review_label_state, "ariaLabel", "title")
         expect(trust_spine).to_have_attribute("data-trace-consistency-review-label", "证据分叉")
         _expect_consistency_align_button(
             segment_consistency_align,
