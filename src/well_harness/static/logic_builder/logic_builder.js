@@ -6123,7 +6123,10 @@
       } else {
         for (const item of changes) {
           const li = document.createElement("li");
-          li.textContent = readableLogicReferenceText(item);
+          const changeText = readableLogicReferenceText(item).replace(/\s+/g, " ").trim();
+          li.textContent = changeText;
+          li.title = changeText;
+          li.setAttribute("aria-label", changeText);
           batchProposedChanges.appendChild(li);
         }
       }
@@ -6288,7 +6291,10 @@
     } else {
       for (const item of changes) {
         const li = document.createElement("li");
-        li.textContent = readableLogicReferenceText(item);
+        const changeText = readableLogicReferenceText(item).replace(/\s+/g, " ").trim();
+        li.textContent = changeText;
+        li.title = changeText;
+        li.setAttribute("aria-label", changeText);
         proposedChanges.appendChild(li);
       }
     }

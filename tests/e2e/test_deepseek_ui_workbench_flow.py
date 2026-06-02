@@ -9300,6 +9300,11 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(page.locator("#logic-batch-proposed-changes li")).to_have_count(2)
         expect(page.locator("#logic-batch-proposed-changes")).to_contain_text("SW1 到 L1")
         expect(page.locator("#logic-batch-proposed-changes")).not_to_contain_text("sw1→logic1")
+        proposed_change_item = page.locator("#logic-batch-proposed-changes li").nth(1)
+        expect(proposed_change_item).to_have_attribute("aria-label", re.compile("SW1 到 L1"))
+        expect(proposed_change_item).to_have_attribute("title", re.compile("SW1 到 L1"))
+        expect(proposed_change_item).not_to_have_attribute("aria-label", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
+        expect(proposed_change_item).not_to_have_attribute("title", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
         expect(page.locator("#logic-batch-confirmation-question")).to_contain_text("是否确认")
         expect(page.locator("#logic-batch-confirm-update")).to_be_enabled()
         batch_copy_state = page.evaluate("""() => ({
