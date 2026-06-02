@@ -5734,9 +5734,11 @@
       element.style.top = `${Number(panel.y) || 0}px`;
       element.style.width = `${Number(panel.width) || 140}px`;
       element.style.height = `${Number(panel.height) || 74}px`;
+      element.dataset.nodeId = panel.node_id || "";
       const panelLabel = readableParameterPanelLabel(panel);
+      const panelNodeLabel = annotationEndpointDisplayLabel(panel.node_id, panel.node_id || "节点");
       element.innerHTML = `
-        <strong><span>${escapeText(panelLabel)}</span><code>${escapeText(panel.node_id)}</code></strong>
+        <strong><span>${escapeText(panelLabel)}</span><code>${escapeText(panelNodeLabel)}</code></strong>
         <input type="range" min="${escapeText(min)}" max="${escapeText(max)}" value="${escapeText(value)}" disabled>
         <code>${escapeText(value)}${unit}</code>
       `;

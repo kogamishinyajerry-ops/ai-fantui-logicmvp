@@ -4232,9 +4232,14 @@ def test_logic_builder_parameter_panel_fallback_copy_uses_readable_label(
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
         _show_logic_builder_workbench(page)
+        parameter_panel = page.locator("#logic-panel-layer > aside").first
+        expect(parameter_panel).to_have_attribute("data-node-id", "input_ra")
         panel_title = page.locator("#logic-panel-layer strong span").first
+        panel_node_ref = page.locator("#logic-panel-layer strong code").first
         expect(panel_title).to_have_text("RA 门限")
         expect(panel_title).not_to_have_text("panel_ra_threshold")
+        expect(panel_node_ref).to_have_text("RA 高度")
+        expect(panel_node_ref).not_to_have_text("input_ra")
         page.click('.logic-node[data-node-id="input_ra"]')
         expect(page.locator("#logic-annotation-params")).to_contain_text("RA 门限: 6 ft")
         expect(page.locator("#logic-annotation-params")).not_to_contain_text("panel_ra_threshold")
