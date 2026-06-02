@@ -1051,16 +1051,25 @@ def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
           const active = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
           const evidence = document.querySelector("#logic-current-segment-evidence");
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
+          const source = document.querySelector("#logic-canvas-source");
+          const selected = document.querySelector("#logic-selected-target-label");
           const badge = active ? active.querySelector(".logic-requirement-trace-text-match") : null;
           const button = active ? active.querySelector("button") : null;
           const allBadges = Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-text-match"));
-          if (!active || !evidence || !identityLoop || !badge || !button) {
+          if (!active || !evidence || !identityLoop || !source || !selected || !badge || !button) {
             return { ok: false, reason: "missing-row-text-match-surface" };
           }
           const mode = active.dataset.originalTextMatch || "";
           const identityMode = identityLoop.dataset.identityLoopTextMatch || "";
           const evidenceMode = evidence.dataset.currentSegmentTextMatch || "";
+          const evidenceToken = evidence.dataset.currentSegmentTextMatchToken || "";
+          const sourceMode = source.dataset.canvasOriginalTextMatch || "";
+          const selectedMode = selected.dataset.canvasOriginalTextMatch || "";
+          const sourceToken = source.dataset.canvasOriginalTextMatchToken || "";
+          const selectedToken = selected.dataset.canvasOriginalTextMatchToken || "";
           const badgeMode = badge.dataset.originalTextMatch || "";
+          const sourceA11y = `${source.getAttribute("aria-label") || ""} | ${source.getAttribute("title") || ""}`;
+          const selectedA11y = `${selected.getAttribute("aria-label") || ""} | ${selected.getAttribute("title") || ""}`;
           const buttonBox = button.getBoundingClientRect();
           const badgeBox = badge.getBoundingClientRect();
           const style = window.getComputedStyle(badge);
@@ -1086,8 +1095,14 @@ def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
             ok: ["full-quote", "meaningful-token"].includes(mode)
               && mode === identityMode
               && mode === evidenceMode
+              && mode === sourceMode
+              && mode === selectedMode
+              && evidenceToken === sourceToken
+              && evidenceToken === selectedToken
               && mode === badgeMode
               && (badge.textContent || "").includes("原文")
+              && sourceA11y.includes("原文命中")
+              && selectedA11y.includes("原文命中")
               && visibleBadges.length === 1
               && visibleBadges[0] === badge
               && insideButton
@@ -1098,6 +1113,13 @@ def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
             mode,
             identityMode,
             evidenceMode,
+            sourceMode,
+            selectedMode,
+            evidenceToken,
+            sourceToken,
+            selectedToken,
+            sourceA11y,
+            selectedA11y,
             badgeMode,
             badgeText: badge.textContent || "",
             insideButton,
