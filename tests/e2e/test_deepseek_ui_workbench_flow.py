@@ -926,6 +926,22 @@ def _expect_output_source_trace_link(
         f"{label_prefix}.*{re.escape(segment_number)}.*需求原文.*{re.escape(output_label)}.*输出依据"
     )
     expect(source).to_have_text(visible_label)
+    source_text_fit_state = source.evaluate(
+        """(element) => ({
+          ok: element.offsetWidth > 0
+            && element.offsetHeight > 0
+            && element.scrollWidth <= element.clientWidth + 1
+            && element.scrollHeight <= element.clientHeight + 1,
+          text: element.textContent || "",
+          offsetWidth: element.offsetWidth,
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          offsetHeight: element.offsetHeight,
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+        })"""
+    )
+    assert source_text_fit_state["ok"] is True, source_text_fit_state
     expect(source).to_have_attribute("aria-label", expected_label)
     expect(source).to_have_attribute("title", expected_label)
     if active:
