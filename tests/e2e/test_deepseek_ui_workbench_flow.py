@@ -3916,12 +3916,18 @@ def test_logic_builder_requirement_trace_panel_stays_readable_at_1280(
         expect(output_list).to_be_visible()
         expect(segment_card).to_be_visible()
         expect(review_matrix).to_be_visible()
+        expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
         review_readability = page.evaluate("""() => {
           const shell = document.querySelector(".logic-requirement-trace-review");
           const title = document.querySelector(".logic-requirement-trace-review > strong");
           const matrixCard = document.querySelector('#logic-global-review-matrix [data-review-item="logic"]');
           const matrixValue = document.querySelector("#logic-review-logic-count");
           const matrixAction = document.querySelector('#logic-global-review-matrix [data-review-filter-action="all"]');
+          const segmentCard = document.querySelector("#logic-current-segment-evidence");
+          const segmentTitle = document.querySelector("#logic-current-segment-title");
+          const outputImpact = document.querySelector("#logic-current-segment-output-impact");
+          const outputLabels = document.querySelector("#logic-current-segment-output-labels");
+          const segmentJumpButtons = Array.from(document.querySelectorAll('#logic-current-segment-anchor-jumps [data-current-segment-jump]'));
           const parseRgb = (value) => {
             const match = String(value || "").match(/rgba?\\(([^)]+)\\)/);
             if (!match) return null;
@@ -3962,15 +3968,21 @@ def test_logic_builder_requirement_trace_panel_stays_readable_at_1280(
             const background = effectiveBackground(backgroundElement || textElement);
             return foreground && background ? contrast(foreground, background) : 0;
           };
+          const segmentJumpRatios = Object.fromEntries(segmentJumpButtons.map((button) => [
+            `segmentJump:${button.dataset.currentSegmentJump || "unknown"}`,
+            sampleContrast(button, button),
+          ]));
           const ratios = {
             title: sampleContrast(title, shell),
             matrixValue: sampleContrast(matrixValue, matrixCard),
             matrixAction: sampleContrast(matrixAction, matrixAction),
+            segmentTitle: sampleContrast(segmentTitle, segmentCard),
+            segmentOutput: sampleContrast(outputLabels, outputImpact),
+            ...segmentJumpRatios,
           };
           return { ok: Object.values(ratios).every((ratio) => ratio >= 4.5), ratios };
         }""")
         assert review_readability["ok"] is True, review_readability
-        expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
         expect(canvas).to_be_visible()
 
         review_matrix.locator('[data-review-filter-action="source"]').click()

@@ -5084,6 +5084,18 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   color: #eafff4;
 }
 
+.logic-shell[data-console-palette="codex-light"] .logic-current-segment-anchor-jumps button {
+  border-color: rgba(54, 198, 216, 0.28);
+  background: rgba(5, 17, 28, 0.92);
+  color: #9ee8ff;
+}
+
+.logic-shell[data-console-palette="codex-light"] .logic-current-segment-anchor-jumps button[aria-pressed="true"] {
+  border-color: rgba(245, 200, 91, 0.70);
+  background: rgba(64, 45, 7, 0.94);
+  color: #fff4bf;
+}
+
 .logic-shell[data-console-palette="codex-light"] button.secondary {
   border-color: var(--logic-border);
   background: #ffffff;
