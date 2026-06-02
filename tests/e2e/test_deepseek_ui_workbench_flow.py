@@ -8999,8 +8999,28 @@ def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
           feedback: document.querySelector("#logic-streamed-revision-feedback")?.textContent || "",
         })""")
         _assert_no_machine_tokens_in_accessible_state(revision_feedback_state, "feedback")
+        page.wait_for_function(
+            """() => {
+              try {
+                const saved = JSON.parse(localStorage.getItem("ai-fantui-logic-builder-streamed-authoring-v1") || "{}");
+                return Array.isArray(saved.decisions) && saved.decisions.length === 1;
+              } catch (error) {
+                return false;
+              }
+            }"""
+        )
+        stored_history = page.evaluate(
+            """() => JSON.parse(localStorage.getItem("ai-fantui-logic-builder-streamed-authoring-v1") || "{}")"""
+        )
+        assert stored_history["decisions"][0]["target_type"] == "wire"
+        assert stored_history["decisions"][0]["target_id"] == "sw1->logic1"
+        assert stored_history["decisions"][0]["target_label"] == "sw1->logic1"
+        assert stored_history["decisions"][0]["decision"] == "request_revision"
+        assert stored_history["decisions"][0]["feedback_text"] == "请重算 sw1->logic1 与 logic1 输入解释"
+        assert stored_history["decisions"][0]["truth_effect"] == "none"
         assert len(captured_requests) >= 2
         assert captured_requests[-1]["decision_history"][0]["target_id"] == "sw1->logic1"
+        assert captured_requests[-1]["decision_history"][0]["target_label"] == "sw1->logic1"
         assert captured_requests[-1]["decision_history"][0]["feedback_text"] == "请重算 sw1->logic1 与 logic1 输入解释"
     finally:
         page.close()
