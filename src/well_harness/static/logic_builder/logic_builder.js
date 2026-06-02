@@ -3234,6 +3234,8 @@
       "canvasTraceConsistencySelectedSource",
       "canvasTraceConsistencyCueLabel",
       "canvasTraceConsistencySurface",
+      "canvasOriginalTextMatch",
+      "canvasOriginalTextMatchToken",
     ];
     const trustDatasetKeys = [
       "canvasTrustChainState",
@@ -3253,7 +3255,20 @@
     const chainLabel = chainReady
       ? `；当前段到全局矩阵：当前段链路 ${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}全局复核`
       : "；当前段到全局矩阵：当前段链路等待";
-    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}${chainLabel}`;
+    const originalTextMatchMode = currentSegmentEvidence
+      ? (currentSegmentEvidence.dataset.currentSegmentTextMatch || "waiting")
+      : "waiting";
+    const originalTextMatchToken = currentSegmentEvidence
+      ? (currentSegmentEvidence.dataset.currentSegmentTextMatchToken || "none")
+      : "none";
+    const originalTextMatchLabels = {
+      "full-quote": "全句",
+      "meaningful-token": "关键词",
+      missing: "未命中",
+      waiting: "等待",
+    };
+    const originalTextMatchLabel = originalTextMatchLabels[originalTextMatchMode] || originalTextMatchLabels.waiting;
+    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}；原文命中：${originalTextMatchLabel}${chainLabel}`;
     const clearCanvasTraceDataset = (element) => {
       traceDatasetKeys.forEach((key) => {
         delete element.dataset[key];
@@ -3288,6 +3303,8 @@
       element.dataset.canvasTraceConsistencySelectedSource = sourceValue;
       element.dataset.canvasTraceConsistencyCueLabel = cueLabel || stateValue;
       element.dataset.canvasTraceConsistencySurface = surfaceName;
+      element.dataset.canvasOriginalTextMatch = originalTextMatchMode;
+      element.dataset.canvasOriginalTextMatchToken = originalTextMatchToken;
       applyCanvasTrustDataset(element, surfaceName);
       element.setAttribute("title", auditLabel);
       element.setAttribute("aria-label", `${labelText}；${auditLabel}`);
