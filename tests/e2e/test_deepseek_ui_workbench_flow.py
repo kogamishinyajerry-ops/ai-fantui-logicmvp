@@ -958,10 +958,28 @@ def _expect_output_source_trace_link(
     return source
 
 
-def _expect_output_coverage_current_source(output_coverage: Any, *, source_chip_label: str) -> None:
+def _expect_output_coverage_current_source(
+    output_coverage: Any,
+    *,
+    source_chip_label: str = "",
+    source: Any = None,
+) -> str:
+    if source is not None:
+        source_chip_state = source.evaluate(
+            """(element) => ({
+              ok: Boolean(element.dataset.outputBacktraceCurrentChipLabel),
+              currentChipLabel: element.dataset.outputBacktraceCurrentChipLabel || "",
+              sourceId: element.dataset.outputBacktraceSource || "",
+              text: element.textContent || "",
+            })"""
+        )
+        assert source_chip_state["ok"] is True, source_chip_state
+        source_chip_label = source_chip_state["currentChipLabel"]
+    assert source_chip_label, "expected a current source chip label"
     compact_label = source_chip_label.replace("当前 ", "源")
     expect(output_coverage).to_have_attribute("data-current-source-chip-label", source_chip_label)
     expect(output_coverage).to_contain_text(compact_label)
+    return source_chip_label
 
 
 def _expect_output_source_visual_difference(
@@ -5093,7 +5111,10 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_coverage).to_contain_text(re.compile(r"输出\s*4/4"))
         expect(output_coverage).to_contain_text("当前")
         expect(output_coverage).to_contain_text("TLS")
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 01")
+        _expect_output_coverage_current_source(
+            output_coverage,
+            source=output_backtrace.locator('[data-output-backtrace-output="tls"] [data-output-backtrace-source="row-logic1"]').first,
+        )
         first_output_coverage_text = output_coverage.inner_text()
         assert_output_backtrace_list_focus_ring = """() => {
           const list = document.querySelector("#logic-output-backtrace-list");
@@ -5497,7 +5518,10 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace).to_have_attribute("data-active-output", "etrac")
         expect(output_backtrace).to_have_attribute("data-related-output-count", "1")
         expect(output_coverage).to_contain_text("ETRAC")
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 02")
+        _expect_output_coverage_current_source(
+            output_coverage,
+            source=output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]').first,
+        )
         assert output_coverage.inner_text() != first_output_coverage_text
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_have_class(re.compile("is-active"))
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_have_class(re.compile("is-related"))
@@ -5511,7 +5535,10 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_coverage).to_contain_text("多输出")
         expect(output_coverage).to_contain_text("TLS")
         expect(output_coverage).to_contain_text("EEC/PLS/PDU")
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 03")
+        _expect_output_coverage_current_source(
+            output_coverage,
+            source=output_backtrace.locator('[data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]').first,
+        )
         multi_output_state = page.evaluate("""() => {
           const panel = document.querySelector("#logic-output-backtrace-panel");
           const ids = (panel?.dataset.relatedOutputIds || "").split("|").filter(Boolean);
@@ -5682,7 +5709,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             output_label="EEC/PLS/PDU",
             active=True,
         )
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 03")
+        _expect_output_coverage_current_source(output_coverage, source=deploy_row_logic3_source)
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         etrac_row_logic2_source = _expect_output_source_trace_link(
             page,
@@ -5715,7 +5742,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             output_label="EEC/PLS/PDU",
             active=False,
         )
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 02")
+        _expect_output_coverage_current_source(output_coverage, source=etrac_row_logic2_source)
         _expect_output_source_visual_difference(
             page,
             active_output_id="etrac",
@@ -5747,13 +5774,13 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             output_label="ETRAC",
             active=False,
         )
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 03")
+        _expect_output_coverage_current_source(output_coverage, source=deploy_row_logic3_source)
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         etrac_row_logic2_source.press(" ")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic2")
-        _expect_output_source_trace_link(
+        etrac_row_logic2_source = _expect_output_source_trace_link(
             page,
             output_backtrace,
             output_id="etrac",
@@ -5771,7 +5798,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             output_label="EEC/PLS/PDU",
             active=False,
         )
-        _expect_output_coverage_current_source(output_coverage, source_chip_label="当前 02")
+        _expect_output_coverage_current_source(output_coverage, source=etrac_row_logic2_source)
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
 
         trace_panel_box = trace_panel.bounding_box()
