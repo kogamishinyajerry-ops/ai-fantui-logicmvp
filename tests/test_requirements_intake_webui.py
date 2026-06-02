@@ -5620,6 +5620,9 @@ def test_requirements_intake_static_subproject_hooks_exist():
     assert "requirements-intake/draw-logic" in logic_script
     assert "requirements-intake/interpret-logic-change" in logic_script
     assert "requirements-intake/update-logic-drawing" in logic_script
+    assert "setReadableEvidenceText(interpretationSummary" in logic_script
+    assert "setReadableEvidenceText(interpretationQuestion" in logic_script
+    assert "clearReadableEvidenceText(interpretationSummary)" in logic_script
     assert 'allow_fallback: provider.value !== "deepseek"' in logic_script
     assert "allow_fallback: true" not in logic_script
     assert "/fault-injection-prepare" in logic_script

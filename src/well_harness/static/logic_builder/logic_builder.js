@@ -643,6 +643,13 @@
     return readableText;
   }
 
+  function clearReadableEvidenceText(element) {
+    if (!element) return;
+    element.textContent = "";
+    element.removeAttribute("title");
+    element.removeAttribute("aria-label");
+  }
+
   function setSourceTrustSummary(text) {
     const value = text || "来源待确认";
     if (sourceTrustSummary) sourceTrustSummary.textContent = value;
@@ -6273,9 +6280,9 @@
     state.interpretationPayload = null;
     interpretationBox.hidden = true;
     interpretationState.textContent = "等待";
-    interpretationSummary.textContent = "";
-    interpretationMatch.textContent = "";
-    interpretationQuestion.textContent = "";
+    clearReadableEvidenceText(interpretationSummary);
+    clearReadableEvidenceText(interpretationMatch);
+    clearReadableEvidenceText(interpretationQuestion);
     proposedChanges.innerHTML = "";
     if (batchInterpretationPanel) batchInterpretationPanel.hidden = true;
     if (batchSummary) batchSummary.textContent = "等待提交标注意见。";
@@ -6290,9 +6297,9 @@
     state.interpretationPayload = payload;
     interpretationBox.hidden = false;
     interpretationState.textContent = "需要确认";
-    interpretationSummary.textContent = readableLogicReferenceText(payload.understanding_zh || "系统已理解修改意见。");
-    interpretationMatch.textContent = readableLogicReferenceText(payload.requirements_match_zh || "");
-    interpretationQuestion.textContent = readableLogicReferenceText(payload.confirmation_question_zh || "请确认是否按此意图更新图纸？");
+    setReadableEvidenceText(interpretationSummary, payload.understanding_zh || "系统已理解修改意见。");
+    setReadableEvidenceText(interpretationMatch, payload.requirements_match_zh || "");
+    setReadableEvidenceText(interpretationQuestion, payload.confirmation_question_zh || "请确认是否按此意图更新图纸？");
     proposedChanges.innerHTML = "";
     const changes = payload.proposed_changes || [];
     if (!changes.length) {
