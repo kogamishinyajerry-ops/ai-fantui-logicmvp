@@ -151,8 +151,13 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             && globalReviewBox.top >= chainBox.top - 1
             && globalReviewBox.bottom <= chainBox.bottom + 1;
           const globalReviewText = globalReview.textContent || "";
+          const globalReviewTitle = globalReview.getAttribute("title") || "";
+          const globalReviewAriaLabel = globalReview.getAttribute("aria-label") || "";
           const globalReviewScope = globalReview.dataset.globalReviewScope || "";
           const globalReviewState = globalReview.dataset.globalReviewState || "";
+          const globalReviewHasBridge = globalReviewText.includes("当前段到全局矩阵");
+          const globalReviewTitleHasBridge = globalReviewTitle.includes("当前段到全局矩阵");
+          const globalReviewAriaHasBridge = globalReviewAriaLabel.includes("当前段到全局矩阵");
           const chainOutputCount = chain.dataset.outputCount || "";
           const chainReviewAnchorCount = chain.dataset.reviewAnchorCount || "";
           const globalReviewOutputCount = globalReview.dataset.outputCount || "";
@@ -166,7 +171,7 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             && globalReviewText.includes("全局")
             && globalReviewText.includes("复核")
             && globalReviewText.includes("当前段")
-            && globalReviewText.includes("当前段到全局矩阵")
+            && globalReviewHasBridge
             && globalReviewScope === "current-segment-to-global"
             && globalReviewCountsMatch;
           const chainTitle = chain.getAttribute("title") || "";
@@ -219,8 +224,19 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             globalReviewInsideChain,
             globalReviewReadable,
             globalReviewText,
+            globalReviewTitle,
+            globalReviewAriaLabel,
             globalReviewScope,
             globalReviewState,
+            bridgeAudit: {
+              token: "当前段到全局矩阵",
+              visibleHasBridge: globalReviewHasBridge,
+              titleHasBridge: globalReviewTitleHasBridge,
+              ariaHasBridge: globalReviewAriaHasBridge,
+              scope: globalReviewScope,
+              expectedScope: "current-segment-to-global",
+              scopeMatch: globalReviewScope === "current-segment-to-global",
+            },
             chainOutputCount,
             chainReviewAnchorCount,
             globalReviewOutputCount,
@@ -562,6 +578,16 @@ def _expect_canvas_selected_trace_state_badge(
               countsMatch: tailCountsMatch,
               countsSource: "canvas-selected-tail",
             },
+            bridgeAudit: {
+              token: "当前段到全局矩阵",
+              visibleHasBridge: null,
+              visibleHasGlobalMarker: tail.includes("全局"),
+              titleHasBridge: titleHasGlobalBridge,
+              ariaHasBridge: ariaHasGlobalBridge,
+              scope: selectedTrustScope,
+              expectedScope: expectedTrustScope,
+              scopeMatch: scopeIsCurrentSegment,
+            },
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -727,6 +753,16 @@ def _expect_canvas_source_trace_state_badge(
               countsMatch: null,
               countsSource: "canvas-source-data-only",
             },
+            bridgeAudit: {
+              token: "当前段到全局矩阵",
+              visibleHasBridge: null,
+              visibleHasGlobalMarker: null,
+              titleHasBridge: titleHasGlobalBridge,
+              ariaHasBridge: ariaHasGlobalBridge,
+              scope: sourceTrustScope,
+              expectedScope: expectedTrustScope,
+              scopeMatch: scopeIsCurrentSegment,
+            },
             accessibility: {
               titleHasCurrentSegment,
               titleHasLink,
@@ -881,6 +917,16 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
                 },
                 countsMatch: tailCountsMatch,
                 countsSource: `${prefix}-tail`,
+              },
+              bridgeAudit: {
+                token: "当前段到全局矩阵",
+                visibleHasBridge: null,
+                visibleHasGlobalMarker: tailContent.includes("全局复核"),
+                titleHasBridge: titleHasGlobalBridge,
+                ariaHasBridge: ariaHasGlobalBridge,
+                scope,
+                expectedScope,
+                scopeMatch: scopeIsCurrentSegment,
               },
               title,
               ariaLabel,
