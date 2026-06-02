@@ -5164,6 +5164,27 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
           return style.position === "absolute" && box.width <= 1 && box.height <= 1;
         }""") is True
         expect(output_backtrace.locator("[data-output-backtrace-output]")).to_have_count(4)
+        output_item_title_state = page.evaluate("""() => {
+          const items = Array.from(document.querySelectorAll("#logic-output-backtrace-list [data-output-backtrace-output]"));
+          return items.map((item) => {
+            const outputLabel = item.querySelector("strong")?.textContent?.trim() || "";
+            const title = item.getAttribute("title") || "";
+            return {
+              outputId: item.dataset.outputBacktraceOutput || "",
+              outputLabel,
+              title,
+              ok: Boolean(outputLabel)
+                && title.includes("聚焦")
+                && title.includes(outputLabel)
+                && title.includes("输出组")
+                && !title.includes("row-logic")
+                && !title.includes("->")
+                && !/\\blogic\\d+\\b/.test(title),
+            };
+          });
+        }""")
+        assert len(output_item_title_state) == 4, output_item_title_state
+        assert all(item["ok"] for item in output_item_title_state), output_item_title_state
         assert page.locator('#logic-output-backtrace-list [data-source-count]:not([data-source-count="0"])').count() >= 3
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_contain_text("当前 01")
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_contain_text("段 02")
