@@ -916,10 +916,16 @@ def _expect_output_source_trace_link(
         f'[data-output-backtrace-output="{output_id}"] [data-output-backtrace-source="{trace_id}"]'
     ).first
     label_prefix = "当前" if active else "回到"
-    expected_label = re.compile(
-        f"{label_prefix}{segment_label} 需求原文.*{re.escape(output_label)}.*输出依据"
+    segment_number = segment_label.removeprefix("段 ").strip()
+    visible_label = re.compile(
+        rf"^\s*当前\s*{re.escape(segment_number)}\s*$"
+        if active
+        else rf"^\s*段\s*{re.escape(segment_number)}\s*$"
     )
-    expect(source).to_have_text(segment_label)
+    expected_label = re.compile(
+        f"{label_prefix}.*{re.escape(segment_number)}.*需求原文.*{re.escape(output_label)}.*输出依据"
+    )
+    expect(source).to_have_text(visible_label)
     expect(source).to_have_attribute("aria-label", expected_label)
     expect(source).to_have_attribute("title", expected_label)
     if active:
@@ -5054,7 +5060,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         }""") is True
         expect(output_backtrace.locator("[data-output-backtrace-output]")).to_have_count(4)
         assert page.locator('#logic-output-backtrace-list [data-source-count]:not([data-source-count="0"])').count() >= 3
-        expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_contain_text("段 01")
+        expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_contain_text("当前 01")
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_contain_text("段 02")
         expect(output_backtrace.locator('[data-output-backtrace-output="deploy"]')).to_contain_text("段 03")
         expect(output_backtrace.locator(".logic-output-backtrace-evidence")).to_have_count(4)

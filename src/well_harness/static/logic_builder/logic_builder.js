@@ -1602,17 +1602,21 @@
     applyOutputBacktraceFocus(activeOutputId);
     outputBacktraceSources.forEach((button) => {
       const isActive = button.dataset.outputBacktraceSource === activeId;
+      const displayLabel = button.dataset.outputBacktraceDisplayLabel || button.textContent.trim();
+      const currentChipLabel = button.dataset.outputBacktraceCurrentChipLabel || displayLabel;
       const actionLabel = button.dataset.outputBacktraceActionLabel || button.getAttribute("aria-label") || "";
       const currentLabel = button.dataset.outputBacktraceCurrentLabel || actionLabel;
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
       if (isActive) {
+        button.textContent = currentChipLabel;
         button.setAttribute("aria-current", "true");
         if (currentLabel) {
           button.setAttribute("aria-label", currentLabel);
           button.title = currentLabel;
         }
       } else {
+        button.textContent = displayLabel;
         button.removeAttribute("aria-current");
         if (actionLabel) {
           button.setAttribute("aria-label", actionLabel);
@@ -1667,9 +1671,10 @@
       const sourceBadges = visibleSources.length
         ? `${visibleSources.map((source) => {
           const sourceLabel = `段 ${source.displayIndex}`;
+          const sourceCurrentChipLabel = `当前 ${source.displayIndex}`;
           const sourceActionLabel = `回到${sourceLabel} 需求原文：查看 ${group.label} 输出依据`;
           const sourceCurrentLabel = `当前${sourceLabel} 需求原文：正在查看 ${group.label} 输出依据`;
-          return `<button type="button" class="logic-output-backtrace-source" data-output-backtrace-source="${escapeText(source.id)}" data-output-backtrace-action-label="${escapeText(sourceActionLabel)}" data-output-backtrace-current-label="${escapeText(sourceCurrentLabel)}" aria-label="${escapeText(sourceActionLabel)}" title="${escapeText(sourceActionLabel)}" aria-pressed="false">${escapeText(sourceLabel)}</button>`;
+          return `<button type="button" class="logic-output-backtrace-source" data-output-backtrace-source="${escapeText(source.id)}" data-output-backtrace-display-label="${escapeText(sourceLabel)}" data-output-backtrace-current-chip-label="${escapeText(sourceCurrentChipLabel)}" data-output-backtrace-action-label="${escapeText(sourceActionLabel)}" data-output-backtrace-current-label="${escapeText(sourceCurrentLabel)}" aria-label="${escapeText(sourceActionLabel)}" title="${escapeText(sourceActionLabel)}" aria-pressed="false">${escapeText(sourceLabel)}</button>`;
         }).join("")}${hiddenSourceCount ? `<span class="logic-output-backtrace-more">+${hiddenSourceCount}</span>` : ""}`
         : '<span class="logic-output-backtrace-more">待映射</span>';
       const evidenceText = `${group.sources.length} 段 · ${group.relatedWireCount || 0} 线索`;
