@@ -4637,6 +4637,22 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_target_id="row-logic2",
             align_source="canvas-node",
         )
+        _expect_canvas_selected_trace_state_badge(
+            page,
+            "分叉",
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
+        _expect_canvas_source_trace_state_badge(
+            page,
+            "分叉",
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
         expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "diverged")
         _assert_current_segment_consistency_cue_layout(page, align_visible=True)
