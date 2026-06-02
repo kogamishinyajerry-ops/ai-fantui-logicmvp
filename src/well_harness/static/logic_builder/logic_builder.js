@@ -492,7 +492,7 @@
     if (!Array.isArray(anchors) || anchors.length === 0) return "候选假设";
     return anchors
       .slice(0, 2)
-      .map((anchor) => `${anchor.id || "DOCX"} · ${anchor.kind || "正文条件"}`)
+      .map((anchor) => `${readableSourceAnchorIdentity(anchor.id, anchor.id || "DOCX")} · ${anchor.kind || "正文条件"}`)
       .join(" / ");
   }
 

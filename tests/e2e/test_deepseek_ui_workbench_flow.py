@@ -8681,6 +8681,38 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
         page.close()
 
 
+def test_logic_builder_source_anchor_fallback_copy_uses_readable_identity(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    drawing = _circuit_view_drawing()
+    for node in drawing["circuit_view"]["nodes"]:
+        if node["id"] == "sw1":
+            node["source_anchors"] = [{"id": "logic1", "kind": "正文条件"}]
+            break
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+            }""",
+            [REQUIREMENTS_READY, drawing],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        page.click('[data-demo-node-id="sw1"]')
+
+        expect(page.locator("#logic-object-context-drawer")).to_be_visible()
+        expect(page.locator("#logic-context-source")).to_have_text("逻辑锚点 01 · 正文条件")
+        expect(page.locator("#logic-annotation-source")).to_have_text("逻辑锚点 01 · 正文条件")
+        expect(page.locator("#logic-context-source")).not_to_contain_text("logic1")
+        expect(page.locator("#logic-annotation-source")).not_to_contain_text("logic1")
+    finally:
+        page.close()
+
+
 def test_logic_builder_streamed_candidate_copy_uses_readable_targets(
     demo_server: str, browser: Any
 ) -> None:
