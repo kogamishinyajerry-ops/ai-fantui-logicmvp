@@ -833,8 +833,31 @@
     status.textContent = nextText;
   }
 
+  function setCurrentSegmentOutputRevealStatus(traceId) {
+    const outputImpact = document.getElementById("logic-current-segment-output-impact");
+    const outputImpactCount = outputImpact ? Number.parseInt(outputImpact.dataset.outputImpactCount || "0", 10) : 0;
+    const hiddenOutputCount = currentSegmentOutputReveal
+      ? Number.parseInt(currentSegmentOutputReveal.dataset.hiddenOutputCount || "0", 10)
+      : 0;
+    const countHint = outputImpactCount > 0
+      ? `${outputImpactCount} 个输出锚点`
+      : `补充 ${hiddenOutputCount} 个隐藏输出锚点`;
+    const traceHint = traceId && traceId !== "none" ? `（${traceId}）` : "";
+    setOutputFocusStatus(`已展开当前需求段全部输出依据${traceHint}，${countHint}`);
+  }
+
+  function setCurrentSegmentJumpStatus(action) {
+    const actionLabels = new Map([
+      ["source", "已切换到当前段来源锚点视图"],
+      ["trace", "已切换到当前段逻辑线路视图"],
+      ["all", "已切换到全局复核视图"]
+    ]);
+    setOutputFocusStatus(actionLabels.get(action) || actionLabels.get("all"));
+  }
+
   function focusOutputBacktraceForCircuitNode(nodeId) {
     if (!nodeId || !outputBacktracePanel) return;
+    clearCurrentSegmentOutputBacktraceReveal();
     const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
     const candidateGroup = OUTPUT_BACKTRACE_GROUPS.find((item) => item.nodeIds.includes(nodeId));
     const group = OUTPUT_BACKTRACE_GROUPS.find((item) => relatedIds.has(item.id) && item.nodeIds.includes(nodeId));
@@ -1367,6 +1390,7 @@
     outputBacktracePanel.dataset.revealSource = "current-segment-output-summary";
     outputBacktracePanel.classList.add("is-current-segment-output-revealed");
     currentSegmentOutputReveal.setAttribute("aria-expanded", "true");
+    setCurrentSegmentOutputRevealStatus(traceId);
     if (typeof outputBacktracePanel.scrollIntoView === "function") {
       outputBacktracePanel.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
@@ -1381,11 +1405,16 @@
 
   function clearCurrentSegmentOutputBacktraceReveal() {
     if (!outputBacktracePanel) return;
+    const wasRevealed = outputBacktracePanel.dataset.currentSegmentOutputReveal === "active";
     outputBacktracePanel.dataset.currentSegmentOutputReveal = "none";
     outputBacktracePanel.dataset.revealTraceId = "";
     outputBacktracePanel.dataset.revealSource = "";
     outputBacktracePanel.classList.remove("is-current-segment-output-revealed");
     if (currentSegmentOutputReveal) currentSegmentOutputReveal.setAttribute("aria-expanded", "false");
+    const status = ensureOutputFocusStatus();
+    if (wasRevealed && status && status.textContent.includes("已展开当前需求段全部输出依据")) {
+      setOutputFocusStatus("已收起当前需求段全部输出依据");
+    }
   }
 
   if (currentSegmentOutputReveal) {
@@ -5550,6 +5579,7 @@
       const action = button.dataset.currentSegmentJump || "all";
       clearCurrentSegmentOutputBacktraceReveal();
       state.currentSegmentJumpAction = action;
+      window.queueMicrotask(() => setCurrentSegmentJumpStatus(action));
       if (action === "trace") {
         setCircuitProvenanceFilter("all");
         if (state.activeRequirementTraceId) setActiveRequirementTrace(state.activeRequirementTraceId);
