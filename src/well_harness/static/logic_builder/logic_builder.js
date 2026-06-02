@@ -965,6 +965,7 @@
         wireCount: "0",
         outputCount: "0",
         reviewAnchorCount: "0",
+        scope: "current-segment",
       };
     }
     return {
@@ -975,6 +976,7 @@
       wireCount: currentSegmentTrustChain.dataset.wireCount || "0",
       outputCount: currentSegmentTrustChain.dataset.outputCount || "0",
       reviewAnchorCount: currentSegmentTrustChain.dataset.reviewAnchorCount || "0",
+      scope: currentSegmentTrustChain.dataset.currentSegmentTrustChainScope || "current-segment",
     };
   }
 
@@ -1640,6 +1642,7 @@
         currentSegmentTrustChain.dataset.wireCount = "0";
         currentSegmentTrustChain.dataset.outputCount = "0";
         currentSegmentTrustChain.dataset.reviewAnchorCount = "0";
+        currentSegmentTrustChain.dataset.currentSegmentTrustChainScope = "current-segment";
         currentSegmentTrustChain.setAttribute("aria-label", "当前段到最终面板的证据链：等待段落");
         currentSegmentTrustChain.setAttribute("title", "当前段到最终面板的证据链：等待段落");
       }
@@ -1707,6 +1710,7 @@
       currentSegmentTrustChain.dataset.wireCount = String(wireIds.length);
       currentSegmentTrustChain.dataset.outputCount = String(outputImpacts.length);
       currentSegmentTrustChain.dataset.reviewAnchorCount = String(totalAnchors);
+      currentSegmentTrustChain.dataset.currentSegmentTrustChainScope = "current-segment";
       currentSegmentTrustChain.setAttribute("aria-label", `当前段到最终面板的证据链：段 ${segmentIndex}，${nodeIds.length} 节点 ${wireIds.length} 连线，${outputImpacts.length} 个输出影响，${totalAnchors} 个复核锚点`);
       currentSegmentTrustChain.setAttribute("title", `段 ${segmentIndex} 证据链：原文到 ${nodeIds.length} 节点 / ${wireIds.length} 连线 / ${outputImpacts.length} 输出 / ${totalAnchors} 复核锚点`);
     }

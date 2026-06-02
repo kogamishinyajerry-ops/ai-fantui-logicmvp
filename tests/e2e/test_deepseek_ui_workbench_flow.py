@@ -292,6 +292,7 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
             wireCount: chain.dataset.wireCount || "",
             outputCount: chain.dataset.outputCount || "",
             reviewAnchorCount: chain.dataset.reviewAnchorCount || "",
+            scope: chain.dataset.currentSegmentTrustChainScope || "",
           };
           const target = (element, prefix) => ({
             state: element.dataset[`${prefix}TrustChainState`] || "",
@@ -306,6 +307,10 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
           });
           const contextMirror = target(context, "context");
           const annotationMirror = target(annotation, "annotation");
+          const selected = document.querySelector("#logic-selected-target-label");
+          const source = document.querySelector("#logic-canvas-source");
+          const selectedScope = selected?.dataset.canvasTrustChainScope || "";
+          const sourceScope = source?.dataset.canvasTrustChainScope || "";
           const same = (mirror) => mirror.state === left.state
             && mirror.traceId === left.traceId
             && mirror.sourceAnchorId === left.sourceAnchorId
@@ -313,15 +318,22 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
             && mirror.wireCount === left.wireCount
             && mirror.outputCount === left.outputCount
             && mirror.reviewAnchorCount === left.reviewAnchorCount
+            && left.scope === "current-segment"
             && mirror.surface === "current-segment"
-            && mirror.scope === "current-segment";
+            && mirror.scope === left.scope;
           const expectedMatches = !expectedTraceId || left.traceId === expectedTraceId;
           return {
-            ok: expectedMatches && same(contextMirror) && same(annotationMirror),
+            ok: expectedMatches
+              && same(contextMirror)
+              && same(annotationMirror)
+              && selectedScope === left.scope
+              && sourceScope === left.scope,
             expectedTraceId,
             left,
             context: contextMirror,
             annotation: annotationMirror,
+            selectedScope,
+            sourceScope,
           };
         }""",
         expected_trace_id,
@@ -4008,6 +4020,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain).to_have_attribute("data-wire-count", "4")
         expect(segment_trust_chain).to_have_attribute("data-output-count", re.compile(r"^[1-9]"))
         expect(segment_trust_chain).to_have_attribute("data-review-anchor-count", "10")
+        expect(segment_trust_chain).to_have_attribute("data-current-segment-trust-chain-scope", "current-segment")
         expect(segment_trust_chain.locator("[data-trust-chain-step]")).to_have_count(4)
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("段 01")
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("读取")
