@@ -983,8 +983,8 @@
   function syncCurrentSegmentTrustChainInspectorSurfaces() {
     const snapshot = currentSegmentTrustChainSnapshot();
     const summary = snapshot.state === "ready"
-      ? `当前段证据链 · 原文锚点 ${snapshot.sourceAnchorId} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 复核 ${snapshot.reviewAnchorCount}`
-      : "当前段证据链等待段落";
+      ? `当前段链路证据 · 原文锚点 ${snapshot.sourceAnchorId} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 复核 ${snapshot.reviewAnchorCount}`
+      : "当前段链路证据等待段落";
     const surfaces = [
       { element: logicContextRequirementTrace, prefix: "context" },
       { element: annotationRequirementTrace, prefix: "annotation" },
@@ -3247,6 +3247,11 @@
 
   function syncRequirementTraceAuditSurface(element, attrPrefix, stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource) {
     if (!element) return;
+    const chainSnapshot = currentSegmentTrustChainSnapshot();
+    const chainLabel = chainSnapshot.state === "ready"
+      ? `当前段链路：${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}复核`
+      : "当前段链路等待";
+    const auditLabel = `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}；${chainLabel}`;
     element.dataset[`${attrPrefix}TraceConsistencyState`] = stateValue || "waiting";
     element.dataset[`${attrPrefix}TraceConsistencyId`] = idValue || "waiting";
     element.dataset[`${attrPrefix}TraceConsistencySurfaces`] = surfaces || "left";
@@ -3256,8 +3261,8 @@
     element.dataset[`${attrPrefix}RequirementTraceCurrentSegmentId`] = currentId || "waiting";
     element.dataset[`${attrPrefix}RequirementTraceSelectedCanvasTraceId`] = selectedEvidenceId || "none";
     element.dataset[`${attrPrefix}RequirementTraceSelectedSource`] = selectedEvidenceSource || "none";
-    element.setAttribute("aria-label", `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
-    element.setAttribute("title", `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
+    element.setAttribute("aria-label", auditLabel);
+    element.setAttribute("title", auditLabel);
   }
 
   function alignCurrentSegmentToSelectedTargetTrace() {

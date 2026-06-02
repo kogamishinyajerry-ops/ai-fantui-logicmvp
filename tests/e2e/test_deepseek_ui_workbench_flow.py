@@ -588,6 +588,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
             const tailContent = tail.content || "";
             const lineHeight = Number.parseFloat(style.lineHeight || "0") || 16;
             const text = element.textContent || "";
+            const title = element.getAttribute("title") || "";
+            const ariaLabel = element.getAttribute("aria-label") || "";
             const ok = box.width > 0
               && box.height > 0
               && style.visibility !== "hidden"
@@ -595,6 +597,10 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && tailContent.includes("段链")
               && tailContent.includes("输出")
               && tailContent.includes("复核")
+              && title.includes("当前段")
+              && title.includes("链路")
+              && ariaLabel.includes("当前段")
+              && ariaLabel.includes("链路")
               && text.includes("段")
               && element.scrollWidth <= element.clientWidth + 2
               && box.height <= lineHeight * 2 + 8
@@ -604,6 +610,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               prefix,
               badgeContent,
               tailContent,
+              title,
+              ariaLabel,
               text,
               height: box.height,
               lineHeight,
