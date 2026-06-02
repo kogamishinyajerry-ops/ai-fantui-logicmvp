@@ -717,6 +717,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
             const titleHasLink = title.includes("链路");
             const ariaHasCurrentSegment = ariaLabel.includes("当前段");
             const ariaHasLink = ariaLabel.includes("链路");
+            const titleHasGlobalReview = title.includes("全局复核");
+            const ariaHasGlobalReview = ariaLabel.includes("全局复核");
             const scope = element.dataset[`${prefix}TrustChainScope`] || "";
             const expectedScope = "current-segment";
             const scopeIsCurrentSegment = scope === expectedScope;
@@ -724,6 +726,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && titleHasLink
               && ariaHasCurrentSegment
               && ariaHasLink
+              && titleHasGlobalReview
+              && ariaHasGlobalReview
               && scopeIsCurrentSegment;
             const ok = box.width > 0
               && box.height > 0
@@ -750,6 +754,8 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               titleHasLink,
               ariaHasCurrentSegment,
               ariaHasLink,
+              titleHasGlobalReview,
+              ariaHasGlobalReview,
               chainAccessible,
               height: box.height,
               lineHeight,

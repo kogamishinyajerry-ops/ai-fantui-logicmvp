@@ -985,7 +985,7 @@
   function syncCurrentSegmentTrustChainInspectorSurfaces() {
     const snapshot = currentSegmentTrustChainSnapshot();
     const summary = snapshot.state === "ready"
-      ? `当前段链路证据 · 原文锚点 ${snapshot.sourceAnchorId} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 复核 ${snapshot.reviewAnchorCount}`
+      ? `当前段链路证据 · 原文锚点 ${snapshot.sourceAnchorId} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 全局复核 ${snapshot.reviewAnchorCount}`
       : "当前段链路证据等待段落";
     const surfaces = [
       { element: logicContextRequirementTrace, prefix: "context" },
@@ -3273,7 +3273,7 @@
     if (!element) return;
     const chainSnapshot = currentSegmentTrustChainSnapshot();
     const chainLabel = chainSnapshot.state === "ready"
-      ? `当前段链路：${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}复核`
+      ? `当前段链路：${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}全局复核`
       : "当前段链路等待";
     const auditLabel = `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}；${chainLabel}`;
     element.dataset[`${attrPrefix}TraceConsistencyState`] = stateValue || "waiting";
