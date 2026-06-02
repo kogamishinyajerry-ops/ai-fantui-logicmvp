@@ -2725,20 +2725,22 @@
       reconstructionModePanel.dataset.mode = hasCircuitView ? "demo-reconstruction" : "concept";
     }
     if (reconstructionMode) {
-      reconstructionMode.textContent = hasCircuitView
+      const reconstructionModeText = hasCircuitView
         ? "当前模式：演示舱一致电路图"
         : "当前模式：概念图，尚未对齐演示舱电路";
+      setReadableStatusText(reconstructionMode, reconstructionModeText);
     }
     if (reconstructionFidelity) {
       const nodeCount = hasCircuitView && Array.isArray(circuitView.nodes) ? circuitView.nodes.length : 0;
       const wireCount = hasCircuitView && Array.isArray(circuitView.wires) ? circuitView.wires.length : 0;
-      reconstructionFidelity.textContent = hasCircuitView
+      const reconstructionFidelityText = hasCircuitView
         ? (
           nodeCount === 20 && wireCount === 23
             ? "链路覆盖：20/20 节点 · 23/23 连线"
             : `链路覆盖：${nodeCount}/20 节点 · ${wireCount}/23 连线`
         )
         : "链路覆盖：未启用";
+      setReadableEvidenceText(reconstructionFidelity, reconstructionFidelityText);
     }
     if (demoBridge) {
       demoBridge.hidden = false;
@@ -3290,9 +3292,10 @@
       resetDrawerParameters({skipSummary: true});
     }
     const runLabel = ({run: "运行中", pause: "已暂停", step: "已单步", reset: "已复位"})[action] || "等待运行";
-    if (runState) runState.textContent = runLabel;
-    if (bottomRunState) bottomRunState.textContent = runLabel;
-    if (bottomRunTime) bottomRunTime.textContent = action === "reset" ? "00:00 / 00:20" : "00:03 / 00:20";
+    const runTimeLabel = action === "reset" ? "00:00 / 00:20" : "00:03 / 00:20";
+    setReadableStatusText(runState, runLabel);
+    setReadableStatusText(bottomRunState, runLabel);
+    setReadableStatusText(bottomRunTime, runTimeLabel);
     if (bottomRunCursor) bottomRunCursor.style.width = action === "reset" ? "0%" : (action === "step" ? "24%" : "18%");
     renderRunSignalSummary(action);
     appendRunTimeline(action);
@@ -4137,15 +4140,16 @@
     }
     if (circuitStatusBadge) {
       circuitStatusBadge.dataset.state = status;
-      circuitStatusBadge.textContent = ({
+      const statusLabel = ({
         idle: "等待",
         ready: "就绪",
         deploying: "放出中",
         deployed: "已放出",
         fault: "异常",
       })[status] || "等待";
+      setReadableStatusText(circuitStatusBadge, statusLabel);
     }
-    if (circuitStatusSummary) circuitStatusSummary.textContent = summary;
+    setReadableEvidenceText(circuitStatusSummary, summary);
   }
 
   function applyCircuitEvaluation(snapshot) {
@@ -4195,7 +4199,7 @@
       }
       if (circuitStatusSummary) {
         const details = error.payload && error.payload.message ? error.payload.message : error.message;
-        circuitStatusSummary.textContent = details || "演示舱状态计算失败。";
+        setReadableEvidenceText(circuitStatusSummary, details || "演示舱状态计算失败。");
       }
     } finally {
       state.circuitEvaluationBusy = false;
@@ -6484,21 +6488,24 @@
     renderRequirementTracePanel(payload, circuitView);
     renderFlags(payload);
     renderNotes(payload);
-    resultState.textContent = circuitView ? "电路图已完成绘制" : "图纸已完成绘制";
-    resultSummary.textContent = payload.summary_zh || "初版逻辑链路图已生成。";
-    counts.textContent = circuitView
+    const resultStateText = circuitView ? "电路图已完成绘制" : "图纸已完成绘制";
+    const resultSummaryText = payload.summary_zh || "初版逻辑链路图已生成。";
+    const countText = circuitView
       ? `${(circuitView.rows || []).length} 行 · ${(circuitView.nodes || []).length} 个电路节点 · ${(circuitView.wires || []).length} 条连线`
       : `${(payload.nodes || []).length} 个节点 · ${(payload.edges || []).length} 条连线 · ${(payload.parameter_panels || []).length} 个面板`;
+    setReadableStatusText(resultState, resultStateText);
+    setReadableEvidenceText(resultSummary, resultSummaryText);
+    setReadableEvidenceText(counts, countText);
     if (bottomRunNodeCount) {
       const nodeTotal = circuitView ? (circuitView.nodes || []).length : (payload.nodes || []).length;
-      bottomRunNodeCount.textContent = `节点 ${nodeTotal}/${nodeTotal}`;
+      setReadableEvidenceText(bottomRunNodeCount, `节点 ${nodeTotal}/${nodeTotal}`);
     }
     if (bottomRunEdgeCount) {
       const edgeTotal = circuitView ? (circuitView.wires || []).length : (payload.edges || []).length;
-      bottomRunEdgeCount.textContent = `连线 ${edgeTotal}/${edgeTotal}`;
+      setReadableEvidenceText(bottomRunEdgeCount, `连线 ${edgeTotal}/${edgeTotal}`);
     }
     const sourceLabel = payload.source_requirements_sha256 ? "来源已确认" : "来源待确认";
-    if (canvasSourceState) canvasSourceState.textContent = sourceLabel;
+    setReadableStatusText(canvasSourceState, sourceLabel);
     if (canvasTraceLegend) {
       canvasTraceLegend.dataset.canvasTraceLegend = circuitView ? "ready" : "none";
       canvasTraceLegend.hidden = !circuitView;
@@ -6535,9 +6542,9 @@
       setProgress(96, "渲染图纸", "节点、连线和参数面板已按生成结果绘制。", "render");
       finishTask("绘制完成", "初版逻辑链路图已生成。");
     } catch (error) {
-      resultState.textContent = "绘制失败";
       const message = error.message || "图纸生成失败，请重新绘制或切换生成方式。";
-      resultSummary.textContent = message;
+      setReadableStatusText(resultState, "绘制失败");
+      setReadableEvidenceText(resultSummary, message);
       failTask("绘制失败", message);
     } finally {
       setBusy(false);

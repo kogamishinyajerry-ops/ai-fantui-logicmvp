@@ -7161,6 +7161,12 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
         page.click("#logic-load-docx-template")
         expect(page.locator("#logic-template-entry")).to_be_hidden()
         expect(page.locator("#logic-result-state")).to_have_text("电路图已完成绘制")
+        expect(page.locator("#logic-result-state")).to_have_attribute("aria-label", "电路图已完成绘制")
+        expect(page.locator("#logic-result-state")).to_have_attribute("title", "电路图已完成绘制")
+        expect(page.locator("#logic-result-summary")).to_have_attribute("aria-label", re.compile("DOCX L1-L4"))
+        expect(page.locator("#logic-result-summary")).to_have_attribute("title", re.compile("界面蓝图演示"))
+        expect(page.locator("#logic-canvas-counts")).to_have_attribute("aria-label", re.compile("20 个电路节点"))
+        expect(page.locator("#logic-canvas-counts")).to_have_attribute("title", re.compile("23 条连线"))
         expect(page.locator('#logic-canvas[data-view-mode="circuit"]')).to_be_visible()
         circuit_column_labels = page.locator("#logic-circuit-svg .logic-circuit-column-label")
         expect(circuit_column_labels).to_have_count(4)
@@ -7184,6 +7190,10 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
         expect(pls_power_node).to_have_attribute("data-technical-label", re.compile("PLS 供电"))
         expect(pdu_motor_node).to_have_attribute("data-technical-label", re.compile("PDU 电机指令"))
         expect(thr_lock_node).to_have_attribute("data-technical-label", re.compile("THR_LOCK 释放"))
+        expect(page.locator("#logic-bottom-run-node-count")).to_have_attribute("aria-label", "节点 20/20")
+        expect(page.locator("#logic-bottom-run-node-count")).to_have_attribute("title", "节点 20/20")
+        expect(page.locator("#logic-bottom-run-edge-count")).to_have_attribute("aria-label", "连线 23/23")
+        expect(page.locator("#logic-bottom-run-edge-count")).to_have_attribute("title", "连线 23/23")
         stored = page.evaluate(
             """
             () => {
