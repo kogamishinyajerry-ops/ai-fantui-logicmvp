@@ -491,10 +491,21 @@ def _expect_canvas_selected_trace_state_badge(
             layout: {
               badge,
               tail,
+              selected: {
+                width: box.width,
+                height: box.height,
+                left: box.left,
+                right: box.right,
+              },
               selectedWidth: box.width,
               selectedHeight: box.height,
               selectedLeft: box.left,
               selectedRight: box.right,
+              popover: {
+                width: popoverBox.width,
+                left: popoverBox.left,
+                right: popoverBox.right,
+              },
               popoverWidth: popoverBox.width,
               popoverLeft: popoverBox.left,
               popoverRight: popoverBox.right,
@@ -597,10 +608,6 @@ def _expect_canvas_source_trace_state_badge(
               scopeIsCurrentSegment,
               chainAccessible,
             },
-            geometry: {
-              width: box.width,
-              height: box.height,
-            },
             traceSnapshot: {
               state: source.dataset.canvasTraceConsistencyState || "",
               currentId: source.dataset.canvasTraceConsistencyCurrentId || "",
@@ -619,8 +626,18 @@ def _expect_canvas_source_trace_state_badge(
             },
             layout: {
               badge,
+              source: {
+                width: box.width,
+                height: box.height,
+                left: box.left,
+                right: box.right,
+              },
               width: box.width,
               height: box.height,
+              sourceWidth: box.width,
+              sourceHeight: box.height,
+              sourceLeft: box.left,
+              sourceRight: box.right,
             },
             surfaceStates: {
               selected: selected.dataset.canvasTraceConsistencyState || "",
