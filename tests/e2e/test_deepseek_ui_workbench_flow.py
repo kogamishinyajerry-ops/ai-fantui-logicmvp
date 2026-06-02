@@ -1000,6 +1000,10 @@ def _expect_output_coverage_current_source(
     assert coverage_state["accessibleLabel"] == coverage_state["title"], coverage_state
     assert coverage_state["text"] in coverage_state["accessibleLabel"], coverage_state
     assert compact_label in coverage_state["accessibleLabel"] or source_chip_label in coverage_state["accessibleLabel"], coverage_state
+    for internal_token in ("row-logic", "logic1->", "logic2->", "logic3->"):
+        assert internal_token not in coverage_state["accessibleLabel"], coverage_state
+        assert internal_token not in coverage_state["ariaLabel"], coverage_state
+        assert internal_token not in coverage_state["title"], coverage_state
     if source is not None:
         assert source_full_label in coverage_state["currentSourceFullLabel"], coverage_state
         assert source_full_label in coverage_state["accessibleLabel"], coverage_state
