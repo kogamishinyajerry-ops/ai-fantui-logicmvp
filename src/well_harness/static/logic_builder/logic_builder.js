@@ -1650,7 +1650,11 @@
       const visibleSources = group.sources.slice(0, 2);
       const hiddenSourceCount = Math.max(0, group.sources.length - visibleSources.length);
       const sourceBadges = visibleSources.length
-        ? `${visibleSources.map((source) => `<button type="button" class="logic-output-backtrace-source" data-output-backtrace-source="${escapeText(source.id)}" aria-pressed="false">段 ${escapeText(source.displayIndex)}</button>`).join("")}${hiddenSourceCount ? `<span class="logic-output-backtrace-more">+${hiddenSourceCount}</span>` : ""}`
+        ? `${visibleSources.map((source) => {
+          const sourceLabel = `段 ${source.displayIndex}`;
+          const sourceActionLabel = `回到${sourceLabel} 需求原文：查看 ${group.label} 输出依据`;
+          return `<button type="button" class="logic-output-backtrace-source" data-output-backtrace-source="${escapeText(source.id)}" aria-label="${escapeText(sourceActionLabel)}" title="${escapeText(sourceActionLabel)}" aria-pressed="false">${escapeText(sourceLabel)}</button>`;
+        }).join("")}${hiddenSourceCount ? `<span class="logic-output-backtrace-more">+${hiddenSourceCount}</span>` : ""}`
         : '<span class="logic-output-backtrace-more">待映射</span>';
       const evidenceText = `${group.sources.length} 段 · ${group.relatedWireCount || 0} 线索`;
       return `

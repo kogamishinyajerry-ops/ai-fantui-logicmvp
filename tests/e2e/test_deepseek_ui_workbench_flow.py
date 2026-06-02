@@ -5515,6 +5515,9 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "etrac")
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
         deploy_row_logic3_source = output_backtrace.locator('[data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]').first
+        expect(deploy_row_logic3_source).to_have_text("段 03")
+        expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("回到段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
+        expect(deploy_row_logic3_source).to_have_attribute("title", re.compile("回到段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
         deploy_row_logic3_source.click()
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic3")
@@ -5522,6 +5525,9 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "true")
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         etrac_row_logic2_source = output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]').first
+        expect(etrac_row_logic2_source).to_have_text("段 02")
+        expect(etrac_row_logic2_source).to_have_attribute("aria-label", re.compile("回到段 02 需求原文.*ETRAC.*输出依据"))
+        expect(etrac_row_logic2_source).to_have_attribute("title", re.compile("回到段 02 需求原文.*ETRAC.*输出依据"))
         etrac_row_logic2_source.click()
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
