@@ -1078,7 +1078,10 @@
       badge.dataset.originalTextMatchToken = token;
       badge.textContent = `原文 ${label}`;
       badge.setAttribute("aria-label", `需求行原文命中方式：${label}`);
-      badge.setAttribute("title", `需求行原文命中方式：${label}；token ${token}`);
+      const readableToken = token && token !== "none" && token !== "waiting"
+        ? token
+        : (token === "waiting" ? "等待" : "无");
+      badge.setAttribute("title", `需求行原文命中方式：${label}；命中词：${readableToken}`);
       if (row) {
         row.dataset.originalTextMatch = mode;
         row.dataset.originalTextMatchToken = token;
@@ -1159,7 +1162,10 @@
       currentSegmentIdentityTextMatch.dataset.originalTextMatchToken = originalTextMatch.token;
       currentSegmentIdentityTextMatch.textContent = `原文 ${originalTextMatch.label}`;
       currentSegmentIdentityTextMatch.setAttribute("aria-label", `原文命中方式：${originalTextMatch.label}`);
-      currentSegmentIdentityTextMatch.setAttribute("title", `原文命中方式：${originalTextMatch.label}；token ${originalTextMatch.token}`);
+      const readableOriginalTextMatchToken = originalTextMatch.token && originalTextMatch.token !== "none" && originalTextMatch.token !== "waiting"
+        ? originalTextMatch.token
+        : (originalTextMatch.token === "waiting" ? "等待" : "无");
+      currentSegmentIdentityTextMatch.setAttribute("title", `原文命中方式：${originalTextMatch.label}；命中词：${readableOriginalTextMatchToken}`);
     }
   }
 
