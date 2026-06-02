@@ -1562,12 +1562,20 @@
     outputBacktracePanel.dataset.relatedOutputMode = relatedOutputMode;
     outputBacktracePanel.dataset.relatedOutputLabels = relatedLabels.join("|");
     if (outputBacktraceCoverage) {
-      const activeSourceButton = activeId === "none"
-        ? null
-        : outputBacktraceSources.find((button) => button.dataset.outputBacktraceSource === activeId);
+      const activeSourceButtons = activeId === "none"
+        ? []
+        : outputBacktraceSources.filter((button) => button.dataset.outputBacktraceSource === activeId);
+      const activeSourceButton = activeSourceButtons[0] || null;
       const activeSourceChipLabel = activeSourceButton
         ? (activeSourceButton.dataset.outputBacktraceCurrentChipLabel || activeSourceButton.dataset.outputBacktraceDisplayLabel || "")
         : "";
+      const activeSourceFullLabels = Array.from(new Set(activeSourceButtons
+        .map((button) => button.dataset.outputBacktraceCurrentLabel || button.dataset.outputBacktraceActionLabel || activeSourceChipLabel)
+        .filter(Boolean)));
+      const activeSourceFullLabel = activeSourceFullLabels.join("|");
+      const activeSourceAccessibleLabel = activeSourceFullLabels.length
+        ? activeSourceFullLabels.join("；")
+        : activeSourceChipLabel;
       const activeSourceNumber = (activeSourceChipLabel.match(/\d+/) || [""])[0];
       const activeSourceCompactLabel = activeSourceNumber ? `源${activeSourceNumber}` : activeSourceChipLabel.replace(/^当前\s*/, "源").replace(/\s+/g, "");
       const totalOutputGroups = Number(outputBacktracePanel.dataset.outputTotalCount || "0");
@@ -1584,9 +1592,14 @@
       outputBacktraceCoverage.dataset.currentOutputCount = String(relatedOutputIds.size);
       outputBacktraceCoverage.dataset.currentOutputLabels = relatedLabels.join("|");
       outputBacktraceCoverage.dataset.currentSourceChipLabel = activeSourceChipLabel;
+      outputBacktraceCoverage.dataset.currentSourceFullLabel = activeSourceFullLabel;
       outputBacktraceCoverage.textContent = activeId === "none"
         ? `${globalCoverageText}·当前0组`
         : `${globalCoverageText}·${currentCoverageText}${coverageTail}${sourceTail}`;
+      const outputCoverageAccessibleLabel = `${outputBacktraceCoverage.textContent}；当前来源：${activeSourceAccessibleLabel || "未定位"}`;
+      outputBacktraceCoverage.dataset.outputCoverageAccessibleLabel = outputCoverageAccessibleLabel;
+      outputBacktraceCoverage.setAttribute("aria-label", outputCoverageAccessibleLabel);
+      outputBacktraceCoverage.setAttribute("title", outputCoverageAccessibleLabel);
     }
     outputBacktracePanel.dataset.relatedOutputIds = Array.from(relatedOutputIds).join("|");
     outputBacktraceItems.forEach((item) => {

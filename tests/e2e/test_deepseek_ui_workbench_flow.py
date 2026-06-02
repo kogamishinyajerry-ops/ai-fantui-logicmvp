@@ -970,6 +970,8 @@ def _expect_output_coverage_current_source(
             """(element) => ({
               ok: Boolean(element.dataset.outputBacktraceCurrentChipLabel),
               currentChipLabel: element.dataset.outputBacktraceCurrentChipLabel || "",
+              currentLabel: element.dataset.outputBacktraceCurrentLabel || "",
+              actionLabel: element.dataset.outputBacktraceActionLabel || "",
               sourceId: element.dataset.outputBacktraceSource || "",
               text: element.textContent || "",
             })"""
@@ -982,6 +984,25 @@ def _expect_output_coverage_current_source(
     compact_label = source_chip_label.replace("当前 ", "源")
     expect(output_coverage).to_have_attribute("data-current-source-chip-label", source_chip_label)
     expect(output_coverage).to_contain_text(compact_label)
+    if source is not None:
+        source_full_label = source_chip_state["currentLabel"] or source_chip_state["actionLabel"] or source_chip_label
+    coverage_state = output_coverage.evaluate(
+        """(element) => ({
+          accessibleLabel: element.dataset.outputCoverageAccessibleLabel || "",
+          ariaLabel: element.getAttribute("aria-label") || "",
+          currentSourceFullLabel: element.dataset.currentSourceFullLabel || "",
+          title: element.getAttribute("title") || "",
+          text: element.textContent || "",
+        })"""
+    )
+    assert coverage_state["accessibleLabel"], coverage_state
+    assert coverage_state["accessibleLabel"] == coverage_state["ariaLabel"], coverage_state
+    assert coverage_state["accessibleLabel"] == coverage_state["title"], coverage_state
+    assert coverage_state["text"] in coverage_state["accessibleLabel"], coverage_state
+    assert compact_label in coverage_state["accessibleLabel"] or source_chip_label in coverage_state["accessibleLabel"], coverage_state
+    if source is not None:
+        assert source_full_label in coverage_state["currentSourceFullLabel"], coverage_state
+        assert source_full_label in coverage_state["accessibleLabel"], coverage_state
     return source_chip_label
 
 
