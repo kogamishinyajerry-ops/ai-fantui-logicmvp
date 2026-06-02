@@ -1873,6 +1873,39 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   white-space: nowrap;
 }
 
+.logic-current-segment-consistency-cue {
+  flex: 0 0 auto;
+  max-width: 58px;
+  border: 1px solid rgba(54, 198, 216, 0.28);
+  border-radius: 999px;
+  background: rgba(54, 198, 216, 0.08);
+  color: #9ee8ff;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 5px;
+}
+
+.logic-current-segment-consistency-cue[data-trace-consistency-cue="consistent"] {
+  border-color: rgba(45, 212, 191, 0.54);
+  background: rgba(45, 212, 191, 0.12);
+  color: #d7fff4;
+}
+
+.logic-current-segment-consistency-cue[data-trace-consistency-cue="segment-only"] {
+  border-color: rgba(245, 200, 91, 0.42);
+  background: rgba(245, 200, 91, 0.10);
+  color: #ffe6a3;
+}
+
+.logic-current-segment-consistency-cue[data-trace-consistency-cue="diverged"],
+.logic-current-segment-consistency-cue[data-trace-consistency-cue="unbound"] {
+  border-color: rgba(255, 180, 168, 0.46);
+  background: rgba(255, 180, 168, 0.10);
+  color: #ffcabf;
+}
+
 .logic-current-segment-consistency-align {
   flex: 0 0 auto;
   min-height: 16px;

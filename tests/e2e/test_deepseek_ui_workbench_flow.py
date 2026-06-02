@@ -49,6 +49,8 @@ def _expect_trace_consistency(
     current_id: str | None = None,
     selected_id: str | None = None,
     selected_source: str | None = None,
+    cue: str | None = None,
+    cue_label: str | None = None,
     alignable: bool | None = None,
     align_target_id: str | None = None,
     align_source: str | None = None,
@@ -64,6 +66,10 @@ def _expect_trace_consistency(
         expect(locator).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", selected_id)
     if selected_source is not None:
         expect(locator).to_have_attribute("data-trace-consistency-selected-source", selected_source)
+    if cue is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-cue", cue)
+    if cue_label is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-cue-label", cue_label)
     if alignable is not None:
         expect(locator).to_have_attribute("data-trace-consistency-alignable", "true" if alignable else "false")
     if align_target_id is not None:
@@ -150,6 +156,8 @@ def _expect_cross_surface_trace_audit(
     current_id: str | None = None,
     selected_id: str | None = None,
     selected_source: str | None = None,
+    cue: str | None = None,
+    cue_label: str | None = None,
     alignable: bool | None = None,
     align_target_id: str | None = None,
     align_source: str | None = None,
@@ -161,6 +169,8 @@ def _expect_cross_surface_trace_audit(
         current_id=current_id,
         selected_id=selected_id,
         selected_source=selected_source,
+        cue=cue,
+        cue_label=cue_label,
         alignable=alignable,
         align_target_id=align_target_id,
         align_source=align_source,
@@ -3498,6 +3508,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         segment_card = page.locator("#logic-current-segment-evidence")
         segment_source_cue = page.locator("#logic-current-segment-source-cue")
         segment_consistency = page.locator("#logic-current-segment-consistency")
+        segment_consistency_cue = page.locator("#logic-current-segment-consistency-cue")
         segment_consistency_align = page.locator("#logic-current-segment-consistency-align")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
@@ -3510,8 +3521,12 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             consistency_id="row-logic1",
             current_id="row-logic1",
             selected_id="none",
+            cue="segment-only",
+            cue_label="待锚点",
             alignable=False,
         )
+        expect(segment_consistency_cue).to_be_visible()
+        expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "segment-only")
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(segment_card).to_have_attribute("data-node-count", "5")
         expect(segment_card).to_have_attribute("data-wire-count", "4")
@@ -4133,7 +4148,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             current_id="row-logic2",
             selected_id="row-logic2",
             selected_source="canvas-node",
+            cue="consistent",
+            cue_label="四表面一致",
         )
+        expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
+        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-surfaces", re.compile("left.*canvas.*context.*annotation"))
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
@@ -4149,12 +4168,16 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             current_id="row-logic3",
             selected_id="row-logic2",
             selected_source="canvas-node",
+            cue="diverged",
+            cue_label="证据分叉",
             alignable=True,
             align_target_id="row-logic2",
             align_source="canvas-node",
         )
         expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
+        expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "diverged")
         expect(trust_review_state).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
+        expect(trust_spine).to_have_attribute("data-trace-consistency-review-label", "证据分叉")
         _expect_consistency_align_button(
             segment_consistency_align,
             visible=True,
@@ -4175,6 +4198,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             consistency_id="row-logic2",
             current_id="row-logic2",
             selected_id="row-logic2",
+            cue="consistent",
+            cue_label="四表面一致",
             alignable=False,
         )
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
@@ -4184,6 +4209,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             state="diverged",
             current_id="row-logic3",
             selected_id="row-logic2",
+            cue="diverged",
             alignable=True,
             align_target_id="row-logic2",
             align_source="canvas-node",
@@ -4297,8 +4323,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             trace_id="none",
             selected_id="none",
             selected_source="none",
+            cue="unbound",
+            cue_label="未绑定",
             alignable=False,
         )
+        expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "unbound")
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(page.locator("#logic-canvas")).to_be_visible()
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
