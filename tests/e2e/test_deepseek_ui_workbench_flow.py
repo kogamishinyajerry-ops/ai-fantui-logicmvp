@@ -3321,6 +3321,12 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-reveal-source", "")
             expect(output_reveal).to_have_attribute("aria-expanded", "false")
             expect(output_backtrace).to_have_attribute("data-active-output", "tls")
+            expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_be_focused()
+            assert page.evaluate("""() => {
+              const panel = document.querySelector("#logic-output-backtrace-panel");
+              const activeItem = document.querySelector("#logic-output-backtrace-list .logic-output-backtrace-item.is-active");
+              return Boolean(panel && activeItem && activeItem.dataset.outputBacktraceOutput === panel.dataset.activeOutput);
+            }""") is True
             output_reveal.click()
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "active")
             expect(related_output_focus).to_be_focused()
@@ -3333,6 +3339,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "source")
         expect(segment_jumps.locator('[data-current-segment-jump="source"]')).to_have_attribute("aria-pressed", "true")
         if len(first_output_impact_label_list) > 2:
+            expect(segment_jumps.locator('[data-current-segment-jump="source"]')).to_be_focused()
+            assert page.evaluate("""() => {
+              const active = document.activeElement;
+              return Boolean(active && !active.closest("#logic-output-backtrace-list"));
+            }""") is True
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "none")
             expect(output_backtrace).to_have_attribute("data-reveal-trace-id", "")
             expect(output_backtrace).to_have_attribute("data-reveal-source", "")
@@ -3350,6 +3361,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "all")
         expect(segment_jumps.locator('[data-current-segment-jump="trace"]')).to_have_attribute("aria-pressed", "true")
         if len(first_output_impact_label_list) > 2:
+            expect(segment_jumps.locator('[data-current-segment-jump="trace"]')).to_be_focused()
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "none")
             expect(output_reveal).to_have_attribute("aria-expanded", "false")
             output_reveal.focus()
@@ -3365,6 +3377,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "all")
         expect(segment_jumps.locator('[data-current-segment-jump="all"]')).to_have_attribute("aria-pressed", "true")
         if len(first_output_impact_label_list) > 2:
+            expect(segment_jumps.locator('[data-current-segment-jump="all"]')).to_be_focused()
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "none")
         active_trace = page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")
         expect(active_trace).to_have_attribute("data-source-anchor-id", "logic1")
