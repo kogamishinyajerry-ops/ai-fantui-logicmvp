@@ -397,6 +397,7 @@ def _expect_canvas_selected_trace_state_badge(
             && selected.dataset.canvasTrustChainState === "ready"
             && selected.dataset.canvasTrustChainTraceId === currentId
             && selected.dataset.canvasTrustChainSurface === "selected-target"
+            && selected.dataset.canvasTrustChainScope === "current-segment"
             && outputCount > 0
             && reviewCount > 0
             && left.dataset.traceConsistencyState === state
@@ -425,6 +426,7 @@ def _expect_canvas_selected_trace_state_badge(
             selectedTrustState: selected.dataset.canvasTrustChainState || "",
             selectedTrustTraceId: selected.dataset.canvasTrustChainTraceId || "",
             selectedTrustSurface: selected.dataset.canvasTrustChainSurface || "",
+            selectedTrustScope: selected.dataset.canvasTrustChainScope || "",
             selectedTrustOutputCount: selected.dataset.canvasTrustChainOutputCount || "",
             selectedTrustReviewAnchorCount: selected.dataset.canvasTrustChainReviewAnchorCount || "",
             leftState: left.dataset.traceConsistencyState || "",
@@ -500,6 +502,7 @@ def _expect_canvas_source_trace_state_badge(
             && source.dataset.canvasTrustChainState === "ready"
             && source.dataset.canvasTrustChainTraceId === currentId
             && source.dataset.canvasTrustChainSurface === "canvas-source"
+            && source.dataset.canvasTrustChainScope === "current-segment"
             && outputCount > 0
             && reviewCount > 0
             && selected.dataset.canvasTraceConsistencyState === state
@@ -534,6 +537,7 @@ def _expect_canvas_source_trace_state_badge(
             sourceTrustState: source.dataset.canvasTrustChainState || "",
             sourceTrustTraceId: source.dataset.canvasTrustChainTraceId || "",
             sourceTrustSurface: source.dataset.canvasTrustChainSurface || "",
+            sourceTrustScope: source.dataset.canvasTrustChainScope || "",
             sourceTrustOutputCount: source.dataset.canvasTrustChainOutputCount || "",
             sourceTrustReviewAnchorCount: source.dataset.canvasTrustChainReviewAnchorCount || "",
             selectedState: selected.dataset.canvasTraceConsistencyState || "",

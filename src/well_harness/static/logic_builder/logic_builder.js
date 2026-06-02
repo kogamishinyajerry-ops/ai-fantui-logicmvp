@@ -3073,6 +3073,7 @@
       "canvasTrustChainOutputCount",
       "canvasTrustChainReviewAnchorCount",
       "canvasTrustChainSurface",
+      "canvasTrustChainScope",
     ];
     const selectedId = selectedEvidenceId || "none";
     const sourceValue = selectedEvidenceSource || "none";
@@ -3103,6 +3104,7 @@
       element.dataset.canvasTrustChainOutputCount = chainSnapshot.outputCount || "0";
       element.dataset.canvasTrustChainReviewAnchorCount = chainSnapshot.reviewAnchorCount || "0";
       element.dataset.canvasTrustChainSurface = surfaceName;
+      element.dataset.canvasTrustChainScope = "current-segment";
     };
     const applyCanvasTraceDataset = (element, surfaceName, labelText) => {
       element.dataset.canvasTraceConsistencyState = stateValue;
