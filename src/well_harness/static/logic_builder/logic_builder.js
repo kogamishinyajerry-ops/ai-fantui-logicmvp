@@ -3493,7 +3493,8 @@
       : (state.selectedTargetType === "wire" ? "canvas-wire" : (state.selectedTargetType === "node" ? "canvas-node" : "trace-list"));
     const currentReadableLabel = readableTraceIdentity(currentId, "等待当前段");
     const selectedReadableLabel = readableTraceIdentity(selectedEvidenceId, "未选择");
-    const auditLabel = `证据一致性状态：${cueLabel}；${text}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSource}`;
+    const selectedEvidenceSourceLabel = currentSegmentSelectionSourceLabel(selectedEvidenceSource);
+    const auditLabel = `证据一致性状态：${cueLabel}；${text}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSourceLabel}`;
     currentSegmentConsistencyStatus.dataset.traceConsistencyState = stateValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencyId = idValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencySurfaces = surfaces;
@@ -3630,8 +3631,9 @@
     trustReviewState.textContent = `${baseText} · ${label}`;
     const currentReadableLabel = readableTraceIdentity(currentId, "等待当前段");
     const selectedReadableLabel = readableTraceIdentity(selectedEvidenceId, "未选择");
-    trustReviewState.setAttribute("aria-label", `${baseText}；一致性状态：${label}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSource || "none"}`);
-    trustReviewState.setAttribute("title", `${baseText}；一致性状态：${label}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSource || "none"}`);
+    const selectedEvidenceSourceLabel = currentSegmentSelectionSourceLabel(selectedEvidenceSource || "none");
+    trustReviewState.setAttribute("aria-label", `${baseText}；一致性状态：${label}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSourceLabel}`);
+    trustReviewState.setAttribute("title", `${baseText}；一致性状态：${label}；当前段：${currentReadableLabel}；选中依据：${selectedReadableLabel}；来源：${selectedEvidenceSourceLabel}`);
     if (trustSpine) {
       trustSpine.dataset.traceConsistencyState = stateValue || "waiting";
       trustSpine.dataset.traceConsistencyId = idValue || "waiting";

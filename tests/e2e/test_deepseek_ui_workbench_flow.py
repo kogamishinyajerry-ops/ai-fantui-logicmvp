@@ -82,6 +82,11 @@ def _expect_trace_consistency(
       text: element.textContent || "",
     })""")
     _assert_no_machine_tokens_in_accessible_state(consistency_accessible_state, "ariaLabel", "title", "text")
+    if selected_source is not None and selected_source != "none":
+        expect(locator).to_have_attribute("aria-label", re.compile("来源："))
+        expect(locator).to_have_attribute("title", re.compile("来源："))
+        assert selected_source not in consistency_accessible_state["ariaLabel"], consistency_accessible_state
+        assert selected_source not in consistency_accessible_state["title"], consistency_accessible_state
 
 
 def _assert_current_segment_consistency_cue_layout(page: Any, *, align_visible: bool) -> None:
@@ -510,6 +515,7 @@ def _expect_trust_review_consistency(
     review_id: str | None = None,
     current_id: str | None = None,
     selected_id: str | None = None,
+    selected_source: str | None = None,
 ) -> None:
     expect(locator).to_have_attribute("data-trace-consistency-review-state", state)
     if review_id is not None:
@@ -520,12 +526,19 @@ def _expect_trust_review_consistency(
     if selected_id is not None:
         expect(locator).to_have_attribute("data-trace-consistency-review-selected-id", selected_id)
         expect(locator).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", selected_id)
+    if selected_source is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-review-selected-source", selected_source)
     review_accessible_state = locator.evaluate("""(element) => ({
       ariaLabel: element.getAttribute("aria-label") || "",
       title: element.getAttribute("title") || "",
       text: element.textContent || "",
     })""")
     _assert_no_machine_tokens_in_accessible_state(review_accessible_state, "ariaLabel", "title", "text")
+    if selected_source is not None and selected_source != "none":
+        expect(locator).to_have_attribute("aria-label", re.compile("来源："))
+        expect(locator).to_have_attribute("title", re.compile("来源："))
+        assert selected_source not in review_accessible_state["ariaLabel"], review_accessible_state
+        assert selected_source not in review_accessible_state["title"], review_accessible_state
 
 
 def _expect_trust_spine_consistency(
@@ -1909,6 +1922,7 @@ def _expect_cross_surface_trace_audit(
         review_id=review_id,
         current_id=current_id,
         selected_id=selected_id,
+        selected_source=selected_source,
     )
     _expect_trust_spine_consistency(
         trust_spine,
