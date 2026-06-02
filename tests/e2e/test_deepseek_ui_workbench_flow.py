@@ -5691,6 +5691,13 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "consistent")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic1")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "false")
+        _expect_current_segment_identity_loop_state(
+            page,
+            state="consistent",
+            current_id="row-logic1",
+            selected_id="row-logic1",
+            selected_source="canvas-wire",
+        )
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-demo-node-id="etrac_540v"]').click()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "unbound")
