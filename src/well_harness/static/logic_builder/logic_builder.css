@@ -1389,6 +1389,15 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.logic-canvas-source {
+  max-width: 176px;
+}
+
+.logic-canvas-source[data-canvas-trace-legend="ready"] {
+  color: #a7f3d0;
+}
+
 .logic-presentation-mode-toggle {
   display: inline-grid;
   width: 30px;

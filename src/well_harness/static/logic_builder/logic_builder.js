@@ -5491,7 +5491,10 @@
       const edgeTotal = circuitView ? (circuitView.wires || []).length : (payload.edges || []).length;
       bottomRunEdgeCount.textContent = `连线 ${edgeTotal}/${edgeTotal}`;
     }
-    source.textContent = payload.source_requirements_sha256 ? "需求来源已确认" : "来源待确认";
+    const sourceLabel = payload.source_requirements_sha256 ? "来源已确认" : "来源待确认";
+    source.dataset.canvasTraceLegend = circuitView ? "ready" : "none";
+    source.textContent = circuitView ? `${sourceLabel} · 青色=可反选` : sourceLabel;
+    source.setAttribute("title", circuitView ? `${sourceLabel}；青色焦点表示可反选回需求段` : sourceLabel);
     renderBurdenSummary(payload);
     renderObjectContextDrawer();
     updateChangeControls();

@@ -3154,8 +3154,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         _show_logic_builder_workbench(page)
         expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-status", "idle")
         trace_panel = page.locator("#logic-requirement-trace-panel")
+        canvas_source = page.locator("#logic-canvas-source")
         expect(trace_panel).to_be_visible()
         expect(page.locator("#logic-requirement-trace-source")).to_have_text("deepseek-v4-pro-demo-requirements.md")
+        expect(canvas_source).to_be_visible()
+        expect(canvas_source).to_have_attribute("data-canvas-trace-legend", "ready")
+        expect(canvas_source).to_have_attribute("title", re.compile("反选"))
+        canvas_source_box = canvas_source.bounding_box()
+        assert canvas_source_box is not None
+        assert canvas_source_box["width"] <= 180
         trust_spine = page.locator("#logic-trust-spine")
         expect(trust_spine).to_be_visible()
         expect(trust_spine).to_have_attribute("data-current-stage", "review")
