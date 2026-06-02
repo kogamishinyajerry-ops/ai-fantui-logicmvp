@@ -955,6 +955,53 @@
     syncTraceEvidenceConsistency();
   }
 
+  function currentSegmentTrustChainSnapshot() {
+    if (!currentSegmentTrustChain) {
+      return {
+        state: "waiting",
+        traceId: "waiting",
+        sourceAnchorId: "waiting",
+        nodeCount: "0",
+        wireCount: "0",
+        outputCount: "0",
+        reviewAnchorCount: "0",
+      };
+    }
+    return {
+      state: currentSegmentTrustChain.dataset.currentSegmentTrustChain || "waiting",
+      traceId: currentSegmentTrustChain.dataset.currentSegmentTraceId || "waiting",
+      sourceAnchorId: currentSegmentTrustChain.dataset.sourceAnchorId || "waiting",
+      nodeCount: currentSegmentTrustChain.dataset.nodeCount || "0",
+      wireCount: currentSegmentTrustChain.dataset.wireCount || "0",
+      outputCount: currentSegmentTrustChain.dataset.outputCount || "0",
+      reviewAnchorCount: currentSegmentTrustChain.dataset.reviewAnchorCount || "0",
+    };
+  }
+
+  function syncCurrentSegmentTrustChainInspectorSurfaces() {
+    const snapshot = currentSegmentTrustChainSnapshot();
+    const summary = snapshot.state === "ready"
+      ? `当前段证据链 · 原文锚点 ${snapshot.sourceAnchorId} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 复核 ${snapshot.reviewAnchorCount}`
+      : "当前段证据链等待段落";
+    const surfaces = [
+      { element: logicContextRequirementTrace, prefix: "context" },
+      { element: annotationRequirementTrace, prefix: "annotation" },
+    ];
+    surfaces.forEach(({ element, prefix }) => {
+      if (!element) return;
+      element.dataset[`${prefix}TrustChainState`] = snapshot.state;
+      element.dataset[`${prefix}TrustChainTraceId`] = snapshot.traceId;
+      element.dataset[`${prefix}TrustChainSourceAnchorId`] = snapshot.sourceAnchorId;
+      element.dataset[`${prefix}TrustChainNodeCount`] = snapshot.nodeCount;
+      element.dataset[`${prefix}TrustChainWireCount`] = snapshot.wireCount;
+      element.dataset[`${prefix}TrustChainOutputCount`] = snapshot.outputCount;
+      element.dataset[`${prefix}TrustChainReviewAnchorCount`] = snapshot.reviewAnchorCount;
+      element.dataset[`${prefix}TrustChainSurface`] = "current-segment";
+      element.setAttribute("aria-label", summary);
+      element.setAttribute("title", summary);
+    });
+  }
+
   function outputVisibleStatusTarget(text, mode, explicitTarget) {
     if (explicitTarget && explicitTarget.kind && explicitTarget.id) {
       return explicitTarget;
@@ -1606,6 +1653,7 @@
       if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = "等待输出影响";
       if (currentSegmentChainReview) currentSegmentChainReview.textContent = "等待复核";
       if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = "等待全局矩阵";
+      syncCurrentSegmentTrustChainInspectorSurfaces();
       if (currentSegmentOutputReveal) {
         currentSegmentOutputReveal.hidden = true;
         currentSegmentOutputReveal.disabled = true;
@@ -1672,6 +1720,7 @@
     if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = outputImpacts.length ? `${outputImpacts.length} 个输出影响` : "无直接输出影响";
     if (currentSegmentChainReview) currentSegmentChainReview.textContent = totalAnchors ? `${totalAnchors} 锚点复核` : "等待复核";
     if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = totalAnchors ? "进入全局矩阵" : "等待全局矩阵";
+    syncCurrentSegmentTrustChainInspectorSurfaces();
     if (currentSegmentOutputImpact) {
       currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
       currentSegmentOutputImpact.dataset.outputImpactCount = String(outputImpacts.length);

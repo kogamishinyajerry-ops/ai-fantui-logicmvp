@@ -5387,6 +5387,22 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   color: #eafff4;
 }
 
+#logic-context-requirement-trace[data-context-trust-chain-state="ready"]::after {
+  content: " · 链 " attr(data-context-trust-chain-output-count) "输出/" attr(data-context-trust-chain-review-anchor-count) "复核";
+  color: rgba(94, 234, 212, 0.92);
+  font-family: "Courier New", monospace;
+  font-size: 0.88em;
+  font-weight: 800;
+}
+
+#logic-annotation-requirement-trace[data-annotation-trust-chain-state="ready"]::after {
+  content: " · 链 " attr(data-annotation-trust-chain-output-count) "输出/" attr(data-annotation-trust-chain-review-anchor-count) "复核";
+  color: rgba(94, 234, 212, 0.92);
+  font-family: "Courier New", monospace;
+  font-size: 0.88em;
+  font-weight: 800;
+}
+
 .logic-shell[data-console-palette="codex-light"] .logic-current-segment-anchor-jumps button {
   border-color: rgba(54, 198, 216, 0.28);
   background: rgba(5, 17, 28, 0.92);

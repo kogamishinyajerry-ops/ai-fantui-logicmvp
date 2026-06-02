@@ -4415,6 +4415,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_source="canvas-wire",
         )
         expect(context_trace).to_contain_text("段")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-state", "ready")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-trace-id", "row-logic1")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-source-anchor-id", "logic1")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-node-count", "5")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-wire-count", "4")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-output-count", re.compile(r"^[1-9]"))
+        expect(context_trace).to_have_attribute("data-context-trust-chain-review-anchor-count", "10")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-surface", "current-segment")
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "matched")
         _expect_requirement_trace_audit(
             annotation_trace,
@@ -4423,6 +4431,27 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_source="canvas-wire",
         )
         expect(annotation_trace).to_contain_text("段")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-state", "ready")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-trace-id", "row-logic1")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-source-anchor-id", "logic1")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-node-count", "5")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-wire-count", "4")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-output-count", re.compile(r"^[1-9]"))
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-review-anchor-count", "10")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-surface", "current-segment")
+        assert page.evaluate("""() => {
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!context || !annotation) return false;
+          const contextBadge = window.getComputedStyle(context, "::after").content || "";
+          const annotationBadge = window.getComputedStyle(annotation, "::after").content || "";
+          return contextBadge.includes("链")
+            && contextBadge.includes("输出")
+            && contextBadge.includes("复核")
+            && annotationBadge.includes("链")
+            && annotationBadge.includes("输出")
+            && annotationBadge.includes("复核");
+        }""") is True
         _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic1")
         _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_trust_review_consistency(trust_review_state, state="consistent", review_id="row-logic1")
