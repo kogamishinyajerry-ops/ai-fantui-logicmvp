@@ -804,6 +804,14 @@ def _expect_current_segment_identity_loop_state(
     expected_source_anchor_id = source_anchor_id
     if expected_source_anchor_id is None:
         expected_source_anchor_id = page.locator("#logic-current-segment-trust-chain").get_attribute("data-source-anchor-id") or ""
+    if state in {"segment-only", "unbound"}:
+        assert selected_id == "none"
+        assert selected_source == "none"
+    if state == "diverged":
+        assert selected_id != "none"
+        assert selected_source in {"canvas-node", "canvas-wire", "trace-list"}
+    if state == "consistent":
+        assert selected_id == current_id
     loop = page.locator("#logic-current-segment-identity-loop")
     expect(loop).to_be_visible()
     expect(loop).to_have_attribute("data-identity-loop-state", state)
