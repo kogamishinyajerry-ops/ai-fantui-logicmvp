@@ -3848,20 +3848,20 @@
     if (!objectContextDrawer) return;
     if (!state.selectedTargetId) {
       objectContextDrawer.hidden = true;
-      if (annotationSource) annotationSource.textContent = "选择节点或连线后显示来源。";
-      if (annotationParams) annotationParams.textContent = "暂无参数。";
+      setReadableEvidenceText(annotationSource, "选择节点或连线后显示来源。");
+      setReadableEvidenceText(annotationParams, "暂无参数。");
       syncObjectContextRequirementTrace();
       return;
     }
     objectContextDrawer.hidden = false;
     const title = readableAnnotationTargetDisplayLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
     const context = selectedTargetContext();
-    if (logicContextTitle) logicContextTitle.textContent = title;
-    if (logicContextSource) logicContextSource.textContent = context.sourceText;
+    setReadableEvidenceText(logicContextTitle, title);
+    setReadableEvidenceText(logicContextSource, context.sourceText);
     syncObjectContextRequirementTrace();
-    if (logicContextParams) logicContextParams.textContent = context.paramText;
-    if (annotationSource) annotationSource.textContent = context.sourceText;
-    if (annotationParams) annotationParams.textContent = context.paramText;
+    setReadableEvidenceText(logicContextParams, context.paramText);
+    setReadableEvidenceText(annotationSource, context.sourceText);
+    setReadableEvidenceText(annotationParams, context.paramText);
   }
 
   function requirementNodeMap() {
@@ -6044,8 +6044,8 @@
       selectedTargetLabel.textContent = readableAnnotationTargetDisplayLabel(state.selectedTargetType, state.selectedTargetId, state.selectedTargetLabel);
     }
     const context = selectedTargetContext();
-    if (annotationSource) annotationSource.textContent = context.sourceText;
-    if (annotationParams) annotationParams.textContent = context.paramText;
+    setReadableEvidenceText(annotationSource, context.sourceText);
+    setReadableEvidenceText(annotationParams, context.paramText);
     updateAnnotationPopoverPosition();
     if (addAnnotationButton) addAnnotationButton.disabled = state.busy || !hasTarget || !hasText;
     renderAnnotationDrafts();
