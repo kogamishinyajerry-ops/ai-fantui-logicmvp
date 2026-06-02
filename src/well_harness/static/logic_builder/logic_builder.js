@@ -5967,7 +5967,7 @@
       state.annotationDrafts.slice(-3).forEach((item) => {
         const li = document.createElement("li");
         li.className = "logic-annotation-item";
-        li.innerHTML = `<strong>${escapeText(readableAnnotationTargetDisplayLabel(item.target_type, item.target_id, item.target_label))}</strong><span>${escapeText(item.text)}</span>`;
+        li.innerHTML = `<strong>${escapeText(readableAnnotationTargetDisplayLabel(item.target_type, item.target_id, item.target_label))}</strong><span>${escapeText(readableLogicReferenceText(item.text))}</span>`;
         annotationList.appendChild(li);
       });
     }

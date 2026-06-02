@@ -9200,10 +9200,12 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         page.fill("#logic-node-comment-text", "SW1 节点需要补充来源锚点。")
         page.click("#logic-add-annotation")
         page.click('.logic-circuit-wire[data-source="sw1"][data-target="logic1"]')
-        page.fill("#logic-node-comment-text", "这条连线需要说明 SW1 如何进入 L1。")
+        page.fill("#logic-node-comment-text", "这条连线需要说明 sw1->logic1 的输入关系。")
         page.click("#logic-add-annotation")
         expect(page.locator("#logic-annotation-list .logic-annotation-item")).to_have_count(2)
         expect(page.locator("#logic-annotation-list")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-annotation-list")).to_contain_text("这条连线需要说明 SW1 到 L1 的输入关系。")
+        expect(page.locator("#logic-annotation-list")).not_to_contain_text("sw1->logic1")
         expect(page.locator("#logic-annotation-list")).not_to_contain_text("sw1 → logic1")
         batch_before_submit = page.evaluate(
             """() => JSON.parse(localStorage.getItem("ai-fantui-logic-builder-annotation-batch-v1") || "{}")"""
@@ -9211,6 +9213,7 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         assert batch_before_submit["annotations"][1]["target_type"] == "wire"
         assert batch_before_submit["annotations"][1]["target_id"] == "sw1->logic1"
         assert batch_before_submit["annotations"][1]["target_label"] == "sw1 → logic1"
+        assert batch_before_submit["annotations"][1]["text"] == "这条连线需要说明 sw1->logic1 的输入关系。"
         page.click("#logic-submit-annotations")
 
         expect(page.locator("#logic-annotation-submit-state")).to_have_text("AI 已生成结构化修订建议")
