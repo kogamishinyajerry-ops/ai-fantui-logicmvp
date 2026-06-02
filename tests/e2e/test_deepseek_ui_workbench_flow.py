@@ -4364,6 +4364,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             cue="consistent",
             cue_label="四表面一致",
         )
+        _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic2")
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
