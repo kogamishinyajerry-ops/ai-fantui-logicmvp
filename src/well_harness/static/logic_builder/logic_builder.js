@@ -5885,6 +5885,17 @@
       const understandingText = readableLogicReferenceText(item.understanding_zh || "等待系统理解。");
       const confirmationText = readableLogicReferenceText(item.confirmation_question_zh || "");
       const updatedSummaryText = readableLogicReferenceText(item.updated_summary_zh || "");
+      const readableProposed = proposed.map((entry) => readableLogicReferenceText(entry));
+      const cardSummaryText = [
+        `记录 ${item.index}`,
+        changeStatusText(item.status),
+        `节点：${targetNodeLabel}`,
+        annotationText,
+        understandingText,
+        confirmationText,
+        updatedSummaryText,
+        readableProposed.join("；"),
+      ].filter(Boolean).join(" · ").replace(/\s+/g, " ").trim();
       card.innerHTML = `
         <div class="logic-change-card-head">
           <strong>记录 ${escapeText(item.index)}</strong>
@@ -5900,8 +5911,10 @@
         ${item.confirmation_question_zh ? `<p class="logic-change-question">${escapeText(confirmationText)}</p>` : ""}
         ${item.updated_summary_zh ? `<p class="logic-change-updated">${escapeText(updatedSummaryText)}</p>` : ""}
         ${metrics.nodes != null ? `<div class="logic-change-meta"><span>${escapeText(metrics.nodes)} 个节点</span><span>${escapeText(metrics.edges)} 条连线</span><span>${escapeText(metrics.panels)} 个面板</span></div>` : ""}
-        ${proposed.length ? `<details><summary>建议修改项</summary><ul>${proposed.map((entry) => `<li>${escapeText(readableLogicReferenceText(entry))}</li>`).join("")}</ul></details>` : ""}
+        ${readableProposed.length ? `<details><summary>建议修改项</summary><ul>${readableProposed.map((entry) => `<li>${escapeText(entry)}</li>`).join("")}</ul></details>` : ""}
       `;
+      card.title = cardSummaryText;
+      card.setAttribute("aria-label", cardSummaryText);
       historyList.appendChild(card);
     }
   }

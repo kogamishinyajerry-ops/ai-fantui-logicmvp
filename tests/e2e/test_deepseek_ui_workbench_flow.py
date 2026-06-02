@@ -9332,6 +9332,10 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(history_card).not_to_contain_text("节点：sw1")
         expect(history_card).not_to_contain_text("sw1 → logic1")
         expect(history_card).not_to_contain_text("sw1→logic1")
+        expect(history_card).to_have_attribute("aria-label", re.compile("节点：SW1.*SW1 到 L1"))
+        expect(history_card).to_have_attribute("title", re.compile("节点：SW1.*SW1 到 L1"))
+        expect(history_card).not_to_have_attribute("aria-label", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
+        expect(history_card).not_to_have_attribute("title", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
 
         page.click("#logic-batch-confirm-update")
         expect(page.locator("#logic-process-title")).to_have_text("更新完成")
