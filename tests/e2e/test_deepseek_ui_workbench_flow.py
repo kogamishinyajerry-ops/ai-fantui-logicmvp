@@ -9279,6 +9279,11 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(page.locator("#logic-annotation-list")).to_contain_text("这条连线需要说明 SW1 到 L1 的输入关系。")
         expect(page.locator("#logic-annotation-list")).not_to_contain_text("sw1->logic1")
         expect(page.locator("#logic-annotation-list")).not_to_contain_text("sw1 → logic1")
+        draft_item = page.locator("#logic-annotation-list .logic-annotation-item").nth(1)
+        expect(draft_item).to_have_attribute("aria-label", re.compile("SW1 到 L1.*输入关系"))
+        expect(draft_item).to_have_attribute("title", re.compile("SW1 到 L1.*输入关系"))
+        expect(draft_item).not_to_have_attribute("aria-label", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
+        expect(draft_item).not_to_have_attribute("title", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
         batch_before_submit = page.evaluate(
             """() => JSON.parse(localStorage.getItem("ai-fantui-logic-builder-annotation-batch-v1") || "{}")"""
         )

@@ -6000,7 +6000,12 @@
       state.annotationDrafts.slice(-3).forEach((item) => {
         const li = document.createElement("li");
         li.className = "logic-annotation-item";
-        li.innerHTML = `<strong>${escapeText(readableAnnotationTargetDisplayLabel(item.target_type, item.target_id, item.target_label))}</strong><span>${escapeText(readableLogicReferenceText(item.text))}</span>`;
+        const targetLabel = readableAnnotationTargetDisplayLabel(item.target_type, item.target_id, item.target_label);
+        const annotationText = readableLogicReferenceText(item.text);
+        const annotationLineText = `${targetLabel} · ${annotationText}`.replace(/\s+/g, " ").trim();
+        li.innerHTML = `<strong>${escapeText(targetLabel)}</strong><span>${escapeText(annotationText)}</span>`;
+        li.title = annotationLineText;
+        li.setAttribute("aria-label", annotationLineText);
         annotationList.appendChild(li);
       });
     }
