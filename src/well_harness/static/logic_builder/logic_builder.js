@@ -3264,6 +3264,19 @@
     return state.drawingPayload.edges.find((edge) => edge.id === edgeId || `${edge.source || ""}->${edge.target || ""}` === edgeId) || null;
   }
 
+  function readableParameterPanelLabel(panel) {
+    const explicitLabel = compactCircuitLabel(panel && panel.label);
+    if (explicitLabel) return readableLogicReferenceText(explicitLabel);
+    const rawId = String(panel && panel.id ? panel.id : "").trim();
+    const knownLabels = {
+      panel_ra_threshold: "RA 门限",
+      ra_threshold: "RA 门限",
+      panel_vdt_deploy: "VDT 部署",
+      vdt_deploy: "VDT 部署",
+    };
+    return knownLabels[rawId] || "参数";
+  }
+
   function drawingParameterSummary(nodeId) {
     if (!state.drawingPayload || !Array.isArray(state.drawingPayload.parameter_panels)) return "暂无参数。";
     const panels = state.drawingPayload.parameter_panels.filter((panel) => panel.node_id === nodeId);
@@ -3273,7 +3286,7 @@
       .map((panel) => {
         const value = panel.default ?? panel.min ?? "";
         const unit = panel.unit ? ` ${panel.unit}` : "";
-        return `${panel.label || panel.id}: ${value}${unit}`;
+        return `${readableParameterPanelLabel(panel)}: ${value}${unit}`;
       })
       .join("；");
   }
@@ -5721,8 +5734,9 @@
       element.style.top = `${Number(panel.y) || 0}px`;
       element.style.width = `${Number(panel.width) || 140}px`;
       element.style.height = `${Number(panel.height) || 74}px`;
+      const panelLabel = readableParameterPanelLabel(panel);
       element.innerHTML = `
-        <strong><span>${escapeText(panel.label || panel.id)}</span><code>${escapeText(panel.node_id)}</code></strong>
+        <strong><span>${escapeText(panelLabel)}</span><code>${escapeText(panel.node_id)}</code></strong>
         <input type="range" min="${escapeText(min)}" max="${escapeText(max)}" value="${escapeText(value)}" disabled>
         <code>${escapeText(value)}${unit}</code>
       `;

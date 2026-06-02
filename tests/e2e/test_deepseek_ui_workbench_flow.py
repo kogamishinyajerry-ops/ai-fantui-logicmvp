@@ -4214,6 +4214,34 @@ def test_logic_builder_unknown_node_kind_uses_readable_fallback(
         page.close()
 
 
+def test_logic_builder_parameter_panel_fallback_copy_uses_readable_label(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    drawing = json.loads(json.dumps(LOGIC_DRAWING))
+    drawing["parameter_panels"][0].pop("label", None)
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        panel_title = page.locator("#logic-panel-layer strong span").first
+        expect(panel_title).to_have_text("RA 门限")
+        expect(panel_title).not_to_have_text("panel_ra_threshold")
+        page.click('.logic-node[data-node-id="input_ra"]')
+        expect(page.locator("#logic-annotation-params")).to_contain_text("RA 门限: 6 ft")
+        expect(page.locator("#logic-annotation-params")).not_to_contain_text("panel_ra_threshold")
+    finally:
+        page.close()
+
+
 def test_fault_sandbox_source_deferred_replay_does_not_claim_config_generated(
     demo_server: str, browser: Any
 ) -> None:
