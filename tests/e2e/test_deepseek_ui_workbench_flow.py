@@ -5544,6 +5544,41 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(deploy_row_logic3_source).not_to_have_attribute("aria-current", "true")
         expect(deploy_row_logic3_source).not_to_have_class(re.compile(r"\bis-active\b"))
         expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("回到段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
+        source_chip_visual_state = page.evaluate("""() => {
+          const active = document.querySelector('#logic-output-backtrace-panel [data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]');
+          const inactive = document.querySelector('#logic-output-backtrace-panel [data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]');
+          if (!active || !inactive) return { ok: false, reason: "missing-source-chip" };
+          const activeStyle = window.getComputedStyle(active);
+          const inactiveStyle = window.getComputedStyle(inactive);
+          const activeBoxShadow = activeStyle.boxShadow || "";
+          const boxShadowVisible = activeBoxShadow !== "none" && !activeBoxShadow.includes("rgba(0, 0, 0, 0)");
+          const differences = {
+            background: activeStyle.backgroundColor !== inactiveStyle.backgroundColor,
+            border: activeStyle.borderColor !== inactiveStyle.borderColor,
+            color: activeStyle.color !== inactiveStyle.color,
+            boxShadow: boxShadowVisible,
+            fontWeight: activeStyle.fontWeight !== inactiveStyle.fontWeight,
+          };
+          return {
+            ok: Object.values(differences).some(Boolean),
+            differences,
+            active: {
+              background: activeStyle.backgroundColor,
+              border: activeStyle.borderColor,
+              color: activeStyle.color,
+              boxShadow: activeStyle.boxShadow,
+              fontWeight: activeStyle.fontWeight,
+            },
+            inactive: {
+              background: inactiveStyle.backgroundColor,
+              border: inactiveStyle.borderColor,
+              color: inactiveStyle.color,
+              boxShadow: inactiveStyle.boxShadow,
+              fontWeight: inactiveStyle.fontWeight,
+            },
+          };
+        }""")
+        assert source_chip_visual_state["ok"] is True, source_chip_visual_state
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         deploy_row_logic3_source.press("Enter")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
