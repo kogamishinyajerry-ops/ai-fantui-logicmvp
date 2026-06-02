@@ -221,6 +221,7 @@
   const currentSegmentAction = $("logic-current-segment-action");
   const currentSegmentAnchor = $("logic-current-segment-anchor");
   const currentSegmentReview = $("logic-current-segment-review");
+  const currentSegmentConsistencyStatus = $("logic-current-segment-consistency");
   const currentSegmentOutputImpact = $("logic-current-segment-output-impact");
   const currentSegmentOutputLabels = $("logic-current-segment-output-labels");
   const currentSegmentOutputReveal = $("logic-current-segment-output-reveal");
@@ -938,6 +939,7 @@
       currentSegmentSourceCue.setAttribute("title", `当前段来源：${label}`);
       currentSegmentSourceCue.setAttribute("aria-label", `当前段来源：${label}`);
     }
+    syncTraceEvidenceConsistency();
   }
 
   function outputVisibleStatusTarget(text, mode, explicitTarget) {
@@ -1640,6 +1642,7 @@
         : "当前段没有隐藏的最终输出影响");
     }
     syncCurrentSegmentJumpActions();
+    syncTraceEvidenceConsistency();
   }
 
   function revealCurrentSegmentOutputBacktrace() {
@@ -2926,6 +2929,7 @@
         element.dataset[`${attrPrefix}RequirementTraceId`] = idValue;
         element.textContent = text;
       });
+      syncTraceEvidenceConsistency();
       return;
     }
     const traceId = trace.id || trace.sourceId || "active";
@@ -2937,6 +2941,47 @@
       element.dataset[`${attrPrefix}RequirementTraceId`] = traceId;
       element.textContent = text;
     });
+    syncTraceEvidenceConsistency();
+  }
+
+  function syncTraceEvidenceConsistency() {
+    if (!currentSegmentConsistencyStatus || !currentSegmentEvidence) return;
+    const currentId = currentSegmentEvidence.dataset.currentSegmentId || "waiting";
+    const contextState = logicContextRequirementTrace ? (logicContextRequirementTrace.dataset.contextRequirementTrace || "waiting") : "missing";
+    const contextId = logicContextRequirementTrace ? (logicContextRequirementTrace.dataset.contextRequirementTraceId || "waiting") : "missing";
+    const annotationState = annotationRequirementTrace ? (annotationRequirementTrace.dataset.annotationRequirementTrace || "waiting") : "missing";
+    const annotationId = annotationRequirementTrace ? (annotationRequirementTrace.dataset.annotationRequirementTraceId || "waiting") : "missing";
+    let stateValue = "waiting";
+    let idValue = currentId;
+    let surfaces = "left";
+    let text = "等待画布锚点";
+
+    if (!currentId || currentId === "waiting") {
+      idValue = "waiting";
+      text = "等待需求段落";
+    } else if (!state.selectedTargetId) {
+      stateValue = "segment-only";
+      text = "段落已锁定，待选择画布锚点";
+    } else if (contextState === "unbound" || annotationState === "unbound") {
+      stateValue = "unbound";
+      idValue = "none";
+      surfaces = "left canvas";
+      text = "选中对象未绑定需求段";
+    } else if (contextState === "matched" && annotationState === "matched" && contextId === currentId && annotationId === currentId) {
+      stateValue = "consistent";
+      surfaces = "left canvas context annotation";
+      text = "左栏、画布、检查器、标注一致";
+    } else if (contextState === "matched" || annotationState === "matched") {
+      stateValue = "diverged";
+      idValue = [currentId, contextId, annotationId].filter(Boolean).join("|");
+      surfaces = "left canvas context annotation";
+      text = "选中对象依据与当前段不同";
+    }
+
+    currentSegmentConsistencyStatus.dataset.traceConsistencyState = stateValue;
+    currentSegmentConsistencyStatus.dataset.traceConsistencyId = idValue;
+    currentSegmentConsistencyStatus.dataset.traceConsistencySurfaces = surfaces;
+    currentSegmentConsistencyStatus.textContent = text;
   }
 
   function clampNumber(value, min, max) {

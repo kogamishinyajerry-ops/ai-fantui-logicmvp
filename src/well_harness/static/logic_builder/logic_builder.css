@@ -1846,6 +1846,20 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+#logic-current-segment-consistency[data-trace-consistency-state="consistent"] {
+  color: #d7fff4;
+}
+
+#logic-current-segment-consistency[data-trace-consistency-state="segment-only"] {
+  color: #f5c85b;
+}
+
+#logic-current-segment-consistency[data-trace-consistency-state="unbound"],
+#logic-current-segment-consistency[data-trace-consistency-state="diverged"] {
+  color: #ffb4a8;
+}
+
 .logic-current-segment-output-impact {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
