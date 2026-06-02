@@ -1618,7 +1618,7 @@
       } else {
         delete item.dataset.outputFocusFeedback;
         delete item.dataset.outputFocusFeedbackLabel;
-        item.removeAttribute("aria-label");
+        item.setAttribute("aria-label", item.dataset.outputBacktraceActionLabel || item.getAttribute("title") || `聚焦 ${outputLabel} 输出组`);
         item.title = outputLabel ? `聚焦 ${outputLabel} 输出组` : "";
       }
     });
@@ -1702,7 +1702,7 @@
         : '<span class="logic-output-backtrace-more">待映射</span>';
       const evidenceText = `${group.sources.length} 段 · ${group.relatedWireCount || 0} 线索`;
       return `
-        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-source-ids="${escapeText(group.sources.map((source) => source.id).join("|"))}" data-wire-count="${group.relatedWireCount || 0}" role="button" tabindex="0" title="聚焦 ${escapeText(group.label)} 输出组">
+        <article class="logic-output-backtrace-item" data-output-backtrace-output="${escapeText(group.id)}" data-source-count="${group.sources.length}" data-source-ids="${escapeText(group.sources.map((source) => source.id).join("|"))}" data-wire-count="${group.relatedWireCount || 0}" data-output-backtrace-action-label="聚焦 ${escapeText(group.label)} 输出组" role="button" tabindex="0" title="聚焦 ${escapeText(group.label)} 输出组" aria-label="聚焦 ${escapeText(group.label)} 输出组">
           <strong>${escapeText(group.label)}</strong>
           <small class="logic-output-backtrace-evidence">${escapeText(evidenceText)}</small>
           <span class="logic-output-backtrace-sources">${sourceBadges}</span>

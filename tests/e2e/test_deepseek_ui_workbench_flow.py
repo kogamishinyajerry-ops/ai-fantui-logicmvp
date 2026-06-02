@@ -5169,17 +5169,23 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
           return items.map((item) => {
             const outputLabel = item.querySelector("strong")?.textContent?.trim() || "";
             const title = item.getAttribute("title") || "";
+            const ariaLabel = item.getAttribute("aria-label") || "";
             return {
               outputId: item.dataset.outputBacktraceOutput || "",
               outputLabel,
+              ariaLabel,
               title,
               ok: Boolean(outputLabel)
+                && ariaLabel === title
                 && title.includes("聚焦")
                 && title.includes(outputLabel)
                 && title.includes("输出组")
                 && !title.includes("row-logic")
+                && !ariaLabel.includes("row-logic")
                 && !title.includes("->")
-                && !/\\blogic\\d+\\b/.test(title),
+                && !ariaLabel.includes("->")
+                && !/\\blogic\\d+\\b/.test(title)
+                && !/\\blogic\\d+\\b/.test(ariaLabel),
             };
           });
         }""")
