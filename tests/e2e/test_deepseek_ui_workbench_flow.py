@@ -3867,6 +3867,28 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator('[data-requirement-trace-id="row-logic3"]')).to_have_class(re.compile("is-active"))
         expect(trust_spine).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(page.locator('[data-demo-node-id="logic3"]')).to_have_class(re.compile("is-requirement-trace-match"))
+        page.locator('[data-wire-id="logic2->etrac_540v"]').evaluate(
+            """(wire) => wire.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))"""
+        )
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
+        expect(trace_panel).to_have_attribute("data-active-trace-source", "trace-list")
+        page.locator('[data-demo-node-id="logic2"]').click()
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
+        expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
+        expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-id", "row-logic2")
+        expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-selection-source", "canvas-node")
+        expect(page.locator('[data-requirement-trace-id="row-logic2"]')).to_have_class(re.compile("is-active"))
+        expect(page.locator('[data-demo-node-id="logic2"]')).to_have_class(re.compile("is-requirement-trace-match"))
+        expect(page.locator('[data-demo-node-id="logic3"]')).not_to_have_class(re.compile("is-requirement-trace-match"))
+        page.locator('[data-wire-id="sw1->logic1"]').evaluate(
+            """(wire) => wire.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))"""
+        )
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic1")
+        expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-wire")
+        expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-id", "row-logic1")
+        expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-selection-source", "canvas-wire")
+        expect(page.locator('[data-requirement-trace-id="row-logic1"]')).to_have_class(re.compile("is-active"))
+        expect(page.locator('[data-wire-id="sw1->logic1"]')).to_have_attribute("data-canvas-requirement-trace-id", "row-logic1")
     finally:
         page.close()
 

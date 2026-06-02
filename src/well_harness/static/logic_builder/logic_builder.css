@@ -1737,6 +1737,15 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 6px;
 }
+
+.logic-current-segment-evidence[data-current-segment-selection-source^="canvas-"] {
+  border-color: rgba(45, 212, 191, 0.64);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(37, 99, 235, 0.32),
+    0 0 18px rgba(45, 212, 191, 0.18);
+}
+
 .logic-current-segment-evidence > span {
   display: block;
   color: #f5c85b;

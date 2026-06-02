@@ -837,6 +837,41 @@
     });
   }
 
+  function parseRequirementTraceTarget(element) {
+    if (!element) return null;
+    try {
+      return JSON.parse(element.dataset.traceTargets || "{}");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function requirementTraceForCanvasTarget(element) {
+    if (!requirementTraceList || !element) return null;
+    const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));
+    for (const traceElement of traces) {
+      const trace = parseRequirementTraceTarget(traceElement);
+      if (trace && targetMatchesTrace(element, trace)) return trace;
+    }
+    return null;
+  }
+
+  function selectRequirementTraceForCanvasTarget(element, activationSource) {
+    const targetRole = element && element.dataset ? (element.dataset.circuitRole || "") : "";
+    const targetNodeId = element && element.dataset
+      ? (element.dataset.demoNodeId || element.dataset.nodeId || element.dataset.technicalId || "")
+      : "";
+    if (activationSource === "canvas-node" && targetRole !== "logic" && !/^logic\d+$/i.test(targetNodeId)) return false;
+    if (activationSource === "canvas-wire") {
+      const targetWireNodeId = element && element.dataset ? (element.dataset.target || "") : "";
+      if (!/^logic\d+$/i.test(targetWireNodeId)) return false;
+    }
+    const trace = requirementTraceForCanvasTarget(element);
+    if (!trace || !(trace.id || trace.sourceId)) return false;
+    setActiveRequirementTrace(trace.id || trace.sourceId, activationSource || "canvas");
+    return true;
+  }
+
   function applyOutputBacktraceFocus(outputId) {
     const group = OUTPUT_BACKTRACE_GROUPS.find((item) => item.id === outputId);
     const focusedNodeIds = new Set(group && Array.isArray(group.nodeIds) ? group.nodeIds : []);
@@ -1495,6 +1530,7 @@
     if (!currentSegmentEvidence) return;
     if (!trace) {
       currentSegmentEvidence.dataset.currentSegmentId = "waiting";
+      currentSegmentEvidence.dataset.currentSegmentSelectionSource = "none";
       currentSegmentEvidence.dataset.nodeCount = "0";
       currentSegmentEvidence.dataset.wireCount = "0";
       currentSegmentEvidence.dataset.conditionCount = "0";
@@ -1629,14 +1665,16 @@
     currentSegmentOutputReveal.addEventListener("click", revealCurrentSegmentOutputBacktrace);
   }
 
-  function setActiveRequirementTrace(traceId) {
+  function setActiveRequirementTrace(traceId, activationSource) {
     if (!requirementTracePanel || !requirementTraceList) return;
     const nextId = traceId || "";
+    const traceActivationSource = activationSource || "trace-list";
     state.activeRequirementTraceId = nextId;
     state.blockedOutputBacktraceId = "";
     state.outputFocusLiveMode = "";
     clearCurrentSegmentOutputBacktraceReveal();
     requirementTracePanel.dataset.activeTraceId = nextId || "none";
+    requirementTracePanel.dataset.activeTraceSource = traceActivationSource;
     if (trustSpine) trustSpine.dataset.activeTraceId = nextId || "none";
     const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));
     let activeTrace = null;
@@ -1654,6 +1692,7 @@
       }
     });
     renderCurrentSegmentEvidenceCard(activeTrace);
+    if (currentSegmentEvidence) currentSegmentEvidence.dataset.currentSegmentSelectionSource = traceActivationSource;
     applyRequirementTraceHighlight(activeTrace);
     syncOutputBacktraceActiveTrace(nextId);
   }
@@ -1668,6 +1707,7 @@
     if (!items.length) {
       clearCurrentSegmentOutputBacktraceReveal();
       requirementTracePanel.dataset.activeTraceId = "waiting";
+      requirementTracePanel.dataset.activeTraceSource = "none";
       requirementTraceList.innerHTML = '<li class="logic-requirement-trace-item is-empty">等待需求解析结果。</li>';
       const evidence = renderTrustSpine(payload, circuitView, items);
       renderGlobalReviewMatrix(evidence);
@@ -1720,7 +1760,7 @@
         <span class="logic-requirement-trace-targets">${escapeText(`${item.nodeIds.length} 节点 · ${item.wireIds.length} 连线`)}</span>
         <span class="logic-requirement-trace-output-impacts" data-output-impact-state="${outputImpactState}" data-output-impact-labels="${escapeText(outputImpacts.join("|"))}" title="${escapeText(outputImpacts.join(" / ") || "无直接输出")}">${outputImpactBadges}</span>
       `;
-      button.addEventListener("click", () => setActiveRequirementTrace(item.id));
+      button.addEventListener("click", () => setActiveRequirementTrace(item.id, "trace-list"));
       li.appendChild(button);
       requirementTraceList.appendChild(li);
     });
@@ -1738,7 +1778,7 @@
         : Object.fromEntries(["source", "assumption", "local"].map((kind) => [kind, 0]));
       requirementTraceReviewSummary.textContent = `逐段来源、节点和连线已汇总；原文锚点 ${counts.source || 0} · 候选假设 ${counts.assumption || 0} · 本地补齐 ${counts.local || 0}。`;
     }
-    setActiveRequirementTrace(activeId);
+    setActiveRequirementTrace(activeId, "initial");
   }
 
   function activeStreamedAuthoringProposal() {
@@ -4400,11 +4440,13 @@
     polyline.appendChild(title);
     polyline.addEventListener("click", (event) => {
       event.stopPropagation();
+      selectRequirementTraceForCanvasTarget(polyline, "canvas-wire");
       selectAnnotationTarget("wire", wireId, `${wire.source || ""} → ${wire.target || ""}`, event, polyline);
     });
     polyline.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
+        selectRequirementTraceForCanvasTarget(polyline, "canvas-wire");
         selectAnnotationTarget("wire", wireId, `${wire.source || ""} → ${wire.target || ""}`, null, polyline);
       }
     });
@@ -4507,12 +4549,14 @@
     }
     renderCircuitNodeDetails(group, node, x, y, width, height);
     group.addEventListener("click", (event) => {
+      selectRequirementTraceForCanvasTarget(group, "canvas-node");
       focusOutputBacktraceForCircuitNode(node.id || selectableId);
       selectNode(selectableId, event, group);
     });
     group.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
+        selectRequirementTraceForCanvasTarget(group, "canvas-node");
         focusOutputBacktraceForCircuitNode(node.id || selectableId);
         selectNode(selectableId, null, group);
       }
@@ -5805,7 +5849,7 @@
       window.queueMicrotask(() => setCurrentSegmentJumpStatus(action));
       if (action === "trace") {
         setCircuitProvenanceFilter("all");
-        if (state.activeRequirementTraceId) setActiveRequirementTrace(state.activeRequirementTraceId);
+        if (state.activeRequirementTraceId) setActiveRequirementTrace(state.activeRequirementTraceId, "current-segment-jump");
         syncCurrentSegmentJumpActions();
         return;
       }
