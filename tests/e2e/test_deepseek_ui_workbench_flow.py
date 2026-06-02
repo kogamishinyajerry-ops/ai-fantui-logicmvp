@@ -649,17 +649,19 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const chain = document.querySelector("#logic-current-segment-trust-chain");
           const globalReview = document.querySelector("#logic-current-segment-global-review");
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
+          const textMatchBadge = document.querySelector("#logic-current-segment-identity-text-match");
           const jumps = document.querySelector("#logic-current-segment-anchor-jumps");
           const highlightedTrace = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
           const selected = document.querySelector("#logic-selected-target-label");
           const source = document.querySelector("#logic-canvas-source");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!consistency || !card || !chain || !globalReview || !identityLoop || !jumps || !highlightedTrace || !selected || !source || !context || !annotation) {
+          if (!consistency || !card || !chain || !globalReview || !identityLoop || !textMatchBadge || !jumps || !highlightedTrace || !selected || !source || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
           const cardBox = card.getBoundingClientRect();
           const identityBox = identityLoop.getBoundingClientRect();
+          const textMatchBox = textMatchBadge.getBoundingClientRect();
           const jumpsBox = jumps.getBoundingClientRect();
           const identityText = identityLoop.textContent || "";
           const identityChildren = Array.from(identityLoop.querySelectorAll("span, strong, small"));
@@ -683,6 +685,22 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             && identityBox.top < jumpsBox.bottom
             && identityBox.bottom > jumpsBox.top);
           const identityCompact = identityBox.height > 0 && identityBox.height <= 28;
+          const textMatchMode = identityLoop.dataset.identityLoopTextMatch || "";
+          const textMatchBadgeMode = textMatchBadge.dataset.originalTextMatch || "";
+          const textMatchBadgeText = textMatchBadge.textContent || "";
+          const textMatchBadgeInsideLoop = textMatchBox.left >= identityBox.left - 1
+            && textMatchBox.right <= identityBox.right + 1
+            && textMatchBox.top >= identityBox.top - 1
+            && textMatchBox.bottom <= identityBox.bottom + 1;
+          const textMatchBadgeCompact = textMatchBox.width > 0
+            && textMatchBox.width <= 54
+            && textMatchBox.height > 0
+            && textMatchBox.height <= 18;
+          const textMatchBadgeReadable = ["full-quote", "meaningful-token"].includes(textMatchMode)
+            && textMatchBadgeMode === textMatchMode
+            && textMatchBadgeText.includes("原文");
+          const textMatchBadgeClipped = textMatchBadge.scrollWidth <= textMatchBadge.clientWidth + 1
+            && textMatchBadge.scrollHeight <= textMatchBadge.clientHeight + 1;
           const sourceAnchorId = chain.dataset.sourceAnchorId || "";
           const highlightedTraceId = highlightedTrace.dataset.requirementTraceId || "";
           const contextSurfaceState = context.dataset.contextRequirementTrace || "";
@@ -753,6 +771,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             ...sourceChecks,
             check("left-identity-loop-source-anchor-id", identityLoop.dataset.sourceAnchorId || "", sourceAnchorId),
             check("left-identity-loop-inspector-surface-state", identityLoop.dataset.inspectorSurfaceState || "", inspectorSurfaceState),
+            check("left-card-original-text-match", card.dataset.currentSegmentTextMatch || "", textMatchMode),
             check("left-identity-loop-scope", identityLoop.dataset.identityLoopScope || "", "current-segment"),
           ];
           return {
@@ -769,16 +788,34 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
               && identityText.includes("来源")
               && identityText.includes("锚点")
               && identityText.includes("检查器")
+              && identityText.includes("原文")
               && identityChildrenClip
               && identityInsideCard
               && identityDoesNotCoverJumps
               && identityCompact
+              && textMatchBadgeInsideLoop
+              && textMatchBadgeCompact
+              && textMatchBadgeReadable
+              && textMatchBadgeClipped
               && checks.every((item) => item.ok),
             expected,
             sourceAnchorId,
             highlightedTraceId,
             inspectorSurfaceState,
             identityText,
+            textMatch: {
+              mode: textMatchMode,
+              badgeMode: textMatchBadgeMode,
+              text: textMatchBadgeText,
+              insideLoop: textMatchBadgeInsideLoop,
+              compact: textMatchBadgeCompact,
+              readable: textMatchBadgeReadable,
+              clipped: textMatchBadgeClipped,
+              box: {
+                width: textMatchBox.width,
+                height: textMatchBox.height,
+              },
+            },
             identityBox: {
               width: identityBox.width,
               height: identityBox.height,
@@ -839,15 +876,18 @@ def _expect_current_segment_identity_loop_state(
     expect(loop).to_have_attribute("data-source-anchor-id", expected_source_anchor_id)
     if expected_inspector_state is not None:
         expect(loop).to_have_attribute("data-inspector-surface-state", expected_inspector_state)
+    expect(loop).to_have_attribute("data-identity-loop-text-match", re.compile("full-quote|meaningful-token"))
     expect(loop).to_have_attribute("data-identity-loop-scope", "current-segment")
     expect(loop).to_have_attribute("aria-label", re.compile(current_id))
     expect(loop).to_have_attribute("aria-label", re.compile(expected_highlighted_id))
     expect(loop).to_have_attribute("aria-label", re.compile(selected_id))
     expect(loop).to_have_attribute("aria-label", re.compile(expected_source_anchor_id))
+    expect(loop).to_have_attribute("aria-label", re.compile("原文命中"))
     expect(loop).to_have_attribute("title", re.compile(current_id))
     expect(loop).to_have_attribute("title", re.compile(expected_highlighted_id))
     expect(loop).to_have_attribute("title", re.compile(selected_id))
     expect(loop).to_have_attribute("title", re.compile(expected_source_anchor_id))
+    expect(loop).to_have_attribute("title", re.compile("原文命中"))
     if expected_inspector_state is not None:
         expect(loop).to_have_attribute("aria-label", re.compile(expected_inspector_state))
         expect(loop).to_have_attribute("title", re.compile(expected_inspector_state))
@@ -856,6 +896,7 @@ def _expect_current_segment_identity_loop_state(
     expect(loop).to_contain_text(expected_highlighted_id)
     expect(loop).to_contain_text(selected_id)
     expect(loop).to_contain_text(expected_source_anchor_id)
+    expect(loop).to_contain_text("原文")
     if expected_inspector_state is not None:
         expect(loop).to_contain_text(expected_inspector_state)
 
