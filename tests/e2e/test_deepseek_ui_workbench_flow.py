@@ -145,11 +145,18 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             && jumpsBox.top >= chainBox.top;
           const chainTitle = chain.getAttribute("title") || "";
           const chainAriaLabel = chain.getAttribute("aria-label") || "";
-          const chainAccessible = chainTitle.includes("当前段")
-            && chainTitle.includes("链路")
-            && chainAriaLabel.includes("当前段")
-            && chainAriaLabel.includes("链路")
-            && chain.dataset.currentSegmentTrustChainScope === "current-segment";
+          const titleHasCurrentSegment = chainTitle.includes("当前段");
+          const titleHasLink = chainTitle.includes("链路");
+          const ariaHasCurrentSegment = chainAriaLabel.includes("当前段");
+          const ariaHasLink = chainAriaLabel.includes("链路");
+          const chainScope = chain.dataset.currentSegmentTrustChainScope || "";
+          const expectedChainScope = "current-segment";
+          const scopeIsCurrentSegment = chainScope === expectedChainScope;
+          const chainAccessible = titleHasCurrentSegment
+            && titleHasLink
+            && ariaHasCurrentSegment
+            && ariaHasLink
+            && scopeIsCurrentSegment;
           const canvasRemainsVisible = canvasBox.width > 0 && canvasBox.height > 0 && chainAccessible;
           const steps = Array.from(chain.querySelectorAll("[data-trust-chain-step]"));
           const stepsStayInside = steps.length === 4 && steps.every((step) => {
@@ -181,6 +188,16 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             chainDoesNotCoverJumps,
             jumpsRemainVisible,
             canvasRemainsVisible,
+            chainAccessible,
+            chainTitle,
+            chainAriaLabel,
+            chainScope,
+            expectedChainScope,
+            titleHasCurrentSegment,
+            titleHasLink,
+            ariaHasCurrentSegment,
+            ariaHasLink,
+            scopeIsCurrentSegment,
             stepsStayInside,
             stepCount: steps.length,
             cardTop: cardBox.top,
