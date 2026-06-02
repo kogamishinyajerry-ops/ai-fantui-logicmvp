@@ -327,6 +327,28 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
     assert mirror_state["ok"] is True, mirror_state
 
 
+def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
+    badge_state = page.evaluate(
+        """(label) => {
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!context || !annotation) return { ok: false, reason: "missing-surface" };
+          const contextBadge = window.getComputedStyle(context, "::before").content || "";
+          const annotationBadge = window.getComputedStyle(annotation, "::before").content || "";
+          return {
+            ok: contextBadge.includes(label) && annotationBadge.includes(label),
+            label,
+            contextBadge,
+            annotationBadge,
+            contextState: context.dataset.contextTraceConsistencyState || "",
+            annotationState: annotation.dataset.annotationTraceConsistencyState || "",
+          };
+        }""",
+        expected_label,
+    )
+    assert badge_state["ok"] is True, badge_state
+
+
 def _expect_cross_surface_trace_audit(
     *,
     segment_consistency: Any,
@@ -4365,6 +4387,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             cue_label="四表面一致",
         )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic2")
+        _expect_inspector_trace_state_badge(page, "一致")
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
@@ -4537,6 +4560,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_source="canvas-wire",
         )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic3")
+        _expect_inspector_trace_state_badge(page, "分叉")
         _assert_current_segment_consistency_cue_layout(page, align_visible=True)
         _expect_consistency_align_button(
             segment_consistency_align,
@@ -4578,6 +4602,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             alignable=False,
         )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
+        _expect_inspector_trace_state_badge(page, "未绑定")
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "unbound")
         _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)

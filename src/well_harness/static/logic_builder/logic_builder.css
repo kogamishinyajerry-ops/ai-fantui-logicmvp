@@ -5403,6 +5403,45 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   font-weight: 800;
 }
 
+#logic-context-requirement-trace[data-context-trace-consistency-state]::before,
+#logic-annotation-requirement-trace[data-annotation-trace-consistency-state]::before {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 5px;
+  border: 1px solid rgba(94, 234, 212, 0.42);
+  border-radius: 999px;
+  background: rgba(4, 48, 39, 0.72);
+  color: #d7fff4;
+  font-family: "Courier New", monospace;
+  font-size: 0.82em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 1px 5px;
+  vertical-align: 1px;
+}
+
+#logic-context-requirement-trace[data-context-trace-consistency-state="consistent"]::before,
+#logic-annotation-requirement-trace[data-annotation-trace-consistency-state="consistent"]::before {
+  content: "一致";
+}
+
+#logic-context-requirement-trace[data-context-trace-consistency-state="diverged"]::before,
+#logic-annotation-requirement-trace[data-annotation-trace-consistency-state="diverged"]::before {
+  content: "分叉";
+  border-color: rgba(245, 200, 91, 0.62);
+  background: rgba(88, 54, 10, 0.72);
+  color: #fff4bf;
+}
+
+#logic-context-requirement-trace[data-context-trace-consistency-state="unbound"]::before,
+#logic-annotation-requirement-trace[data-annotation-trace-consistency-state="unbound"]::before {
+  content: "未绑定";
+  border-color: rgba(255, 180, 168, 0.56);
+  background: rgba(89, 24, 34, 0.72);
+  color: #ffd8d1;
+}
+
 .logic-shell[data-console-palette="codex-light"] .logic-current-segment-anchor-jumps button {
   border-color: rgba(54, 198, 216, 0.28);
   background: rgba(5, 17, 28, 0.92);
