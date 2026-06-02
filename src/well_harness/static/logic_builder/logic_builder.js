@@ -598,9 +598,13 @@
   }
 
   function readableLogicReferenceText(text) {
-    return String(text || "").replace(/\b([A-Za-z0-9_]+)\s*(?:->|→)\s*([A-Za-z0-9_]+)\b/g, (match, sourceId, targetId) => {
+    const withReadableWires = String(text || "").replace(/\b([A-Za-z0-9_]+)\s*(?:->|→)\s*([A-Za-z0-9_]+)\b/g, (match, sourceId, targetId) => {
       const display = readableAnnotationTargetDisplayLabel("wire", `${sourceId}->${targetId}`, "");
       return display || match;
+    });
+    return withReadableWires.replace(/\b[A-Za-z][A-Za-z0-9_]*\b/g, (match) => {
+      const readable = annotationEndpointDisplayLabel(match, match);
+      return readable !== match ? readable : match;
     });
   }
 
