@@ -648,13 +648,17 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const card = document.querySelector("#logic-current-segment-evidence");
           const chain = document.querySelector("#logic-current-segment-trust-chain");
           const globalReview = document.querySelector("#logic-current-segment-global-review");
+          const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
           const selected = document.querySelector("#logic-selected-target-label");
           const source = document.querySelector("#logic-canvas-source");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!consistency || !card || !chain || !globalReview || !selected || !source || !context || !annotation) {
+          if (!consistency || !card || !chain || !globalReview || !identityLoop || !selected || !source || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
+          const identityBox = identityLoop.getBoundingClientRect();
+          const identityText = identityLoop.textContent || "";
+          const sourceAnchorId = chain.dataset.sourceAnchorId || "";
           const expected = {
             state: consistency.dataset.traceConsistencyState || "",
             currentId: consistency.dataset.traceConsistencyCurrentSegmentId || consistency.dataset.traceConsistencyCurrentId || "",
@@ -669,6 +673,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           });
           const stateChecks = [
             check("left-state", consistency.dataset.traceConsistencyState || "", expected.state),
+            check("left-identity-loop-state", identityLoop.dataset.identityLoopState || "", expected.state),
             check("canvas-selected-state", selected.dataset.canvasTraceConsistencyState || "", expected.state),
             check("canvas-source-state", source.dataset.canvasTraceConsistencyState || "", expected.state),
             check("right-context-state", context.dataset.contextTraceConsistencyState || "", expected.state),
@@ -680,6 +685,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             check("left-card-current-segment-id", card.dataset.currentSegmentId || "", expected.currentId),
             check("left-chain-trace-id", chain.dataset.currentSegmentTraceId || "", expected.currentId),
             check("left-global-review-current-segment-id", globalReview.dataset.currentSegmentId || "", expected.currentId),
+            check("left-identity-loop-current-segment-id", identityLoop.dataset.currentSegmentId || "", expected.currentId),
             check("canvas-selected-current-id", selected.dataset.canvasTraceConsistencyCurrentId || "", expected.currentId),
             check("canvas-source-current-id", source.dataset.canvasTraceConsistencyCurrentId || "", expected.currentId),
             check("right-context-current-segment-id", context.dataset.contextTraceConsistencyCurrentSegmentId || "", expected.currentId),
@@ -690,6 +696,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const selectedChecks = [
             check("left-selected-id", consistency.dataset.traceConsistencySelectedId || "", expected.selectedId),
             check("left-selected-canvas-trace-id", consistency.dataset.traceConsistencySelectedCanvasTraceId || "", expected.selectedId),
+            check("left-identity-loop-selected-canvas-trace-id", identityLoop.dataset.selectedCanvasTraceId || "", expected.selectedId),
             check("canvas-selected-selected-id", selected.dataset.canvasTraceConsistencySelectedId || "", expected.selectedId),
             check("canvas-source-selected-id", source.dataset.canvasTraceConsistencySelectedId || "", expected.selectedId),
             check("right-context-selected-canvas-trace-id", context.dataset.contextTraceConsistencySelectedCanvasTraceId || "", expected.selectedId),
@@ -700,6 +707,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const sourceChecks = [
             check("left-selected-source", consistency.dataset.traceConsistencySelectedSource || "", expected.selectedSource),
             check("left-card-selection-source", card.dataset.currentSegmentSelectionSource || "", expected.selectedSource),
+            check("left-identity-loop-selected-source", identityLoop.dataset.selectedSource || "", expected.selectedSource),
             check("canvas-selected-selected-source", selected.dataset.canvasTraceConsistencySelectedSource || "", expected.selectedSource),
             check("canvas-source-selected-source", source.dataset.canvasTraceConsistencySelectedSource || "", expected.selectedSource),
             check("right-context-requirement-selected-source", context.dataset.contextRequirementTraceSelectedSource || "", expected.selectedSource),
@@ -710,14 +718,30 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             ...currentChecks,
             ...selectedChecks,
             ...sourceChecks,
+            check("left-identity-loop-source-anchor-id", identityLoop.dataset.sourceAnchorId || "", sourceAnchorId),
+            check("left-identity-loop-scope", identityLoop.dataset.identityLoopScope || "", "current-segment"),
           ];
           return {
             ok: expected.state.length > 0
               && expected.currentId.length > 0
               && expected.selectedId.length > 0
               && expected.selectedSource.length > 0
+              && sourceAnchorId.length > 0
+              && identityBox.width > 0
+              && identityBox.height > 0
+              && identityText.includes("身份闭环")
+              && identityText.includes("当前段")
+              && identityText.includes("选中")
+              && identityText.includes("来源")
+              && identityText.includes("锚点")
               && checks.every((item) => item.ok),
             expected,
+            sourceAnchorId,
+            identityText,
+            identityBox: {
+              width: identityBox.width,
+              height: identityBox.height,
+            },
             checks,
           };
         }"""

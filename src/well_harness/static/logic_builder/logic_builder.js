@@ -239,6 +239,12 @@
   const currentSegmentChainReviewAnchor = $("logic-current-segment-chain-review-anchor");
   const currentSegmentGlobalReview = $("logic-current-segment-global-review");
   const currentSegmentGlobalReviewSummary = $("logic-current-segment-global-review-summary");
+  const currentSegmentIdentityLoop = $("logic-current-segment-identity-loop");
+  const currentSegmentIdentityState = $("logic-current-segment-identity-state");
+  const currentSegmentIdentityCurrent = $("logic-current-segment-identity-current");
+  const currentSegmentIdentitySelected = $("logic-current-segment-identity-selected");
+  const currentSegmentIdentitySource = $("logic-current-segment-identity-source");
+  const currentSegmentIdentityAnchor = $("logic-current-segment-identity-anchor");
   const currentSegmentTrustSteps = Array.from(document.querySelectorAll("#logic-current-segment-trust-chain [data-trust-chain-step]"));
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
@@ -982,6 +988,50 @@
     };
   }
 
+  function syncCurrentSegmentIdentityLoop() {
+    if (!currentSegmentIdentityLoop || !currentSegmentEvidence) return;
+    const chainSnapshot = currentSegmentTrustChainSnapshot();
+    const stateValue = currentSegmentConsistencyStatus
+      ? (currentSegmentConsistencyStatus.dataset.traceConsistencyState || "waiting")
+      : "waiting";
+    const currentId = currentSegmentEvidence.dataset.currentSegmentId || chainSnapshot.traceId || "waiting";
+    const selectedId = currentSegmentConsistencyStatus
+      ? (currentSegmentConsistencyStatus.dataset.traceConsistencySelectedCanvasTraceId || currentSegmentConsistencyStatus.dataset.traceConsistencySelectedId || "none")
+      : "none";
+    const selectedSource = currentSegmentConsistencyStatus
+      ? (currentSegmentConsistencyStatus.dataset.traceConsistencySelectedSource || currentSegmentEvidence.dataset.currentSegmentSelectionSource || "none")
+      : (currentSegmentEvidence.dataset.currentSegmentSelectionSource || "none");
+    const selectedSourceLabel = currentSegmentSelectionSourceLabel(selectedSource);
+    const sourceAnchorId = chainSnapshot.sourceAnchorId || "waiting";
+    const stateLabels = {
+      waiting: "等待",
+      "segment-only": "待锚点",
+      consistent: "闭环一致",
+      diverged: "证据分叉",
+      unbound: "未绑定",
+    };
+    const stateLabel = stateLabels[stateValue] || stateLabels.waiting;
+    currentSegmentIdentityLoop.dataset.identityLoopState = stateValue;
+    currentSegmentIdentityLoop.dataset.currentSegmentId = currentId;
+    currentSegmentIdentityLoop.dataset.selectedCanvasTraceId = selectedId;
+    currentSegmentIdentityLoop.dataset.selectedSource = selectedSource;
+    currentSegmentIdentityLoop.dataset.sourceAnchorId = sourceAnchorId;
+    currentSegmentIdentityLoop.dataset.identityLoopScope = "current-segment";
+    currentSegmentIdentityLoop.setAttribute(
+      "aria-label",
+      `身份闭环：${stateLabel}，当前段 ${currentId}，选中依据 ${selectedId}，来源 ${selectedSourceLabel}，源锚点 ${sourceAnchorId}`
+    );
+    currentSegmentIdentityLoop.setAttribute(
+      "title",
+      `身份闭环：${stateLabel}，当前段 ${currentId}，选中依据 ${selectedId}，来源 ${selectedSourceLabel}，源锚点 ${sourceAnchorId}`
+    );
+    if (currentSegmentIdentityState) currentSegmentIdentityState.textContent = stateLabel;
+    if (currentSegmentIdentityCurrent) currentSegmentIdentityCurrent.textContent = `当前段 ${currentId}`;
+    if (currentSegmentIdentitySelected) currentSegmentIdentitySelected.textContent = `选中 ${selectedId}`;
+    if (currentSegmentIdentitySource) currentSegmentIdentitySource.textContent = `来源 ${selectedSourceLabel}`;
+    if (currentSegmentIdentityAnchor) currentSegmentIdentityAnchor.textContent = `锚点 ${sourceAnchorId}`;
+  }
+
   function syncCurrentSegmentTrustChainInspectorSurfaces() {
     const snapshot = currentSegmentTrustChainSnapshot();
     const summary = snapshot.state === "ready"
@@ -1005,6 +1055,7 @@
       element.setAttribute("aria-label", summary);
       element.setAttribute("title", summary);
     });
+    syncCurrentSegmentIdentityLoop();
   }
 
   function outputVisibleStatusTarget(text, mode, explicitTarget) {
@@ -3269,6 +3320,7 @@
     syncCanvasSelectedTargetTraceAuditSurface(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource, cueLabel, text);
     syncRequirementTraceAuditSurface(logicContextRequirementTrace, "context", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
     syncRequirementTraceAuditSurface(annotationRequirementTrace, "annotation", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
+    syncCurrentSegmentIdentityLoop();
   }
 
   function syncRequirementTraceAuditSurface(element, attrPrefix, stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource) {
