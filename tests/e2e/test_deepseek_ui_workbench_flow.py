@@ -369,10 +369,14 @@ def _expect_canvas_selected_trace_state_badge(
             return { ok: false, reason: "missing-surface" };
           }
           const badge = window.getComputedStyle(selected, "::before").content || "";
+          const tail = window.getComputedStyle(selected, "::after").content || "";
           const box = selected.getBoundingClientRect();
           const popoverBox = popover.getBoundingClientRect();
           const labelText = selected.textContent || "";
+          const outputCount = Number.parseInt(selected.dataset.canvasTrustChainOutputCount || "0", 10);
+          const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const ok = badge.includes(label)
+            && tail.includes("链")
             && box.width > 0
             && box.height > 0
             && popoverBox.width > 0
@@ -384,6 +388,11 @@ def _expect_canvas_selected_trace_state_badge(
             && selected.dataset.canvasTraceConsistencySelectedSource === selectedSource
             && selected.dataset.canvasTraceConsistencyCueLabel
             && selected.dataset.canvasTraceConsistencySurface === "selected-target"
+            && selected.dataset.canvasTrustChainState === "ready"
+            && selected.dataset.canvasTrustChainTraceId === currentId
+            && selected.dataset.canvasTrustChainSurface === "selected-target"
+            && outputCount > 0
+            && reviewCount > 0
             && left.dataset.traceConsistencyState === state
             && left.dataset.traceConsistencyCurrentId === currentId
             && left.dataset.traceConsistencySelectedId === selectedId
@@ -398,12 +407,18 @@ def _expect_canvas_selected_trace_state_badge(
             selectedId,
             selectedSource,
             badge,
+            tail,
             labelText,
             selectedState: selected.dataset.canvasTraceConsistencyState || "",
             selectedCurrentId: selected.dataset.canvasTraceConsistencyCurrentId || "",
             selectedSelectedId: selected.dataset.canvasTraceConsistencySelectedId || "",
             selectedSelectedSource: selected.dataset.canvasTraceConsistencySelectedSource || "",
             selectedSurface: selected.dataset.canvasTraceConsistencySurface || "",
+            selectedTrustState: selected.dataset.canvasTrustChainState || "",
+            selectedTrustTraceId: selected.dataset.canvasTrustChainTraceId || "",
+            selectedTrustSurface: selected.dataset.canvasTrustChainSurface || "",
+            selectedTrustOutputCount: selected.dataset.canvasTrustChainOutputCount || "",
+            selectedTrustReviewAnchorCount: selected.dataset.canvasTrustChainReviewAnchorCount || "",
             leftState: left.dataset.traceConsistencyState || "",
             leftCurrentId: left.dataset.traceConsistencyCurrentId || "",
             leftSelectedId: left.dataset.traceConsistencySelectedId || "",
@@ -447,6 +462,8 @@ def _expect_canvas_source_trace_state_badge(
           }
           const badge = window.getComputedStyle(source, "::before").content || "";
           const box = source.getBoundingClientRect();
+          const outputCount = Number.parseInt(source.dataset.canvasTrustChainOutputCount || "0", 10);
+          const reviewCount = Number.parseInt(source.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const childReadable = (element) => {
             const childBox = element.getBoundingClientRect();
             return childBox.width > 0
@@ -466,6 +483,11 @@ def _expect_canvas_source_trace_state_badge(
             && source.dataset.canvasTraceConsistencySelectedSource === selectedSource
             && source.dataset.canvasTraceConsistencyCueLabel
             && source.dataset.canvasTraceConsistencySurface === "canvas-source"
+            && source.dataset.canvasTrustChainState === "ready"
+            && source.dataset.canvasTrustChainTraceId === currentId
+            && source.dataset.canvasTrustChainSurface === "canvas-source"
+            && outputCount > 0
+            && reviewCount > 0
             && selected.dataset.canvasTraceConsistencyState === state
             && selected.dataset.canvasTraceConsistencyCurrentId === currentId
             && selected.dataset.canvasTraceConsistencySelectedId === selectedId
@@ -493,6 +515,11 @@ def _expect_canvas_source_trace_state_badge(
             sourceSelectedId: source.dataset.canvasTraceConsistencySelectedId || "",
             sourceSelectedSource: source.dataset.canvasTraceConsistencySelectedSource || "",
             sourceSurface: source.dataset.canvasTraceConsistencySurface || "",
+            sourceTrustState: source.dataset.canvasTrustChainState || "",
+            sourceTrustTraceId: source.dataset.canvasTrustChainTraceId || "",
+            sourceTrustSurface: source.dataset.canvasTrustChainSurface || "",
+            sourceTrustOutputCount: source.dataset.canvasTrustChainOutputCount || "",
+            sourceTrustReviewAnchorCount: source.dataset.canvasTrustChainReviewAnchorCount || "",
             selectedState: selected.dataset.canvasTraceConsistencyState || "",
             leftState: left.dataset.traceConsistencyState || "",
             contextState: context.dataset.contextTraceConsistencyState || "",

@@ -2904,6 +2904,14 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   background: rgba(89, 24, 34, 0.72);
   color: #ffd8d1;
 }
+
+#logic-selected-target-label[data-canvas-trust-chain-state="ready"]::after {
+  content: " · 段链" attr(data-canvas-trust-chain-output-count) "/" attr(data-canvas-trust-chain-review-anchor-count);
+  color: rgba(94, 234, 212, 0.92);
+  font-family: "Courier New", monospace;
+  font-size: 0.92em;
+  font-weight: 800;
+}
 .logic-annotation-popover label {
   color: var(--logic-muted);
   font-size: 11px;

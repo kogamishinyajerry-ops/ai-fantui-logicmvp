@@ -3064,13 +3064,45 @@
       "canvasTraceConsistencyCueLabel",
       "canvasTraceConsistencySurface",
     ];
+    const trustDatasetKeys = [
+      "canvasTrustChainState",
+      "canvasTrustChainTraceId",
+      "canvasTrustChainSourceAnchorId",
+      "canvasTrustChainNodeCount",
+      "canvasTrustChainWireCount",
+      "canvasTrustChainOutputCount",
+      "canvasTrustChainReviewAnchorCount",
+      "canvasTrustChainSurface",
+    ];
     const selectedId = selectedEvidenceId || "none";
     const sourceValue = selectedEvidenceSource || "none";
-    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}`;
+    const chainSnapshot = currentSegmentTrustChainSnapshot();
+    const chainReady = chainSnapshot.state === "ready";
+    const chainLabel = chainReady ? `；当前段链路：${chainSnapshot.outputCount || "0"}输出/${chainSnapshot.reviewAnchorCount || "0"}复核` : "";
+    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}${chainLabel}`;
     const clearCanvasTraceDataset = (element) => {
       traceDatasetKeys.forEach((key) => {
         delete element.dataset[key];
       });
+    };
+    const clearCanvasTrustDataset = (element) => {
+      trustDatasetKeys.forEach((key) => {
+        delete element.dataset[key];
+      });
+    };
+    const applyCanvasTrustDataset = (element, surfaceName) => {
+      if (!chainReady) {
+        clearCanvasTrustDataset(element);
+        return;
+      }
+      element.dataset.canvasTrustChainState = chainSnapshot.state;
+      element.dataset.canvasTrustChainTraceId = chainSnapshot.traceId || "waiting";
+      element.dataset.canvasTrustChainSourceAnchorId = chainSnapshot.sourceAnchorId || "waiting";
+      element.dataset.canvasTrustChainNodeCount = chainSnapshot.nodeCount || "0";
+      element.dataset.canvasTrustChainWireCount = chainSnapshot.wireCount || "0";
+      element.dataset.canvasTrustChainOutputCount = chainSnapshot.outputCount || "0";
+      element.dataset.canvasTrustChainReviewAnchorCount = chainSnapshot.reviewAnchorCount || "0";
+      element.dataset.canvasTrustChainSurface = surfaceName;
     };
     const applyCanvasTraceDataset = (element, surfaceName, labelText) => {
       element.dataset.canvasTraceConsistencyState = stateValue;
@@ -3081,6 +3113,7 @@
       element.dataset.canvasTraceConsistencySelectedSource = sourceValue;
       element.dataset.canvasTraceConsistencyCueLabel = cueLabel || stateValue;
       element.dataset.canvasTraceConsistencySurface = surfaceName;
+      applyCanvasTrustDataset(element, surfaceName);
       element.setAttribute("title", auditLabel);
       element.setAttribute("aria-label", `${labelText}；${auditLabel}`);
     };
@@ -3090,6 +3123,7 @@
     if (!selectedTargetLabel) return;
     if (!state.selectedTargetId) {
       clearCanvasTraceDataset(selectedTargetLabel);
+      clearCanvasTrustDataset(selectedTargetLabel);
       selectedTargetLabel.setAttribute("title", "未选择画布对象");
       selectedTargetLabel.setAttribute("aria-label", "未选择画布对象");
       return;
