@@ -5265,6 +5265,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain).to_have_attribute("data-current-segment-trust-chain-scope", "current-segment")
         expect(segment_trust_chain).to_have_attribute("title", re.compile("当前段.*链路"))
         expect(segment_trust_chain).to_have_attribute("aria-label", re.compile("当前段.*链路"))
+        segment_trust_label_state = segment_trust_chain.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(segment_trust_label_state, "ariaLabel", "title")
         expect(segment_trust_chain.locator("[data-trust-chain-step]")).to_have_count(4)
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("段 01")
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("读取")
@@ -5280,6 +5285,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_global_review).to_have_attribute("data-review-anchor-count", re.compile(r"^[1-9]"))
         expect(segment_global_review).to_have_attribute("title", re.compile("全局复核.*全局矩阵"))
         expect(segment_global_review).to_have_attribute("aria-label", re.compile("全局复核.*当前段"))
+        segment_global_review_label_state = segment_global_review.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(segment_global_review_label_state, "ariaLabel", "title")
         expect(segment_global_review).to_contain_text("全局复核闭环")
         expect(segment_global_review).to_contain_text("当前段到全局矩阵")
         expect(segment_global_review).to_contain_text("当前段")

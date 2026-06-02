@@ -1960,8 +1960,8 @@
       currentSegmentGlobalReview.dataset.currentSegmentId = traceId;
       currentSegmentGlobalReview.dataset.outputCount = String(outputImpacts.length);
       currentSegmentGlobalReview.dataset.reviewAnchorCount = String(totalAnchors);
-      currentSegmentGlobalReview.setAttribute("aria-label", `全局复核口径：当前段 ${traceId}，${globalReviewSummary}`);
-      currentSegmentGlobalReview.setAttribute("title", `全局复核口径：当前段 ${traceId}，${globalReviewSummary}`);
+      currentSegmentGlobalReview.setAttribute("aria-label", `全局复核口径：段 ${segmentIndex}，${globalReviewSummary}`);
+      currentSegmentGlobalReview.setAttribute("title", `全局复核口径：段 ${segmentIndex}，${globalReviewSummary}`);
       if (currentSegmentGlobalReviewSummary) currentSegmentGlobalReviewSummary.textContent = globalReviewSummary;
     }
     syncCurrentSegmentTrustChainInspectorSurfaces();
