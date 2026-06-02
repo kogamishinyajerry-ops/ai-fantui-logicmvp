@@ -3177,8 +3177,10 @@
       apply: "参数已应用",
       idle: "等待运行",
     };
-    if (logicRunFrame) logicRunFrame.textContent = `当前帧：${frame}`;
-    if (logicRunVerdict) logicRunVerdict.textContent = overrideVerdict || verdicts[normalizedAction] || "等待运行";
+    const frameText = `当前帧：${frame}`;
+    const verdictText = overrideVerdict || verdicts[normalizedAction] || "等待运行";
+    setReadableStatusText(logicRunFrame, frameText);
+    setReadableStatusText(logicRunVerdict, verdictText);
     if (!logicRunSignals) return;
     logicRunSignals.innerHTML = "";
     const signals = [
@@ -3189,9 +3191,12 @@
       `SW2 ${drawerInputs.sw2 && drawerInputs.sw2.checked ? "ON" : "OFF"}`,
       drawerRunMode(),
     ];
+    const signalSummary = signals.join("；");
+    logicRunSignals.setAttribute("aria-label", signalSummary);
+    logicRunSignals.setAttribute("title", signalSummary);
     signals.forEach((signal) => {
       const span = document.createElement("span");
-      span.textContent = signal;
+      setReadableEvidenceText(span, signal);
       logicRunSignals.appendChild(span);
     });
   }
@@ -3281,7 +3286,8 @@
       apply: "应用",
     };
     const li = document.createElement("li");
-    li.textContent = `${time} ${labels[action] || action} · RA ${drawerNumericValue("ra", 235).toFixed(0)} ft · TRA ${drawerNumericValue("traThreshold", 350).toFixed(0)} ft · VDT ${drawerNumericValue("vdt", 132).toFixed(0)} kt`;
+    const timelineText = `${time} ${labels[action] || action} · RA ${drawerNumericValue("ra", 235).toFixed(0)} ft · TRA ${drawerNumericValue("traThreshold", 350).toFixed(0)} ft · VDT ${drawerNumericValue("vdt", 132).toFixed(0)} kt`;
+    setReadableEvidenceText(li, timelineText);
     runTimeline.prepend(li);
     while (runTimeline.children.length > 8) runTimeline.removeChild(runTimeline.lastElementChild);
   }
