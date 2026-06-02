@@ -5587,6 +5587,28 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "true")
         expect(deploy_row_logic3_source).to_have_attribute("aria-current", "true")
         expect(deploy_row_logic3_source).to_have_class(re.compile(r"\bis-active\b"))
+        expect(deploy_row_logic3_source).to_be_focused()
+        source_chip_focus_state = page.evaluate("""() => {
+          const source = document.querySelector('#logic-output-backtrace-panel [data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]');
+          if (!source) return { ok: false, reason: "missing-source-chip" };
+          const style = window.getComputedStyle(source);
+          const outlineVisible = style.outlineStyle !== "none"
+            && parseFloat(style.outlineWidth || "0") >= 1
+            && style.outlineColor !== "rgba(0, 0, 0, 0)";
+          const boxShadowVisible = style.boxShadow !== "none"
+            && !String(style.boxShadow || "").includes("rgba(0, 0, 0, 0)");
+          return {
+            ok: document.activeElement === source && (outlineVisible || boxShadowVisible),
+            activeElementMatches: document.activeElement === source,
+            outline: {
+              style: style.outlineStyle,
+              width: style.outlineWidth,
+              color: style.outlineColor,
+            },
+            boxShadow: style.boxShadow,
+          };
+        }""")
+        assert source_chip_focus_state["ok"] is True, source_chip_focus_state
         expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("当前段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
         expect(etrac_row_logic2_source).to_have_attribute("aria-pressed", "false")
         expect(etrac_row_logic2_source).not_to_have_attribute("aria-current", "true")
