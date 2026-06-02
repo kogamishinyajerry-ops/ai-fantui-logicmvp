@@ -295,6 +295,7 @@
   const objectContextDrawer = $("logic-object-context-drawer");
   const logicContextTitle = $("logic-context-title");
   const logicContextSource = $("logic-context-source");
+  const logicContextRequirementTrace = $("logic-context-requirement-trace");
   const logicContextParams = $("logic-context-params");
   const logicContextCommentShortcut = $("logic-context-comment-shortcut");
   const selectedNode = $("logic-selected-node");
@@ -2884,6 +2885,50 @@
     };
   }
 
+  function selectedTargetMatchesTrace(trace) {
+    if (!trace || !state.selectedTargetId) return false;
+    if (state.selectedTargetType === "wire") {
+      const edge = circuitWireByTargetId(state.selectedTargetId) || drawingEdgeByTargetId(state.selectedTargetId) || {};
+      if (!canvasWireTraceSelectable(edge)) return false;
+      return Array.isArray(trace.wireIds) && trace.wireIds.includes(state.selectedTargetId);
+    }
+    if (state.selectedTargetType === "node") {
+      const circuitNode = circuitNodeBySelectableId(state.selectedTargetId);
+      if (!circuitNode || !canvasNodeTraceSelectable(circuitNode, circuitNode.circuit_role || "input")) return false;
+      return Array.isArray(trace.nodeIds) && trace.nodeIds.includes(state.selectedTargetId);
+    }
+    return false;
+  }
+
+  function selectedTargetRequirementTrace() {
+    if (!requirementTraceList || !state.selectedTargetId) return null;
+    const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"))
+      .map(parseRequirementTraceTarget)
+      .filter(Boolean);
+    const activeTrace = traces.find((trace) => (trace.id || trace.sourceId) === state.activeRequirementTraceId);
+    if (selectedTargetMatchesTrace(activeTrace)) return activeTrace;
+    return traces.find(selectedTargetMatchesTrace) || null;
+  }
+
+  function syncObjectContextRequirementTrace() {
+    if (!logicContextRequirementTrace) return;
+    const trace = selectedTargetRequirementTrace();
+    if (!trace) {
+      logicContextRequirementTrace.dataset.contextRequirementTrace = state.selectedTargetId ? "unbound" : "waiting";
+      logicContextRequirementTrace.dataset.contextRequirementTraceId = state.selectedTargetId ? "none" : "waiting";
+      logicContextRequirementTrace.textContent = state.selectedTargetId
+        ? "未绑定当前需求段。"
+        : "选择节点或连线后显示需求段依据。";
+      return;
+    }
+    const traceId = trace.id || trace.sourceId || "active";
+    const segmentLabel = trace.displayIndex ? `段 ${trace.displayIndex}` : "当前段";
+    const actions = Array.isArray(trace.actions) ? trace.actions.filter(Boolean).join("；") : "";
+    logicContextRequirementTrace.dataset.contextRequirementTrace = "matched";
+    logicContextRequirementTrace.dataset.contextRequirementTraceId = traceId;
+    logicContextRequirementTrace.textContent = `${segmentLabel} · ${actions || "生成候选节点与连线"}`;
+  }
+
   function clampNumber(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
@@ -2938,6 +2983,7 @@
       objectContextDrawer.hidden = true;
       if (annotationSource) annotationSource.textContent = "选择节点或连线后显示来源。";
       if (annotationParams) annotationParams.textContent = "暂无参数。";
+      syncObjectContextRequirementTrace();
       return;
     }
     objectContextDrawer.hidden = false;
@@ -2945,6 +2991,7 @@
     const context = selectedTargetContext();
     if (logicContextTitle) logicContextTitle.textContent = title;
     if (logicContextSource) logicContextSource.textContent = context.sourceText;
+    syncObjectContextRequirementTrace();
     if (logicContextParams) logicContextParams.textContent = context.paramText;
     if (annotationSource) annotationSource.textContent = context.sourceText;
     if (annotationParams) annotationParams.textContent = context.paramText;

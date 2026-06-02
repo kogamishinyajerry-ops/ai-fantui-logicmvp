@@ -3110,6 +3110,8 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   display: grid;
   gap: 10px;
   width: 310px;
+  max-height: min(520px, calc(100vh - 180px));
+  overflow: auto;
   border: 1px solid rgba(54, 198, 216, 0.42);
   border-radius: 10px;
   background: rgba(5, 17, 28, 0.96);
@@ -3152,6 +3154,18 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-size: 12px;
   line-height: 1.45;
 }
+
+.logic-context-trace-section {
+  border-color: rgba(45, 212, 191, 0.36);
+  background:
+    linear-gradient(135deg, rgba(45, 212, 191, 0.08), rgba(8, 22, 36, 0.72)),
+    rgba(8, 22, 36, 0.7);
+}
+
+#logic-context-requirement-trace[data-context-requirement-trace="matched"] {
+  color: #d7fff4;
+}
+
 .logic-context-comment-shortcut {
   min-height: 30px;
   border-color: rgba(54, 198, 216, 0.42);
