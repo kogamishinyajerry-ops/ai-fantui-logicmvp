@@ -973,6 +973,12 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             && rowTextMatchBadge.scrollHeight <= rowTextMatchBadge.clientHeight + 1;
           const rightTextMatches = !segmentLabel
             || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
+          const matchedCanvasTargets = [...nodeTargets, ...wireTargets].filter(targetMatchesActive);
+          const matchedCanvasTargetsCarryTextMatch = matchedCanvasTargets.length > 0
+            && matchedCanvasTargets.every((target) => target.dataset.canvasOriginalTextMatch === quoteSummaryMatchMode
+              && target.dataset.canvasOriginalTextMatchToken === (evidence.dataset.currentSegmentTextMatchToken || "")
+              && (target.getAttribute("aria-label") || "").includes("原文命中")
+              && (target.getAttribute("title") || "").includes("原文命中"));
           const checks = [
             { key: "identity-highlighted", ok: identityLoop.dataset.highlightedTraceId === activeId, actual: identityLoop.dataset.highlightedTraceId || "", expected: activeId },
             { key: "identity-current", ok: identityLoop.dataset.currentSegmentId === activeId, actual: identityLoop.dataset.currentSegmentId || "", expected: activeId },
@@ -993,6 +999,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "canvas-source-original-text-match-token", ok: source.dataset.canvasOriginalTextMatchToken === evidence.dataset.currentSegmentTextMatchToken, actual: source.dataset.canvasOriginalTextMatchToken || "", expected: evidence.dataset.currentSegmentTextMatchToken || "" },
             { key: "canvas-selected-original-text-match-a11y", ok: (selected.getAttribute("aria-label") || "").includes("原文命中") && (selected.getAttribute("title") || "").includes("原文命中"), actual: `${selected.getAttribute("aria-label") || ""} | ${selected.getAttribute("title") || ""}`, expected: "原文命中" },
             { key: "canvas-source-original-text-match-a11y", ok: (source.getAttribute("aria-label") || "").includes("原文命中") && (source.getAttribute("title") || "").includes("原文命中"), actual: `${source.getAttribute("aria-label") || ""} | ${source.getAttribute("title") || ""}`, expected: "原文命中" },
+            { key: "matched-canvas-target-original-text-match", ok: matchedCanvasTargetsCarryTextMatch, actual: JSON.stringify(matchedCanvasTargets.map((target) => ({ mode: target.dataset.canvasOriginalTextMatch || "", token: target.dataset.canvasOriginalTextMatchToken || "", aria: target.getAttribute("aria-label") || "", title: target.getAttribute("title") || "" }))), expected: quoteSummaryMatchMode },
             { key: "context-original-text-match", ok: context.dataset.contextOriginalTextMatch === quoteSummaryMatchMode, actual: context.dataset.contextOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "annotation-original-text-match", ok: annotation.dataset.annotationOriginalTextMatch === quoteSummaryMatchMode, actual: annotation.dataset.annotationOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "context-original-text-match-token", ok: context.dataset.contextOriginalTextMatchToken === evidence.dataset.currentSegmentTextMatchToken, actual: context.dataset.contextOriginalTextMatchToken || "", expected: evidence.dataset.currentSegmentTextMatchToken || "" },
@@ -1034,6 +1041,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             wireIds,
             nodeMatches,
             wireMatches,
+            matchedCanvasTargetCount: matchedCanvasTargets.length,
             checks,
           };
         }"""

@@ -838,6 +838,8 @@
     if (!isMatch || !trace) {
       delete element.dataset.canvasRequirementTraceId;
       delete element.dataset.canvasRequirementTraceEvidence;
+      delete element.dataset.canvasOriginalTextMatch;
+      delete element.dataset.canvasOriginalTextMatchToken;
       if (title && element.dataset.baseTitle) title.textContent = element.dataset.baseTitle;
       const baseAriaLabel = element.dataset.baseAriaLabel || "";
       if (baseAriaLabel) {
@@ -845,17 +847,35 @@
       } else {
         element.removeAttribute("aria-label");
       }
+      element.removeAttribute("title");
       return;
     }
     const evidenceLabel = requirementTraceEvidenceLabel(trace);
+    const originalTextMatchMode = currentSegmentEvidence
+      ? (currentSegmentEvidence.dataset.currentSegmentTextMatch || "waiting")
+      : "waiting";
+    const originalTextMatchToken = currentSegmentEvidence
+      ? (currentSegmentEvidence.dataset.currentSegmentTextMatchToken || "none")
+      : "none";
+    const originalTextMatchLabels = {
+      "full-quote": "全句",
+      "meaningful-token": "关键词",
+      missing: "未命中",
+      waiting: "等待",
+    };
+    const originalTextMatchLabel = originalTextMatchLabels[originalTextMatchMode] || originalTextMatchLabels.waiting;
+    const originalTextMatchEvidence = `原文命中：${originalTextMatchLabel}`;
     element.dataset.canvasRequirementTraceId = trace.id || trace.sourceId || "active";
     element.dataset.canvasRequirementTraceEvidence = evidenceLabel;
+    element.dataset.canvasOriginalTextMatch = originalTextMatchMode;
+    element.dataset.canvasOriginalTextMatchToken = originalTextMatchToken;
     if (title) {
       const baseTitle = element.dataset.baseTitle || title.textContent || "";
-      title.textContent = `${baseTitle} · ${evidenceLabel}`;
+      title.textContent = `${baseTitle} · ${evidenceLabel} · ${originalTextMatchEvidence}`;
+      element.setAttribute("title", `${baseTitle} · ${evidenceLabel} · ${originalTextMatchEvidence}`);
     }
     const baseAriaLabel = element.dataset.baseAriaLabel || "";
-    element.setAttribute("aria-label", baseAriaLabel ? `${baseAriaLabel}，${evidenceLabel}` : evidenceLabel);
+    element.setAttribute("aria-label", baseAriaLabel ? `${baseAriaLabel}，${evidenceLabel}，${originalTextMatchEvidence}` : `${evidenceLabel}，${originalTextMatchEvidence}`);
   }
 
   function applyRequirementTraceHighlight(trace) {
