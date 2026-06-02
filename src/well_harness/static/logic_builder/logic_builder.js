@@ -1692,6 +1692,12 @@
         event.stopPropagation();
         activateOutputBacktraceSource(button);
       });
+      button.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+        event.preventDefault();
+        event.stopPropagation();
+        activateOutputBacktraceSource(button);
+      });
     });
     outputBacktraceList.querySelectorAll("[data-output-backtrace-output]").forEach((item) => {
       item.addEventListener("keydown", (event) => {
