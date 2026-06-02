@@ -5693,6 +5693,25 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(etrac_output).to_have_attribute("aria-label", re.compile("非当前段相关输出"))
         expect(etrac_output).to_have_attribute("title", re.compile("非当前段相关输出"))
         expect(etrac_output).to_have_class(re.compile("is-output-focus-blocked"))
+        blocked_etrac_label_state = etrac_output.evaluate("""(item) => {
+          const ariaLabel = item.getAttribute("aria-label") || "";
+          const title = item.getAttribute("title") || "";
+          return {
+            ariaLabel,
+            title,
+            ok: ariaLabel.includes("ETRAC")
+              && title.includes("ETRAC")
+              && ariaLabel.includes("非当前段相关输出")
+              && title.includes("非当前段相关输出")
+              && !ariaLabel.includes("row-logic")
+              && !title.includes("row-logic")
+              && !ariaLabel.includes("->")
+              && !title.includes("->")
+              && !/\\blogic\\d+\\b/.test(ariaLabel)
+              && !/\\blogic\\d+\\b/.test(title),
+          };
+        }""")
+        assert blocked_etrac_label_state["ok"] is True, blocked_etrac_label_state
         expect(output_focus_status).to_contain_text("ETRAC")
         expect(output_focus_status).to_contain_text("非当前段相关输出")
         first_noop_status = output_focus_status.inner_text()
@@ -5711,6 +5730,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace).to_have_attribute("data-output-focus-feedback-label", "")
         expect(etrac_output).not_to_have_attribute("data-output-focus-feedback-label", "非当前段相关输出")
         expect(etrac_output).to_have_attribute("title", "聚焦 ETRAC 输出组")
+        expect(etrac_output).to_have_attribute("aria-label", "聚焦 ETRAC 输出组")
         expect(etrac_output).not_to_have_class(re.compile("is-output-focus-blocked"))
         expect(output_focus_status).to_contain_text("TLS")
         assert "非当前段相关输出" not in output_focus_status.inner_text()
