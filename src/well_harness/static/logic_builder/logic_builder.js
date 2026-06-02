@@ -3054,38 +3054,48 @@
   }
 
   function syncCanvasSelectedTargetTraceAuditSurface(stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource, cueLabel, text) {
+    const traceDatasetKeys = [
+      "canvasTraceConsistencyState",
+      "canvasTraceConsistencyId",
+      "canvasTraceConsistencySurfaces",
+      "canvasTraceConsistencyCurrentId",
+      "canvasTraceConsistencySelectedId",
+      "canvasTraceConsistencySelectedSource",
+      "canvasTraceConsistencyCueLabel",
+      "canvasTraceConsistencySurface",
+    ];
+    const selectedId = selectedEvidenceId || "none";
+    const sourceValue = selectedEvidenceSource || "none";
+    const auditLabel = `画布证据状态：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}`;
+    const clearCanvasTraceDataset = (element) => {
+      traceDatasetKeys.forEach((key) => {
+        delete element.dataset[key];
+      });
+    };
+    const applyCanvasTraceDataset = (element, surfaceName, labelText) => {
+      element.dataset.canvasTraceConsistencyState = stateValue;
+      element.dataset.canvasTraceConsistencyId = idValue || "waiting";
+      element.dataset.canvasTraceConsistencySurfaces = surfaces || "left canvas";
+      element.dataset.canvasTraceConsistencyCurrentId = currentId || "waiting";
+      element.dataset.canvasTraceConsistencySelectedId = selectedId;
+      element.dataset.canvasTraceConsistencySelectedSource = sourceValue;
+      element.dataset.canvasTraceConsistencyCueLabel = cueLabel || stateValue;
+      element.dataset.canvasTraceConsistencySurface = surfaceName;
+      element.setAttribute("title", auditLabel);
+      element.setAttribute("aria-label", `${labelText}；${auditLabel}`);
+    };
+    if (source) {
+      applyCanvasTraceDataset(source, "canvas-source", "画布来源位");
+    }
     if (!selectedTargetLabel) return;
     if (!state.selectedTargetId) {
-      [
-        "canvasTraceConsistencyState",
-        "canvasTraceConsistencyId",
-        "canvasTraceConsistencySurfaces",
-        "canvasTraceConsistencyCurrentId",
-        "canvasTraceConsistencySelectedId",
-        "canvasTraceConsistencySelectedSource",
-        "canvasTraceConsistencyCueLabel",
-        "canvasTraceConsistencySurface",
-      ].forEach((key) => {
-        delete selectedTargetLabel.dataset[key];
-      });
+      clearCanvasTraceDataset(selectedTargetLabel);
       selectedTargetLabel.setAttribute("title", "未选择画布对象");
       selectedTargetLabel.setAttribute("aria-label", "未选择画布对象");
       return;
     }
     const targetText = selectedTargetLabel.textContent || state.selectedTargetLabel || "选中对象";
-    const selectedId = selectedEvidenceId || "none";
-    const sourceValue = selectedEvidenceSource || "none";
-    const auditLabel = `画布选中对象证据：${cueLabel}；${text}；当前段：${currentId || "waiting"}；选中依据：${selectedId}；来源：${sourceValue}`;
-    selectedTargetLabel.dataset.canvasTraceConsistencyState = stateValue;
-    selectedTargetLabel.dataset.canvasTraceConsistencyId = idValue || "waiting";
-    selectedTargetLabel.dataset.canvasTraceConsistencySurfaces = surfaces || "left canvas";
-    selectedTargetLabel.dataset.canvasTraceConsistencyCurrentId = currentId || "waiting";
-    selectedTargetLabel.dataset.canvasTraceConsistencySelectedId = selectedId;
-    selectedTargetLabel.dataset.canvasTraceConsistencySelectedSource = sourceValue;
-    selectedTargetLabel.dataset.canvasTraceConsistencyCueLabel = cueLabel || stateValue;
-    selectedTargetLabel.dataset.canvasTraceConsistencySurface = "selected-target";
-    selectedTargetLabel.setAttribute("title", auditLabel);
-    selectedTargetLabel.setAttribute("aria-label", `${targetText}；${auditLabel}`);
+    applyCanvasTraceDataset(selectedTargetLabel, "selected-target", targetText);
   }
 
   function syncTraceEvidenceConsistency() {

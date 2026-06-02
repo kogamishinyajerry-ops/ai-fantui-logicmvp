@@ -424,6 +424,75 @@ def _expect_canvas_selected_trace_state_badge(
     assert badge_state["ok"] is True, badge_state
 
 
+def _expect_canvas_source_trace_state_badge(
+    page: Any,
+    expected_label: str,
+    *,
+    state: str,
+    current_id: str,
+    selected_id: str,
+    selected_source: str,
+) -> None:
+    badge_state = page.evaluate(
+        """({label, state, currentId, selectedId, selectedSource}) => {
+          const source = document.querySelector("#logic-canvas-source");
+          const selected = document.querySelector("#logic-selected-target-label");
+          const left = document.querySelector("#logic-current-segment-consistency");
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!source || !selected || !left || !context || !annotation) {
+            return { ok: false, reason: "missing-surface" };
+          }
+          const badge = window.getComputedStyle(source, "::before").content || "";
+          const box = source.getBoundingClientRect();
+          const ok = badge.includes(label)
+            && box.width > 0
+            && box.height > 0
+            && box.width <= 180
+            && source.dataset.canvasTraceConsistencyState === state
+            && source.dataset.canvasTraceConsistencyCurrentId === currentId
+            && source.dataset.canvasTraceConsistencySelectedId === selectedId
+            && source.dataset.canvasTraceConsistencySelectedSource === selectedSource
+            && source.dataset.canvasTraceConsistencyCueLabel
+            && source.dataset.canvasTraceConsistencySurface === "canvas-source"
+            && selected.dataset.canvasTraceConsistencyState === state
+            && selected.dataset.canvasTraceConsistencyCurrentId === currentId
+            && selected.dataset.canvasTraceConsistencySelectedId === selectedId
+            && selected.dataset.canvasTraceConsistencySelectedSource === selectedSource
+            && left.dataset.traceConsistencyState === state
+            && context.dataset.contextTraceConsistencyState === state
+            && annotation.dataset.annotationTraceConsistencyState === state;
+          return {
+            ok,
+            label,
+            state,
+            currentId,
+            selectedId,
+            selectedSource,
+            badge,
+            width: box.width,
+            sourceState: source.dataset.canvasTraceConsistencyState || "",
+            sourceCurrentId: source.dataset.canvasTraceConsistencyCurrentId || "",
+            sourceSelectedId: source.dataset.canvasTraceConsistencySelectedId || "",
+            sourceSelectedSource: source.dataset.canvasTraceConsistencySelectedSource || "",
+            sourceSurface: source.dataset.canvasTraceConsistencySurface || "",
+            selectedState: selected.dataset.canvasTraceConsistencyState || "",
+            leftState: left.dataset.traceConsistencyState || "",
+            contextState: context.dataset.contextTraceConsistencyState || "",
+            annotationState: annotation.dataset.annotationTraceConsistencyState || "",
+          };
+        }""",
+        {
+            "label": expected_label,
+            "state": state,
+            "currentId": current_id,
+            "selectedId": selected_id,
+            "selectedSource": selected_source,
+        },
+    )
+    assert badge_state["ok"] is True, badge_state
+
+
 def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None:
     layout_state = page.evaluate(
         """(label) => {
@@ -4519,6 +4588,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_id="row-logic2",
             selected_source="canvas-node",
         )
+        _expect_canvas_source_trace_state_badge(
+            page,
+            "一致",
+            state="consistent",
+            current_id="row-logic2",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
         _assert_inspector_trace_badge_layout(page, "一致")
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
@@ -4701,6 +4778,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_id="row-logic1",
             selected_source="canvas-wire",
         )
+        _expect_canvas_source_trace_state_badge(
+            page,
+            "分叉",
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic1",
+            selected_source="canvas-wire",
+        )
         _assert_inspector_trace_badge_layout(page, "分叉")
         _assert_current_segment_consistency_cue_layout(page, align_visible=True)
         _expect_consistency_align_button(
@@ -4745,6 +4830,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
         _expect_inspector_trace_state_badge(page, "未绑定")
         _expect_canvas_selected_trace_state_badge(
+            page,
+            "未绑定",
+            state="unbound",
+            current_id="row-logic1",
+            selected_id="none",
+            selected_source="none",
+        )
+        _expect_canvas_source_trace_state_badge(
             page,
             "未绑定",
             state="unbound",

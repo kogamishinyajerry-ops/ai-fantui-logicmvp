@@ -1397,6 +1397,48 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   max-width: 176px;
 }
 
+.logic-canvas-source[data-canvas-trace-consistency-state]::before {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid rgba(94, 234, 212, 0.42);
+  border-radius: 999px;
+  background: rgba(4, 48, 39, 0.72);
+  color: #d7fff4;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 2px 5px;
+}
+
+.logic-canvas-source[data-canvas-trace-consistency-state="waiting"]::before {
+  content: "等待";
+}
+
+.logic-canvas-source[data-canvas-trace-consistency-state="segment-only"]::before {
+  content: "待锚点";
+}
+
+.logic-canvas-source[data-canvas-trace-consistency-state="consistent"]::before {
+  content: "一致";
+}
+
+.logic-canvas-source[data-canvas-trace-consistency-state="diverged"]::before {
+  content: "分叉";
+  border-color: rgba(245, 200, 91, 0.62);
+  background: rgba(88, 54, 10, 0.72);
+  color: #fff4bf;
+}
+
+.logic-canvas-source[data-canvas-trace-consistency-state="unbound"]::before {
+  content: "未绑定";
+  border-color: rgba(255, 180, 168, 0.56);
+  background: rgba(89, 24, 34, 0.72);
+  color: #ffd8d1;
+}
+
 .logic-canvas-source-state,
 .logic-canvas-trace-legend {
   min-width: 0;
