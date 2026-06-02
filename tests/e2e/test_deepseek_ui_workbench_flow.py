@@ -9108,6 +9108,7 @@ def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
                     },
                     "candidate_recalculation": {"status": "revision_candidate_ready"},
                     "requirements_document_patch_status": "not_requested",
+                    "requirements_document_patch_sha256": "abc12345deadbeef",
                 }
             ] if revised else [],
         }
@@ -9151,8 +9152,13 @@ def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
         expect(replay_item).to_contain_text("已反馈重算")
         expect(replay_item).to_contain_text("SW1 到 L1")
         expect(replay_item).not_to_contain_text("sw1->logic1")
+        expect(replay_item).to_contain_text("补丁证据已记录")
+        expect(replay_item).not_to_contain_text("abc12345")
+        expect(replay_item).to_have_attribute("data-requirements-patch-hash-prefix", "abc12345")
         expect(replay_item).to_have_attribute("aria-label", re.compile("已反馈重算.*SW1 到 L1"))
         expect(replay_item).to_have_attribute("title", re.compile("已反馈重算.*SW1 到 L1"))
+        expect(replay_item).not_to_have_attribute("aria-label", re.compile("abc12345"))
+        expect(replay_item).not_to_have_attribute("title", re.compile("abc12345"))
         revision_feedback_state = page.evaluate("""() => ({
           feedback: document.querySelector("#logic-streamed-revision-feedback")?.textContent || "",
           replay: document.querySelector("#logic-streamed-history li[data-stream-replay-event]")?.textContent || "",
