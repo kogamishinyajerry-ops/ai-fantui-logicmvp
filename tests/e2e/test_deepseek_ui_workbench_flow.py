@@ -5349,7 +5349,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_focus_status).to_contain_text("已展开")
             expect(output_focus_status).to_contain_text("全部输出依据")
             expect(output_focus_status).to_contain_text("段 01")
-            assert "row-logic" not in output_focus_status.inner_text()
+            _assert_no_machine_tokens_in_accessible_state({"text": output_focus_status.inner_text()}, "text")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
@@ -5358,7 +5358,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_contain_text("已展开")
             expect(output_visible_status).to_contain_text("全部输出依据")
             expect(output_visible_status).to_contain_text("段 01")
-            assert "row-logic" not in output_visible_status.inner_text()
+            _assert_no_machine_tokens_in_accessible_state({"text": output_visible_status.inner_text()}, "text")
             assert page.evaluate("""() => {
               const visibleStatus = document.querySelector("#logic-output-visible-status");
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
@@ -5415,7 +5415,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
-            assert "row-logic" not in output_visible_status.inner_text()
+            _assert_no_machine_tokens_in_accessible_state({"text": output_visible_status.inner_text()}, "text")
             expect(related_output_focus).to_be_focused()
         else:
             expect(output_reveal).to_be_hidden()
@@ -5470,7 +5470,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
-            assert "row-logic" not in output_visible_status.inner_text()
+            _assert_no_machine_tokens_in_accessible_state({"text": output_visible_status.inner_text()}, "text")
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
         segment_jumps.locator('[data-current-segment-jump="trace"]').click()
@@ -5505,7 +5505,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
-            assert "row-logic" not in output_visible_status.inner_text()
+            _assert_no_machine_tokens_in_accessible_state({"text": output_visible_status.inner_text()}, "text")
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
@@ -5592,8 +5592,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
             expect(output_visible_status).to_contain_text("全部输出依据")
             expect(output_visible_status).to_contain_text("段 02")
-            assert "row-logic" not in output_focus_status.inner_text()
-            assert "row-logic" not in output_visible_status.inner_text()
+            _assert_no_machine_tokens_in_accessible_state({"text": output_focus_status.inner_text()}, "text")
+            _assert_no_machine_tokens_in_accessible_state({"text": output_visible_status.inner_text()}, "text")
             assert page.evaluate("""() => {
               const visibleStatus = document.querySelector("#logic-output-visible-status");
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
