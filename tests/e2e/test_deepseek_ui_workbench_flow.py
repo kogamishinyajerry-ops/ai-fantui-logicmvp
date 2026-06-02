@@ -792,6 +792,29 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
     assert identity_state["ok"] is True, identity_state
 
 
+def _expect_current_segment_identity_loop_state(
+    page: Any,
+    *,
+    state: str,
+    current_id: str,
+    selected_id: str,
+    selected_source: str,
+    source_anchor_id: str,
+) -> None:
+    loop = page.locator("#logic-current-segment-identity-loop")
+    expect(loop).to_be_visible()
+    expect(loop).to_have_attribute("data-identity-loop-state", state)
+    expect(loop).to_have_attribute("data-current-segment-id", current_id)
+    expect(loop).to_have_attribute("data-selected-canvas-trace-id", selected_id)
+    expect(loop).to_have_attribute("data-selected-source", selected_source)
+    expect(loop).to_have_attribute("data-source-anchor-id", source_anchor_id)
+    expect(loop).to_have_attribute("data-identity-loop-scope", "current-segment")
+    expect(loop).to_contain_text("身份闭环")
+    expect(loop).to_contain_text(current_id)
+    expect(loop).to_contain_text(selected_id)
+    expect(loop).to_contain_text(source_anchor_id)
+
+
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
     badge_state = page.evaluate(
         """(label) => {
@@ -4742,6 +4765,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_global_review).to_contain_text("当前段到全局矩阵")
         expect(segment_global_review).to_contain_text("当前段")
         expect(segment_global_review).to_contain_text("全局矩阵")
+        _expect_current_segment_identity_loop_state(
+            page,
+            state="segment-only",
+            current_id="row-logic1",
+            selected_id="none",
+            selected_source="none",
+            source_anchor_id="logic1",
+        )
         expect(page.locator("#logic-canvas")).to_be_visible()
         _assert_current_segment_trust_chain_layout(page)
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
