@@ -278,6 +278,7 @@
   const annotationSubmitBar = $("logic-annotation-submit-bar");
   const selectedTargetLabel = $("logic-selected-target-label");
   const annotationSource = $("logic-annotation-source");
+  const annotationRequirementTrace = $("logic-annotation-requirement-trace");
   const annotationParams = $("logic-annotation-params");
   const nodeCommentText = $("logic-node-comment-text");
   const addAnnotationButton = $("logic-add-annotation");
@@ -2911,22 +2912,31 @@
   }
 
   function syncObjectContextRequirementTrace() {
-    if (!logicContextRequirementTrace) return;
     const trace = selectedTargetRequirementTrace();
+    const targets = [
+      {element: logicContextRequirementTrace, attrPrefix: "context"},
+      {element: annotationRequirementTrace, attrPrefix: "annotation"},
+    ].filter((item) => item.element);
     if (!trace) {
-      logicContextRequirementTrace.dataset.contextRequirementTrace = state.selectedTargetId ? "unbound" : "waiting";
-      logicContextRequirementTrace.dataset.contextRequirementTraceId = state.selectedTargetId ? "none" : "waiting";
-      logicContextRequirementTrace.textContent = state.selectedTargetId
-        ? "未绑定当前需求段。"
-        : "选择节点或连线后显示需求段依据。";
+      const stateValue = state.selectedTargetId ? "unbound" : "waiting";
+      const idValue = state.selectedTargetId ? "none" : "waiting";
+      const text = state.selectedTargetId ? "未绑定当前需求段。" : "选择节点或连线后显示需求段依据。";
+      targets.forEach(({element, attrPrefix}) => {
+        element.dataset[`${attrPrefix}RequirementTrace`] = stateValue;
+        element.dataset[`${attrPrefix}RequirementTraceId`] = idValue;
+        element.textContent = text;
+      });
       return;
     }
     const traceId = trace.id || trace.sourceId || "active";
     const segmentLabel = trace.displayIndex ? `段 ${trace.displayIndex}` : "当前段";
     const actions = Array.isArray(trace.actions) ? trace.actions.filter(Boolean).join("；") : "";
-    logicContextRequirementTrace.dataset.contextRequirementTrace = "matched";
-    logicContextRequirementTrace.dataset.contextRequirementTraceId = traceId;
-    logicContextRequirementTrace.textContent = `${segmentLabel} · ${actions || "生成候选节点与连线"}`;
+    const text = `${segmentLabel} · ${actions || "生成候选节点与连线"}`;
+    targets.forEach(({element, attrPrefix}) => {
+      element.dataset[`${attrPrefix}RequirementTrace`] = "matched";
+      element.dataset[`${attrPrefix}RequirementTraceId`] = traceId;
+      element.textContent = text;
+    });
   }
 
   function clampNumber(value, min, max) {

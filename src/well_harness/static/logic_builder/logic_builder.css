@@ -2622,6 +2622,8 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   display: grid;
   gap: 7px;
   width: min(320px, calc(100% - 48px));
+  max-height: min(360px, calc(100vh - 180px));
+  overflow: auto;
   border: 1px solid rgba(25, 210, 143, 0.48);
   border-radius: 8px;
   background: rgba(7, 20, 33, 0.94);
@@ -2668,6 +2670,14 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   background: rgba(8, 22, 36, 0.64);
   padding: 6px 7px;
 }
+
+.logic-annotation-context-grid .logic-annotation-trace-section {
+  border-color: rgba(45, 212, 191, 0.34);
+  background:
+    linear-gradient(135deg, rgba(45, 212, 191, 0.08), rgba(8, 22, 36, 0.66)),
+    rgba(8, 22, 36, 0.64);
+}
+
 .logic-annotation-context-grid span {
   display: block;
   margin-bottom: 3px;
@@ -2686,6 +2696,11 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+#logic-annotation-requirement-trace[data-annotation-requirement-trace="matched"] {
+  color: #d7fff4;
+}
+
 .logic-annotation-submit-bar[hidden] {
   display: none;
 }
