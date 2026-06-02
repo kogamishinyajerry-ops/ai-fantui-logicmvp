@@ -650,11 +650,12 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const globalReview = document.querySelector("#logic-current-segment-global-review");
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
           const jumps = document.querySelector("#logic-current-segment-anchor-jumps");
+          const highlightedTrace = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
           const selected = document.querySelector("#logic-selected-target-label");
           const source = document.querySelector("#logic-canvas-source");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!consistency || !card || !chain || !globalReview || !identityLoop || !jumps || !selected || !source || !context || !annotation) {
+          if (!consistency || !card || !chain || !globalReview || !identityLoop || !jumps || !highlightedTrace || !selected || !source || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
           const cardBox = card.getBoundingClientRect();
@@ -662,7 +663,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const jumpsBox = jumps.getBoundingClientRect();
           const identityText = identityLoop.textContent || "";
           const identityChildren = Array.from(identityLoop.querySelectorAll("span, strong, small"));
-          const identityChildrenClip = identityChildren.length === 6 && identityChildren.every((child) => {
+          const identityChildrenClip = identityChildren.length === 7 && identityChildren.every((child) => {
             const childBox = child.getBoundingClientRect();
             const style = window.getComputedStyle(child);
             return childBox.width > 0
@@ -683,6 +684,12 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             && identityBox.bottom > jumpsBox.top);
           const identityCompact = identityBox.height > 0 && identityBox.height <= 28;
           const sourceAnchorId = chain.dataset.sourceAnchorId || "";
+          const highlightedTraceId = highlightedTrace.dataset.requirementTraceId || "";
+          const contextSurfaceState = context.dataset.contextRequirementTrace || "";
+          const annotationSurfaceState = annotation.dataset.annotationRequirementTrace || "";
+          const inspectorSurfaceState = contextSurfaceState === annotationSurfaceState
+            ? contextSurfaceState
+            : `${contextSurfaceState}|${annotationSurfaceState}`;
           const expected = {
             state: consistency.dataset.traceConsistencyState || "",
             currentId: consistency.dataset.traceConsistencyCurrentSegmentId || consistency.dataset.traceConsistencyCurrentId || "",
@@ -710,6 +717,8 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             check("left-chain-trace-id", chain.dataset.currentSegmentTraceId || "", expected.currentId),
             check("left-global-review-current-segment-id", globalReview.dataset.currentSegmentId || "", expected.currentId),
             check("left-identity-loop-current-segment-id", identityLoop.dataset.currentSegmentId || "", expected.currentId),
+            check("left-identity-loop-highlighted-trace-id", identityLoop.dataset.highlightedTraceId || "", highlightedTraceId),
+            check("active-highlighted-trace-id", highlightedTraceId, expected.currentId),
             check("canvas-selected-current-id", selected.dataset.canvasTraceConsistencyCurrentId || "", expected.currentId),
             check("canvas-source-current-id", source.dataset.canvasTraceConsistencyCurrentId || "", expected.currentId),
             check("right-context-current-segment-id", context.dataset.contextTraceConsistencyCurrentSegmentId || "", expected.currentId),
@@ -743,6 +752,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             ...selectedChecks,
             ...sourceChecks,
             check("left-identity-loop-source-anchor-id", identityLoop.dataset.sourceAnchorId || "", sourceAnchorId),
+            check("left-identity-loop-inspector-surface-state", identityLoop.dataset.inspectorSurfaceState || "", inspectorSurfaceState),
             check("left-identity-loop-scope", identityLoop.dataset.identityLoopScope || "", "current-segment"),
           ];
           return {
@@ -754,10 +764,11 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
               && identityBox.width > 0
               && identityBox.height > 0
               && identityText.includes("身份闭环")
-              && identityText.includes("当前段")
+              && identityText.includes("高亮段")
               && identityText.includes("选中")
               && identityText.includes("来源")
               && identityText.includes("锚点")
+              && identityText.includes("检查器")
               && identityChildrenClip
               && identityInsideCard
               && identityDoesNotCoverJumps
@@ -765,6 +776,8 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
               && checks.every((item) => item.ok),
             expected,
             sourceAnchorId,
+            highlightedTraceId,
+            inspectorSurfaceState,
             identityText,
             identityBox: {
               width: identityBox.width,
@@ -800,10 +813,14 @@ def _expect_current_segment_identity_loop_state(
     selected_id: str,
     selected_source: str,
     source_anchor_id: str | None = None,
+    highlighted_id: str | None = None,
+    inspector_state: str | None = None,
 ) -> None:
     expected_source_anchor_id = source_anchor_id
     if expected_source_anchor_id is None:
         expected_source_anchor_id = page.locator("#logic-current-segment-trust-chain").get_attribute("data-source-anchor-id") or ""
+    expected_highlighted_id = highlighted_id or current_id
+    expected_inspector_state = inspector_state
     if state in {"segment-only", "unbound"}:
         assert selected_id == "none"
         assert selected_source == "none"
@@ -816,20 +833,28 @@ def _expect_current_segment_identity_loop_state(
     expect(loop).to_be_visible()
     expect(loop).to_have_attribute("data-identity-loop-state", state)
     expect(loop).to_have_attribute("data-current-segment-id", current_id)
+    expect(loop).to_have_attribute("data-highlighted-trace-id", expected_highlighted_id)
     expect(loop).to_have_attribute("data-selected-canvas-trace-id", selected_id)
     expect(loop).to_have_attribute("data-selected-source", selected_source)
     expect(loop).to_have_attribute("data-source-anchor-id", expected_source_anchor_id)
+    if expected_inspector_state is not None:
+        expect(loop).to_have_attribute("data-inspector-surface-state", expected_inspector_state)
     expect(loop).to_have_attribute("data-identity-loop-scope", "current-segment")
     expect(loop).to_have_attribute("aria-label", re.compile(current_id))
+    expect(loop).to_have_attribute("aria-label", re.compile(expected_highlighted_id))
     expect(loop).to_have_attribute("aria-label", re.compile(selected_id))
     expect(loop).to_have_attribute("aria-label", re.compile(expected_source_anchor_id))
     expect(loop).to_have_attribute("title", re.compile(current_id))
+    expect(loop).to_have_attribute("title", re.compile(expected_highlighted_id))
     expect(loop).to_have_attribute("title", re.compile(selected_id))
     expect(loop).to_have_attribute("title", re.compile(expected_source_anchor_id))
     expect(loop).to_contain_text("身份闭环")
     expect(loop).to_contain_text(current_id)
+    expect(loop).to_contain_text(expected_highlighted_id)
     expect(loop).to_contain_text(selected_id)
     expect(loop).to_contain_text(expected_source_anchor_id)
+    if expected_inspector_state is not None:
+        expect(loop).to_contain_text(expected_inspector_state)
 
 
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:

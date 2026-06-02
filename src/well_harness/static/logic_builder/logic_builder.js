@@ -245,6 +245,7 @@
   const currentSegmentIdentitySelected = $("logic-current-segment-identity-selected");
   const currentSegmentIdentitySource = $("logic-current-segment-identity-source");
   const currentSegmentIdentityAnchor = $("logic-current-segment-identity-anchor");
+  const currentSegmentIdentityInspector = $("logic-current-segment-identity-inspector");
   const currentSegmentTrustSteps = Array.from(document.querySelectorAll("#logic-current-segment-trust-chain [data-trust-chain-step]"));
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
@@ -1003,6 +1004,17 @@
       : (currentSegmentEvidence.dataset.currentSegmentSelectionSource || "none");
     const selectedSourceLabel = currentSegmentSelectionSourceLabel(selectedSource);
     const sourceAnchorId = chainSnapshot.sourceAnchorId || "waiting";
+    const highlightedTrace = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
+    const highlightedTraceId = highlightedTrace ? (highlightedTrace.dataset.requirementTraceId || currentId) : currentId;
+    const contextSurfaceState = logicContextRequirementTrace
+      ? (logicContextRequirementTrace.dataset.contextRequirementTrace || "waiting")
+      : "missing";
+    const annotationSurfaceState = annotationRequirementTrace
+      ? (annotationRequirementTrace.dataset.annotationRequirementTrace || "waiting")
+      : "missing";
+    const inspectorSurfaceState = contextSurfaceState === annotationSurfaceState
+      ? contextSurfaceState
+      : `${contextSurfaceState}|${annotationSurfaceState}`;
     const stateLabels = {
       waiting: "等待",
       "segment-only": "待锚点",
@@ -1013,23 +1025,26 @@
     const stateLabel = stateLabels[stateValue] || stateLabels.waiting;
     currentSegmentIdentityLoop.dataset.identityLoopState = stateValue;
     currentSegmentIdentityLoop.dataset.currentSegmentId = currentId;
+    currentSegmentIdentityLoop.dataset.highlightedTraceId = highlightedTraceId;
     currentSegmentIdentityLoop.dataset.selectedCanvasTraceId = selectedId;
     currentSegmentIdentityLoop.dataset.selectedSource = selectedSource;
     currentSegmentIdentityLoop.dataset.sourceAnchorId = sourceAnchorId;
+    currentSegmentIdentityLoop.dataset.inspectorSurfaceState = inspectorSurfaceState;
     currentSegmentIdentityLoop.dataset.identityLoopScope = "current-segment";
     currentSegmentIdentityLoop.setAttribute(
       "aria-label",
-      `身份闭环：${stateLabel}，当前段 ${currentId}，选中依据 ${selectedId}，来源 ${selectedSourceLabel}，源锚点 ${sourceAnchorId}`
+      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId}，当前段 ${currentId}，源锚点 ${sourceAnchorId}，画布依据 ${selectedId}，来源 ${selectedSourceLabel}，检查器 ${inspectorSurfaceState}`
     );
     currentSegmentIdentityLoop.setAttribute(
       "title",
-      `身份闭环：${stateLabel}，当前段 ${currentId}，选中依据 ${selectedId}，来源 ${selectedSourceLabel}，源锚点 ${sourceAnchorId}`
+      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId} -> 源锚点 ${sourceAnchorId} -> 画布依据 ${selectedId} -> 检查器 ${inspectorSurfaceState}；当前段 ${currentId}；来源 ${selectedSourceLabel}`
     );
     if (currentSegmentIdentityState) currentSegmentIdentityState.textContent = stateLabel;
-    if (currentSegmentIdentityCurrent) currentSegmentIdentityCurrent.textContent = `当前段 ${currentId}`;
+    if (currentSegmentIdentityCurrent) currentSegmentIdentityCurrent.textContent = `高亮段 ${highlightedTraceId}`;
     if (currentSegmentIdentitySelected) currentSegmentIdentitySelected.textContent = `选中 ${selectedId}`;
     if (currentSegmentIdentitySource) currentSegmentIdentitySource.textContent = `来源 ${selectedSourceLabel}`;
     if (currentSegmentIdentityAnchor) currentSegmentIdentityAnchor.textContent = `锚点 ${sourceAnchorId}`;
+    if (currentSegmentIdentityInspector) currentSegmentIdentityInspector.textContent = `检查器 ${inspectorSurfaceState}`;
   }
 
   function syncCurrentSegmentTrustChainInspectorSurfaces() {

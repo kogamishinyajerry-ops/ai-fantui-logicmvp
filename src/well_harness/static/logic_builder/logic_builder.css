@@ -2141,7 +2141,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 .logic-current-segment-identity-loop {
   display: grid;
-  grid-template-columns: auto auto repeat(4, minmax(0, 1fr));
+  grid-template-columns: auto auto repeat(5, minmax(0, 1fr));
   align-items: center;
   gap: 3px;
   min-width: 0;
