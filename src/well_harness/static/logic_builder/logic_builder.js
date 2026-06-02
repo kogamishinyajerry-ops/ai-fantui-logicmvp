@@ -998,6 +998,9 @@
       ["trace", "已切换到当前段逻辑线路视图"],
       ["all", "已切换到全局复核视图"]
     ]);
+    state.blockedOutputBacktraceId = "";
+    state.outputFocusLiveMode = "";
+    syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
     setOutputFocusStatus(actionLabels.get(action) || actionLabels.get("all"), { kind: "view", id: action || "all" });
   }
 
