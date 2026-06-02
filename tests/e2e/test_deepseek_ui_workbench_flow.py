@@ -413,14 +413,23 @@ def _expect_canvas_selected_trace_state_badge(
           const labelText = selected.textContent || "";
           const title = selected.getAttribute("title") || "";
           const ariaLabel = selected.getAttribute("aria-label") || "";
+          const titleHasCurrentSegment = title.includes("当前段");
+          const titleHasLink = title.includes("链路");
+          const ariaHasCurrentSegment = ariaLabel.includes("当前段");
+          const ariaHasLink = ariaLabel.includes("链路");
+          const selectedTrustScope = selected.dataset.canvasTrustChainScope || "";
+          const expectedTrustScope = "current-segment";
+          const scopeIsCurrentSegment = selectedTrustScope === expectedTrustScope;
+          const chainAccessible = titleHasCurrentSegment
+            && titleHasLink
+            && ariaHasCurrentSegment
+            && ariaHasLink
+            && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(selected.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const ok = badge.includes(label)
             && tail.includes("段链")
-            && title.includes("当前段")
-            && title.includes("链路")
-            && ariaLabel.includes("当前段")
-            && ariaLabel.includes("链路")
+            && chainAccessible
             && box.width > 0
             && box.height > 0
             && popoverBox.width > 0
@@ -455,6 +464,11 @@ def _expect_canvas_selected_trace_state_badge(
             tail,
             title,
             ariaLabel,
+            titleHasCurrentSegment,
+            titleHasLink,
+            ariaHasCurrentSegment,
+            ariaHasLink,
+            chainAccessible,
             labelText,
             selectedState: selected.dataset.canvasTraceConsistencyState || "",
             selectedCurrentId: selected.dataset.canvasTraceConsistencyCurrentId || "",
@@ -464,7 +478,9 @@ def _expect_canvas_selected_trace_state_badge(
             selectedTrustState: selected.dataset.canvasTrustChainState || "",
             selectedTrustTraceId: selected.dataset.canvasTrustChainTraceId || "",
             selectedTrustSurface: selected.dataset.canvasTrustChainSurface || "",
-            selectedTrustScope: selected.dataset.canvasTrustChainScope || "",
+            selectedTrustScope,
+            expectedTrustScope,
+            scopeIsCurrentSegment,
             selectedTrustOutputCount: selected.dataset.canvasTrustChainOutputCount || "",
             selectedTrustReviewAnchorCount: selected.dataset.canvasTrustChainReviewAnchorCount || "",
             leftState: left.dataset.traceConsistencyState || "",
@@ -512,6 +528,18 @@ def _expect_canvas_source_trace_state_badge(
           const box = source.getBoundingClientRect();
           const title = source.getAttribute("title") || "";
           const ariaLabel = source.getAttribute("aria-label") || "";
+          const titleHasCurrentSegment = title.includes("当前段");
+          const titleHasLink = title.includes("链路");
+          const ariaHasCurrentSegment = ariaLabel.includes("当前段");
+          const ariaHasLink = ariaLabel.includes("链路");
+          const sourceTrustScope = source.dataset.canvasTrustChainScope || "";
+          const expectedTrustScope = "current-segment";
+          const scopeIsCurrentSegment = sourceTrustScope === expectedTrustScope;
+          const chainAccessible = titleHasCurrentSegment
+            && titleHasLink
+            && ariaHasCurrentSegment
+            && ariaHasLink
+            && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(source.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(source.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const childReadable = (element) => {
@@ -533,10 +561,7 @@ def _expect_canvas_source_trace_state_badge(
             && source.dataset.canvasTraceConsistencySelectedSource === selectedSource
             && source.dataset.canvasTraceConsistencyCueLabel
             && source.dataset.canvasTraceConsistencySurface === "canvas-source"
-            && title.includes("当前段")
-            && title.includes("链路")
-            && ariaLabel.includes("当前段")
-            && ariaLabel.includes("链路")
+            && chainAccessible
             && source.dataset.canvasTrustChainState === "ready"
             && source.dataset.canvasTrustChainTraceId === currentId
             && source.dataset.canvasTrustChainSurface === "canvas-source"
@@ -560,6 +585,11 @@ def _expect_canvas_source_trace_state_badge(
             badge,
             title,
             ariaLabel,
+            titleHasCurrentSegment,
+            titleHasLink,
+            ariaHasCurrentSegment,
+            ariaHasLink,
+            chainAccessible,
             width: box.width,
             sourceStateText: sourceState.textContent || "",
             sourceStateClientWidth: sourceState.clientWidth,
@@ -575,7 +605,9 @@ def _expect_canvas_source_trace_state_badge(
             sourceTrustState: source.dataset.canvasTrustChainState || "",
             sourceTrustTraceId: source.dataset.canvasTrustChainTraceId || "",
             sourceTrustSurface: source.dataset.canvasTrustChainSurface || "",
-            sourceTrustScope: source.dataset.canvasTrustChainScope || "",
+            sourceTrustScope,
+            expectedTrustScope,
+            scopeIsCurrentSegment,
             sourceTrustOutputCount: source.dataset.canvasTrustChainOutputCount || "",
             sourceTrustReviewAnchorCount: source.dataset.canvasTrustChainReviewAnchorCount || "",
             selectedState: selected.dataset.canvasTraceConsistencyState || "",
