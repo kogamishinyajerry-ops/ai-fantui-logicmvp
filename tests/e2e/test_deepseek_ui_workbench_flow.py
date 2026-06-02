@@ -41,6 +41,101 @@ def _show_logic_builder_workbench(page: Any) -> None:
     expect(page.locator("body")).to_have_attribute("data-logic-interaction-mode", "workbench")
 
 
+def _expect_trace_consistency(
+    locator: Any,
+    *,
+    state: str,
+    consistency_id: str | None = None,
+    current_id: str | None = None,
+    selected_id: str | None = None,
+    selected_source: str | None = None,
+    alignable: bool | None = None,
+    align_target_id: str | None = None,
+    align_source: str | None = None,
+) -> None:
+    expect(locator).to_have_attribute("data-trace-consistency-state", state)
+    if consistency_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-id", consistency_id)
+    if current_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-current-id", current_id)
+        expect(locator).to_have_attribute("data-trace-consistency-current-segment-id", current_id)
+    if selected_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-selected-id", selected_id)
+        expect(locator).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", selected_id)
+    if selected_source is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-selected-source", selected_source)
+    if alignable is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-alignable", "true" if alignable else "false")
+    if align_target_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-align-target-id", align_target_id)
+    if align_source is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-align-source", align_source)
+
+
+def _expect_trust_review_consistency(
+    locator: Any,
+    *,
+    state: str,
+    review_id: str | None = None,
+    current_id: str | None = None,
+    selected_id: str | None = None,
+) -> None:
+    expect(locator).to_have_attribute("data-trace-consistency-review-state", state)
+    if review_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-review-id", review_id)
+    if current_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-review-current-id", current_id)
+        expect(locator).to_have_attribute("data-trace-consistency-review-current-segment-id", current_id)
+    if selected_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-review-selected-id", selected_id)
+        expect(locator).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", selected_id)
+
+
+def _expect_trust_spine_consistency(
+    locator: Any,
+    *,
+    state: str,
+    current_id: str | None = None,
+    selected_id: str | None = None,
+    selected_source: str | None = None,
+) -> None:
+    expect(locator).to_have_attribute("data-trace-consistency-state", state)
+    expect(locator).to_have_attribute("data-trace-consistency-review-state", state)
+    if current_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-current-segment-id", current_id)
+        expect(locator).to_have_attribute("data-trace-consistency-review-current-segment-id", current_id)
+    if selected_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", selected_id)
+        expect(locator).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", selected_id)
+    if selected_source is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-selected-source", selected_source)
+        expect(locator).to_have_attribute("data-trace-consistency-review-selected-source", selected_source)
+
+
+def _expect_requirement_trace_audit(
+    locator: Any,
+    *,
+    prefix: str,
+    state: str | None = None,
+    trace_id: str | None = None,
+    current_id: str | None = None,
+    selected_id: str | None = None,
+    selected_source: str | None = None,
+) -> None:
+    if state is not None:
+        expect(locator).to_have_attribute(f"data-{prefix}-trace-consistency-state", state)
+    if trace_id is not None:
+        expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-id", trace_id)
+    if current_id is not None:
+        expect(locator).to_have_attribute(f"data-{prefix}-trace-consistency-current-segment-id", current_id)
+        expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-current-segment-id", current_id)
+    if selected_id is not None:
+        expect(locator).to_have_attribute(f"data-{prefix}-trace-consistency-selected-canvas-trace-id", selected_id)
+        expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-selected-canvas-trace-id", selected_id)
+    if selected_source is not None:
+        expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-selected-source", selected_source)
+
+
 REQUIREMENTS_READY = {
     "kind": "ai-fantui-requirements-intake-analysis",
     "status": "ready_for_logic_builder",
@@ -3175,18 +3270,19 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-trust-parse-state")).to_contain_text("段原文已结构化")
         expect(page.locator("#logic-trust-map-state")).to_contain_text("段落到节点/连线")
         expect(trust_review_state).to_contain_text("节点 /")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-state", "segment-only")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-id", "row-logic1")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-current-id", "row-logic1")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-current-segment-id", "row-logic1")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-selected-id", "none")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", "none")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-state", "segment-only")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-state", "segment-only")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-current-segment-id", "row-logic1")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-current-segment-id", "row-logic1")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "none")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", "none")
+        _expect_trust_review_consistency(
+            trust_review_state,
+            state="segment-only",
+            review_id="row-logic1",
+            current_id="row-logic1",
+            selected_id="none",
+        )
+        _expect_trust_spine_consistency(
+            trust_spine,
+            state="segment-only",
+            current_id="row-logic1",
+            selected_id="none",
+        )
         expect(page.locator("#logic-trust-source-state")).to_contain_text("需求页交接已接收")
         review_matrix = page.locator("#logic-global-review-matrix")
         expect(review_matrix).to_be_visible()
@@ -3317,13 +3413,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_card).to_have_attribute("data-current-segment-selection-label", re.compile("段落"))
         assert segment_source_cue.inner_text() == (segment_card.get_attribute("data-current-segment-selection-label") or "")
         expect(segment_consistency).to_be_visible()
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "segment-only")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic1")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-id", "row-logic1")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-segment-id", "row-logic1")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-id", "none")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "none")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "false")
+        _expect_trace_consistency(
+            segment_consistency,
+            state="segment-only",
+            consistency_id="row-logic1",
+            current_id="row-logic1",
+            selected_id="none",
+            alignable=False,
+        )
         expect(segment_consistency_align).to_be_hidden()
         expect(segment_consistency_align).to_be_disabled()
         expect(segment_card).to_have_attribute("data-node-count", "5")
@@ -3931,66 +4028,73 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
         expect(context_trace).to_be_visible()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "matched")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-state", "consistent")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-current-segment-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-current-segment-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-canvas-trace-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-source", "canvas-node")
+        _expect_requirement_trace_audit(
+            context_trace,
+            prefix="context",
+            state="consistent",
+            trace_id="row-logic2",
+            current_id="row-logic2",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
         expect(context_trace).to_contain_text("段")
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "matched")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-state", "consistent")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-current-segment-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-current-segment-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-canvas-trace-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-source", "canvas-node")
+        _expect_requirement_trace_audit(
+            annotation_trace,
+            prefix="annotation",
+            state="consistent",
+            trace_id="row-logic2",
+            current_id="row-logic2",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
         expect(annotation_trace).to_contain_text("段")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "consistent")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic2")
+        _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic2")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-surfaces", re.compile("left.*canvas.*context.*annotation"))
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-state", "consistent")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-id", "row-logic2")
+        _expect_trust_review_consistency(trust_review_state, state="consistent", review_id="row-logic2")
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic3")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-state", "diverged")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-current-segment-id", "row-logic3")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-current-segment-id", "row-logic3")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-canvas-trace-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-state", "diverged")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-current-segment-id", "row-logic3")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-current-segment-id", "row-logic3")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-canvas-trace-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "diverged")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-id", "row-logic3")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-segment-id", "row-logic3")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-source", "canvas-node")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "true")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-align-target-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-align-source", "canvas-node")
+        _expect_requirement_trace_audit(
+            context_trace,
+            prefix="context",
+            state="diverged",
+            trace_id="row-logic2",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+        )
+        _expect_requirement_trace_audit(
+            annotation_trace,
+            prefix="annotation",
+            state="diverged",
+            trace_id="row-logic2",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+        )
+        _expect_trace_consistency(
+            segment_consistency,
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+            alignable=True,
+            align_target_id="row-logic2",
+            align_source="canvas-node",
+        )
         expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-state", "diverged")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-current-id", "row-logic3")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-current-segment-id", "row-logic3")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-selected-id", "row-logic2")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", "row-logic2")
+        _expect_trust_review_consistency(
+            trust_review_state,
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+        )
         expect(trust_review_state).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
-        expect(trust_spine).to_have_attribute("data-trace-consistency-state", "diverged")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-state", "diverged")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-current-segment-id", "row-logic3")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-current-segment-id", "row-logic3")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", "row-logic2")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-selected-source", "canvas-node")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-selected-source", "canvas-node")
+        _expect_trust_spine_consistency(
+            trust_spine,
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
         expect(segment_consistency_align).to_be_visible()
         expect(segment_consistency_align).to_be_enabled()
         expect(segment_consistency_align).to_have_attribute("data-trace-consistency-action", "align-selected-trace")
@@ -4001,22 +4105,26 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(segment_card).to_have_attribute("data-current-segment-selection-source", "canvas-node")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "consistent")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "false")
+        _expect_trace_consistency(
+            segment_consistency,
+            state="consistent",
+            consistency_id="row-logic2",
+            current_id="row-logic2",
+            selected_id="row-logic2",
+            alignable=False,
+        )
         expect(segment_consistency_align).to_be_hidden()
         expect(segment_consistency_align).to_be_disabled()
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "diverged")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-id", "row-logic3")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "true")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-align-target-id", "row-logic2")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-align-source", "canvas-node")
+        _expect_trace_consistency(
+            segment_consistency,
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+            alignable=True,
+            align_target_id="row-logic2",
+            align_source="canvas-node",
+        )
         expect(segment_consistency_align).to_be_visible()
         expect(segment_consistency_align).to_be_enabled()
         segment_consistency_align.focus()
@@ -4024,8 +4132,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         page.keyboard.press("Enter")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "consistent")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic2")
+        _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic2")
         expect(segment_consistency_align).to_be_hidden()
         expect(segment_consistency_align).to_be_disabled()
         expect(page.locator("#logic-canvas")).to_be_visible()
@@ -4042,34 +4149,50 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator('[data-requirement-trace-id="row-logic1"]')).to_have_class(re.compile("is-active"))
         expect(page.locator('[data-wire-id="sw1->logic1"]')).to_have_attribute("data-canvas-requirement-trace-id", "row-logic1")
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "matched")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-id", "row-logic1")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-source", "canvas-wire")
+        _expect_requirement_trace_audit(
+            context_trace,
+            prefix="context",
+            trace_id="row-logic1",
+            selected_source="canvas-wire",
+        )
         expect(context_trace).to_contain_text("段")
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "matched")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-id", "row-logic1")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-source", "canvas-wire")
+        _expect_requirement_trace_audit(
+            annotation_trace,
+            prefix="annotation",
+            trace_id="row-logic1",
+            selected_source="canvas-wire",
+        )
         expect(annotation_trace).to_contain_text("段")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "consistent")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic1")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-state", "consistent")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-id", "row-logic1")
+        _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic1")
+        _expect_trust_review_consistency(trust_review_state, state="consistent", review_id="row-logic1")
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "diverged")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-state", "diverged")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-state", "diverged")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-current-segment-id", "row-logic3")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-canvas-trace-id", "row-logic1")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-source", "canvas-wire")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-current-segment-id", "row-logic3")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-canvas-trace-id", "row-logic1")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-source", "canvas-wire")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-current-id", "row-logic3")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-id", "row-logic1")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "row-logic1")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-source", "canvas-wire")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "true")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-align-target-id", "row-logic1")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-align-source", "canvas-wire")
+        _expect_requirement_trace_audit(
+            context_trace,
+            prefix="context",
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic1",
+            selected_source="canvas-wire",
+        )
+        _expect_requirement_trace_audit(
+            annotation_trace,
+            prefix="annotation",
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic1",
+            selected_source="canvas-wire",
+        )
+        _expect_trace_consistency(
+            segment_consistency,
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic1",
+            selected_source="canvas-wire",
+            alignable=True,
+            align_target_id="row-logic1",
+            align_source="canvas-wire",
+        )
         expect(segment_consistency_align).to_be_visible()
         expect(segment_consistency_align).to_be_enabled()
         expect(segment_consistency_align).to_have_attribute("data-trace-consistency-align-target-id", "row-logic1")
@@ -4088,30 +4211,34 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_consistency_align).to_be_disabled()
         page.locator('[data-demo-node-id="etrac_540v"]').click()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "unbound")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-id", "none")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-state", "unbound")
-        expect(context_trace).to_have_attribute("data-context-trace-consistency-selected-canvas-trace-id", "none")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-canvas-trace-id", "none")
-        expect(context_trace).to_have_attribute("data-context-requirement-trace-selected-source", "none")
+        _expect_requirement_trace_audit(
+            context_trace,
+            prefix="context",
+            state="unbound",
+            trace_id="none",
+            selected_id="none",
+            selected_source="none",
+        )
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "unbound")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-id", "none")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-state", "unbound")
-        expect(annotation_trace).to_have_attribute("data-annotation-trace-consistency-selected-canvas-trace-id", "none")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-canvas-trace-id", "none")
-        expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace-selected-source", "none")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "unbound")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "none")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-id", "none")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "none")
-        expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "false")
+        _expect_requirement_trace_audit(
+            annotation_trace,
+            prefix="annotation",
+            state="unbound",
+            trace_id="none",
+            selected_id="none",
+            selected_source="none",
+        )
+        _expect_trace_consistency(
+            segment_consistency,
+            state="unbound",
+            consistency_id="none",
+            selected_id="none",
+            alignable=False,
+        )
         expect(segment_consistency_align).to_be_hidden()
         expect(segment_consistency_align).to_be_disabled()
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-state", "unbound")
-        expect(trust_review_state).to_have_attribute("data-trace-consistency-review-id", "none")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-state", "unbound")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-state", "unbound")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-selected-canvas-trace-id", "none")
-        expect(trust_spine).to_have_attribute("data-trace-consistency-review-selected-canvas-trace-id", "none")
+        _expect_trust_review_consistency(trust_review_state, state="unbound", review_id="none")
+        _expect_trust_spine_consistency(trust_spine, state="unbound", selected_id="none")
         expect(page.locator("#logic-canvas")).to_be_visible()
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         page.locator('[data-demo-node-id="logic2"]').focus()
