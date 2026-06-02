@@ -213,6 +213,7 @@
   const requirementTraceSource = $("logic-requirement-trace-source");
   const requirementTraceList = $("logic-requirement-trace-list");
   const currentSegmentEvidence = $("logic-current-segment-evidence");
+  const currentSegmentSourceCue = $("logic-current-segment-source-cue");
   const currentSegmentTitle = $("logic-current-segment-title");
   const currentSegmentSummary = $("logic-current-segment-summary");
   const currentSegmentAction = $("logic-current-segment-action");
@@ -921,6 +922,27 @@
     return titleText || "当前需求段";
   }
 
+  function currentSegmentSelectionSourceLabel(source) {
+    if (source === "canvas-node") return "画布节点反选";
+    if (source === "canvas-wire") return "画布连线反选";
+    if (source === "current-segment-jump") return "当前段跳转";
+    if (source === "none") return "等待段落";
+    return "当前段落";
+  }
+
+  function syncCurrentSegmentSelectionSource(source) {
+    if (!currentSegmentEvidence) return;
+    const safeSource = source || "trace-list";
+    const label = currentSegmentSelectionSourceLabel(safeSource);
+    currentSegmentEvidence.dataset.currentSegmentSelectionSource = safeSource;
+    currentSegmentEvidence.dataset.currentSegmentSelectionLabel = label;
+    if (currentSegmentSourceCue) {
+      currentSegmentSourceCue.textContent = label;
+      currentSegmentSourceCue.setAttribute("title", `当前段来源：${label}`);
+      currentSegmentSourceCue.setAttribute("aria-label", `当前段来源：${label}`);
+    }
+  }
+
   function outputVisibleStatusTarget(text, mode, explicitTarget) {
     if (explicitTarget && explicitTarget.kind && explicitTarget.id) {
       return explicitTarget;
@@ -1530,7 +1552,7 @@
     if (!currentSegmentEvidence) return;
     if (!trace) {
       currentSegmentEvidence.dataset.currentSegmentId = "waiting";
-      currentSegmentEvidence.dataset.currentSegmentSelectionSource = "none";
+      syncCurrentSegmentSelectionSource("none");
       currentSegmentEvidence.dataset.nodeCount = "0";
       currentSegmentEvidence.dataset.wireCount = "0";
       currentSegmentEvidence.dataset.conditionCount = "0";
@@ -1692,7 +1714,7 @@
       }
     });
     renderCurrentSegmentEvidenceCard(activeTrace);
-    if (currentSegmentEvidence) currentSegmentEvidence.dataset.currentSegmentSelectionSource = traceActivationSource;
+    syncCurrentSegmentSelectionSource(traceActivationSource);
     applyRequirementTraceHighlight(activeTrace);
     syncOutputBacktraceActiveTrace(nextId);
   }

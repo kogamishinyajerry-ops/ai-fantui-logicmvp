@@ -3286,8 +3286,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             && style.outlineColor !== "rgba(0, 0, 0, 0)";
         }"""
         segment_card = page.locator("#logic-current-segment-evidence")
+        segment_source_cue = page.locator("#logic-current-segment-source-cue")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
+        expect(segment_card).to_have_attribute("data-current-segment-selection-label", re.compile("段落"))
+        assert segment_source_cue.inner_text() == (segment_card.get_attribute("data-current-segment-selection-label") or "")
         expect(segment_card).to_have_attribute("data-node-count", "5")
         expect(segment_card).to_have_attribute("data-wire-count", "4")
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
@@ -3867,6 +3870,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator('[data-requirement-trace-id="row-logic3"]')).to_have_class(re.compile("is-active"))
         expect(trust_spine).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(page.locator('[data-demo-node-id="logic3"]')).to_have_class(re.compile("is-requirement-trace-match"))
+        expect(segment_card).to_have_attribute("data-current-segment-selection-label", re.compile("段落"))
+        assert segment_source_cue.inner_text() == (segment_card.get_attribute("data-current-segment-selection-label") or "")
         page.locator('[data-wire-id="logic2->etrac_540v"]').evaluate(
             """(wire) => wire.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))"""
         )
@@ -3877,6 +3882,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
         expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-selection-source", "canvas-node")
+        expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-selection-label", re.compile("节点.*反选"))
+        assert segment_source_cue.inner_text() == (segment_card.get_attribute("data-current-segment-selection-label") or "")
         expect(page.locator('[data-requirement-trace-id="row-logic2"]')).to_have_class(re.compile("is-active"))
         expect(page.locator('[data-demo-node-id="logic2"]')).to_have_class(re.compile("is-requirement-trace-match"))
         expect(page.locator('[data-demo-node-id="logic3"]')).not_to_have_class(re.compile("is-requirement-trace-match"))
@@ -3887,6 +3894,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-wire")
         expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-id", "row-logic1")
         expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-selection-source", "canvas-wire")
+        expect(page.locator("#logic-current-segment-evidence")).to_have_attribute("data-current-segment-selection-label", re.compile("连线.*反选"))
+        assert segment_source_cue.inner_text() == (segment_card.get_attribute("data-current-segment-selection-label") or "")
         expect(page.locator('[data-requirement-trace-id="row-logic1"]')).to_have_class(re.compile("is-active"))
         expect(page.locator('[data-wire-id="sw1->logic1"]')).to_have_attribute("data-canvas-requirement-trace-id", "row-logic1")
     finally:

@@ -1754,6 +1754,12 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   font-weight: 800;
   letter-spacing: 0.08em;
 }
+
+.logic-current-segment-evidence[data-current-segment-selection-source^="canvas-"] > #logic-current-segment-source-cue {
+  color: #5eead4;
+  text-shadow: 0 0 10px rgba(45, 212, 191, 0.34);
+}
+
 .logic-current-segment-evidence > strong {
   display: block;
   overflow: hidden;
