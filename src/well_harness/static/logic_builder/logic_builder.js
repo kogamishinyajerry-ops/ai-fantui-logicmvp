@@ -220,6 +220,7 @@
   const currentSegmentReview = $("logic-current-segment-review");
   const currentSegmentOutputImpact = $("logic-current-segment-output-impact");
   const currentSegmentOutputLabels = $("logic-current-segment-output-labels");
+  const currentSegmentOutputReveal = $("logic-current-segment-output-reveal");
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
   const outputBacktracePanel = $("logic-output-backtrace-panel");
@@ -1278,6 +1279,15 @@
         currentSegmentOutputImpact.setAttribute("title", "最终输出影响摘要：等待输出映射");
       }
       if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = "等待输出映射";
+      if (currentSegmentOutputReveal) {
+        currentSegmentOutputReveal.hidden = true;
+        currentSegmentOutputReveal.disabled = true;
+        currentSegmentOutputReveal.dataset.outputImpactReveal = "hidden";
+        currentSegmentOutputReveal.dataset.hiddenOutputCount = "0";
+        currentSegmentOutputReveal.dataset.targetTraceId = "waiting";
+        currentSegmentOutputReveal.setAttribute("aria-label", "等待输出回溯完整清单");
+        currentSegmentOutputReveal.setAttribute("title", "等待输出回溯完整清单");
+      }
       state.currentSegmentJumpAction = "";
       syncCurrentSegmentJumpActions();
       return;
@@ -1322,7 +1332,48 @@
       currentSegmentOutputImpact.setAttribute("title", `最终输出影响摘要：${outputImpactLabel}`);
     }
     if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpactVisibleLabel;
+    if (currentSegmentOutputReveal) {
+      const hasHiddenOutputImpacts = hiddenOutputImpactCount > 0;
+      currentSegmentOutputReveal.hidden = !hasHiddenOutputImpacts;
+      currentSegmentOutputReveal.disabled = !hasHiddenOutputImpacts;
+      currentSegmentOutputReveal.dataset.outputImpactReveal = hasHiddenOutputImpacts ? "ready" : "hidden";
+      currentSegmentOutputReveal.dataset.hiddenOutputCount = String(hiddenOutputImpactCount);
+      currentSegmentOutputReveal.dataset.targetTraceId = trace.id || trace.sourceId || "active";
+      currentSegmentOutputReveal.setAttribute("aria-label", hasHiddenOutputImpacts
+        ? `查看输出回溯完整清单：${outputImpactLabel}`
+        : "当前段没有隐藏的最终输出影响");
+      currentSegmentOutputReveal.setAttribute("title", hasHiddenOutputImpacts
+        ? `查看输出回溯完整清单：${outputImpactLabel}`
+        : "当前段没有隐藏的最终输出影响");
+    }
     syncCurrentSegmentJumpActions();
+  }
+
+  function revealCurrentSegmentOutputBacktrace() {
+    if (!currentSegmentOutputReveal || currentSegmentOutputReveal.disabled || !outputBacktracePanel) return;
+    const traceId = state.activeRequirementTraceId || (currentSegmentEvidence && currentSegmentEvidence.dataset.currentSegmentId) || "none";
+    state.blockedOutputBacktraceId = "";
+    state.outputFocusLiveMode = "";
+    syncOutputBacktraceActiveTrace(traceId);
+    outputBacktracePanel.dataset.currentSegmentOutputReveal = "active";
+    outputBacktracePanel.dataset.revealTraceId = traceId || "none";
+    outputBacktracePanel.dataset.revealSource = "current-segment-output-summary";
+    outputBacktracePanel.classList.add("is-current-segment-output-revealed");
+    if (typeof outputBacktracePanel.scrollIntoView === "function") {
+      outputBacktracePanel.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }
+
+  function clearCurrentSegmentOutputBacktraceReveal() {
+    if (!outputBacktracePanel) return;
+    outputBacktracePanel.dataset.currentSegmentOutputReveal = "none";
+    outputBacktracePanel.dataset.revealTraceId = "";
+    outputBacktracePanel.dataset.revealSource = "";
+    outputBacktracePanel.classList.remove("is-current-segment-output-revealed");
+  }
+
+  if (currentSegmentOutputReveal) {
+    currentSegmentOutputReveal.addEventListener("click", revealCurrentSegmentOutputBacktrace);
   }
 
   function setActiveRequirementTrace(traceId) {
@@ -1331,6 +1382,7 @@
     state.activeRequirementTraceId = nextId;
     state.blockedOutputBacktraceId = "";
     state.outputFocusLiveMode = "";
+    clearCurrentSegmentOutputBacktraceReveal();
     requirementTracePanel.dataset.activeTraceId = nextId || "none";
     if (trustSpine) trustSpine.dataset.activeTraceId = nextId || "none";
     const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));

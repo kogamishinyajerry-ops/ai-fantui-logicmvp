@@ -3275,6 +3275,24 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         for label in first_output_impact_label_list:
             assert label in first_output_impact_title
             assert label in first_output_impact_aria
+        output_reveal = page.locator("#logic-current-segment-output-reveal")
+        expect(output_reveal).to_have_count(1)
+        if len(first_output_impact_label_list) > 2:
+            expect(output_reveal).to_be_visible()
+            expect(output_reveal).to_have_attribute("data-output-impact-reveal", "ready")
+            expect(output_reveal).to_have_attribute("data-hidden-output-count", str(len(first_output_impact_label_list) - 2))
+            expect(output_reveal).to_have_attribute("data-target-trace-id", "row-logic1")
+            expect(output_reveal).to_have_attribute("aria-label", re.compile("输出回溯完整清单"))
+            output_reveal.click()
+            expect(output_backtrace).to_be_visible()
+            expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "active")
+            expect(output_backtrace).to_have_attribute("data-reveal-trace-id", "row-logic1")
+            expect(output_backtrace).to_have_attribute("data-reveal-source", "current-segment-output-summary")
+            expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "none")
+            expect(output_backtrace.locator(".logic-output-backtrace-item.is-related")).not_to_have_count(0)
+            expect(page.locator("#logic-canvas")).to_be_visible()
+        else:
+            expect(output_reveal).to_be_hidden()
         segment_jumps = page.locator("#logic-current-segment-anchor-jumps")
         expect(segment_jumps).to_be_visible()
         expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
@@ -3317,6 +3335,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         second_output_impact_visible_list = [label for label in (output_impact.get_attribute("data-output-impact-visible-labels") or "").split("|") if label]
         assert int(output_impact.get_attribute("data-output-impact-count") or "0") == len(second_output_impact_label_list)
         assert 1 <= len(second_output_impact_visible_list) <= 3
+        if len(second_output_impact_label_list) > 2:
+            expect(output_reveal).to_be_visible()
+            expect(output_reveal).to_have_attribute("data-target-trace-id", "row-logic2")
+        else:
+            expect(output_reveal).to_be_hidden()
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("ETRAC")
         assert second_trace_labels.split("|")[0] in page.locator("#logic-current-segment-output-labels").inner_text()
         assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
