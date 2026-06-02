@@ -1847,6 +1847,12 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   padding: 3px 4px;
   text-align: center;
 }
+.logic-current-segment-anchor-jumps button:focus,
+.logic-current-segment-anchor-jumps button:focus-visible {
+  outline: 1px solid rgba(245, 200, 91, 0.86);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgba(54, 198, 216, 0.24), 0 0 12px rgba(245, 200, 91, 0.18);
+}
 .logic-current-segment-anchor-jumps button[aria-pressed="true"] {
   border-color: rgba(245, 200, 91, 0.70);
   background: rgba(245, 200, 91, 0.16);

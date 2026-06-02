@@ -4045,6 +4045,15 @@ def test_logic_builder_requirement_trace_panel_stays_readable_at_1280(
         expect(output_status).to_have_attribute("data-output-visible-status", "view")
         expect(output_status).to_have_attribute("data-output-visible-target-id", "all")
         expect(output_status).to_have_attribute("data-output-visible-verification-source", "view-action")
+        segment_jumps.locator('[data-current-segment-jump="trace"]').focus()
+        expect(segment_jumps.locator('[data-current-segment-jump="trace"]')).to_be_focused()
+        assert page.evaluate("""() => {
+          const button = document.querySelector('#logic-current-segment-anchor-jumps [data-current-segment-jump="trace"]');
+          if (!button || document.activeElement !== button) return false;
+          const style = window.getComputedStyle(button);
+          return (style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 1)
+            || style.boxShadow !== "none";
+        }""") is True
 
         layout_state = page.evaluate("""() => {
           const byId = (id) => document.querySelector(id);
