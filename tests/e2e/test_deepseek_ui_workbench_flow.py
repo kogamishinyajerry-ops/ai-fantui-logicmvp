@@ -298,6 +298,93 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
     assert layout["ok"] is True, layout
 
 
+def _expect_bridge_token_across_trace_surfaces(page: Any) -> None:
+    bridge_state = page.evaluate(
+        """() => {
+          const token = "当前段到全局矩阵";
+          const surfaces = [
+            {
+              key: "left-chain",
+              element: document.querySelector("#logic-current-segment-trust-chain"),
+              visibleRequired: false,
+              scope: (element) => element.dataset.currentSegmentTrustChainScope || "",
+              expectedScope: "current-segment",
+            },
+            {
+              key: "left-global-review",
+              element: document.querySelector("#logic-current-segment-global-review"),
+              visibleRequired: true,
+              scope: (element) => element.dataset.globalReviewScope || "",
+              expectedScope: "current-segment-to-global",
+            },
+            {
+              key: "canvas-selected",
+              element: document.querySelector("#logic-selected-target-label"),
+              visibleRequired: false,
+              scope: (element) => element.dataset.canvasTrustChainScope || "",
+              expectedScope: "current-segment",
+            },
+            {
+              key: "canvas-source",
+              element: document.querySelector("#logic-canvas-source"),
+              visibleRequired: false,
+              scope: (element) => element.dataset.canvasTrustChainScope || "",
+              expectedScope: "current-segment",
+            },
+            {
+              key: "right-context",
+              element: document.querySelector("#logic-context-requirement-trace"),
+              visibleRequired: false,
+              scope: (element) => element.dataset.contextTrustChainScope || "",
+              expectedScope: "current-segment",
+            },
+            {
+              key: "right-annotation",
+              element: document.querySelector("#logic-annotation-requirement-trace"),
+              visibleRequired: false,
+              scope: (element) => element.dataset.annotationTrustChainScope || "",
+              expectedScope: "current-segment",
+            },
+          ];
+          const checks = surfaces.map(({ key, element, visibleRequired, scope, expectedScope }) => {
+            if (!element) return { key, ok: false, reason: "missing-surface" };
+            const text = element.textContent || "";
+            const title = element.getAttribute("title") || "";
+            const ariaLabel = element.getAttribute("aria-label") || "";
+            const actualScope = scope(element);
+            const visibleHasToken = text.includes(token);
+            const titleHasToken = title.includes(token);
+            const ariaHasToken = ariaLabel.includes(token);
+            const scopeMatch = actualScope === expectedScope;
+            const ok = (!visibleRequired || visibleHasToken)
+              && titleHasToken
+              && ariaHasToken
+              && scopeMatch;
+            return {
+              key,
+              ok,
+              visibleRequired,
+              visibleHasToken,
+              titleHasToken,
+              ariaHasToken,
+              scope: actualScope,
+              expectedScope,
+              scopeMatch,
+              text,
+              title,
+              ariaLabel,
+            };
+          });
+          return {
+            ok: checks.every((check) => check.ok),
+            token,
+            checks,
+          };
+        }"""
+    )
+    assert bridge_state["ok"] is True, bridge_state
+
+
 def _assert_layout_target_uncovered(page: Any, selector: str) -> None:
     assert page.evaluate(
         """(targetSelector) => {
@@ -5053,6 +5140,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_source="canvas-node",
         )
         _assert_inspector_trace_badge_layout(page, "一致")
+        _expect_bridge_token_across_trace_surfaces(page)
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
