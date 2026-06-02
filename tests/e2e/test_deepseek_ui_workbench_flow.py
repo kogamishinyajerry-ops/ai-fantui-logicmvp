@@ -9151,11 +9151,15 @@ def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
         expect(replay_item).to_contain_text("已反馈重算")
         expect(replay_item).to_contain_text("SW1 到 L1")
         expect(replay_item).not_to_contain_text("sw1->logic1")
+        expect(replay_item).to_have_attribute("aria-label", re.compile("已反馈重算.*SW1 到 L1"))
+        expect(replay_item).to_have_attribute("title", re.compile("已反馈重算.*SW1 到 L1"))
         revision_feedback_state = page.evaluate("""() => ({
           feedback: document.querySelector("#logic-streamed-revision-feedback")?.textContent || "",
           replay: document.querySelector("#logic-streamed-history li[data-stream-replay-event]")?.textContent || "",
+          replayAria: document.querySelector("#logic-streamed-history li[data-stream-replay-event]")?.getAttribute("aria-label") || "",
+          replayTitle: document.querySelector("#logic-streamed-history li[data-stream-replay-event]")?.getAttribute("title") || "",
         })""")
-        _assert_no_machine_tokens_in_accessible_state(revision_feedback_state, "feedback", "replay")
+        _assert_no_machine_tokens_in_accessible_state(revision_feedback_state, "feedback", "replay", "replayAria", "replayTitle")
         page.wait_for_function(
             """() => {
               try {

@@ -2446,7 +2446,10 @@
         const docGate = event.requirements_document_edit_requested
           ? (event.requirements_document_edit_authorized ? " · 需求文档候选补丁已授权" : " · 需求文档补丁待授权")
           : "";
-        li.textContent = `${decision} #${event.decision_index || "-"} · ${target} · ${streamedGraphDiffSummary(event.graph_diff)}${recalculation}${sourceExcerpt}${docGate}${patchHash}`;
+        const replayLineText = `${decision} #${event.decision_index || "-"} · ${target} · ${streamedGraphDiffSummary(event.graph_diff)}${recalculation}${sourceExcerpt}${docGate}${patchHash}`;
+        li.textContent = replayLineText;
+        li.title = replayLineText;
+        li.setAttribute("aria-label", replayLineText);
         streamedAuthoringHistory.appendChild(li);
       });
       return;
@@ -2463,7 +2466,10 @@
       const docGate = item.requirements_document_edit_requested
         ? (item.requirements_document_edit_authorized ? " · 需求文档候选补丁已授权" : " · 需求文档补丁待授权")
         : "";
-      li.textContent = `${decision} · ${target}${docGate}`;
+      const historyLineText = `${decision} · ${target}${docGate}`;
+      li.textContent = historyLineText;
+      li.title = historyLineText;
+      li.setAttribute("aria-label", historyLineText);
       streamedAuthoringHistory.appendChild(li);
     }
   }
