@@ -6005,12 +6005,13 @@
     payload = state.interpretationPayload;
     if (batchInterpretationPanel) batchInterpretationPanel.hidden = false;
     if (batchSummary) {
-      batchSummary.textContent = payload.annotation_batch_summary_zh
+      const summaryText = payload.annotation_batch_summary_zh
         || payload.understanding_zh
         || "AI 已归并本次标注意见。";
+      batchSummary.textContent = readableLogicReferenceText(summaryText);
     }
     if (batchConflictSummary) {
-      batchConflictSummary.textContent = payload.conflict_summary_zh || "未发现冲突。";
+      batchConflictSummary.textContent = readableLogicReferenceText(payload.conflict_summary_zh || "未发现冲突。");
     }
     if (batchProposedChanges) {
       batchProposedChanges.innerHTML = "";
@@ -6026,7 +6027,7 @@
       }
     }
     if (batchConfirmationQuestion) {
-      batchConfirmationQuestion.textContent = payload.confirmation_question_zh || "请确认是否按本次批注生成修订版逻辑图？";
+      batchConfirmationQuestion.textContent = readableLogicReferenceText(payload.confirmation_question_zh || "请确认是否按本次批注生成修订版逻辑图？");
     }
     recordChangeInterpretation(
       payload,
@@ -6175,9 +6176,9 @@
     state.interpretationPayload = payload;
     interpretationBox.hidden = false;
     interpretationState.textContent = "需要确认";
-    interpretationSummary.textContent = payload.understanding_zh || "系统已理解修改意见。";
-    interpretationMatch.textContent = payload.requirements_match_zh || "";
-    interpretationQuestion.textContent = payload.confirmation_question_zh || "请确认是否按此意图更新图纸？";
+    interpretationSummary.textContent = readableLogicReferenceText(payload.understanding_zh || "系统已理解修改意见。");
+    interpretationMatch.textContent = readableLogicReferenceText(payload.requirements_match_zh || "");
+    interpretationQuestion.textContent = readableLogicReferenceText(payload.confirmation_question_zh || "请确认是否按此意图更新图纸？");
     proposedChanges.innerHTML = "";
     const changes = payload.proposed_changes || [];
     if (!changes.length) {
