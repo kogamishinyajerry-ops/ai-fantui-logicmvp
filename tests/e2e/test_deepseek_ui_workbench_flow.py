@@ -3238,6 +3238,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_coverage).to_contain_text("当前")
         expect(output_coverage).to_contain_text("TLS")
         first_output_coverage_text = output_coverage.inner_text()
+        assert_output_backtrace_list_focus_ring = """() => {
+          const list = document.querySelector("#logic-output-backtrace-list");
+          if (!list || document.activeElement !== list) return false;
+          const style = window.getComputedStyle(list);
+          return style.outlineStyle !== "none"
+            && parseFloat(style.outlineWidth) >= 1
+            && style.outlineColor !== "rgba(0, 0, 0, 0)"
+            && style.boxShadow !== "none";
+        }"""
         segment_card = page.locator("#logic-current-segment-evidence")
         expect(segment_card).to_be_visible()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
@@ -3294,6 +3303,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "none")
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(page.locator("#logic-output-backtrace-list")).to_be_focused()
+            assert page.evaluate(assert_output_backtrace_list_focus_ring) is True
             expect(output_backtrace.locator(".logic-output-backtrace-item.is-related")).not_to_have_count(0)
             expect(page.locator("#logic-canvas")).to_be_visible()
             output_backtrace.locator('[data-output-backtrace-output="tls"]').click()
@@ -3326,6 +3336,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "none")
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(page.locator("#logic-output-backtrace-list")).to_be_focused()
+            assert page.evaluate(assert_output_backtrace_list_focus_ring) is True
         segment_jumps.locator('[data-current-segment-jump="trace"]').click()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "all")
         expect(segment_jumps.locator('[data-current-segment-jump="trace"]')).to_have_attribute("aria-pressed", "true")
@@ -3339,6 +3350,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-reveal-trace-id", "row-logic1")
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(page.locator("#logic-output-backtrace-list")).to_be_focused()
+            assert page.evaluate(assert_output_backtrace_list_focus_ring) is True
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
         segment_jumps.locator('[data-current-segment-jump="all"]').click()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "all")
