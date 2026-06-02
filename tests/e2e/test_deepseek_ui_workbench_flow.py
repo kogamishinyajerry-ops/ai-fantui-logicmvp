@@ -979,6 +979,9 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
               && target.dataset.canvasOriginalTextMatchToken === (evidence.dataset.currentSegmentTextMatchToken || "")
               && (target.getAttribute("aria-label") || "").includes("原文命中")
               && (target.getAttribute("title") || "").includes("原文命中"));
+          const staleCanvasTargets = Array.from(document.querySelectorAll(".logic-circuit-node, .logic-circuit-wire"))
+            .filter((target) => !targetMatchesActive(target)
+              && (target.dataset.canvasOriginalTextMatch || target.dataset.canvasOriginalTextMatchToken));
           const checks = [
             { key: "identity-highlighted", ok: identityLoop.dataset.highlightedTraceId === activeId, actual: identityLoop.dataset.highlightedTraceId || "", expected: activeId },
             { key: "identity-current", ok: identityLoop.dataset.currentSegmentId === activeId, actual: identityLoop.dataset.currentSegmentId || "", expected: activeId },
@@ -1000,6 +1003,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "canvas-selected-original-text-match-a11y", ok: (selected.getAttribute("aria-label") || "").includes("原文命中") && (selected.getAttribute("title") || "").includes("原文命中"), actual: `${selected.getAttribute("aria-label") || ""} | ${selected.getAttribute("title") || ""}`, expected: "原文命中" },
             { key: "canvas-source-original-text-match-a11y", ok: (source.getAttribute("aria-label") || "").includes("原文命中") && (source.getAttribute("title") || "").includes("原文命中"), actual: `${source.getAttribute("aria-label") || ""} | ${source.getAttribute("title") || ""}`, expected: "原文命中" },
             { key: "matched-canvas-target-original-text-match", ok: matchedCanvasTargetsCarryTextMatch, actual: JSON.stringify(matchedCanvasTargets.map((target) => ({ mode: target.dataset.canvasOriginalTextMatch || "", token: target.dataset.canvasOriginalTextMatchToken || "", aria: target.getAttribute("aria-label") || "", title: target.getAttribute("title") || "" }))), expected: quoteSummaryMatchMode },
+            { key: "stale-canvas-target-original-text-match", ok: staleCanvasTargets.length === 0, actual: JSON.stringify(staleCanvasTargets.map((target) => ({ id: target.dataset.demoNodeId || target.dataset.wireId || target.dataset.nodeId || "", mode: target.dataset.canvasOriginalTextMatch || "", token: target.dataset.canvasOriginalTextMatchToken || "" }))), expected: "no stale canvas target text-match data" },
             { key: "context-original-text-match", ok: context.dataset.contextOriginalTextMatch === quoteSummaryMatchMode, actual: context.dataset.contextOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "annotation-original-text-match", ok: annotation.dataset.annotationOriginalTextMatch === quoteSummaryMatchMode, actual: annotation.dataset.annotationOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "context-original-text-match-token", ok: context.dataset.contextOriginalTextMatchToken === evidence.dataset.currentSegmentTextMatchToken, actual: context.dataset.contextOriginalTextMatchToken || "", expected: evidence.dataset.currentSegmentTextMatchToken || "" },
@@ -1042,6 +1046,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             nodeMatches,
             wireMatches,
             matchedCanvasTargetCount: matchedCanvasTargets.length,
+            staleCanvasTargetCount: staleCanvasTargets.length,
             checks,
           };
         }"""
