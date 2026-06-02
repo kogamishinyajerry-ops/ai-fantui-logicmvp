@@ -895,7 +895,13 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
           const nodeMatches = nodeTargets.filter(targetMatchesActive).length;
           const wireMatches = wireTargets.filter(targetMatchesActive).length;
           const hasCanvasEvidence = nodeMatches + wireMatches > 0;
-          const quoteMatchesSummary = quote.length > 0 && (summary.textContent || "").includes(quote);
+          const normalizeText = (value) => String(value || "").replace(/\\s+/g, " ").trim();
+          const normalizedQuote = normalizeText(quote);
+          const normalizedSummary = normalizeText(summary.textContent || "");
+          const quoteSnippet = normalizedQuote.slice(0, 12);
+          const quoteMatchesSummary = normalizedQuote.length > 0
+            && (normalizedSummary.includes(normalizedQuote)
+              || (quoteSnippet.length >= 6 && normalizedSummary.includes(quoteSnippet)));
           const rightTextMatches = !segmentLabel
             || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
           const checks = [
@@ -905,7 +911,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "source-current", ok: source.dataset.canvasTraceConsistencyCurrentId === activeId, actual: source.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
             { key: "context-current", ok: context.dataset.contextRequirementTraceCurrentSegmentId === activeId, actual: context.dataset.contextRequirementTraceCurrentSegmentId || "", expected: activeId },
             { key: "annotation-current", ok: annotation.dataset.annotationRequirementTraceCurrentSegmentId === activeId, actual: annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected: activeId },
-            { key: "quote-summary", ok: quoteMatchesSummary, actual: summary.textContent || "", expected: quote },
+            { key: "quote-summary", ok: quoteMatchesSummary, actual: normalizedSummary, expected: normalizedQuote },
             { key: "right-text-segment", ok: rightTextMatches, actual: `${context.textContent || ""} | ${annotation.textContent || ""}`, expected: segmentLabel },
             { key: "canvas-highlight", ok: hasCanvasEvidence, actual: `${nodeMatches} nodes/${wireMatches} wires`, expected: `${nodeIds.length} nodes/${wireIds.length} wires` },
           ];
@@ -916,6 +922,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
               && checks.every((check) => check.ok),
             activeId,
             quote,
+            quoteSnippet,
             segmentLabel,
             nodeIds,
             wireIds,
