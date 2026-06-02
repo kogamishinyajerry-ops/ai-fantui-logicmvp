@@ -799,20 +799,23 @@ def _expect_current_segment_identity_loop_state(
     current_id: str,
     selected_id: str,
     selected_source: str,
-    source_anchor_id: str,
+    source_anchor_id: str | None = None,
 ) -> None:
+    expected_source_anchor_id = source_anchor_id
+    if expected_source_anchor_id is None:
+        expected_source_anchor_id = page.locator("#logic-current-segment-trust-chain").get_attribute("data-source-anchor-id") or ""
     loop = page.locator("#logic-current-segment-identity-loop")
     expect(loop).to_be_visible()
     expect(loop).to_have_attribute("data-identity-loop-state", state)
     expect(loop).to_have_attribute("data-current-segment-id", current_id)
     expect(loop).to_have_attribute("data-selected-canvas-trace-id", selected_id)
     expect(loop).to_have_attribute("data-selected-source", selected_source)
-    expect(loop).to_have_attribute("data-source-anchor-id", source_anchor_id)
+    expect(loop).to_have_attribute("data-source-anchor-id", expected_source_anchor_id)
     expect(loop).to_have_attribute("data-identity-loop-scope", "current-segment")
     expect(loop).to_contain_text("身份闭环")
     expect(loop).to_contain_text(current_id)
     expect(loop).to_contain_text(selected_id)
-    expect(loop).to_contain_text(source_anchor_id)
+    expect(loop).to_contain_text(expected_source_anchor_id)
 
 
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
@@ -5450,6 +5453,13 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             alignable=True,
             align_target_id="row-logic2",
             align_source="canvas-node",
+        )
+        _expect_current_segment_identity_loop_state(
+            page,
+            state="diverged",
+            current_id="row-logic3",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
         )
         _expect_canvas_selected_trace_state_badge(
             page,
