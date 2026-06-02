@@ -858,15 +858,8 @@
   }
 
   function selectRequirementTraceForCanvasTarget(element, activationSource) {
-    const targetRole = element && element.dataset ? (element.dataset.circuitRole || "") : "";
-    const targetNodeId = element && element.dataset
-      ? (element.dataset.demoNodeId || element.dataset.nodeId || element.dataset.technicalId || "")
-      : "";
-    if (activationSource === "canvas-node" && targetRole !== "logic" && !/^logic\d+$/i.test(targetNodeId)) return false;
-    if (activationSource === "canvas-wire") {
-      const targetWireNodeId = element && element.dataset ? (element.dataset.target || "") : "";
-      if (!/^logic\d+$/i.test(targetWireNodeId)) return false;
-    }
+    if ((activationSource === "canvas-node" || activationSource === "canvas-wire")
+      && (!element || !element.dataset || element.dataset.canvasTraceSelectable !== "true")) return false;
     const trace = requirementTraceForCanvasTarget(element);
     if (!trace || !(trace.id || trace.sourceId)) return false;
     setActiveRequirementTrace(trace.id || trace.sourceId, activationSource || "canvas");
@@ -4424,6 +4417,15 @@
     applyCircuitProvenanceFilter();
   }
 
+  function canvasNodeTraceSelectable(node, role) {
+    const nodeId = node && (node.id || node.linked_node_id || "");
+    return role === "logic" || /^logic\d+$/i.test(nodeId || "");
+  }
+
+  function canvasWireTraceSelectable(wire) {
+    return /^logic\d+$/i.test((wire && wire.target) || "");
+  }
+
   function renderCircuitWire(wire, provenanceById) {
     const route = Array.isArray(wire.route) ? wire.route : [];
     if (route.length < 2) return;
@@ -4435,6 +4437,7 @@
     const faultWire = wire.source === "reverser_inhibited";
     const readableLane = circuitReadableLaneForWire(wire);
     const provenanceKind = circuitProvenanceKindForWire(wire, provenanceById);
+    const isTraceSelectable = canvasWireTraceSelectable(wire);
     const baseWireLabel = wire.label || `${wire.source || ""} → ${wire.target || ""}`;
     const baseWireTitle = `${baseWireLabel} · 来源：${circuitProvenanceLabel(provenanceKind)}`;
     const polyline = createSvgElement("polyline", {
@@ -4446,6 +4449,7 @@
       "data-state": wireState,
       "data-fault": faultWire ? "true" : "false",
       "data-readable-lane": readableLane || null,
+      "data-canvas-trace-selectable": isTraceSelectable ? "true" : null,
       "data-provenance-kind": provenanceKind,
       "data-provenance-label": circuitProvenanceLabel(provenanceKind),
       "data-base-title": baseWireTitle,
@@ -4489,6 +4493,7 @@
     const technicalLabel = circuitTechnicalLabel(node);
     const readableLane = circuitReadableLaneForNode(node);
     const provenanceKind = circuitProvenanceKindForNode(node);
+    const isTraceSelectable = canvasNodeTraceSelectable(node, role);
     const baseNodeAriaLabel = `${displayLabel}${technicalLabel ? `，${technicalLabel}` : ""}`;
     const baseNodeTitle = circuitNodeHoverTitle(node);
     const group = createSvgElement("g", {
@@ -4499,6 +4504,7 @@
       "data-state": nodeState,
       "data-raw-state": node.state || "idle",
       "data-readable-lane": readableLane || null,
+      "data-canvas-trace-selectable": isTraceSelectable ? "true" : null,
       "data-provenance-kind": provenanceKind,
       "data-provenance-label": circuitProvenanceLabel(provenanceKind),
       "data-display-label": displayLabel,

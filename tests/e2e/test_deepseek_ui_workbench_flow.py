@@ -3872,6 +3872,10 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator('[data-demo-node-id="logic3"]')).to_have_class(re.compile("is-requirement-trace-match"))
         expect(segment_card).to_have_attribute("data-current-segment-selection-label", re.compile("段落"))
         assert segment_source_cue.inner_text() == (segment_card.get_attribute("data-current-segment-selection-label") or "")
+        expect(page.locator('[data-demo-node-id="logic2"]')).to_have_attribute("data-canvas-trace-selectable", "true")
+        expect(page.locator('[data-wire-id="sw1->logic1"]')).to_have_attribute("data-canvas-trace-selectable", "true")
+        expect(page.locator('[data-demo-node-id="etrac_540v"]')).not_to_have_attribute("data-canvas-trace-selectable", "true")
+        expect(page.locator('[data-wire-id="logic2->etrac_540v"]')).not_to_have_attribute("data-canvas-trace-selectable", "true")
         page.locator('[data-wire-id="logic2->etrac_540v"]').evaluate(
             """(wire) => wire.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))"""
         )

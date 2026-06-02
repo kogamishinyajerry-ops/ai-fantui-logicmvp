@@ -543,6 +543,22 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   stroke-width: 3.2;
 }
 
+.logic-circuit-node[data-canvas-trace-selectable="true"],
+.logic-circuit-wire[data-canvas-trace-selectable="true"] {
+  cursor: pointer;
+}
+
+.logic-circuit-node[data-canvas-trace-selectable="true"]:focus-visible .logic-circuit-node-box,
+.logic-circuit-node[data-canvas-trace-selectable="true"]:focus-visible .logic-circuit-gate-box {
+  stroke: #2dd4bf;
+  stroke-width: 2.4;
+}
+
+.logic-circuit-wire[data-canvas-trace-selectable="true"]:focus-visible {
+  stroke: #2dd4bf;
+  stroke-width: 3;
+}
+
 .logic-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
