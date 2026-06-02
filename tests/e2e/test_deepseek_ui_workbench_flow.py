@@ -8210,11 +8210,15 @@ def test_deepseek_workflow_streams_chunks_before_model_final_response(
         _show_logic_builder_workbench(page)
         expect(page.locator("#logic-stream-chunks")).to_be_visible()
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="load"]')).to_contain_text("已读取需求")
+        expect(page.locator('#logic-stream-chunks [data-stream-chunk="load"]')).to_have_attribute("aria-label", re.compile("已读取需求"))
+        expect(page.locator('#logic-stream-chunks [data-stream-chunk="load"]')).to_have_attribute("title", re.compile("已读取需求"))
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="model"]')).to_contain_text("正在生成图纸")
+        expect(page.locator('#logic-stream-chunks [data-stream-chunk="model"]')).to_have_attribute("aria-label", re.compile("正在生成图纸"))
         expect(page.locator("#logic-step-model")).to_have_attribute("data-state", "active")
         assert logic_routes
         _fulfill_json(logic_routes.pop(0), _circuit_view_drawing())
         expect(page.locator('#logic-stream-chunks [data-stream-chunk="render"]')).to_contain_text("渲染电路")
+        expect(page.locator('#logic-stream-chunks [data-stream-chunk="render"]')).to_have_attribute("title", re.compile("渲染电路"))
 
         fault_routes: list[Any] = []
         page.route("**/api/requirements-intake/prepare-fault-injection", lambda route: fault_routes.append(route))

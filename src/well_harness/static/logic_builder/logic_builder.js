@@ -683,7 +683,10 @@
       streamChunks.appendChild(chunk);
     }
     chunk.dataset.state = stateName || "active";
-    chunk.textContent = text || name;
+    const chunkText = String(text || name).replace(/\s+/g, " ").trim();
+    chunk.textContent = chunkText;
+    chunk.title = chunkText;
+    chunk.setAttribute("aria-label", chunkText);
   }
 
   function syncStreamChunks(activeStep) {
