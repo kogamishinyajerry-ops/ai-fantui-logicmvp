@@ -641,6 +641,90 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
     assert mirror_state["ok"] is True, mirror_state
 
 
+def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
+    identity_state = page.evaluate(
+        """() => {
+          const consistency = document.querySelector("#logic-current-segment-consistency");
+          const card = document.querySelector("#logic-current-segment-evidence");
+          const chain = document.querySelector("#logic-current-segment-trust-chain");
+          const globalReview = document.querySelector("#logic-current-segment-global-review");
+          const selected = document.querySelector("#logic-selected-target-label");
+          const source = document.querySelector("#logic-canvas-source");
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!consistency || !card || !chain || !globalReview || !selected || !source || !context || !annotation) {
+            return { ok: false, reason: "missing-surface" };
+          }
+          const expected = {
+            state: consistency.dataset.traceConsistencyState || "",
+            currentId: consistency.dataset.traceConsistencyCurrentSegmentId || consistency.dataset.traceConsistencyCurrentId || "",
+            selectedId: consistency.dataset.traceConsistencySelectedCanvasTraceId || consistency.dataset.traceConsistencySelectedId || "",
+            selectedSource: consistency.dataset.traceConsistencySelectedSource || "",
+          };
+          const check = (key, actual, expectedValue) => ({
+            key,
+            actual,
+            expected: expectedValue,
+            ok: actual === expectedValue,
+          });
+          const stateChecks = [
+            check("left-state", consistency.dataset.traceConsistencyState || "", expected.state),
+            check("canvas-selected-state", selected.dataset.canvasTraceConsistencyState || "", expected.state),
+            check("canvas-source-state", source.dataset.canvasTraceConsistencyState || "", expected.state),
+            check("right-context-state", context.dataset.contextTraceConsistencyState || "", expected.state),
+            check("right-annotation-state", annotation.dataset.annotationTraceConsistencyState || "", expected.state),
+          ];
+          const currentChecks = [
+            check("left-current-id", consistency.dataset.traceConsistencyCurrentId || "", expected.currentId),
+            check("left-current-segment-id", consistency.dataset.traceConsistencyCurrentSegmentId || "", expected.currentId),
+            check("left-card-current-segment-id", card.dataset.currentSegmentId || "", expected.currentId),
+            check("left-chain-trace-id", chain.dataset.currentSegmentTraceId || "", expected.currentId),
+            check("left-global-review-current-segment-id", globalReview.dataset.currentSegmentId || "", expected.currentId),
+            check("canvas-selected-current-id", selected.dataset.canvasTraceConsistencyCurrentId || "", expected.currentId),
+            check("canvas-source-current-id", source.dataset.canvasTraceConsistencyCurrentId || "", expected.currentId),
+            check("right-context-current-segment-id", context.dataset.contextTraceConsistencyCurrentSegmentId || "", expected.currentId),
+            check("right-context-requirement-current-segment-id", context.dataset.contextRequirementTraceCurrentSegmentId || "", expected.currentId),
+            check("right-annotation-current-segment-id", annotation.dataset.annotationTraceConsistencyCurrentSegmentId || "", expected.currentId),
+            check("right-annotation-requirement-current-segment-id", annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected.currentId),
+          ];
+          const selectedChecks = [
+            check("left-selected-id", consistency.dataset.traceConsistencySelectedId || "", expected.selectedId),
+            check("left-selected-canvas-trace-id", consistency.dataset.traceConsistencySelectedCanvasTraceId || "", expected.selectedId),
+            check("canvas-selected-selected-id", selected.dataset.canvasTraceConsistencySelectedId || "", expected.selectedId),
+            check("canvas-source-selected-id", source.dataset.canvasTraceConsistencySelectedId || "", expected.selectedId),
+            check("right-context-selected-canvas-trace-id", context.dataset.contextTraceConsistencySelectedCanvasTraceId || "", expected.selectedId),
+            check("right-context-requirement-selected-canvas-trace-id", context.dataset.contextRequirementTraceSelectedCanvasTraceId || "", expected.selectedId),
+            check("right-annotation-selected-canvas-trace-id", annotation.dataset.annotationTraceConsistencySelectedCanvasTraceId || "", expected.selectedId),
+            check("right-annotation-requirement-selected-canvas-trace-id", annotation.dataset.annotationRequirementTraceSelectedCanvasTraceId || "", expected.selectedId),
+          ];
+          const sourceChecks = [
+            check("left-selected-source", consistency.dataset.traceConsistencySelectedSource || "", expected.selectedSource),
+            check("left-card-selection-source", card.dataset.currentSegmentSelectionSource || "", expected.selectedSource),
+            check("canvas-selected-selected-source", selected.dataset.canvasTraceConsistencySelectedSource || "", expected.selectedSource),
+            check("canvas-source-selected-source", source.dataset.canvasTraceConsistencySelectedSource || "", expected.selectedSource),
+            check("right-context-requirement-selected-source", context.dataset.contextRequirementTraceSelectedSource || "", expected.selectedSource),
+            check("right-annotation-requirement-selected-source", annotation.dataset.annotationRequirementTraceSelectedSource || "", expected.selectedSource),
+          ];
+          const checks = [
+            ...stateChecks,
+            ...currentChecks,
+            ...selectedChecks,
+            ...sourceChecks,
+          ];
+          return {
+            ok: expected.state.length > 0
+              && expected.currentId.length > 0
+              && expected.selectedId.length > 0
+              && expected.selectedSource.length > 0
+              && checks.every((item) => item.ok),
+            expected,
+            checks,
+          };
+        }"""
+    )
+    assert identity_state["ok"] is True, identity_state
+
+
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
     badge_state = page.evaluate(
         """(label) => {
@@ -5245,6 +5329,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         _assert_inspector_trace_badge_layout(page, "一致")
         _expect_bridge_token_across_trace_surfaces(page)
         _expect_global_review_counts_across_trace_surfaces(page)
+        _expect_trace_identity_coherence_across_surfaces(page)
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
