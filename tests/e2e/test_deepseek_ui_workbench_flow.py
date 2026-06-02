@@ -649,15 +649,39 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const chain = document.querySelector("#logic-current-segment-trust-chain");
           const globalReview = document.querySelector("#logic-current-segment-global-review");
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
+          const jumps = document.querySelector("#logic-current-segment-anchor-jumps");
           const selected = document.querySelector("#logic-selected-target-label");
           const source = document.querySelector("#logic-canvas-source");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!consistency || !card || !chain || !globalReview || !identityLoop || !selected || !source || !context || !annotation) {
+          if (!consistency || !card || !chain || !globalReview || !identityLoop || !jumps || !selected || !source || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
+          const cardBox = card.getBoundingClientRect();
           const identityBox = identityLoop.getBoundingClientRect();
+          const jumpsBox = jumps.getBoundingClientRect();
           const identityText = identityLoop.textContent || "";
+          const identityChildren = Array.from(identityLoop.querySelectorAll("span, strong, small"));
+          const identityChildrenClip = identityChildren.length === 6 && identityChildren.every((child) => {
+            const childBox = child.getBoundingClientRect();
+            const style = window.getComputedStyle(child);
+            return childBox.width > 0
+              && childBox.height > 0
+              && childBox.left >= identityBox.left - 1
+              && childBox.right <= identityBox.right + 1
+              && style.whiteSpace === "nowrap"
+              && style.overflowX === "hidden"
+              && style.textOverflow === "ellipsis";
+          });
+          const identityInsideCard = identityBox.left >= cardBox.left - 1
+            && identityBox.right <= cardBox.right + 1
+            && identityBox.top >= cardBox.top - 1
+            && identityBox.bottom <= cardBox.bottom + 1;
+          const identityDoesNotCoverJumps = !(identityBox.left < jumpsBox.right
+            && identityBox.right > jumpsBox.left
+            && identityBox.top < jumpsBox.bottom
+            && identityBox.bottom > jumpsBox.top);
+          const identityCompact = identityBox.height > 0 && identityBox.height <= 28;
           const sourceAnchorId = chain.dataset.sourceAnchorId || "";
           const expected = {
             state: consistency.dataset.traceConsistencyState || "",
@@ -734,6 +758,10 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
               && identityText.includes("选中")
               && identityText.includes("来源")
               && identityText.includes("锚点")
+              && identityChildrenClip
+              && identityInsideCard
+              && identityDoesNotCoverJumps
+              && identityCompact
               && checks.every((item) => item.ok),
             expected,
             sourceAnchorId,
@@ -741,6 +769,21 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
             identityBox: {
               width: identityBox.width,
               height: identityBox.height,
+            },
+            identityLayout: {
+              childCount: identityChildren.length,
+              childrenClip: identityChildrenClip,
+              insideCard: identityInsideCard,
+              doesNotCoverJumps: identityDoesNotCoverJumps,
+              compact: identityCompact,
+              card: {
+                width: cardBox.width,
+                height: cardBox.height,
+              },
+              jumps: {
+                top: jumpsBox.top,
+                bottom: jumpsBox.bottom,
+              },
             },
             checks,
           };
