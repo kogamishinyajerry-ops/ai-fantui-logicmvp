@@ -457,6 +457,7 @@ def _expect_canvas_selected_trace_state_badge(
           const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
           const ok = badge.includes(label)
             && tail.includes("段链")
+            && tail.includes("全局")
             && chainAccessible
             && box.width > 0
             && box.height > 0
