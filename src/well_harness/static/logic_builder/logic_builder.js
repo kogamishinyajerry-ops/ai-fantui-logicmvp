@@ -997,6 +997,7 @@
       element.dataset[`${prefix}TrustChainOutputCount`] = snapshot.outputCount;
       element.dataset[`${prefix}TrustChainReviewAnchorCount`] = snapshot.reviewAnchorCount;
       element.dataset[`${prefix}TrustChainSurface`] = "current-segment";
+      element.dataset[`${prefix}TrustChainScope`] = "current-segment";
       element.setAttribute("aria-label", summary);
       element.setAttribute("title", summary);
     });

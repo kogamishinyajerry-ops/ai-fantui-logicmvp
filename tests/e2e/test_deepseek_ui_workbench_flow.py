@@ -302,6 +302,7 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
             outputCount: element.dataset[`${prefix}TrustChainOutputCount`] || "",
             reviewAnchorCount: element.dataset[`${prefix}TrustChainReviewAnchorCount`] || "",
             surface: element.dataset[`${prefix}TrustChainSurface`] || "",
+            scope: element.dataset[`${prefix}TrustChainScope`] || "",
           });
           const contextMirror = target(context, "context");
           const annotationMirror = target(annotation, "annotation");
@@ -312,7 +313,8 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
             && mirror.wireCount === left.wireCount
             && mirror.outputCount === left.outputCount
             && mirror.reviewAnchorCount === left.reviewAnchorCount
-            && mirror.surface === "current-segment";
+            && mirror.surface === "current-segment"
+            && mirror.scope === "current-segment";
           const expectedMatches = !expectedTraceId || left.traceId === expectedTraceId;
           return {
             ok: expectedMatches && same(contextMirror) && same(annotationMirror),
@@ -4788,6 +4790,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(context_trace).to_have_attribute("data-context-trust-chain-output-count", re.compile(r"^[1-9]"))
         expect(context_trace).to_have_attribute("data-context-trust-chain-review-anchor-count", "10")
         expect(context_trace).to_have_attribute("data-context-trust-chain-surface", "current-segment")
+        expect(context_trace).to_have_attribute("data-context-trust-chain-scope", "current-segment")
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "matched")
         _expect_requirement_trace_audit(
             annotation_trace,
@@ -4804,6 +4807,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-output-count", re.compile(r"^[1-9]"))
         expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-review-anchor-count", "10")
         expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-surface", "current-segment")
+        expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-scope", "current-segment")
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
         assert page.evaluate("""() => {
           const context = document.querySelector("#logic-context-requirement-trace");
