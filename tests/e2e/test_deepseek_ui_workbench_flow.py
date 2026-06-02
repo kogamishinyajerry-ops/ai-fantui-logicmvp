@@ -8789,7 +8789,7 @@ def test_logic_builder_streamed_candidate_copy_uses_readable_targets(
                             "proposal_status": "candidate_awaiting_confirmation",
                             "requires_user_confirmation": True,
                             "source_excerpt": "按 sw1->logic1 建立 logic1 输入说明。",
-                            "source_anchor_ids": ["logic1"],
+                            "source_anchor_ids": ["logic1", "sw1"],
                             "upstream": ["sw1"],
                             "downstream": ["logic1"],
                             "interpreted_logic": "候选会补充 sw1->logic1 与 logic1 输入解释。",
@@ -8856,7 +8856,7 @@ def test_logic_builder_streamed_candidate_copy_uses_readable_targets(
         expect(page.locator("#logic-streamed-explanation")).to_contain_text("L1")
         expect(page.locator("#logic-streamed-queue-next")).to_have_text("下一连线 · SW1 到 L1")
         expect(page.locator("#logic-streamed-source")).to_contain_text("SW1 到 L1")
-        expect(page.locator("#logic-streamed-source")).to_contain_text("逻辑锚点 01")
+        expect(page.locator("#logic-streamed-source")).to_contain_text("逻辑锚点 01 / SW1")
         expect(page.locator("#logic-streamed-neighborhood")).to_contain_text("上游：SW1")
         expect(page.locator("#logic-streamed-neighborhood")).to_contain_text("下游：L1")
         expect(page.locator("#logic-streamed-history")).to_contain_text("SW1 到 L1")

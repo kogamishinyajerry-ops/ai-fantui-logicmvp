@@ -492,7 +492,7 @@
     if (!Array.isArray(anchors) || anchors.length === 0) return "候选假设";
     return anchors
       .slice(0, 2)
-      .map((anchor) => `${readableSourceAnchorIdentity(anchor.id, anchor.id || "DOCX")} · ${anchor.kind || "正文条件"}`)
+      .map((anchor) => `${readableSourceAnchorListIdentity(anchor.id, anchor.id || "DOCX")} · ${anchor.kind || "正文条件"}`)
       .join(" / ");
   }
 
@@ -729,6 +729,15 @@
     const match = raw.match(/^logic(\d+)$/);
     if (match) return `逻辑锚点 ${String(match[1]).padStart(2, "0")}`;
     return fallback;
+  }
+
+  function readableSourceAnchorListIdentity(id, fallback = "等待锚点") {
+    const raw = String(id || "").trim();
+    if (!raw || raw === "none" || raw === "waiting") return fallback;
+    return readableSourceAnchorIdentity(raw, "")
+      || readableTraceIdentity(raw, "")
+      || annotationEndpointDisplayLabel(raw, raw)
+      || fallback;
   }
 
   function sourceAnchorText(anchor) {
@@ -2602,7 +2611,7 @@
     }
     if (streamedAuthoringSource) {
       const anchorIds = Array.isArray(proposal.source_anchor_ids) && proposal.source_anchor_ids.length
-        ? ` · ${proposal.source_anchor_ids.map((id) => readableSourceAnchorIdentity(id, id)).join(" / ")}`
+        ? ` · ${proposal.source_anchor_ids.map((id) => readableSourceAnchorListIdentity(id, id)).join(" / ")}`
         : "";
       streamedAuthoringSource.textContent = `${readableLogicReferenceText(proposal.source_excerpt || "来源片段待补齐")}${anchorIds}`;
       streamedAuthoringSource.dataset.sourceHighlight = "active";
