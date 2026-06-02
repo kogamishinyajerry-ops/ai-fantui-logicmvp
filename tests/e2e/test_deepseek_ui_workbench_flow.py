@@ -3751,6 +3751,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         trace_panel_box = trace_panel.bounding_box()
         trace_list_box = page.locator("#logic-requirement-trace-list").bounding_box()
         output_backtrace_box = output_backtrace.bounding_box()
+        output_visible_status_box = output_visible_status.bounding_box()
+        output_backtrace_list_box = page.locator("#logic-output-backtrace-list").bounding_box()
         segment_card_box = segment_card.bounding_box()
         review_matrix_box = review_matrix.bounding_box()
         canvas_box = page.locator("#logic-canvas").bounding_box()
@@ -3759,12 +3761,43 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert trace_panel_box is not None
         assert trace_list_box is not None
         assert output_backtrace_box is not None
+        assert output_visible_status_box is not None
+        assert output_backtrace_list_box is not None
         assert segment_card_box is not None
         assert review_matrix_box is not None
         assert canvas_box is not None
         assert toolbar_box is not None
         assert bottom_strip_box is not None
         assert trace_list_box["height"] >= 100
+        assert output_visible_status_box["width"] <= output_backtrace_box["width"]
+        assert output_visible_status_box["height"] <= 24
+        assert output_backtrace_list_box["height"] >= 16
+        assert output_backtrace_box["y"] - 4 <= output_visible_status_box["y"]
+        assert output_backtrace_box["y"] - 4 <= output_backtrace_list_box["y"]
+        assert abs((output_visible_status_box["y"] + output_visible_status_box["height"]) - output_backtrace_list_box["y"]) <= 28
+        assert output_visible_status_box["x"] >= output_backtrace_box["x"] - 1
+        assert output_visible_status_box["x"] + output_visible_status_box["width"] <= output_backtrace_box["x"] + output_backtrace_box["width"] + 1
+        assert page.evaluate("""() => {
+          const status = document.querySelector("#logic-output-visible-status");
+          const canvas = document.querySelector("#logic-canvas");
+          const list = document.querySelector("#logic-output-backtrace-list");
+          if (!status || !canvas || !list) return false;
+          const overlap = (a, b) => {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+            return ar.left < br.right && ar.right > br.left && ar.top < br.bottom && ar.bottom > br.top;
+          };
+          return !overlap(status, canvas) && !overlap(status, list);
+        }""") is True
+        assert page.evaluate("""() => {
+          const status = document.querySelector("#logic-output-visible-status");
+          if (!status) return false;
+          const style = window.getComputedStyle(status);
+          return style.whiteSpace === "nowrap"
+            && style.overflowX === "hidden"
+            && style.textOverflow === "ellipsis"
+            && status.getClientRects().length === 1;
+        }""") is True
         assert page.evaluate("""() => Array.from(document.querySelectorAll("#logic-output-backtrace-list [data-output-backtrace-output]")).every((item) => Number(item.dataset.sourceCount || "0") >= 0 && Number(item.dataset.wireCount || "0") >= 0)""") is True
         hidden_source_index_state = page.evaluate("""() => {
           const etrac = document.querySelector('[data-output-backtrace-output="etrac"]');
