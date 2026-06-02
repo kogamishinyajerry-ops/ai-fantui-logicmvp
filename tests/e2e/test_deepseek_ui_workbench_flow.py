@@ -567,7 +567,9 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
           const chain = document.querySelector("#logic-current-segment-trust-chain");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!chain || !context || !annotation) {
+          const selected = document.querySelector("#logic-selected-target-label");
+          const source = document.querySelector("#logic-canvas-source");
+          if (!chain || !context || !annotation || !selected || !source) {
             return { ok: false, reason: "missing-surface" };
           }
           const left = {
@@ -593,10 +595,15 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
           });
           const contextMirror = target(context, "context");
           const annotationMirror = target(annotation, "annotation");
-          const selected = document.querySelector("#logic-selected-target-label");
-          const source = document.querySelector("#logic-canvas-source");
-          const selectedScope = selected?.dataset.canvasTrustChainScope || "";
-          const sourceScope = source?.dataset.canvasTrustChainScope || "";
+          const canvasTarget = (element) => ({
+            state: element.dataset.canvasTrustChainState || "",
+            traceId: element.dataset.canvasTrustChainTraceId || "",
+            sourceAnchorId: element.dataset.canvasTrustChainSourceAnchorId || "",
+            surface: element.dataset.canvasTrustChainSurface || "",
+            scope: element.dataset.canvasTrustChainScope || "",
+          });
+          const selectedMirror = canvasTarget(selected);
+          const sourceMirror = canvasTarget(source);
           const same = (mirror) => mirror.state === left.state
             && mirror.traceId === left.traceId
             && mirror.sourceAnchorId === left.sourceAnchorId
@@ -607,19 +614,26 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
             && left.scope === "current-segment"
             && mirror.surface === "current-segment"
             && mirror.scope === left.scope;
+          const canvasSame = (mirror, expectedSurface) => mirror.state === left.state
+            && mirror.traceId === left.traceId
+            && mirror.sourceAnchorId === left.sourceAnchorId
+            && left.sourceAnchorId.length > 0
+            && mirror.surface === expectedSurface
+            && mirror.scope === left.scope
+            && left.scope === "current-segment";
           const expectedMatches = !expectedTraceId || left.traceId === expectedTraceId;
           return {
             ok: expectedMatches
               && same(contextMirror)
               && same(annotationMirror)
-              && selectedScope === left.scope
-              && sourceScope === left.scope,
+              && canvasSame(selectedMirror, "selected-target")
+              && canvasSame(sourceMirror, "canvas-source"),
             expectedTraceId,
             left,
             context: contextMirror,
             annotation: annotationMirror,
-            selectedScope,
-            sourceScope,
+            selected: selectedMirror,
+            source: sourceMirror,
           };
         }""",
         expected_trace_id,
