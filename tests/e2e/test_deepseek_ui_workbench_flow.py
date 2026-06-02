@@ -902,10 +902,16 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             .split(/[，。；、,.;:\\s]+/)
             .map((token) => token.trim())
             .filter((token) => token.length >= 6);
-          const quoteTokenMatchesSummary = meaningfulTokens.some((token) => normalizedSummary.includes(token));
+          const tokenMatches = meaningfulTokens.filter((token) => normalizedSummary.includes(token));
+          const fullQuoteMatchesSummary = normalizedQuote.length > 0
+            && normalizedSummary.includes(normalizedQuote);
+          const quoteTokenMatchesSummary = meaningfulTokens.length > 0
+            && tokenMatches.length > 0;
+          const quoteSummaryMatchMode = fullQuoteMatchesSummary
+            ? "full-quote"
+            : (quoteTokenMatchesSummary ? "meaningful-token" : "none");
           const quoteMatchesSummary = normalizedQuote.length > 0
-            && (normalizedSummary.includes(normalizedQuote)
-              || quoteTokenMatchesSummary);
+            && (fullQuoteMatchesSummary || quoteTokenMatchesSummary);
           const rightTextMatches = !segmentLabel
             || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
           const checks = [
@@ -915,7 +921,19 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "source-current", ok: source.dataset.canvasTraceConsistencyCurrentId === activeId, actual: source.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
             { key: "context-current", ok: context.dataset.contextRequirementTraceCurrentSegmentId === activeId, actual: context.dataset.contextRequirementTraceCurrentSegmentId || "", expected: activeId },
             { key: "annotation-current", ok: annotation.dataset.annotationRequirementTraceCurrentSegmentId === activeId, actual: annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected: activeId },
-            { key: "quote-summary", ok: quoteMatchesSummary, actual: normalizedSummary, expected: normalizedQuote },
+            {
+              key: "quote-summary",
+              ok: quoteMatchesSummary,
+              actual: JSON.stringify({
+                mode: quoteSummaryMatchMode,
+                summary: normalizedSummary,
+                tokenMatches,
+              }),
+              expected: JSON.stringify({
+                quote: normalizedQuote,
+                meaningfulTokens,
+              }),
+            },
             { key: "right-text-segment", ok: rightTextMatches, actual: `${context.textContent || ""} | ${annotation.textContent || ""}`, expected: segmentLabel },
             { key: "canvas-highlight", ok: hasCanvasEvidence, actual: `${nodeMatches} nodes/${wireMatches} wires`, expected: `${nodeIds.length} nodes/${wireIds.length} wires` },
           ];
@@ -926,7 +944,13 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
               && checks.every((check) => check.ok),
             activeId,
             quote,
+            normalizedQuote,
+            normalizedSummary,
             meaningfulTokens,
+            tokenMatches,
+            fullQuoteMatchesSummary,
+            quoteTokenMatchesSummary,
+            quoteSummaryMatchMode,
             segmentLabel,
             nodeIds,
             wireIds,
@@ -937,6 +961,10 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
         }"""
     )
     assert path_state["ok"] is True, path_state
+    assert path_state["quoteSummaryMatchMode"] in {"full-quote", "meaningful-token"}, path_state
+    if path_state["quoteSummaryMatchMode"] == "meaningful-token":
+        assert path_state["meaningfulTokens"], path_state
+        assert path_state["tokenMatches"], path_state
 
 
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
