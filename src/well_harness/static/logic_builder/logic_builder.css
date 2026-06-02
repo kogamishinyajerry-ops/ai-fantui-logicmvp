@@ -5519,7 +5519,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 }
 
 #logic-context-requirement-trace[data-context-trust-chain-state="ready"]::after {
-  content: " · 段链 " attr(data-context-trust-chain-output-count) "输出/" attr(data-context-trust-chain-review-anchor-count) "复核";
+  content: " · 段链 " attr(data-context-trust-chain-output-count) "输出/" attr(data-context-trust-chain-review-anchor-count) "全局复核";
   color: rgba(94, 234, 212, 0.92);
   font-family: "Courier New", monospace;
   font-size: 0.88em;
@@ -5527,7 +5527,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 }
 
 #logic-annotation-requirement-trace[data-annotation-trust-chain-state="ready"]::after {
-  content: " · 段链 " attr(data-annotation-trust-chain-output-count) "输出/" attr(data-annotation-trust-chain-review-anchor-count) "复核";
+  content: " · 段链 " attr(data-annotation-trust-chain-output-count) "输出/" attr(data-annotation-trust-chain-review-anchor-count) "全局复核";
   color: rgba(94, 234, 212, 0.92);
   font-family: "Courier New", monospace;
   font-size: 0.88em;

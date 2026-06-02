@@ -736,6 +736,7 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && tailContent.includes("段链")
               && tailContent.includes("输出")
               && tailContent.includes("复核")
+              && tailContent.includes("全局复核")
               && chainAccessible
               && text.includes("段")
               && element.scrollWidth <= element.clientWidth + 2
