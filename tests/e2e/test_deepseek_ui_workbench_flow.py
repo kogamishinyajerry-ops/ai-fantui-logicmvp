@@ -5317,6 +5317,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_impact).to_have_attribute("data-output-impact-source", "trace-output-map")
         expect(output_impact).to_have_attribute("aria-label", re.compile("最终输出影响摘要"))
         expect(output_impact).to_have_attribute("title", re.compile("TLS"))
+        output_impact_label_state = output_impact.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(output_impact_label_state, "ariaLabel", "title")
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("TLS")
         first_output_impact = page.locator("#logic-current-segment-output-labels").inner_text()
         first_output_impact_labels = output_impact.get_attribute("data-output-impact-labels") or ""
@@ -5339,6 +5344,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             assert label in first_output_impact_aria
         output_reveal = page.locator("#logic-current-segment-output-reveal")
         expect(output_reveal).to_have_count(1)
+        output_reveal_label_state = output_reveal.evaluate("""(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(output_reveal_label_state, "ariaLabel", "title")
         related_output_focus = output_backtrace.locator('.logic-output-backtrace-item.is-related[role="button"]').first
         if len(first_output_impact_label_list) > 2:
             expect(output_reveal).to_be_visible()
