@@ -441,6 +441,8 @@ def _expect_canvas_selected_trace_state_badge(
           const titleHasLink = title.includes("链路");
           const ariaHasCurrentSegment = ariaLabel.includes("当前段");
           const ariaHasLink = ariaLabel.includes("链路");
+          const titleHasGlobalReview = title.includes("全局复核");
+          const ariaHasGlobalReview = ariaLabel.includes("全局复核");
           const selectedTrustScope = selected.dataset.canvasTrustChainScope || "";
           const expectedTrustScope = "current-segment";
           const scopeIsCurrentSegment = selectedTrustScope === expectedTrustScope;
@@ -448,6 +450,8 @@ def _expect_canvas_selected_trace_state_badge(
             && titleHasLink
             && ariaHasCurrentSegment
             && ariaHasLink
+            && titleHasGlobalReview
+            && ariaHasGlobalReview
             && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(selected.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(selected.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
@@ -488,6 +492,8 @@ def _expect_canvas_selected_trace_state_badge(
               titleHasLink,
               ariaHasCurrentSegment,
               ariaHasLink,
+              titleHasGlobalReview,
+              ariaHasGlobalReview,
               scopeIsCurrentSegment,
               chainAccessible,
             },
@@ -576,6 +582,8 @@ def _expect_canvas_source_trace_state_badge(
           const titleHasLink = title.includes("链路");
           const ariaHasCurrentSegment = ariaLabel.includes("当前段");
           const ariaHasLink = ariaLabel.includes("链路");
+          const titleHasGlobalReview = title.includes("全局复核");
+          const ariaHasGlobalReview = ariaLabel.includes("全局复核");
           const sourceTrustScope = source.dataset.canvasTrustChainScope || "";
           const expectedTrustScope = "current-segment";
           const scopeIsCurrentSegment = sourceTrustScope === expectedTrustScope;
@@ -583,6 +591,8 @@ def _expect_canvas_source_trace_state_badge(
             && titleHasLink
             && ariaHasCurrentSegment
             && ariaHasLink
+            && titleHasGlobalReview
+            && ariaHasGlobalReview
             && scopeIsCurrentSegment;
           const outputCount = Number.parseInt(source.dataset.canvasTrustChainOutputCount || "0", 10);
           const reviewCount = Number.parseInt(source.dataset.canvasTrustChainReviewAnchorCount || "0", 10);
@@ -629,6 +639,8 @@ def _expect_canvas_source_trace_state_badge(
               titleHasLink,
               ariaHasCurrentSegment,
               ariaHasLink,
+              titleHasGlobalReview,
+              ariaHasGlobalReview,
               scopeIsCurrentSegment,
               chainAccessible,
             },
