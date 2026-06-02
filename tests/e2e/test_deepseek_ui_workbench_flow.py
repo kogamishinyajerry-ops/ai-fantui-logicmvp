@@ -901,6 +901,121 @@ def _expect_current_segment_identity_loop_state(
         expect(loop).to_contain_text(expected_inspector_state)
 
 
+def _expect_output_source_trace_link(
+    page: Any,
+    output_backtrace: Any,
+    *,
+    output_id: str,
+    trace_id: str,
+    segment_label: str,
+    output_label: str,
+    active: bool,
+    focused: bool = False,
+) -> Any:
+    source = output_backtrace.locator(
+        f'[data-output-backtrace-output="{output_id}"] [data-output-backtrace-source="{trace_id}"]'
+    ).first
+    label_prefix = "当前" if active else "回到"
+    expected_label = re.compile(
+        f"{label_prefix}{segment_label} 需求原文.*{re.escape(output_label)}.*输出依据"
+    )
+    expect(source).to_have_text(segment_label)
+    expect(source).to_have_attribute("aria-label", expected_label)
+    expect(source).to_have_attribute("title", expected_label)
+    if active:
+        expect(source).to_have_attribute("aria-pressed", "true")
+        expect(source).to_have_attribute("aria-current", "true")
+        expect(source).to_have_class(re.compile(r"\bis-active\b"))
+    else:
+        expect(source).to_have_attribute("aria-pressed", "false")
+        expect(source).not_to_have_attribute("aria-current", "true")
+        expect(source).not_to_have_class(re.compile(r"\bis-active\b"))
+    if focused:
+        expect(source).to_be_focused()
+        _expect_output_source_focus_ring(page, output_id=output_id, trace_id=trace_id)
+    return source
+
+
+def _expect_output_source_visual_difference(
+    page: Any,
+    *,
+    active_output_id: str,
+    active_trace_id: str,
+    inactive_output_id: str,
+    inactive_trace_id: str,
+) -> None:
+    state = page.evaluate(
+        """([activeOutputId, activeTraceId, inactiveOutputId, inactiveTraceId]) => {
+          const sourceSelector = (outputId, traceId) =>
+            `#logic-output-backtrace-panel [data-output-backtrace-output="${outputId}"] [data-output-backtrace-source="${traceId}"]`;
+          const active = document.querySelector(sourceSelector(activeOutputId, activeTraceId));
+          const inactive = document.querySelector(sourceSelector(inactiveOutputId, inactiveTraceId));
+          if (!active || !inactive) return { ok: false, reason: "missing-source-chip" };
+          const activeStyle = window.getComputedStyle(active);
+          const inactiveStyle = window.getComputedStyle(inactive);
+          const normalize = (value) => String(value || "").trim().toLowerCase();
+          const activeBoxShadow = normalize(activeStyle.boxShadow);
+          const boxShadowVisible = activeBoxShadow !== "none" && !activeBoxShadow.includes("rgba(0, 0, 0, 0)");
+          const differences = {
+            background: normalize(activeStyle.backgroundColor) !== normalize(inactiveStyle.backgroundColor),
+            border: normalize(activeStyle.borderTopColor || activeStyle.borderColor) !== normalize(inactiveStyle.borderTopColor || inactiveStyle.borderColor),
+            color: normalize(activeStyle.color) !== normalize(inactiveStyle.color),
+            boxShadow: boxShadowVisible,
+            fontWeight: normalize(activeStyle.fontWeight) !== normalize(inactiveStyle.fontWeight),
+          };
+          return {
+            ok: active.offsetWidth > 0 && active.offsetHeight > 0 && Object.values(differences).some(Boolean),
+            differences,
+            active: {
+              background: activeStyle.backgroundColor,
+              border: activeStyle.borderTopColor || activeStyle.borderColor,
+              color: activeStyle.color,
+              boxShadow: activeStyle.boxShadow,
+              fontWeight: activeStyle.fontWeight,
+            },
+            inactive: {
+              background: inactiveStyle.backgroundColor,
+              border: inactiveStyle.borderTopColor || inactiveStyle.borderColor,
+              color: inactiveStyle.color,
+              boxShadow: inactiveStyle.boxShadow,
+              fontWeight: inactiveStyle.fontWeight,
+            },
+          };
+        }""",
+        [active_output_id, active_trace_id, inactive_output_id, inactive_trace_id],
+    )
+    assert state["ok"] is True, state
+
+
+def _expect_output_source_focus_ring(page: Any, *, output_id: str, trace_id: str) -> None:
+    state = page.evaluate(
+        """([outputId, traceId]) => {
+          const source = document.querySelector(
+            `#logic-output-backtrace-panel [data-output-backtrace-output="${outputId}"] [data-output-backtrace-source="${traceId}"]`
+          );
+          if (!source) return { ok: false, reason: "missing-source-chip" };
+          const style = window.getComputedStyle(source);
+          const outlineVisible = style.outlineStyle !== "none"
+            && parseFloat(style.outlineWidth || "0") >= 1
+            && style.outlineColor !== "rgba(0, 0, 0, 0)";
+          const boxShadowVisible = style.boxShadow !== "none"
+            && !String(style.boxShadow || "").includes("rgba(0, 0, 0, 0)");
+          return {
+            ok: document.activeElement === source && (outlineVisible || boxShadowVisible),
+            activeElementMatches: document.activeElement === source,
+            outline: {
+              style: style.outlineStyle,
+              width: style.outlineWidth,
+              color: style.outlineColor,
+            },
+            boxShadow: style.boxShadow,
+          };
+        }""",
+        [output_id, trace_id],
+    )
+    assert state["ok"] is True, state
+
+
 def _expect_current_requirement_text_match_closed_loop(page: Any, *, strict_selected_trace: bool = True) -> None:
     path_state = page.evaluate(
         """({strictSelectedTrace}) => {
@@ -5514,117 +5629,114 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_coverage).to_contain_text("ETRAC")
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "etrac")
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
-        deploy_row_logic3_source = output_backtrace.locator('[data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]').first
-        expect(deploy_row_logic3_source).to_have_text("段 03")
-        expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("回到段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
-        expect(deploy_row_logic3_source).to_have_attribute("title", re.compile("回到段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
+        deploy_row_logic3_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="deploy",
+            trace_id="row-logic3",
+            segment_label="段 03",
+            output_label="EEC/PLS/PDU",
+            active=False,
+        )
         deploy_row_logic3_source.click()
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic3")
         expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic3")
-        expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "true")
-        expect(deploy_row_logic3_source).to_have_attribute("aria-current", "true")
-        expect(deploy_row_logic3_source).to_have_class(re.compile(r"\bis-active\b"))
-        expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("当前段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
-        expect(deploy_row_logic3_source).to_have_attribute("title", re.compile("当前段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
+        deploy_row_logic3_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="deploy",
+            trace_id="row-logic3",
+            segment_label="段 03",
+            output_label="EEC/PLS/PDU",
+            active=True,
+        )
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
-        etrac_row_logic2_source = output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]').first
-        expect(etrac_row_logic2_source).to_have_text("段 02")
-        expect(etrac_row_logic2_source).to_have_attribute("aria-label", re.compile("回到段 02 需求原文.*ETRAC.*输出依据"))
-        expect(etrac_row_logic2_source).to_have_attribute("title", re.compile("回到段 02 需求原文.*ETRAC.*输出依据"))
+        etrac_row_logic2_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="etrac",
+            trace_id="row-logic2",
+            segment_label="段 02",
+            output_label="ETRAC",
+            active=False,
+        )
         etrac_row_logic2_source.click()
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic2")
-        expect(etrac_row_logic2_source).to_have_attribute("aria-pressed", "true")
-        expect(etrac_row_logic2_source).to_have_attribute("aria-current", "true")
-        expect(etrac_row_logic2_source).to_have_class(re.compile(r"\bis-active\b"))
-        expect(etrac_row_logic2_source).to_have_attribute("aria-label", re.compile("当前段 02 需求原文.*ETRAC.*输出依据"))
-        expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "false")
-        expect(deploy_row_logic3_source).not_to_have_attribute("aria-current", "true")
-        expect(deploy_row_logic3_source).not_to_have_class(re.compile(r"\bis-active\b"))
-        expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("回到段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
-        source_chip_visual_state = page.evaluate("""() => {
-          const active = document.querySelector('#logic-output-backtrace-panel [data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]');
-          const inactive = document.querySelector('#logic-output-backtrace-panel [data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]');
-          if (!active || !inactive) return { ok: false, reason: "missing-source-chip" };
-          const activeStyle = window.getComputedStyle(active);
-          const inactiveStyle = window.getComputedStyle(inactive);
-          const activeBoxShadow = activeStyle.boxShadow || "";
-          const boxShadowVisible = activeBoxShadow !== "none" && !activeBoxShadow.includes("rgba(0, 0, 0, 0)");
-          const differences = {
-            background: activeStyle.backgroundColor !== inactiveStyle.backgroundColor,
-            border: activeStyle.borderColor !== inactiveStyle.borderColor,
-            color: activeStyle.color !== inactiveStyle.color,
-            boxShadow: boxShadowVisible,
-            fontWeight: activeStyle.fontWeight !== inactiveStyle.fontWeight,
-          };
-          return {
-            ok: Object.values(differences).some(Boolean),
-            differences,
-            active: {
-              background: activeStyle.backgroundColor,
-              border: activeStyle.borderColor,
-              color: activeStyle.color,
-              boxShadow: activeStyle.boxShadow,
-              fontWeight: activeStyle.fontWeight,
-            },
-            inactive: {
-              background: inactiveStyle.backgroundColor,
-              border: inactiveStyle.borderColor,
-              color: inactiveStyle.color,
-              boxShadow: inactiveStyle.boxShadow,
-              fontWeight: inactiveStyle.fontWeight,
-            },
-          };
-        }""")
-        assert source_chip_visual_state["ok"] is True, source_chip_visual_state
+        etrac_row_logic2_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="etrac",
+            trace_id="row-logic2",
+            segment_label="段 02",
+            output_label="ETRAC",
+            active=True,
+        )
+        deploy_row_logic3_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="deploy",
+            trace_id="row-logic3",
+            segment_label="段 03",
+            output_label="EEC/PLS/PDU",
+            active=False,
+        )
+        _expect_output_source_visual_difference(
+            page,
+            active_output_id="etrac",
+            active_trace_id="row-logic2",
+            inactive_output_id="deploy",
+            inactive_trace_id="row-logic3",
+        )
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         deploy_row_logic3_source.press("Enter")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic3")
         expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic3")
-        expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "true")
-        expect(deploy_row_logic3_source).to_have_attribute("aria-current", "true")
-        expect(deploy_row_logic3_source).to_have_class(re.compile(r"\bis-active\b"))
-        expect(deploy_row_logic3_source).to_be_focused()
-        source_chip_focus_state = page.evaluate("""() => {
-          const source = document.querySelector('#logic-output-backtrace-panel [data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]');
-          if (!source) return { ok: false, reason: "missing-source-chip" };
-          const style = window.getComputedStyle(source);
-          const outlineVisible = style.outlineStyle !== "none"
-            && parseFloat(style.outlineWidth || "0") >= 1
-            && style.outlineColor !== "rgba(0, 0, 0, 0)";
-          const boxShadowVisible = style.boxShadow !== "none"
-            && !String(style.boxShadow || "").includes("rgba(0, 0, 0, 0)");
-          return {
-            ok: document.activeElement === source && (outlineVisible || boxShadowVisible),
-            activeElementMatches: document.activeElement === source,
-            outline: {
-              style: style.outlineStyle,
-              width: style.outlineWidth,
-              color: style.outlineColor,
-            },
-            boxShadow: style.boxShadow,
-          };
-        }""")
-        assert source_chip_focus_state["ok"] is True, source_chip_focus_state
-        expect(deploy_row_logic3_source).to_have_attribute("aria-label", re.compile("当前段 03 需求原文.*EEC/PLS/PDU.*输出依据"))
-        expect(etrac_row_logic2_source).to_have_attribute("aria-pressed", "false")
-        expect(etrac_row_logic2_source).not_to_have_attribute("aria-current", "true")
-        expect(etrac_row_logic2_source).not_to_have_class(re.compile(r"\bis-active\b"))
+        deploy_row_logic3_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="deploy",
+            trace_id="row-logic3",
+            segment_label="段 03",
+            output_label="EEC/PLS/PDU",
+            active=True,
+            focused=True,
+        )
+        etrac_row_logic2_source = _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="etrac",
+            trace_id="row-logic2",
+            segment_label="段 02",
+            output_label="ETRAC",
+            active=False,
+        )
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         etrac_row_logic2_source.press(" ")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic2")
-        expect(etrac_row_logic2_source).to_have_attribute("aria-pressed", "true")
-        expect(etrac_row_logic2_source).to_have_attribute("aria-current", "true")
-        expect(etrac_row_logic2_source).to_have_class(re.compile(r"\bis-active\b"))
-        expect(etrac_row_logic2_source).to_have_attribute("aria-label", re.compile("当前段 02 需求原文.*ETRAC.*输出依据"))
-        expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "false")
-        expect(deploy_row_logic3_source).not_to_have_attribute("aria-current", "true")
-        expect(deploy_row_logic3_source).not_to_have_class(re.compile(r"\bis-active\b"))
+        _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="etrac",
+            trace_id="row-logic2",
+            segment_label="段 02",
+            output_label="ETRAC",
+            active=True,
+        )
+        _expect_output_source_trace_link(
+            page,
+            output_backtrace,
+            output_id="deploy",
+            trace_id="row-logic3",
+            segment_label="段 03",
+            output_label="EEC/PLS/PDU",
+            active=False,
+        )
         _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
 
         trace_panel_box = trace_panel.bounding_box()
