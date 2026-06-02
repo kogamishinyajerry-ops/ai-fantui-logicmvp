@@ -4330,6 +4330,9 @@ def test_logic_builder_parameter_panel_fallback_copy_uses_readable_label(
         expect(panel_node_ref).to_have_text("RA 高度")
         expect(panel_node_ref).not_to_have_text("input_ra")
         page.click('.logic-node[data-node-id="input_ra"]')
+        expect(page.locator("#logic-selected-node")).to_have_text("RA 高度")
+        expect(page.locator("#logic-selected-node")).to_have_attribute("aria-label", "RA 高度")
+        expect(page.locator("#logic-selected-node")).to_have_attribute("title", "RA 高度")
         expect(page.locator("#logic-annotation-params")).to_contain_text("RA 门限: 6 ft")
         expect(page.locator("#logic-annotation-params")).not_to_contain_text("panel_ra_threshold")
     finally:

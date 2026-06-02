@@ -6267,7 +6267,13 @@
       state.selectedTargetLabel || state.selectedNodeId || "未选择",
     );
     selectedNode.textContent = selectedCopy;
-    if (logicDetailSelectedNode) logicDetailSelectedNode.textContent = selectedCopy;
+    selectedNode.title = selectedCopy;
+    selectedNode.setAttribute("aria-label", selectedCopy);
+    if (logicDetailSelectedNode) {
+      logicDetailSelectedNode.textContent = selectedCopy;
+      logicDetailSelectedNode.title = selectedCopy;
+      logicDetailSelectedNode.setAttribute("aria-label", selectedCopy);
+    }
     updateAnnotationControls();
     renderWorkflowOverview();
   }
