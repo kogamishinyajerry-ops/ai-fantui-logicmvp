@@ -436,19 +436,30 @@ def _expect_canvas_source_trace_state_badge(
     badge_state = page.evaluate(
         """({label, state, currentId, selectedId, selectedSource}) => {
           const source = document.querySelector("#logic-canvas-source");
+          const sourceState = document.querySelector("#logic-canvas-source-state");
+          const traceLegend = document.querySelector("#logic-canvas-trace-legend");
           const selected = document.querySelector("#logic-selected-target-label");
           const left = document.querySelector("#logic-current-segment-consistency");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!source || !selected || !left || !context || !annotation) {
+          if (!source || !sourceState || !traceLegend || !selected || !left || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
           const badge = window.getComputedStyle(source, "::before").content || "";
           const box = source.getBoundingClientRect();
+          const childReadable = (element) => {
+            const childBox = element.getBoundingClientRect();
+            return childBox.width > 0
+              && childBox.height > 0
+              && element.scrollWidth <= element.clientWidth + 1
+              && (element.textContent || "").trim().length > 0;
+          };
           const ok = badge.includes(label)
             && box.width > 0
             && box.height > 0
             && box.width <= 180
+            && childReadable(sourceState)
+            && childReadable(traceLegend)
             && source.dataset.canvasTraceConsistencyState === state
             && source.dataset.canvasTraceConsistencyCurrentId === currentId
             && source.dataset.canvasTraceConsistencySelectedId === selectedId
@@ -471,6 +482,12 @@ def _expect_canvas_source_trace_state_badge(
             selectedSource,
             badge,
             width: box.width,
+            sourceStateText: sourceState.textContent || "",
+            sourceStateClientWidth: sourceState.clientWidth,
+            sourceStateScrollWidth: sourceState.scrollWidth,
+            traceLegendText: traceLegend.textContent || "",
+            traceLegendClientWidth: traceLegend.clientWidth,
+            traceLegendScrollWidth: traceLegend.scrollWidth,
             sourceState: source.dataset.canvasTraceConsistencyState || "",
             sourceCurrentId: source.dataset.canvasTraceConsistencyCurrentId || "",
             sourceSelectedId: source.dataset.canvasTraceConsistencySelectedId || "",
