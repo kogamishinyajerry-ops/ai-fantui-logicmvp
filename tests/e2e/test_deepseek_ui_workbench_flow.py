@@ -8101,6 +8101,19 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         expect(page.locator("#logic-circuit-hud-vdt90")).to_have_text("≥90%")
         expect(page.locator("#logic-circuit-hud-logic")).to_contain_text("L4:通")
         expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_text("已释放")
+        expect(page.locator("#logic-circuit-hud-sw1")).to_have_attribute("aria-label", "闭合")
+        expect(page.locator("#logic-circuit-hud-sw2")).to_have_attribute("title", "闭合")
+        expect(page.locator("#logic-circuit-hud-tls")).to_have_attribute("aria-label", "已解锁")
+        expect(page.locator("#logic-circuit-hud-vdt90")).to_have_attribute("title", "≥90%")
+        expect(page.locator("#logic-circuit-hud-logic")).to_have_attribute(
+            "aria-label", re.compile("L4:通")
+        )
+        expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_attribute(
+            "aria-label", "已释放"
+        )
+        expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_attribute(
+            "title", "已释放"
+        )
         expect(page.locator('[data-demo-node-id="thr_lock"]')).to_have_attribute("data-state", "active")
         expect(page.locator('.logic-circuit-wire[data-source="logic4"][data-target="thr_lock"]')).to_have_attribute(
             "data-state",
