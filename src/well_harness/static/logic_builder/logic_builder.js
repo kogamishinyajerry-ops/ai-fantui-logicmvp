@@ -3551,7 +3551,28 @@
       waiting: "等待",
     };
     const originalTextMatchLabel = originalTextMatchLabels[originalTextMatchMode] || originalTextMatchLabels.waiting;
-    const auditLabel = `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}；原文命中：${originalTextMatchLabel}；${chainLabel}`;
+    const stateLabels = {
+      matched: "已匹配",
+      aligned: "已对齐",
+      mismatch: "需对齐",
+      waiting: "等待",
+      unbound: "未绑定",
+    };
+    const readableAuditIdentity = (identity, fallback) => {
+      const normalized = identity || fallback;
+      const traceLabel = readableTraceIdentity(normalized, fallback);
+      if (traceLabel && traceLabel !== normalized) return traceLabel;
+      return readableSourceAnchorIdentity(normalized, fallback);
+    };
+    const currentSegmentLabel = readableAuditIdentity(currentId || "waiting", "等待");
+    const selectedEvidenceLabel = selectedEvidenceId && selectedEvidenceId !== "none"
+      ? readableAuditIdentity(selectedEvidenceId, "无")
+      : "无";
+    const selectedSourceLabel = selectedEvidenceSource && selectedEvidenceSource !== "none"
+      ? currentSegmentSelectionSourceLabel(selectedEvidenceSource)
+      : "无";
+    const auditStateLabel = stateLabels[stateValue || "waiting"] || stateValue || "等待";
+    const auditLabel = `需求段依据；一致性状态：${auditStateLabel}；当前段：${currentSegmentLabel}；选中依据：${selectedEvidenceLabel}；来源：${selectedSourceLabel}；原文命中：${originalTextMatchLabel}；${chainLabel}`;
     element.dataset[`${attrPrefix}TraceConsistencyState`] = stateValue || "waiting";
     element.dataset[`${attrPrefix}TraceConsistencyId`] = idValue || "waiting";
     element.dataset[`${attrPrefix}TraceConsistencySurfaces`] = surfaces || "left";

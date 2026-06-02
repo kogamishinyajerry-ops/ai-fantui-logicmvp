@@ -571,6 +571,22 @@ def _expect_requirement_trace_audit(
         expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-selected-canvas-trace-id", selected_id)
     if selected_source is not None:
         expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-selected-source", selected_source)
+    trace_accessible_state = locator.evaluate("""(element) => ({
+      ariaLabel: element.getAttribute("aria-label") || "",
+      title: element.getAttribute("title") || "",
+      text: element.textContent || "",
+    })""")
+    _assert_no_machine_tokens_in_accessible_state(trace_accessible_state, "ariaLabel", "title", "text")
+    expect(locator).to_have_attribute("aria-label", re.compile("需求段依据"))
+    expect(locator).to_have_attribute("title", re.compile("需求段依据"))
+    if current_id is not None and current_id.startswith("row-logic"):
+        segment_number = re.escape(current_id.removeprefix("row-logic"))
+        expect(locator).to_have_attribute("aria-label", re.compile(fr"当前段：段\s*0*{segment_number}"))
+        expect(locator).to_have_attribute("title", re.compile(fr"当前段：段\s*0*{segment_number}"))
+    if selected_id is not None and selected_id.startswith("row-logic"):
+        segment_number = re.escape(selected_id.removeprefix("row-logic"))
+        expect(locator).to_have_attribute("aria-label", re.compile(fr"选中依据：段\s*0*{segment_number}"))
+        expect(locator).to_have_attribute("title", re.compile(fr"选中依据：段\s*0*{segment_number}"))
 
 
 def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: str | None = None) -> None:
