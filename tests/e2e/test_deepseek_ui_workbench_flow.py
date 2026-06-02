@@ -136,6 +136,69 @@ def _expect_requirement_trace_audit(
         expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-selected-source", selected_source)
 
 
+def _expect_cross_surface_trace_audit(
+    *,
+    segment_consistency: Any,
+    trust_review_state: Any,
+    trust_spine: Any,
+    context_trace: Any,
+    annotation_trace: Any,
+    state: str,
+    consistency_id: str | None = None,
+    review_id: str | None = None,
+    trace_id: str | None = None,
+    current_id: str | None = None,
+    selected_id: str | None = None,
+    selected_source: str | None = None,
+    alignable: bool | None = None,
+    align_target_id: str | None = None,
+    align_source: str | None = None,
+) -> None:
+    _expect_trace_consistency(
+        segment_consistency,
+        state=state,
+        consistency_id=consistency_id,
+        current_id=current_id,
+        selected_id=selected_id,
+        selected_source=selected_source,
+        alignable=alignable,
+        align_target_id=align_target_id,
+        align_source=align_source,
+    )
+    _expect_trust_review_consistency(
+        trust_review_state,
+        state=state,
+        review_id=review_id,
+        current_id=current_id,
+        selected_id=selected_id,
+    )
+    _expect_trust_spine_consistency(
+        trust_spine,
+        state=state,
+        current_id=current_id,
+        selected_id=selected_id,
+        selected_source=selected_source,
+    )
+    _expect_requirement_trace_audit(
+        context_trace,
+        prefix="context",
+        state=state,
+        trace_id=trace_id,
+        current_id=current_id,
+        selected_id=selected_id,
+        selected_source=selected_source,
+    )
+    _expect_requirement_trace_audit(
+        annotation_trace,
+        prefix="annotation",
+        state=state,
+        trace_id=trace_id,
+        current_id=current_id,
+        selected_id=selected_id,
+        selected_source=selected_source,
+    )
+
+
 REQUIREMENTS_READY = {
     "kind": "ai-fantui-requirements-intake-analysis",
     "status": "ready_for_logic_builder",
@@ -4028,51 +4091,34 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
         expect(context_trace).to_be_visible()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "matched")
-        _expect_requirement_trace_audit(
-            context_trace,
-            prefix="context",
-            state="consistent",
-            trace_id="row-logic2",
-            current_id="row-logic2",
-            selected_id="row-logic2",
-            selected_source="canvas-node",
-        )
         expect(context_trace).to_contain_text("段")
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "matched")
-        _expect_requirement_trace_audit(
-            annotation_trace,
-            prefix="annotation",
+        _expect_cross_surface_trace_audit(
+            segment_consistency=segment_consistency,
+            trust_review_state=trust_review_state,
+            trust_spine=trust_spine,
+            context_trace=context_trace,
+            annotation_trace=annotation_trace,
             state="consistent",
+            consistency_id="row-logic2",
+            review_id="row-logic2",
             trace_id="row-logic2",
             current_id="row-logic2",
             selected_id="row-logic2",
             selected_source="canvas-node",
         )
         expect(annotation_trace).to_contain_text("段")
-        _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic2")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-surfaces", re.compile("left.*canvas.*context.*annotation"))
-        _expect_trust_review_consistency(trust_review_state, state="consistent", review_id="row-logic2")
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic3")
-        _expect_requirement_trace_audit(
-            context_trace,
-            prefix="context",
+        _expect_cross_surface_trace_audit(
+            segment_consistency=segment_consistency,
+            trust_review_state=trust_review_state,
+            trust_spine=trust_spine,
+            context_trace=context_trace,
+            annotation_trace=annotation_trace,
             state="diverged",
             trace_id="row-logic2",
-            current_id="row-logic3",
-            selected_id="row-logic2",
-        )
-        _expect_requirement_trace_audit(
-            annotation_trace,
-            prefix="annotation",
-            state="diverged",
-            trace_id="row-logic2",
-            current_id="row-logic3",
-            selected_id="row-logic2",
-        )
-        _expect_trace_consistency(
-            segment_consistency,
-            state="diverged",
             current_id="row-logic3",
             selected_id="row-logic2",
             selected_source="canvas-node",
@@ -4081,20 +4127,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_source="canvas-node",
         )
         expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
-        _expect_trust_review_consistency(
-            trust_review_state,
-            state="diverged",
-            current_id="row-logic3",
-            selected_id="row-logic2",
-        )
         expect(trust_review_state).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
-        _expect_trust_spine_consistency(
-            trust_spine,
-            state="diverged",
-            current_id="row-logic3",
-            selected_id="row-logic2",
-            selected_source="canvas-node",
-        )
         expect(segment_consistency_align).to_be_visible()
         expect(segment_consistency_align).to_be_enabled()
         expect(segment_consistency_align).to_have_attribute("data-trace-consistency-action", "align-selected-trace")
@@ -4211,34 +4244,23 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_consistency_align).to_be_disabled()
         page.locator('[data-demo-node-id="etrac_540v"]').click()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "unbound")
-        _expect_requirement_trace_audit(
-            context_trace,
-            prefix="context",
-            state="unbound",
-            trace_id="none",
-            selected_id="none",
-            selected_source="none",
-        )
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "unbound")
-        _expect_requirement_trace_audit(
-            annotation_trace,
-            prefix="annotation",
-            state="unbound",
-            trace_id="none",
-            selected_id="none",
-            selected_source="none",
-        )
-        _expect_trace_consistency(
-            segment_consistency,
+        _expect_cross_surface_trace_audit(
+            segment_consistency=segment_consistency,
+            trust_review_state=trust_review_state,
+            trust_spine=trust_spine,
+            context_trace=context_trace,
+            annotation_trace=annotation_trace,
             state="unbound",
             consistency_id="none",
+            review_id="none",
+            trace_id="none",
             selected_id="none",
+            selected_source="none",
             alignable=False,
         )
         expect(segment_consistency_align).to_be_hidden()
         expect(segment_consistency_align).to_be_disabled()
-        _expect_trust_review_consistency(trust_review_state, state="unbound", review_id="none")
-        _expect_trust_spine_consistency(trust_spine, state="unbound", selected_id="none")
         expect(page.locator("#logic-canvas")).to_be_visible()
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         page.locator('[data-demo-node-id="logic2"]').focus()
