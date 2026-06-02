@@ -275,6 +275,58 @@ def _expect_requirement_trace_audit(
         expect(locator).to_have_attribute(f"data-{prefix}-requirement-trace-selected-source", selected_source)
 
 
+def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: str | None = None) -> None:
+    mirror_state = page.evaluate(
+        """(expectedTraceId) => {
+          const chain = document.querySelector("#logic-current-segment-trust-chain");
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!chain || !context || !annotation) {
+            return { ok: false, reason: "missing-surface" };
+          }
+          const left = {
+            state: chain.dataset.currentSegmentTrustChain || "",
+            traceId: chain.dataset.currentSegmentTraceId || "",
+            sourceAnchorId: chain.dataset.sourceAnchorId || "",
+            nodeCount: chain.dataset.nodeCount || "",
+            wireCount: chain.dataset.wireCount || "",
+            outputCount: chain.dataset.outputCount || "",
+            reviewAnchorCount: chain.dataset.reviewAnchorCount || "",
+          };
+          const target = (element, prefix) => ({
+            state: element.dataset[`${prefix}TrustChainState`] || "",
+            traceId: element.dataset[`${prefix}TrustChainTraceId`] || "",
+            sourceAnchorId: element.dataset[`${prefix}TrustChainSourceAnchorId`] || "",
+            nodeCount: element.dataset[`${prefix}TrustChainNodeCount`] || "",
+            wireCount: element.dataset[`${prefix}TrustChainWireCount`] || "",
+            outputCount: element.dataset[`${prefix}TrustChainOutputCount`] || "",
+            reviewAnchorCount: element.dataset[`${prefix}TrustChainReviewAnchorCount`] || "",
+            surface: element.dataset[`${prefix}TrustChainSurface`] || "",
+          });
+          const contextMirror = target(context, "context");
+          const annotationMirror = target(annotation, "annotation");
+          const same = (mirror) => mirror.state === left.state
+            && mirror.traceId === left.traceId
+            && mirror.sourceAnchorId === left.sourceAnchorId
+            && mirror.nodeCount === left.nodeCount
+            && mirror.wireCount === left.wireCount
+            && mirror.outputCount === left.outputCount
+            && mirror.reviewAnchorCount === left.reviewAnchorCount
+            && mirror.surface === "current-segment";
+          const expectedMatches = !expectedTraceId || left.traceId === expectedTraceId;
+          return {
+            ok: expectedMatches && same(contextMirror) && same(annotationMirror),
+            expectedTraceId,
+            left,
+            context: contextMirror,
+            annotation: annotationMirror,
+          };
+        }""",
+        expected_trace_id,
+    )
+    assert mirror_state["ok"] is True, mirror_state
+
+
 def _expect_cross_surface_trace_audit(
     *,
     segment_consistency: Any,
@@ -4439,6 +4491,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-output-count", re.compile(r"^[1-9]"))
         expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-review-anchor-count", "10")
         expect(annotation_trace).to_have_attribute("data-annotation-trust-chain-surface", "current-segment")
+        _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
         assert page.evaluate("""() => {
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
@@ -4482,6 +4535,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_target_id="row-logic1",
             align_source="canvas-wire",
         )
+        _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic3")
         _assert_current_segment_consistency_cue_layout(page, align_visible=True)
         _expect_consistency_align_button(
             segment_consistency_align,
@@ -4522,6 +4576,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             cue_label="未绑定",
             alignable=False,
         )
+        _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "unbound")
         _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
