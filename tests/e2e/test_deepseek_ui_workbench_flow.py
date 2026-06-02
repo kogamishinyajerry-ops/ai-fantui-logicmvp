@@ -592,7 +592,7 @@ def _assert_inspector_trace_badge_layout(page: Any, expected_label: str) -> None
               && box.height > 0
               && style.visibility !== "hidden"
               && badgeContent.includes(label)
-              && tailContent.includes("链")
+              && tailContent.includes("段链")
               && tailContent.includes("输出")
               && tailContent.includes("复核")
               && text.includes("段")
@@ -4828,10 +4828,10 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
           if (!context || !annotation) return false;
           const contextBadge = window.getComputedStyle(context, "::after").content || "";
           const annotationBadge = window.getComputedStyle(annotation, "::after").content || "";
-          return contextBadge.includes("链")
+          return contextBadge.includes("段链")
             && contextBadge.includes("输出")
             && contextBadge.includes("复核")
-            && annotationBadge.includes("链")
+            && annotationBadge.includes("段链")
             && annotationBadge.includes("输出")
             && annotationBadge.includes("复核");
         }""") is True
