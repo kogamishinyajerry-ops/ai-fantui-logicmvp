@@ -944,6 +944,20 @@ def _expect_output_source_trace_link(
     assert source_text_fit_state["ok"] is True, source_text_fit_state
     expect(source).to_have_attribute("aria-label", expected_label)
     expect(source).to_have_attribute("title", expected_label)
+    source_accessible_state = source.evaluate(
+        """(element) => ({
+          ariaLabel: element.getAttribute("aria-label") || "",
+          title: element.getAttribute("title") || "",
+        })"""
+    )
+    for internal_token in ("row-logic", "logic1->", "logic2->", "logic3->"):
+        assert internal_token not in source_accessible_state["ariaLabel"], source_accessible_state
+        assert internal_token not in source_accessible_state["title"], source_accessible_state
+    for internal_token in (trace_id, "->"):
+        assert internal_token not in source_accessible_state["ariaLabel"], source_accessible_state
+        assert internal_token not in source_accessible_state["title"], source_accessible_state
+    assert re.search(r"\blogic\d+\b", source_accessible_state["ariaLabel"]) is None, source_accessible_state
+    assert re.search(r"\blogic\d+\b", source_accessible_state["title"]) is None, source_accessible_state
     if active:
         expect(source).to_have_attribute("aria-pressed", "true")
         expect(source).to_have_attribute("aria-current", "true")
