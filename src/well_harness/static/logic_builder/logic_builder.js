@@ -3032,6 +3032,23 @@
       currentSegmentConsistencyAlign.setAttribute("title", alignLabel);
     }
     syncTraceConsistencyReviewState(stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
+    syncRequirementTraceAuditSurface(logicContextRequirementTrace, "context", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
+    syncRequirementTraceAuditSurface(annotationRequirementTrace, "annotation", stateValue, idValue, surfaces, currentId || "waiting", selectedEvidenceId, selectedEvidenceSource);
+  }
+
+  function syncRequirementTraceAuditSurface(element, attrPrefix, stateValue, idValue, surfaces, currentId, selectedEvidenceId, selectedEvidenceSource) {
+    if (!element) return;
+    element.dataset[`${attrPrefix}TraceConsistencyState`] = stateValue || "waiting";
+    element.dataset[`${attrPrefix}TraceConsistencyId`] = idValue || "waiting";
+    element.dataset[`${attrPrefix}TraceConsistencySurfaces`] = surfaces || "left";
+    element.dataset[`${attrPrefix}TraceConsistencyCurrentSegmentId`] = currentId || "waiting";
+    element.dataset[`${attrPrefix}TraceConsistencySelectedCanvasTraceId`] = selectedEvidenceId || "none";
+    element.dataset[`${attrPrefix}TraceConsistencySelectedSource`] = selectedEvidenceSource || "none";
+    element.dataset[`${attrPrefix}RequirementTraceCurrentSegmentId`] = currentId || "waiting";
+    element.dataset[`${attrPrefix}RequirementTraceSelectedCanvasTraceId`] = selectedEvidenceId || "none";
+    element.dataset[`${attrPrefix}RequirementTraceSelectedSource`] = selectedEvidenceSource || "none";
+    element.setAttribute("aria-label", `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
+    element.setAttribute("title", `需求段依据；一致性状态：${stateValue || "waiting"}；当前段：${currentId || "waiting"}；选中依据：${selectedEvidenceId || "none"}；来源：${selectedEvidenceSource || "none"}`);
   }
 
   function alignCurrentSegmentToSelectedTargetTrace() {
