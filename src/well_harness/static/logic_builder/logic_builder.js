@@ -246,6 +246,7 @@
   const currentSegmentIdentitySource = $("logic-current-segment-identity-source");
   const currentSegmentIdentityAnchor = $("logic-current-segment-identity-anchor");
   const currentSegmentIdentityInspector = $("logic-current-segment-identity-inspector");
+  const currentSegmentIdentityTextMatch = $("logic-current-segment-identity-text-match");
   const currentSegmentTrustSteps = Array.from(document.querySelectorAll("#logic-current-segment-trust-chain [data-trust-chain-step]"));
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
@@ -989,6 +990,44 @@
     };
   }
 
+  function normalizeCurrentSegmentOriginalText(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  function currentSegmentOriginalTextMatch(highlightedTrace) {
+    let trace = {};
+    try {
+      trace = highlightedTrace ? JSON.parse(highlightedTrace.dataset.traceTargets || "{}") : {};
+    } catch (error) {
+      trace = {};
+    }
+    const quote = normalizeCurrentSegmentOriginalText(
+      trace.quote || (highlightedTrace ? highlightedTrace.querySelector("strong")?.textContent : "") || ""
+    );
+    const summary = normalizeCurrentSegmentOriginalText(currentSegmentSummary ? currentSegmentSummary.textContent : "");
+    const meaningfulTokens = quote
+      .split(/[，。；、,.;:\s]+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 6);
+    const tokenMatches = meaningfulTokens.filter((token) => summary.includes(token));
+    const fullQuoteMatch = quote.length > 0 && summary.includes(quote);
+    const tokenMatch = meaningfulTokens.length > 0 && tokenMatches.length > 0;
+    const mode = fullQuoteMatch ? "full-quote" : (tokenMatch ? "meaningful-token" : (quote ? "missing" : "waiting"));
+    const labels = {
+      "full-quote": "全句",
+      "meaningful-token": "关键词",
+      missing: "未命中",
+      waiting: "等待",
+    };
+    return {
+      mode,
+      label: labels[mode] || labels.waiting,
+      quote,
+      summary,
+      token: tokenMatches[0] || "none",
+    };
+  }
+
   function syncCurrentSegmentIdentityLoop() {
     if (!currentSegmentIdentityLoop || !currentSegmentEvidence) return;
     const chainSnapshot = currentSegmentTrustChainSnapshot();
@@ -1006,6 +1045,7 @@
     const sourceAnchorId = chainSnapshot.sourceAnchorId || "waiting";
     const highlightedTrace = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
     const highlightedTraceId = highlightedTrace ? (highlightedTrace.dataset.requirementTraceId || currentId) : currentId;
+    const originalTextMatch = currentSegmentOriginalTextMatch(highlightedTrace);
     const contextSurfaceState = logicContextRequirementTrace
       ? (logicContextRequirementTrace.dataset.contextRequirementTrace || "waiting")
       : "missing";
@@ -1023,6 +1063,8 @@
       unbound: "未绑定",
     };
     const stateLabel = stateLabels[stateValue] || stateLabels.waiting;
+    currentSegmentEvidence.dataset.currentSegmentTextMatch = originalTextMatch.mode;
+    currentSegmentEvidence.dataset.currentSegmentTextMatchToken = originalTextMatch.token;
     currentSegmentIdentityLoop.dataset.identityLoopState = stateValue;
     currentSegmentIdentityLoop.dataset.currentSegmentId = currentId;
     currentSegmentIdentityLoop.dataset.highlightedTraceId = highlightedTraceId;
@@ -1030,14 +1072,18 @@
     currentSegmentIdentityLoop.dataset.selectedSource = selectedSource;
     currentSegmentIdentityLoop.dataset.sourceAnchorId = sourceAnchorId;
     currentSegmentIdentityLoop.dataset.inspectorSurfaceState = inspectorSurfaceState;
+    currentSegmentIdentityLoop.dataset.identityLoopTextMatch = originalTextMatch.mode;
+    currentSegmentIdentityLoop.dataset.identityLoopTextMatchToken = originalTextMatch.token;
+    currentSegmentIdentityLoop.dataset.originalTextMatch = originalTextMatch.mode;
+    currentSegmentIdentityLoop.dataset.originalTextMatchToken = originalTextMatch.token;
     currentSegmentIdentityLoop.dataset.identityLoopScope = "current-segment";
     currentSegmentIdentityLoop.setAttribute(
       "aria-label",
-      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId}，当前段 ${currentId}，源锚点 ${sourceAnchorId}，画布依据 ${selectedId}，来源 ${selectedSourceLabel}，检查器 ${inspectorSurfaceState}`
+      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId}，当前段 ${currentId}，源锚点 ${sourceAnchorId}，画布依据 ${selectedId}，来源 ${selectedSourceLabel}，检查器 ${inspectorSurfaceState}，原文命中 ${originalTextMatch.label}`
     );
     currentSegmentIdentityLoop.setAttribute(
       "title",
-      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId} -> 源锚点 ${sourceAnchorId} -> 画布依据 ${selectedId} -> 检查器 ${inspectorSurfaceState}；当前段 ${currentId}；来源 ${selectedSourceLabel}`
+      `身份闭环：${stateLabel}，高亮段 ${highlightedTraceId} -> 源锚点 ${sourceAnchorId} -> 画布依据 ${selectedId} -> 检查器 ${inspectorSurfaceState}；当前段 ${currentId}；来源 ${selectedSourceLabel}；原文命中 ${originalTextMatch.label}；token ${originalTextMatch.token}`
     );
     if (currentSegmentIdentityState) currentSegmentIdentityState.textContent = stateLabel;
     if (currentSegmentIdentityCurrent) currentSegmentIdentityCurrent.textContent = `高亮段 ${highlightedTraceId}`;
@@ -1045,6 +1091,13 @@
     if (currentSegmentIdentitySource) currentSegmentIdentitySource.textContent = `来源 ${selectedSourceLabel}`;
     if (currentSegmentIdentityAnchor) currentSegmentIdentityAnchor.textContent = `锚点 ${sourceAnchorId}`;
     if (currentSegmentIdentityInspector) currentSegmentIdentityInspector.textContent = `检查器 ${inspectorSurfaceState}`;
+    if (currentSegmentIdentityTextMatch) {
+      currentSegmentIdentityTextMatch.dataset.originalTextMatch = originalTextMatch.mode;
+      currentSegmentIdentityTextMatch.dataset.originalTextMatchToken = originalTextMatch.token;
+      currentSegmentIdentityTextMatch.textContent = `原文 ${originalTextMatch.label}`;
+      currentSegmentIdentityTextMatch.setAttribute("aria-label", `原文命中方式：${originalTextMatch.label}`);
+      currentSegmentIdentityTextMatch.setAttribute("title", `原文命中方式：${originalTextMatch.label}；token ${originalTextMatch.token}`);
+    }
   }
 
   function syncCurrentSegmentTrustChainInspectorSurfaces() {

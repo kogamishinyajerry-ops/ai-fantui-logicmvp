@@ -2140,6 +2140,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   text-align: right;
 }
 .logic-current-segment-identity-loop {
+  position: relative;
   display: grid;
   grid-template-columns: auto auto repeat(5, minmax(0, 1fr));
   align-items: center;
@@ -2147,7 +2148,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   min-width: 0;
   min-height: 18px;
   margin: -1px 0 4px;
-  padding: 3px 5px;
+  padding: 3px 54px 3px 5px;
   overflow: hidden;
   border: 1px solid rgba(54, 198, 216, 0.22);
   border-radius: 6px;
@@ -2197,6 +2198,29 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   color: rgba(185, 225, 245, 0.74);
   font-size: 7px;
   line-height: 1.05;
+}
+#logic-current-segment-identity-text-match {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  width: 46px;
+  border: 1px solid rgba(104, 234, 186, 0.28);
+  border-radius: 999px;
+  background: rgba(104, 234, 186, 0.08);
+  color: rgba(218, 255, 244, 0.92);
+  padding: 1px 4px;
+  text-align: center;
+  transform: translateY(-50%);
+}
+#logic-current-segment-identity-text-match[data-original-text-match="meaningful-token"] {
+  border-color: rgba(245, 200, 91, 0.34);
+  background: rgba(245, 200, 91, 0.09);
+  color: #ffe5a3;
+}
+#logic-current-segment-identity-text-match[data-original-text-match="missing"] {
+  border-color: rgba(255, 180, 168, 0.38);
+  background: rgba(255, 180, 168, 0.09);
+  color: #ffcabf;
 }
 .logic-current-segment-trust-step small {
   margin-top: 0;

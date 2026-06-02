@@ -663,7 +663,7 @@ def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
           const jumpsBox = jumps.getBoundingClientRect();
           const identityText = identityLoop.textContent || "";
           const identityChildren = Array.from(identityLoop.querySelectorAll("span, strong, small"));
-          const identityChildrenClip = identityChildren.length === 7 && identityChildren.every((child) => {
+          const identityChildrenClip = identityChildren.length === 8 && identityChildren.every((child) => {
             const childBox = child.getBoundingClientRect();
             const style = window.getComputedStyle(child);
             return childBox.width > 0
@@ -864,13 +864,15 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
     path_state = page.evaluate(
         """() => {
           const active = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
+          const evidence = document.querySelector("#logic-current-segment-evidence");
           const summary = document.querySelector("#logic-current-segment-summary");
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
+          const textMatchBadge = document.querySelector("#logic-current-segment-identity-text-match");
           const selected = document.querySelector("#logic-selected-target-label");
           const source = document.querySelector("#logic-canvas-source");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!active || !summary || !identityLoop || !selected || !source || !context || !annotation) {
+          if (!active || !evidence || !summary || !identityLoop || !textMatchBadge || !selected || !source || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
           let trace = {};
@@ -921,6 +923,10 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "source-current", ok: source.dataset.canvasTraceConsistencyCurrentId === activeId, actual: source.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
             { key: "context-current", ok: context.dataset.contextRequirementTraceCurrentSegmentId === activeId, actual: context.dataset.contextRequirementTraceCurrentSegmentId || "", expected: activeId },
             { key: "annotation-current", ok: annotation.dataset.annotationRequirementTraceCurrentSegmentId === activeId, actual: annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected: activeId },
+            { key: "evidence-original-text-match", ok: evidence.dataset.currentSegmentTextMatch === quoteSummaryMatchMode, actual: evidence.dataset.currentSegmentTextMatch || "", expected: quoteSummaryMatchMode },
+            { key: "identity-loop-text-match", ok: identityLoop.dataset.identityLoopTextMatch === quoteSummaryMatchMode, actual: identityLoop.dataset.identityLoopTextMatch || "", expected: quoteSummaryMatchMode },
+            { key: "identity-original-text-match", ok: identityLoop.dataset.originalTextMatch === quoteSummaryMatchMode, actual: identityLoop.dataset.originalTextMatch || "", expected: quoteSummaryMatchMode },
+            { key: "badge-original-text-match", ok: textMatchBadge.dataset.originalTextMatch === quoteSummaryMatchMode && (textMatchBadge.textContent || "").includes("原文"), actual: `${textMatchBadge.dataset.originalTextMatch || ""} | ${textMatchBadge.textContent || ""}`, expected: quoteSummaryMatchMode },
             {
               key: "quote-summary",
               ok: quoteMatchesSummary,
