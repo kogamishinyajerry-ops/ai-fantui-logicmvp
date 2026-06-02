@@ -1100,6 +1100,18 @@ def _expect_output_coverage_source_label_set(output_coverage: Any, *sources: Any
         assert source_state["fullLabel"] in coverage_state["accessibleLabel"], coverage_state
 
 
+def _assert_output_status_copy_safety(page: Any) -> None:
+    status_state = page.evaluate("""() => {
+      const visible = document.querySelector("#logic-output-visible-status");
+      const focus = document.querySelector("#logic-output-focus-status");
+      return {
+        visibleText: visible ? (visible.textContent || "") : "",
+        focusText: focus ? (focus.textContent || "") : "",
+      };
+    }""")
+    _assert_no_machine_tokens_in_accessible_state(status_state, "visibleText", "focusText")
+
+
 def _expect_output_source_visual_difference(
     page: Any,
     *,
@@ -5759,6 +5771,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
         expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "blocked-output")
         expect(output_visible_status).to_contain_text("非当前段相关输出")
+        _assert_output_status_copy_safety(page)
         assert page.evaluate("""() => {
           const visibleStatus = document.querySelector("#logic-output-visible-status");
           const hiddenStatus = document.querySelector("#logic-output-focus-status");
@@ -5790,6 +5803,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         first_noop_status = output_focus_status.inner_text()
         etrac_output.evaluate("(item) => item.click()")
         expect(output_focus_status).to_contain_text("非当前段相关输出")
+        _assert_output_status_copy_safety(page)
         assert output_focus_status.inner_text() != first_noop_status
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "deploy")
         expect(page.locator('[data-demo-node-id="tls115"]')).not_to_have_class(re.compile("is-output-backtrace-focus"))
@@ -5807,6 +5821,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(etrac_output).not_to_have_class(re.compile("is-output-focus-blocked"))
         expect(output_focus_status).to_contain_text("TLS")
         assert "非当前段相关输出" not in output_focus_status.inner_text()
+        _assert_output_status_copy_safety(page)
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "tls")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         eec_node = page.locator('[data-demo-node-id="eec_deploy"]')

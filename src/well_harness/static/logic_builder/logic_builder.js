@@ -1603,10 +1603,15 @@
       ? outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === state.blockedOutputBacktraceId)
       : null;
     const blockedOutputLabelElement = blockedOutputItem ? blockedOutputItem.querySelector("strong") : null;
-    const blockedOutputLabel = blockedOutputLabelElement ? blockedOutputLabelElement.textContent.trim() : "";
+    const blockedOutputGroup = state.blockedOutputBacktraceId
+      ? OUTPUT_BACKTRACE_GROUPS.find((group) => group.id === state.blockedOutputBacktraceId)
+      : null;
+    const blockedOutputLabel = blockedOutputLabelElement
+      ? blockedOutputLabelElement.textContent.trim()
+      : (blockedOutputGroup ? blockedOutputGroup.label : "");
     let outputFocusStatusText = "";
     if (state.outputFocusLiveMode === "blocked" && state.blockedOutputBacktraceId) {
-      outputFocusStatusText = `${blockedOutputLabel || state.blockedOutputBacktraceId}：${outputFocusFeedbackLabel}（${state.outputFocusStatusNonce}）`;
+      outputFocusStatusText = `${blockedOutputLabel || "未命名输出组"}：${outputFocusFeedbackLabel}（${state.outputFocusStatusNonce}）`;
     } else if (state.outputFocusLiveMode === "focused" && activeOutputLabel) {
       outputFocusStatusText = `已聚焦 ${activeOutputLabel} 输出组`;
     }
