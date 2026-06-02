@@ -9031,7 +9031,23 @@ def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
                 "pending_count": 1,
                 "next_candidate_kind": "wire",
             },
-            "stream_replay": [],
+            "stream_replay": [
+                {
+                    "event_type": "candidate_edit_revision_requested",
+                    "decision_index": 1,
+                    "target_type": "wire",
+                    "target_id": "sw1->logic1",
+                    "display_label": "sw1->logic1",
+                    "source_excerpt": "按 sw1->logic1 建立 logic1 输入说明。",
+                    "graph_diff": {
+                        "operation": "candidate_edit",
+                        "node_ids_added": [],
+                        "wire_ids_added": ["sw1->logic1"],
+                    },
+                    "candidate_recalculation": {"status": "revision_candidate_ready"},
+                    "requirements_document_patch_status": "not_requested",
+                }
+            ] if revised else [],
         }
 
     def fulfill_streamed_candidate(route: Any) -> None:
@@ -9069,10 +9085,15 @@ def test_logic_builder_streamed_revision_feedback_copy_uses_readable_targets(
         expect(page.locator("#logic-streamed-revision-status")).to_have_text("反馈已重算候选")
         expect(page.locator("#logic-streamed-revision-feedback")).to_contain_text("SW1 到 L1")
         expect(page.locator("#logic-streamed-revision-feedback")).to_contain_text("L1")
+        replay_item = page.locator("#logic-streamed-history li[data-stream-replay-event]").first
+        expect(replay_item).to_contain_text("已反馈重算")
+        expect(replay_item).to_contain_text("SW1 到 L1")
+        expect(replay_item).not_to_contain_text("sw1->logic1")
         revision_feedback_state = page.evaluate("""() => ({
           feedback: document.querySelector("#logic-streamed-revision-feedback")?.textContent || "",
+          replay: document.querySelector("#logic-streamed-history li[data-stream-replay-event]")?.textContent || "",
         })""")
-        _assert_no_machine_tokens_in_accessible_state(revision_feedback_state, "feedback")
+        _assert_no_machine_tokens_in_accessible_state(revision_feedback_state, "feedback", "replay")
         page.wait_for_function(
             """() => {
               try {
