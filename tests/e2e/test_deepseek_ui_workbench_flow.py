@@ -4029,6 +4029,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain).to_have_attribute("data-output-count", re.compile(r"^[1-9]"))
         expect(segment_trust_chain).to_have_attribute("data-review-anchor-count", "10")
         expect(segment_trust_chain).to_have_attribute("data-current-segment-trust-chain-scope", "current-segment")
+        expect(segment_trust_chain).to_have_attribute("title", re.compile("当前段.*链路"))
+        expect(segment_trust_chain).to_have_attribute("aria-label", re.compile("当前段.*链路"))
         expect(segment_trust_chain.locator("[data-trust-chain-step]")).to_have_count(4)
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("段 01")
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("读取")
