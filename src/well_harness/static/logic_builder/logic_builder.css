@@ -1860,6 +1860,43 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   color: #ffb4a8;
 }
 
+.logic-current-segment-consistency-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.logic-current-segment-consistency-cell > span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logic-current-segment-consistency-align {
+  flex: 0 0 auto;
+  min-height: 16px;
+  border: 1px solid rgba(245, 200, 91, 0.42);
+  border-radius: 999px;
+  background: rgba(245, 200, 91, 0.10);
+  color: #ffe6a3;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 5px;
+}
+
+.logic-current-segment-consistency-align:focus-visible {
+  outline: 1px solid rgba(245, 200, 91, 0.86);
+  outline-offset: 2px;
+}
+
+.logic-current-segment-consistency-align[hidden] {
+  display: none;
+}
+
 #logic-trust-review-state[data-trace-consistency-review-state="consistent"] {
   color: #a7f3d0;
 }

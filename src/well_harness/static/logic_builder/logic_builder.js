@@ -222,6 +222,8 @@
   const currentSegmentAnchor = $("logic-current-segment-anchor");
   const currentSegmentReview = $("logic-current-segment-review");
   const currentSegmentConsistencyStatus = $("logic-current-segment-consistency");
+  const currentSegmentConsistencyText = $("logic-current-segment-consistency-text");
+  const currentSegmentConsistencyAlign = $("logic-current-segment-consistency-align");
   const currentSegmentOutputImpact = $("logic-current-segment-output-impact");
   const currentSegmentOutputLabels = $("logic-current-segment-output-labels");
   const currentSegmentOutputReveal = $("logic-current-segment-output-reveal");
@@ -2979,11 +2981,43 @@
       text = "选中对象依据与当前段不同";
     }
 
+    const alignTrace = stateValue === "diverged" ? selectedTargetRequirementTrace() : null;
+    const alignTraceId = alignTrace ? (alignTrace.id || alignTrace.sourceId || "active") : "none";
+    const alignSource = alignTrace
+      ? (state.selectedTargetType === "wire" ? "canvas-wire" : (state.selectedTargetType === "node" ? "canvas-node" : "trace-list"))
+      : "none";
+    const canAlign = stateValue === "diverged" && Boolean(alignTrace);
     currentSegmentConsistencyStatus.dataset.traceConsistencyState = stateValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencyId = idValue;
     currentSegmentConsistencyStatus.dataset.traceConsistencySurfaces = surfaces;
-    currentSegmentConsistencyStatus.textContent = text;
+    currentSegmentConsistencyStatus.dataset.traceConsistencyAlignable = canAlign ? "true" : "false";
+    currentSegmentConsistencyStatus.dataset.traceConsistencyAlignTargetId = canAlign ? alignTraceId : "none";
+    currentSegmentConsistencyStatus.dataset.traceConsistencyAlignSource = canAlign ? alignSource : "none";
+    if (currentSegmentConsistencyText) {
+      currentSegmentConsistencyText.textContent = text;
+    } else {
+      currentSegmentConsistencyStatus.textContent = text;
+    }
+    if (currentSegmentConsistencyAlign) {
+      currentSegmentConsistencyAlign.hidden = !canAlign;
+      currentSegmentConsistencyAlign.disabled = !canAlign;
+      currentSegmentConsistencyAlign.dataset.traceConsistencyAlign = canAlign ? "ready" : "hidden";
+      currentSegmentConsistencyAlign.dataset.traceConsistencyAlignTargetId = canAlign ? alignTraceId : "none";
+      currentSegmentConsistencyAlign.dataset.traceConsistencyAlignSource = canAlign ? alignSource : "none";
+    }
     syncTraceConsistencyReviewState(stateValue, idValue, surfaces);
+  }
+
+  function alignCurrentSegmentToSelectedTargetTrace() {
+    const trace = selectedTargetRequirementTrace();
+    if (!trace) return;
+    const traceId = trace.id || trace.sourceId || "";
+    if (!traceId) return;
+    const source = state.selectedTargetType === "wire"
+      ? "canvas-wire"
+      : (state.selectedTargetType === "node" ? "canvas-node" : "trace-list");
+    setActiveRequirementTrace(traceId, source);
+    syncObjectContextRequirementTrace();
   }
 
   function syncTraceConsistencyReviewState(stateValue, idValue, surfaces) {
@@ -6021,6 +6055,9 @@
       setCircuitProvenanceFilter(action === "source" ? "source" : "all");
     });
   });
+  if (currentSegmentConsistencyAlign) {
+    currentSegmentConsistencyAlign.addEventListener("click", alignCurrentSegmentToSelectedTargetTrace);
+  }
   if (canvas) {
     canvas.addEventListener("click", (event) => {
       const target = event.target;
