@@ -199,6 +199,34 @@ def _expect_cross_surface_trace_audit(
     )
 
 
+def _expect_consistency_align_button(
+    locator: Any,
+    *,
+    visible: bool,
+    enabled: bool,
+    action: str | None = None,
+    align: str | None = None,
+    target_id: str | None = None,
+    source: str | None = None,
+) -> None:
+    if visible:
+        expect(locator).to_be_visible()
+    else:
+        expect(locator).to_be_hidden()
+    if enabled:
+        expect(locator).to_be_enabled()
+    else:
+        expect(locator).to_be_disabled()
+    if action is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-action", action)
+    if align is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-align", align)
+    if target_id is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-align-target-id", target_id)
+    if source is not None:
+        expect(locator).to_have_attribute("data-trace-consistency-align-source", source)
+
+
 REQUIREMENTS_READY = {
     "kind": "ai-fantui-requirements-intake-analysis",
     "status": "ready_for_logic_builder",
@@ -3484,8 +3512,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_id="none",
             alignable=False,
         )
-        expect(segment_consistency_align).to_be_hidden()
-        expect(segment_consistency_align).to_be_disabled()
+        _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(segment_card).to_have_attribute("data-node-count", "5")
         expect(segment_card).to_have_attribute("data-wire-count", "4")
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
@@ -4128,11 +4155,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         )
         expect(segment_consistency).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
         expect(trust_review_state).to_have_attribute("aria-label", re.compile("diverged.*row-logic3.*row-logic2"))
-        expect(segment_consistency_align).to_be_visible()
-        expect(segment_consistency_align).to_be_enabled()
-        expect(segment_consistency_align).to_have_attribute("data-trace-consistency-action", "align-selected-trace")
-        expect(segment_consistency_align).to_have_attribute("data-trace-consistency-align", "ready")
-        expect(segment_consistency_align).to_have_attribute("data-trace-consistency-align-target-id", "row-logic2")
+        _expect_consistency_align_button(
+            segment_consistency_align,
+            visible=True,
+            enabled=True,
+            action="align-selected-trace",
+            align="ready",
+            target_id="row-logic2",
+            source="canvas-node",
+        )
         segment_consistency_align.click()
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
@@ -4146,8 +4177,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_id="row-logic2",
             alignable=False,
         )
-        expect(segment_consistency_align).to_be_hidden()
-        expect(segment_consistency_align).to_be_disabled()
+        _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         _expect_trace_consistency(
             segment_consistency,
@@ -4158,16 +4188,22 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_target_id="row-logic2",
             align_source="canvas-node",
         )
-        expect(segment_consistency_align).to_be_visible()
-        expect(segment_consistency_align).to_be_enabled()
+        _expect_consistency_align_button(
+            segment_consistency_align,
+            visible=True,
+            enabled=True,
+            action="align-selected-trace",
+            align="ready",
+            target_id="row-logic2",
+            source="canvas-node",
+        )
         segment_consistency_align.focus()
         expect(segment_consistency_align).to_be_focused()
         page.keyboard.press("Enter")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
         _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic2")
-        expect(segment_consistency_align).to_be_hidden()
-        expect(segment_consistency_align).to_be_disabled()
+        _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator('[data-demo-node-id="logic3"]')).not_to_have_class(re.compile("is-requirement-trace-match"))
         page.locator('[data-wire-id="sw1->logic1"]').evaluate(
@@ -4226,10 +4262,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             align_target_id="row-logic1",
             align_source="canvas-wire",
         )
-        expect(segment_consistency_align).to_be_visible()
-        expect(segment_consistency_align).to_be_enabled()
-        expect(segment_consistency_align).to_have_attribute("data-trace-consistency-align-target-id", "row-logic1")
-        expect(segment_consistency_align).to_have_attribute("data-trace-consistency-align-source", "canvas-wire")
+        _expect_consistency_align_button(
+            segment_consistency_align,
+            visible=True,
+            enabled=True,
+            action="align-selected-trace",
+            align="ready",
+            target_id="row-logic1",
+            source="canvas-wire",
+        )
         segment_consistency_align.focus()
         expect(segment_consistency_align).to_be_focused()
         page.keyboard.press(" ")
@@ -4240,8 +4281,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_consistency).to_have_attribute("data-trace-consistency-state", "consistent")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-id", "row-logic1")
         expect(segment_consistency).to_have_attribute("data-trace-consistency-alignable", "false")
-        expect(segment_consistency_align).to_be_hidden()
-        expect(segment_consistency_align).to_be_disabled()
+        _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-demo-node-id="etrac_540v"]').click()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "unbound")
         expect(annotation_trace).to_have_attribute("data-annotation-requirement-trace", "unbound")
@@ -4259,8 +4299,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_source="none",
             alignable=False,
         )
-        expect(segment_consistency_align).to_be_hidden()
-        expect(segment_consistency_align).to_be_disabled()
+        _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(page.locator("#logic-canvas")).to_be_visible()
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         page.locator('[data-demo-node-id="logic2"]').focus()
