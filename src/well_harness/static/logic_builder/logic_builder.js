@@ -961,8 +961,7 @@
     const nodeIds = nodeIdsForTrace(trace);
     return OUTPUT_IMPACT_DEFINITIONS
       .filter(([id]) => nodeIds.has(id))
-      .map(([, label]) => label)
-      .slice(0, 3);
+      .map(([, label]) => label);
   }
 
   function relatedWireIdsForOutputGroup(sources, group) {
@@ -1273,6 +1272,7 @@
         currentSegmentOutputImpact.dataset.outputImpact = "waiting";
         currentSegmentOutputImpact.dataset.outputImpactCount = "0";
         currentSegmentOutputImpact.dataset.outputImpactLabels = "";
+        currentSegmentOutputImpact.dataset.outputImpactVisibleLabels = "";
         currentSegmentOutputImpact.dataset.outputImpactSource = "trace-output-map";
         currentSegmentOutputImpact.setAttribute("aria-label", "最终输出影响摘要：等待输出映射");
         currentSegmentOutputImpact.setAttribute("title", "最终输出影响摘要：等待输出映射");
@@ -1305,15 +1305,23 @@
     }
     const outputImpacts = outputImpactsForTrace(trace);
     const outputImpactLabel = outputImpacts.join(" · ") || "未直接触达输出";
+    const visibleOutputImpacts = outputImpacts.slice(0, 2);
+    const hiddenOutputImpactCount = Math.max(0, outputImpacts.length - visibleOutputImpacts.length);
+    const outputImpactVisibleLabel = outputImpacts.length
+      ? `${visibleOutputImpacts.join(" · ")}${hiddenOutputImpactCount ? ` · +${hiddenOutputImpactCount}` : ""}`
+      : "未直接触达输出";
     if (currentSegmentOutputImpact) {
       currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
       currentSegmentOutputImpact.dataset.outputImpactCount = String(outputImpacts.length);
       currentSegmentOutputImpact.dataset.outputImpactLabels = outputImpacts.join("|");
+      currentSegmentOutputImpact.dataset.outputImpactVisibleLabels = outputImpacts.length
+        ? [...visibleOutputImpacts, ...(hiddenOutputImpactCount ? [`+${hiddenOutputImpactCount}`] : [])].join("|")
+        : "";
       currentSegmentOutputImpact.dataset.outputImpactSource = "trace-output-map";
       currentSegmentOutputImpact.setAttribute("aria-label", `最终输出影响摘要：${outputImpactLabel}`);
       currentSegmentOutputImpact.setAttribute("title", `最终输出影响摘要：${outputImpactLabel}`);
     }
-    if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpactLabel;
+    if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = outputImpactVisibleLabel;
     syncCurrentSegmentJumpActions();
   }
 

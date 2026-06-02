@@ -3251,12 +3251,30 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_impact).to_have_attribute("data-output-impact", "ready")
         expect(output_impact).to_have_attribute("data-output-impact-count", re.compile(r"^[1-9]"))
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("TLS"))
+        expect(output_impact).to_have_attribute("data-output-impact-visible-labels", re.compile(r"^[^|]+(\\|[^|]+){0,2}$"))
         expect(output_impact).to_have_attribute("data-output-impact-source", "trace-output-map")
         expect(output_impact).to_have_attribute("aria-label", re.compile("最终输出影响摘要"))
         expect(output_impact).to_have_attribute("title", re.compile("TLS"))
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("TLS")
         first_output_impact = page.locator("#logic-current-segment-output-labels").inner_text()
         first_output_impact_labels = output_impact.get_attribute("data-output-impact-labels") or ""
+        first_output_impact_visible_labels = output_impact.get_attribute("data-output-impact-visible-labels") or ""
+        first_output_impact_label_list = [label for label in first_output_impact_labels.split("|") if label]
+        first_output_impact_visible_list = [label for label in first_output_impact_visible_labels.split("|") if label]
+        first_output_impact_count = int(output_impact.get_attribute("data-output-impact-count") or "0")
+        first_output_impact_title = output_impact.get_attribute("title") or ""
+        first_output_impact_aria = output_impact.get_attribute("aria-label") or ""
+        assert first_output_impact_count == len(first_output_impact_label_list)
+        assert 1 <= len(first_output_impact_visible_list) <= 3
+        assert len(first_output_impact.split(" · ")) <= 3
+        if len(first_output_impact_label_list) > 2:
+            assert first_output_impact_visible_list[-1] == f"+{len(first_output_impact_label_list) - 2}"
+            assert first_output_impact_visible_list[-1] in first_output_impact
+        else:
+            assert not any(label.startswith("+") for label in first_output_impact_visible_list)
+        for label in first_output_impact_label_list:
+            assert label in first_output_impact_title
+            assert label in first_output_impact_aria
         segment_jumps = page.locator("#logic-current-segment-anchor-jumps")
         expect(segment_jumps).to_be_visible()
         expect(segment_jumps.locator("[data-current-segment-jump]")).to_have_count(3)
@@ -3294,6 +3312,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 02")
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
         assert (output_impact.get_attribute("data-output-impact-labels") or "") != first_output_impact_labels
+        assert (output_impact.get_attribute("data-output-impact-visible-labels") or "") != first_output_impact_visible_labels
+        second_output_impact_label_list = [label for label in (output_impact.get_attribute("data-output-impact-labels") or "").split("|") if label]
+        second_output_impact_visible_list = [label for label in (output_impact.get_attribute("data-output-impact-visible-labels") or "").split("|") if label]
+        assert int(output_impact.get_attribute("data-output-impact-count") or "0") == len(second_output_impact_label_list)
+        assert 1 <= len(second_output_impact_visible_list) <= 3
         expect(page.locator("#logic-current-segment-output-labels")).to_contain_text("ETRAC")
         assert second_trace_labels.split("|")[0] in page.locator("#logic-current-segment-output-labels").inner_text()
         assert page.locator("#logic-current-segment-output-labels").inner_text() != first_output_impact
