@@ -901,6 +901,20 @@ def _expect_current_segment_identity_loop_state(
         expect(loop).to_contain_text(expected_inspector_state)
 
 
+def _assert_no_machine_tokens_in_accessible_state(
+    state: dict[str, Any],
+    *fields: str,
+    extra_tokens: tuple[str, ...] = (),
+) -> None:
+    internal_tokens = ("row-logic", "->", *extra_tokens)
+    for field in fields:
+        value = str(state.get(field) or "")
+        for token in internal_tokens:
+            if token:
+                assert token not in value, state
+        assert re.search(r"\blogic\d+\b", value) is None, state
+
+
 def _expect_output_source_trace_link(
     page: Any,
     output_backtrace: Any,
@@ -950,14 +964,7 @@ def _expect_output_source_trace_link(
           title: element.getAttribute("title") || "",
         })"""
     )
-    for internal_token in ("row-logic", "logic1->", "logic2->", "logic3->"):
-        assert internal_token not in source_accessible_state["ariaLabel"], source_accessible_state
-        assert internal_token not in source_accessible_state["title"], source_accessible_state
-    for internal_token in (trace_id, "->"):
-        assert internal_token not in source_accessible_state["ariaLabel"], source_accessible_state
-        assert internal_token not in source_accessible_state["title"], source_accessible_state
-    assert re.search(r"\blogic\d+\b", source_accessible_state["ariaLabel"]) is None, source_accessible_state
-    assert re.search(r"\blogic\d+\b", source_accessible_state["title"]) is None, source_accessible_state
+    _assert_no_machine_tokens_in_accessible_state(source_accessible_state, "ariaLabel", "title", extra_tokens=(trace_id,))
     if active:
         expect(source).to_have_attribute("aria-pressed", "true")
         expect(source).to_have_attribute("aria-current", "true")
@@ -1014,10 +1021,7 @@ def _expect_output_coverage_current_source(
     assert coverage_state["accessibleLabel"] == coverage_state["title"], coverage_state
     assert coverage_state["text"] in coverage_state["accessibleLabel"], coverage_state
     assert compact_label in coverage_state["accessibleLabel"] or source_chip_label in coverage_state["accessibleLabel"], coverage_state
-    for internal_token in ("row-logic", "logic1->", "logic2->", "logic3->"):
-        assert internal_token not in coverage_state["accessibleLabel"], coverage_state
-        assert internal_token not in coverage_state["ariaLabel"], coverage_state
-        assert internal_token not in coverage_state["title"], coverage_state
+    _assert_no_machine_tokens_in_accessible_state(coverage_state, "accessibleLabel", "ariaLabel", "title")
     if source is not None:
         assert source_full_label in coverage_state["currentSourceFullLabel"], coverage_state
         assert source_full_label in coverage_state["accessibleLabel"], coverage_state
@@ -5179,18 +5183,14 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
                 && ariaLabel === title
                 && title.includes("聚焦")
                 && title.includes(outputLabel)
-                && title.includes("输出组")
-                && !title.includes("row-logic")
-                && !ariaLabel.includes("row-logic")
-                && !title.includes("->")
-                && !ariaLabel.includes("->")
-                && !/\\blogic\\d+\\b/.test(title)
-                && !/\\blogic\\d+\\b/.test(ariaLabel),
+                && title.includes("输出组"),
             };
           });
         }""")
         assert len(output_item_title_state) == 4, output_item_title_state
         assert all(item["ok"] for item in output_item_title_state), output_item_title_state
+        for output_item_state in output_item_title_state:
+            _assert_no_machine_tokens_in_accessible_state(output_item_state, "ariaLabel", "title")
         assert page.locator('#logic-output-backtrace-list [data-source-count]:not([data-source-count="0"])').count() >= 3
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_contain_text("当前 01")
         expect(output_backtrace.locator('[data-output-backtrace-output="etrac"]')).to_contain_text("段 02")
@@ -5702,16 +5702,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             ok: ariaLabel.includes("ETRAC")
               && title.includes("ETRAC")
               && ariaLabel.includes("非当前段相关输出")
-              && title.includes("非当前段相关输出")
-              && !ariaLabel.includes("row-logic")
-              && !title.includes("row-logic")
-              && !ariaLabel.includes("->")
-              && !title.includes("->")
-              && !/\\blogic\\d+\\b/.test(ariaLabel)
-              && !/\\blogic\\d+\\b/.test(title),
+              && title.includes("非当前段相关输出"),
           };
         }""")
         assert blocked_etrac_label_state["ok"] is True, blocked_etrac_label_state
+        _assert_no_machine_tokens_in_accessible_state(blocked_etrac_label_state, "ariaLabel", "title")
         expect(output_focus_status).to_contain_text("ETRAC")
         expect(output_focus_status).to_contain_text("非当前段相关输出")
         first_noop_status = output_focus_status.inner_text()
