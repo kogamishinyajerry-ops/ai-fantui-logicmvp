@@ -1665,10 +1665,10 @@
         currentSegmentGlobalReview.dataset.currentSegmentId = "waiting";
         currentSegmentGlobalReview.dataset.outputCount = "0";
         currentSegmentGlobalReview.dataset.reviewAnchorCount = "0";
-        currentSegmentGlobalReview.setAttribute("aria-label", "全局复核口径：等待段落");
-        currentSegmentGlobalReview.setAttribute("title", "全局复核口径：等待段落");
+        currentSegmentGlobalReview.setAttribute("aria-label", "全局复核口径：等待当前段到全局矩阵");
+        currentSegmentGlobalReview.setAttribute("title", "全局复核口径：等待当前段到全局矩阵");
       }
-      if (currentSegmentGlobalReviewSummary) currentSegmentGlobalReviewSummary.textContent = "等待全局矩阵";
+      if (currentSegmentGlobalReviewSummary) currentSegmentGlobalReviewSummary.textContent = "等待当前段到全局矩阵";
       syncCurrentSegmentTrustChainInspectorSurfaces();
       if (currentSegmentOutputReveal) {
         currentSegmentOutputReveal.hidden = true;
@@ -1739,7 +1739,7 @@
     if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = totalAnchors ? "进入全局矩阵" : "等待全局矩阵";
     if (currentSegmentGlobalReview) {
       const traceId = trace.id || trace.sourceId || "active";
-      const globalReviewSummary = `${outputImpacts.length} 输出影响 · ${totalAnchors} 复核锚点 · 全局矩阵`;
+      const globalReviewSummary = `当前段到全局矩阵 · ${outputImpacts.length} 输出影响 · ${totalAnchors} 复核锚点`;
       currentSegmentGlobalReview.dataset.globalReviewState = totalAnchors ? "ready" : "waiting";
       currentSegmentGlobalReview.dataset.globalReviewScope = "current-segment-to-global";
       currentSegmentGlobalReview.dataset.currentSegmentId = traceId;

@@ -165,6 +165,8 @@ def _assert_current_segment_trust_chain_layout(page: Any) -> None:
             && globalReviewBox.height > 0
             && globalReviewText.includes("全局")
             && globalReviewText.includes("复核")
+            && globalReviewText.includes("当前段")
+            && globalReviewText.includes("当前段到全局矩阵")
             && globalReviewScope === "current-segment-to-global"
             && globalReviewCountsMatch;
           const chainTitle = chain.getAttribute("title") || "";
@@ -4312,6 +4314,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_global_review).to_have_attribute("title", re.compile("全局复核.*全局矩阵"))
         expect(segment_global_review).to_have_attribute("aria-label", re.compile("全局复核.*当前段"))
         expect(segment_global_review).to_contain_text("全局复核闭环")
+        expect(segment_global_review).to_contain_text("当前段到全局矩阵")
+        expect(segment_global_review).to_contain_text("当前段")
         expect(segment_global_review).to_contain_text("全局矩阵")
         expect(page.locator("#logic-canvas")).to_be_visible()
         _assert_current_segment_trust_chain_layout(page)
@@ -4582,6 +4586,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain.locator('[data-trust-chain-step="output"]')).to_contain_text("ETRAC")
         expect(segment_trust_chain.locator('[data-trust-chain-step="review"]')).to_contain_text("锚点复核")
         expect(segment_global_review).to_have_attribute("data-current-segment-id", "row-logic2")
+        expect(segment_global_review).to_contain_text("当前段到全局矩阵")
+        expect(segment_global_review).to_contain_text("当前段")
         expect(segment_global_review).to_contain_text("全局矩阵")
         _assert_current_segment_trust_chain_layout(page)
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
