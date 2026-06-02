@@ -1370,8 +1370,12 @@
     if (typeof outputBacktracePanel.scrollIntoView === "function") {
       outputBacktracePanel.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
-    if (outputBacktraceList && typeof outputBacktraceList.focus === "function") {
-      outputBacktraceList.focus({ preventScroll: true });
+    const relatedOutputFocusTarget = outputBacktraceList
+      ? outputBacktraceList.querySelector('.logic-output-backtrace-item.is-related[role="button"]')
+      : null;
+    const outputFocusTarget = relatedOutputFocusTarget || outputBacktraceList;
+    if (outputFocusTarget && typeof outputFocusTarget.focus === "function") {
+      outputFocusTarget.focus({ preventScroll: true });
     }
   }
 
