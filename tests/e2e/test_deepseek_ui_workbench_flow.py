@@ -4272,6 +4272,37 @@ def test_logic_builder_generation_stream_prefers_node_label_over_backend_id(
         page.close()
 
 
+def test_logic_builder_circuit_node_fallback_uses_linked_concept_label(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    drawing = _circuit_view_drawing()
+    for node in drawing["circuit_view"]["nodes"]:
+        if node["id"] == "radio_altitude_ft":
+            node["id"] = "backend_radio_altitude_raw"
+            node.pop("label", None)
+            node["linked_node_id"] = "input_ra"
+            break
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        circuit_node = page.locator('[data-demo-node-id="backend_radio_altitude_raw"]')
+        expect(circuit_node).to_have_attribute("data-node-id", "input_ra")
+        expect(circuit_node).to_have_attribute("data-display-label", "RA 高度")
+        expect(circuit_node).not_to_have_attribute("data-display-label", "backend_radio_altitude_raw")
+    finally:
+        page.close()
+
+
 def test_logic_builder_parameter_panel_fallback_copy_uses_readable_label(
     demo_server: str, browser: Any
 ) -> None:

@@ -5071,7 +5071,10 @@
   function circuitDisplayLabel(node) {
     const id = node.id || "";
     if (CIRCUIT_SHORT_LABELS[id]) return CIRCUIT_SHORT_LABELS[id];
-    return compactCircuitLabel(node.label) || id;
+    const linkedLabel = node.linked_node_id
+      ? readableDrawingNodeLabel({ id: node.linked_node_id }, "")
+      : "";
+    return compactCircuitLabel(node.label) || linkedLabel || id;
   }
 
   function circuitTechnicalLabel(node) {
