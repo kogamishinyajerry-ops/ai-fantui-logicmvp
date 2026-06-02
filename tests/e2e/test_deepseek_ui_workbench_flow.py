@@ -8681,6 +8681,127 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
         page.close()
 
 
+def test_logic_builder_streamed_candidate_copy_uses_readable_targets(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1440, "height": 960})
+    captured_requests: list[dict[str, Any]] = []
+    try:
+        page.route(
+            "**/api/requirements-intake/streamed-authoring/proposal",
+            lambda route: (
+                captured_requests.append(json.loads(route.request.post_data or "{}")),
+                _fulfill_json(
+                    route,
+                    {
+                        "kind": "ai-fantui-streamed-authoring-session",
+                        "status": "awaiting_confirmation",
+                        "proposal_count": 1,
+                        "source_requirements_sha256": "req-sha",
+                        "source_drawing_sha256": "drawing-sha",
+                        "active_proposal": {
+                            "id": "proposal-wire-sw1-logic1",
+                            "target_type": "wire",
+                            "target_id": "sw1->logic1",
+                            "display_label": "sw1->logic1",
+                            "sequence_index": 1,
+                            "proposal_status": "candidate_awaiting_confirmation",
+                            "requires_user_confirmation": True,
+                            "source_excerpt": "按 sw1->logic1 建立输入说明。",
+                            "source_anchor_ids": ["logic1"],
+                            "upstream": ["sw1"],
+                            "downstream": ["logic1"],
+                            "interpreted_logic": "候选会补充 sw1->logic1 输入解释。",
+                            "confirmation_question_zh": "是否确认 sw1->logic1？",
+                            "graph_diff": {
+                                "operation": "candidate_edit",
+                                "node_ids_added": [],
+                                "wire_ids_added": ["sw1->logic1"],
+                            },
+                        },
+                        "candidate_queue": {
+                            "status": "candidate_queue_active",
+                            "active_target_key": "sw1->logic1",
+                            "active_sequence_index": 1,
+                            "total_candidate_count": 1,
+                            "accepted_count": 0,
+                            "pending_count": 1,
+                            "next_candidate_kind": "wire",
+                        },
+                        "stream_replay": [
+                            {
+                                "event_type": "candidate_edit_revision_requested",
+                                "decision_index": 1,
+                                "target_type": "wire",
+                                "target_id": "sw1->logic1",
+                                "display_label": "sw1->logic1",
+                                "source_excerpt": "回放 sw1->logic1 输入说明。",
+                                "graph_diff": {
+                                    "operation": "candidate_edit",
+                                    "node_ids_added": [],
+                                    "wire_ids_added": ["sw1->logic1"],
+                                },
+                                "candidate_recalculation": {"status": "revision_candidate_ready"},
+                            }
+                        ],
+                    },
+                ),
+            ),
+        )
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-logic-builder-streamed-authoring-history");
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing()],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        page.click("#logic-streamed-panel-toggle")
+        expect(page.locator("#logic-streamed-authoring-panel")).to_be_visible()
+        page.click("#logic-streamed-start")
+
+        panel = page.locator("#logic-streamed-authoring-panel")
+        expect(panel).to_be_visible()
+        expect(panel).to_have_attribute("data-state", "awaiting-confirmation")
+        current = page.locator("#logic-streamed-current")
+        expect(current).to_have_attribute("data-target-id", "sw1->logic1")
+        expect(current).to_have_attribute("data-target-type", "wire")
+        expect(page.locator("#logic-streamed-title")).to_have_text("连线 SW1 到 L1")
+        expect(page.locator("#logic-streamed-explanation")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-streamed-queue-next")).to_have_text("下一连线 · SW1 到 L1")
+        expect(page.locator("#logic-streamed-source")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-streamed-source")).to_contain_text("逻辑锚点 01")
+        expect(page.locator("#logic-streamed-neighborhood")).to_contain_text("上游：SW1")
+        expect(page.locator("#logic-streamed-neighborhood")).to_contain_text("下游：L1")
+        expect(page.locator("#logic-streamed-history")).to_contain_text("SW1 到 L1")
+        streamed_copy_state = page.evaluate("""() => ({
+          title: document.querySelector("#logic-streamed-title")?.textContent || "",
+          explanation: document.querySelector("#logic-streamed-explanation")?.textContent || "",
+          queue: document.querySelector("#logic-streamed-queue-next")?.textContent || "",
+          source: document.querySelector("#logic-streamed-source")?.textContent || "",
+          neighborhood: document.querySelector("#logic-streamed-neighborhood")?.textContent || "",
+          history: document.querySelector("#logic-streamed-history")?.textContent || "",
+        })""")
+        _assert_no_machine_tokens_in_accessible_state(
+            streamed_copy_state,
+            "title",
+            "explanation",
+            "queue",
+            "source",
+            "neighborhood",
+            "history",
+        )
+        assert captured_requests, "streamed authoring proposal request was not sent"
+        assert captured_requests[0]["natural_language_prompt"] == ""
+        assert captured_requests[0]["decision_history"] == []
+    finally:
+        page.close()
+
+
 def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
     demo_server: str, browser: Any
 ) -> None:

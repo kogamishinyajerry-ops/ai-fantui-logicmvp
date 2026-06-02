@@ -2591,7 +2591,9 @@
     if (streamedAuthoringSequence) streamedAuthoringSequence.textContent = `#${proposal.sequence_index || 1}/${session.proposal_count || "?"}`;
     if (streamedAuthoringTitle) streamedAuthoringTitle.textContent = streamedTargetLabel(proposal);
     if (streamedAuthoringExplanation) {
-      streamedAuthoringExplanation.textContent = proposal.interpreted_logic || proposal.confirmation_question_zh || "请确认系统对这一笔候选编辑的理解。";
+      streamedAuthoringExplanation.textContent = readableLogicReferenceText(
+        proposal.interpreted_logic || proposal.confirmation_question_zh || "请确认系统对这一笔候选编辑的理解。"
+      );
       streamedAuthoringExplanation.dataset.logicHighlight = "active";
     }
     if (streamedAuthoringSource) {
