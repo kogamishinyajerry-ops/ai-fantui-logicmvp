@@ -4214,6 +4214,33 @@ def test_logic_builder_unknown_node_kind_uses_readable_fallback(
         page.close()
 
 
+def test_logic_builder_node_label_fallback_uses_readable_concept_anchor(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    drawing = json.loads(json.dumps(LOGIC_DRAWING))
+    drawing["nodes"][0].pop("label", None)
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """(drawing) => {
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+              localStorage.removeItem("ai-fantui-requirements-intake-ready-v1");
+            }""",
+            drawing,
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        raw_label_node = page.locator('.logic-node[data-node-id="input_ra"]')
+        expect(raw_label_node).to_have_attribute("data-node-id", "input_ra")
+        expect(raw_label_node.locator(".logic-node-title strong")).to_have_text("RA 高度")
+        expect(raw_label_node.locator(".logic-node-title strong")).not_to_have_text("input_ra")
+        expect(raw_label_node).to_have_attribute("title", re.compile("^RA 高度"))
+    finally:
+        page.close()
+
+
 def test_logic_builder_parameter_panel_fallback_copy_uses_readable_label(
     demo_server: str, browser: Any
 ) -> None:

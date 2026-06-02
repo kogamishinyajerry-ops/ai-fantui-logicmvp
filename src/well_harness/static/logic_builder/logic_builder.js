@@ -38,6 +38,11 @@
     sw1: "sw",
     sw2: "sw",
   };
+  const CONCEPT_NODE_FALLBACK_LABELS = {
+    input_ra: "RA 高度",
+    gate_release: "释放门",
+    output_unlock: "油门锁释放",
+  };
   const CIRCUIT_LOCAL_COMPLETION_IDS = new Set([
     "sw1",
     "sw2",
@@ -575,9 +580,22 @@
     if (circuitNode) return circuitDisplayLabel(circuitNode) || fallback || normalized;
     const drawingNode = normalized ? drawingNodeById(normalized) : null;
     if (drawingNode) {
-      return compactCircuitLabel(drawingNode.label || drawingNode.title || drawingNode.id) || fallback || normalized;
+      return readableDrawingNodeLabel(drawingNode, fallback || normalized);
     }
-    return fallback || normalized || "未选择";
+    return readableDrawingNodeLabel({ id: normalized, label: fallback }, fallback || normalized || "未选择");
+  }
+
+  function readableDrawingNodeLabel(node, fallback = "节点") {
+    const normalized = String((node && node.id) || "").trim();
+    const mappedNode = normalized ? requirementNodeMap().get(normalized) : null;
+    const displayLabel = compactCircuitLabel(
+      (node && (node.label || node.title || node.title_zh))
+        || (mappedNode && (mappedNode.label || mappedNode.title || mappedNode.title_zh))
+        || CONCEPT_NODE_FALLBACK_LABELS[normalized]
+        || fallback
+        || normalized
+    );
+    return displayLabel || fallback || normalized || "节点";
   }
 
   function readableAnnotationTargetDisplayLabel(type, id, fallback) {
@@ -5706,7 +5724,8 @@
       element.style.width = `${Number(node.width) || 180}px`;
       element.style.height = `${Math.max(72, Number(node.height) || 104)}px`;
       const anchorTitle = sourceAnchorQuote(anchorsForNode(node));
-      const hoverTitle = [node.label || node.id, node.description_zh, anchorTitle]
+      const displayLabel = readableDrawingNodeLabel(node, node.id || "节点");
+      const hoverTitle = [displayLabel, node.description_zh, anchorTitle]
         .filter(Boolean)
         .join("\n");
       if (hoverTitle) {
@@ -5715,7 +5734,7 @@
       element.innerHTML = `
         <span class="logic-node-kind">${escapeText(nodeKindLabel(node.node_kind))}</span>
         <div class="logic-node-title">
-          <strong>${escapeText(node.label || node.id)}</strong>
+          <strong>${escapeText(displayLabel)}</strong>
         </div>
       `;
       element.addEventListener("click", (event) => selectNode(node.id || "", event, element));
