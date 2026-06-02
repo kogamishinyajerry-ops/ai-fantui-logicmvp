@@ -5514,6 +5514,20 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_coverage).to_contain_text("ETRAC")
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "etrac")
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
+        deploy_row_logic3_source = output_backtrace.locator('[data-output-backtrace-output="deploy"] [data-output-backtrace-source="row-logic3"]').first
+        deploy_row_logic3_source.click()
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
+        expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic3")
+        expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic3")
+        expect(deploy_row_logic3_source).to_have_attribute("aria-pressed", "true")
+        _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
+        etrac_row_logic2_source = output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]').first
+        etrac_row_logic2_source.click()
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
+        expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
+        expect(output_backtrace).to_have_attribute("data-active-trace-id", "row-logic2")
+        expect(etrac_row_logic2_source).to_have_attribute("aria-pressed", "true")
+        _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
 
         trace_panel_box = trace_panel.bounding_box()
         trace_list_box = page.locator("#logic-requirement-trace-list").bounding_box()
