@@ -5278,7 +5278,7 @@
     const readableLane = circuitReadableLaneForWire(wire);
     const provenanceKind = circuitProvenanceKindForWire(wire, provenanceById);
     const isTraceSelectable = canvasWireTraceSelectable(wire);
-    const baseWireLabel = wire.label || `${wire.source || ""} → ${wire.target || ""}`;
+    const baseWireLabel = readableAnnotationTargetDisplayLabel("wire", wireId, wire.label || wireId);
     const baseWireTitle = `${baseWireLabel} · 来源：${circuitProvenanceLabel(provenanceKind)}`;
     const polyline = createSvgElement("polyline", {
       points: route.map((point) => `${Number(point.x) || 0},${Number(point.y) || 0}`).join(" "),

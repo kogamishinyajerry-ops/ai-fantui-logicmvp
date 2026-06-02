@@ -8681,6 +8681,55 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
         page.close()
 
 
+def test_logic_builder_circuit_wire_accessible_copy_uses_readable_fallback(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    drawing = _circuit_view_drawing()
+    for wire in drawing["circuit_view"]["wires"]:
+        if wire.get("source") == "sw1" and wire.get("target") == "logic1":
+            wire.pop("label", None)
+            break
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing]) => {
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+            }""",
+            [REQUIREMENTS_READY, drawing],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        wire = page.locator('.logic-circuit-wire[data-source="sw1"][data-target="logic1"]')
+        expect(wire).to_be_visible()
+        expect(wire).to_have_attribute("data-wire-id", "sw1->logic1")
+        expect(wire).to_have_attribute("data-source", "sw1")
+        expect(wire).to_have_attribute("data-target", "logic1")
+
+        wire_copy_state = wire.evaluate(
+            """(element) => ({
+              ariaLabel: element.getAttribute("aria-label") || "",
+              baseTitle: element.dataset.baseTitle || "",
+              title: element.querySelector("title")?.textContent || "",
+              wireId: element.dataset.wireId || "",
+            })"""
+        )
+        assert wire_copy_state["wireId"] == "sw1->logic1"
+        assert "SW1 到 L1" in wire_copy_state["ariaLabel"]
+        assert "SW1 到 L1" in wire_copy_state["baseTitle"]
+        assert "SW1 到 L1" in wire_copy_state["title"]
+        _assert_no_machine_tokens_in_accessible_state(
+            wire_copy_state,
+            "ariaLabel",
+            "baseTitle",
+            "title",
+        )
+    finally:
+        page.close()
+
+
 def test_logic_builder_source_anchor_fallback_copy_uses_readable_identity(
     demo_server: str, browser: Any
 ) -> None:
