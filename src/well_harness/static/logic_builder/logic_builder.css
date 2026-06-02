@@ -1984,6 +1984,82 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-current-segment-output-reveal[hidden] {
   display: none;
 }
+.logic-current-segment-trust-chain {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 5px;
+  padding: 6px;
+  border: 1px solid rgba(54, 198, 216, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(5, 21, 35, 0.9), rgba(3, 13, 22, 0.76)),
+    repeating-linear-gradient(90deg, rgba(96, 221, 255, 0.055) 0 1px, transparent 1px 12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+.logic-current-segment-trust-chain::before {
+  content: "";
+  position: absolute;
+  inset: 13px 14px auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(95, 219, 255, 0.10), rgba(104, 234, 186, 0.42), rgba(95, 219, 255, 0.10));
+  pointer-events: none;
+}
+.logic-current-segment-trust-step {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px solid rgba(115, 221, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(6, 22, 38, 0.74);
+  padding: 5px 6px 5px 17px;
+}
+.logic-current-segment-trust-step::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(104, 234, 186, 0.92);
+  box-shadow: 0 0 0 3px rgba(104, 234, 186, 0.12), 0 0 12px rgba(104, 234, 186, 0.36);
+}
+.logic-current-segment-trust-step[data-step-state="waiting"]::before {
+  background: rgba(138, 166, 190, 0.78);
+  box-shadow: 0 0 0 3px rgba(138, 166, 190, 0.10);
+}
+.logic-current-segment-trust-step span,
+.logic-current-segment-trust-step strong,
+.logic-current-segment-trust-step small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-current-segment-trust-step span {
+  color: rgba(174, 218, 245, 0.68);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.logic-current-segment-trust-step strong {
+  margin-top: 2px;
+  color: #effbff;
+  font-size: 9px;
+  line-height: 1.1;
+}
+.logic-current-segment-trust-step small {
+  margin-top: 1px;
+  color: rgba(185, 225, 245, 0.70);
+  font-size: 8px;
+  line-height: 1.1;
+}
 .logic-current-segment-anchor-jumps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

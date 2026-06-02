@@ -272,6 +272,28 @@
             <dt>最终输出</dt>
             <dd id="logic-current-segment-output-impact" class="logic-current-segment-output-impact" data-output-impact="waiting" data-output-impact-count="0" data-output-impact-labels="" data-output-impact-visible-labels="" data-output-impact-source="trace-output-map" aria-label="最终输出影响摘要：等待输出映射" title="最终输出影响摘要：等待输出映射"><strong id="logic-current-segment-output-labels">等待输出映射</strong><button id="logic-current-segment-output-reveal" class="logic-current-segment-output-reveal" type="button" data-output-impact-reveal="hidden" data-hidden-output-count="0" aria-label="等待输出回溯完整清单" aria-controls="logic-output-backtrace-panel" aria-expanded="false" disabled hidden>全部</button></dd>
           </dl>
+          <div id="logic-current-segment-trust-chain" class="logic-current-segment-trust-chain" aria-label="当前段到最终面板的证据链" data-current-segment-trust-chain="waiting" data-current-segment-trace-id="waiting" data-source-anchor-id="waiting" data-node-count="0" data-wire-count="0" data-output-count="0" data-review-anchor-count="0">
+            <article class="logic-current-segment-trust-step" data-trust-chain-step="source" data-step-state="waiting">
+              <span>01 原文</span>
+              <strong id="logic-current-segment-chain-source">等待原文</strong>
+              <small id="logic-current-segment-chain-source-anchor">等待段落锚点</small>
+            </article>
+            <article class="logic-current-segment-trust-step" data-trust-chain-step="map" data-step-state="waiting">
+              <span>02 落图</span>
+              <strong id="logic-current-segment-chain-map">0 节点 · 0 连线</strong>
+              <small id="logic-current-segment-chain-map-anchor">等待逻辑锚点</small>
+            </article>
+            <article class="logic-current-segment-trust-step" data-trust-chain-step="output" data-step-state="waiting">
+              <span>03 输出</span>
+              <strong id="logic-current-segment-chain-output">等待输出</strong>
+              <small id="logic-current-segment-chain-output-anchor">等待输出影响</small>
+            </article>
+            <article class="logic-current-segment-trust-step" data-trust-chain-step="review" data-step-state="waiting">
+              <span>04 复核</span>
+              <strong id="logic-current-segment-chain-review">等待复核</strong>
+              <small id="logic-current-segment-chain-review-anchor">等待全局矩阵</small>
+            </article>
+          </div>
           <div id="logic-current-segment-anchor-jumps" class="logic-current-segment-anchor-jumps" data-current-segment-jumps="waiting" aria-label="当前段落锚点跳转">
             <button type="button" data-current-segment-jump="trace" aria-pressed="false" disabled>看本段</button>
             <button type="button" data-current-segment-jump="source" aria-pressed="false" disabled>来源</button>

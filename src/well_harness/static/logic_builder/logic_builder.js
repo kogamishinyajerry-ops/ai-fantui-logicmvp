@@ -228,6 +228,16 @@
   const currentSegmentOutputImpact = $("logic-current-segment-output-impact");
   const currentSegmentOutputLabels = $("logic-current-segment-output-labels");
   const currentSegmentOutputReveal = $("logic-current-segment-output-reveal");
+  const currentSegmentTrustChain = $("logic-current-segment-trust-chain");
+  const currentSegmentChainSource = $("logic-current-segment-chain-source");
+  const currentSegmentChainSourceAnchor = $("logic-current-segment-chain-source-anchor");
+  const currentSegmentChainMap = $("logic-current-segment-chain-map");
+  const currentSegmentChainMapAnchor = $("logic-current-segment-chain-map-anchor");
+  const currentSegmentChainOutput = $("logic-current-segment-chain-output");
+  const currentSegmentChainOutputAnchor = $("logic-current-segment-chain-output-anchor");
+  const currentSegmentChainReview = $("logic-current-segment-chain-review");
+  const currentSegmentChainReviewAnchor = $("logic-current-segment-chain-review-anchor");
+  const currentSegmentTrustSteps = Array.from(document.querySelectorAll("#logic-current-segment-trust-chain [data-trust-chain-step]"));
   const currentSegmentJumpBar = $("logic-current-segment-anchor-jumps");
   const currentSegmentJumpButtons = Array.from(document.querySelectorAll("[data-current-segment-jump]"));
   const outputBacktracePanel = $("logic-output-backtrace-panel");
@@ -1574,6 +1584,28 @@
         currentSegmentOutputImpact.setAttribute("title", "最终输出影响摘要：等待输出映射");
       }
       if (currentSegmentOutputLabels) currentSegmentOutputLabels.textContent = "等待输出映射";
+      if (currentSegmentTrustChain) {
+        currentSegmentTrustChain.dataset.currentSegmentTrustChain = "waiting";
+        currentSegmentTrustChain.dataset.currentSegmentTraceId = "waiting";
+        currentSegmentTrustChain.dataset.sourceAnchorId = "waiting";
+        currentSegmentTrustChain.dataset.nodeCount = "0";
+        currentSegmentTrustChain.dataset.wireCount = "0";
+        currentSegmentTrustChain.dataset.outputCount = "0";
+        currentSegmentTrustChain.dataset.reviewAnchorCount = "0";
+        currentSegmentTrustChain.setAttribute("aria-label", "当前段到最终面板的证据链：等待段落");
+        currentSegmentTrustChain.setAttribute("title", "当前段到最终面板的证据链：等待段落");
+      }
+      currentSegmentTrustSteps.forEach((step) => {
+        step.dataset.stepState = "waiting";
+      });
+      if (currentSegmentChainSource) currentSegmentChainSource.textContent = "等待原文";
+      if (currentSegmentChainSourceAnchor) currentSegmentChainSourceAnchor.textContent = "等待段落锚点";
+      if (currentSegmentChainMap) currentSegmentChainMap.textContent = "0 节点 · 0 连线";
+      if (currentSegmentChainMapAnchor) currentSegmentChainMapAnchor.textContent = "等待逻辑锚点";
+      if (currentSegmentChainOutput) currentSegmentChainOutput.textContent = "等待输出";
+      if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = "等待输出影响";
+      if (currentSegmentChainReview) currentSegmentChainReview.textContent = "等待复核";
+      if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = "等待全局矩阵";
       if (currentSegmentOutputReveal) {
         currentSegmentOutputReveal.hidden = true;
         currentSegmentOutputReveal.disabled = true;
@@ -1606,8 +1638,8 @@
     if (currentSegmentSummary) currentSegmentSummary.textContent = trace.quote || "当前段原文等待解析。";
     if (currentSegmentAction) currentSegmentAction.textContent = actions.join("；") || "生成候选节点与连线";
     if (currentSegmentAnchor) currentSegmentAnchor.textContent = anchorParts.join(" · ") || "等待节点/连线";
+    const totalAnchors = nodeIds.length + wireIds.length + conditionCount;
     if (currentSegmentReview) {
-      const totalAnchors = nodeIds.length + wireIds.length + conditionCount;
       currentSegmentReview.textContent = totalAnchors ? `${totalAnchors} 个锚点已进入全局复核` : "等待全局复核";
     }
     const outputImpacts = outputImpactsForTrace(trace);
@@ -1617,6 +1649,29 @@
     const outputImpactVisibleLabel = outputImpacts.length
       ? `${visibleOutputImpacts.join(" · ")}${hiddenOutputImpactCount ? ` · +${hiddenOutputImpactCount}` : ""}`
       : "未直接触达输出";
+    if (currentSegmentTrustChain) {
+      const sourceAnchorId = trace.sourceAnchorId || trace.source_anchor_id || trace.anchorId || "none";
+      currentSegmentTrustChain.dataset.currentSegmentTrustChain = "ready";
+      currentSegmentTrustChain.dataset.currentSegmentTraceId = trace.id || trace.sourceId || "active";
+      currentSegmentTrustChain.dataset.sourceAnchorId = sourceAnchorId;
+      currentSegmentTrustChain.dataset.nodeCount = String(nodeIds.length);
+      currentSegmentTrustChain.dataset.wireCount = String(wireIds.length);
+      currentSegmentTrustChain.dataset.outputCount = String(outputImpacts.length);
+      currentSegmentTrustChain.dataset.reviewAnchorCount = String(totalAnchors);
+      currentSegmentTrustChain.setAttribute("aria-label", `当前段到最终面板的证据链：段 ${segmentIndex}，${nodeIds.length} 节点 ${wireIds.length} 连线，${outputImpacts.length} 个输出影响，${totalAnchors} 个复核锚点`);
+      currentSegmentTrustChain.setAttribute("title", `段 ${segmentIndex} 证据链：原文到 ${nodeIds.length} 节点 / ${wireIds.length} 连线 / ${outputImpacts.length} 输出 / ${totalAnchors} 复核锚点`);
+    }
+    currentSegmentTrustSteps.forEach((step) => {
+      step.dataset.stepState = "ready";
+    });
+    if (currentSegmentChainSource) currentSegmentChainSource.textContent = `段 ${segmentIndex} 原文`;
+    if (currentSegmentChainSourceAnchor) currentSegmentChainSourceAnchor.textContent = trace.quote || "原文已结构化";
+    if (currentSegmentChainMap) currentSegmentChainMap.textContent = `${nodeIds.length} 节点 · ${wireIds.length} 连线`;
+    if (currentSegmentChainMapAnchor) currentSegmentChainMapAnchor.textContent = anchorParts.join(" · ") || "等待逻辑锚点";
+    if (currentSegmentChainOutput) currentSegmentChainOutput.textContent = outputImpacts.length ? outputImpactVisibleLabel : "未直接触达输出";
+    if (currentSegmentChainOutputAnchor) currentSegmentChainOutputAnchor.textContent = outputImpacts.length ? `${outputImpacts.length} 个输出影响` : "无直接输出影响";
+    if (currentSegmentChainReview) currentSegmentChainReview.textContent = totalAnchors ? `${totalAnchors} 锚点复核` : "等待复核";
+    if (currentSegmentChainReviewAnchor) currentSegmentChainReviewAnchor.textContent = totalAnchors ? "进入全局矩阵" : "等待全局矩阵";
     if (currentSegmentOutputImpact) {
       currentSegmentOutputImpact.dataset.outputImpact = outputImpacts.length ? "ready" : "none";
       currentSegmentOutputImpact.dataset.outputImpactCount = String(outputImpacts.length);
@@ -1712,6 +1767,7 @@
       if (isActive) {
         try {
           activeTrace = JSON.parse(element.dataset.traceTargets || "{}");
+          activeTrace.sourceAnchorId = activeTrace.sourceAnchorId || element.dataset.sourceAnchorId || "none";
         } catch (error) {
           activeTrace = null;
         }
