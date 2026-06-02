@@ -6118,7 +6118,11 @@
     if (batchConfirmUpdateButton) {
       batchConfirmUpdateButton.disabled = state.busy || !state.interpretationPayload || !hasDraft;
     }
-    const selectedCopy = state.selectedTargetLabel || state.selectedNodeId || "未选择";
+    const selectedCopy = readableAnnotationTargetDisplayLabel(
+      state.selectedTargetType,
+      state.selectedTargetId || state.selectedNodeId,
+      state.selectedTargetLabel || state.selectedNodeId || "未选择",
+    );
     selectedNode.textContent = selectedCopy;
     if (logicDetailSelectedNode) logicDetailSelectedNode.textContent = selectedCopy;
     updateAnnotationControls();

@@ -8240,7 +8240,7 @@ def test_logic_builder_detail_area_defaults_to_three_decision_cards(
         expect(page.locator("#logic-change-history-details")).to_be_hidden()
 
         page.click('[data-demo-node-id="sw1"]')
-        expect(board.locator("#logic-detail-selected-node")).to_have_text("sw1")
+        expect(board.locator("#logic-detail-selected-node")).to_have_text("SW1")
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
         expect(page.locator("#logic-selected-target-label")).to_contain_text("SW1")
@@ -8640,6 +8640,8 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
           text: element.textContent || "",
         })""")
         _assert_no_machine_tokens_in_accessible_state(selected_target_state, "ariaLabel", "title", "text")
+        expect(page.locator("#logic-selected-node")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-selected-node")).not_to_contain_text("sw1 → logic1")
         page.fill("#logic-node-comment-text", "这条连线需要说明 SW1 如何进入 L1。")
         page.click("#logic-add-annotation")
         expect(page.locator("#logic-annotation-count")).to_have_text("2 条标注意见")
@@ -8825,8 +8827,8 @@ def test_logic_builder_combines_notes_change_and_history_into_tabbed_canvas_draw
         assert canvas_wrap_box["height"] <= 800
 
         page.click('[data-demo-node-id="sw1"]')
-        expect(page.locator("#logic-selected-node")).to_have_text("sw1")
-        expect(page.locator("#logic-detail-selected-node")).to_have_text("sw1")
+        expect(page.locator("#logic-selected-node")).to_have_text("SW1")
+        expect(page.locator("#logic-detail-selected-node")).to_have_text("SW1")
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
         expect(page.locator("#logic-annotation-popover")).to_be_visible()
         expect(page.locator("#logic-change-loop-details")).to_be_hidden()
