@@ -3218,6 +3218,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_visible_status).to_have_class(re.compile("logic-output-visible-status"))
         expect(output_visible_status).to_have_attribute("aria-hidden", "true")
         expect(output_visible_status).to_have_attribute("data-output-visible-status", "idle")
+        expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "none")
+        expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "none")
         expect(output_visible_status).to_contain_text("输出依据待命")
         assert page.evaluate("""() => {
           const panel = document.querySelector("#logic-output-backtrace-panel");
@@ -3329,11 +3331,16 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
             expect(output_focus_status).to_contain_text("row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_contain_text("已展开当前需求段全部输出依据")
             assert page.evaluate("""() => {
               const visibleStatus = document.querySelector("#logic-output-visible-status");
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
-              return Boolean(visibleStatus && hiddenStatus && visibleStatus.textContent === hiddenStatus.textContent);
+              const panel = document.querySelector("#logic-output-backtrace-panel");
+              return Boolean(visibleStatus && hiddenStatus && panel
+                && visibleStatus.textContent === hiddenStatus.textContent
+                && visibleStatus.dataset.outputVisibleTargetId === panel.dataset.revealTraceId);
             }""") is True
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
@@ -3349,6 +3356,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_focus_status).to_contain_text("已聚焦")
             expect(output_focus_status).to_contain_text("TLS")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "focused")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "output")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "tls")
             expect(output_visible_status).to_contain_text("已聚焦")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3357,8 +3366,11 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             assert page.evaluate("""() => {
               const visibleStatus = document.querySelector("#logic-output-visible-status");
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
+              const panel = document.querySelector("#logic-output-backtrace-panel");
               return Boolean(visibleStatus && hiddenStatus
+                && panel
                 && visibleStatus.textContent === hiddenStatus.textContent
+                && visibleStatus.dataset.outputVisibleTargetId === panel.dataset.activeOutput
                 && !visibleStatus.textContent.includes("已展开当前需求段全部输出依据"));
             }""") is True
             assert page.evaluate("""() => {
@@ -3370,6 +3382,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "active")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(related_output_focus).to_be_focused()
         else:
             expect(output_reveal).to_be_hidden()
@@ -3391,6 +3405,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_reveal).to_have_attribute("aria-expanded", "false")
             expect(output_focus_status).to_contain_text("当前段来源锚点视图")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "view")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "source")
             expect(output_visible_status).to_contain_text("当前段来源锚点视图")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3401,6 +3417,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
               return Boolean(visibleStatus && hiddenStatus
                 && visibleStatus.textContent === hiddenStatus.textContent
+                && visibleStatus.dataset.outputVisibleTargetKind === "view"
+                && visibleStatus.dataset.outputVisibleTargetId === "source"
                 && !visibleStatus.textContent.includes("已展开当前需求段全部输出依据"));
             }""") is True
             output_reveal.focus()
@@ -3412,6 +3430,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
         segment_jumps.locator('[data-current-segment-jump="trace"]').click()
@@ -3423,6 +3443,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_reveal).to_have_attribute("aria-expanded", "false")
             expect(output_focus_status).to_contain_text("当前段逻辑线路视图")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "view")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "trace")
             expect(output_visible_status).to_contain_text("当前段逻辑线路视图")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3436,6 +3458,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_reveal).to_have_attribute("aria-expanded", "true")
             expect(output_focus_status).to_contain_text("已展开当前需求段全部输出依据")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "expanded")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
         expect(page.locator(".logic-circuit-node.is-requirement-trace-match")).not_to_have_count(0)
@@ -3447,6 +3471,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_backtrace).to_have_attribute("data-current-segment-output-reveal", "none")
             expect(output_focus_status).to_contain_text("全局复核视图")
             expect(output_visible_status).to_have_attribute("data-output-visible-status", "view")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
+            expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "all")
             expect(output_visible_status).to_contain_text("全局复核视图")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3457,6 +3483,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
               const hiddenStatus = document.querySelector("#logic-output-focus-status");
               return Boolean(visibleStatus && hiddenStatus
                 && visibleStatus.textContent === hiddenStatus.textContent
+                && visibleStatus.dataset.outputVisibleTargetKind === "view"
+                && visibleStatus.dataset.outputVisibleTargetId === "all"
                 && !visibleStatus.textContent.includes("已展开当前需求段全部输出依据"));
             }""") is True
         active_trace = page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")
@@ -3551,6 +3579,18 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "not-related")
         expect(output_backtrace).to_have_attribute("data-output-focus-blocked", "etrac")
         expect(output_backtrace).to_have_attribute("data-output-focus-feedback-label", "非当前段相关输出")
+        expect(output_visible_status).to_have_attribute("data-output-visible-status", "blocked")
+        expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "output")
+        expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "etrac")
+        expect(output_visible_status).to_contain_text("非当前段相关输出")
+        assert page.evaluate("""() => {
+          const visibleStatus = document.querySelector("#logic-output-visible-status");
+          const hiddenStatus = document.querySelector("#logic-output-focus-status");
+          const panel = document.querySelector("#logic-output-backtrace-panel");
+          return Boolean(visibleStatus && hiddenStatus && panel
+            && visibleStatus.textContent === hiddenStatus.textContent
+            && visibleStatus.dataset.outputVisibleTargetId === panel.dataset.outputFocusBlocked);
+        }""") is True
         expect(etrac_output).to_have_attribute("data-output-focus-feedback-label", "非当前段相关输出")
         expect(etrac_output).to_have_attribute("aria-label", re.compile("非当前段相关输出"))
         expect(etrac_output).to_have_attribute("title", re.compile("非当前段相关输出"))

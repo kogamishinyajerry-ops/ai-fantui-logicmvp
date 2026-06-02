@@ -835,7 +835,54 @@
     return "idle";
   }
 
-  function setVisibleOutputStatus(text) {
+  function outputVisibleStatusTarget(text, mode, explicitTarget) {
+    if (explicitTarget && explicitTarget.kind && explicitTarget.id) {
+      return explicitTarget;
+    }
+    const activeOutputId = outputBacktracePanel ? (outputBacktracePanel.dataset.activeOutput || "") : "";
+    const activeTraceId = outputBacktracePanel ? (outputBacktracePanel.dataset.activeTraceId || "") : "";
+    if (mode === "expanded") {
+      return {
+        kind: "requirement-trace",
+        id: (outputBacktracePanel && outputBacktracePanel.dataset.revealTraceId)
+          || (currentSegmentOutputReveal && currentSegmentOutputReveal.dataset.targetTraceId)
+          || activeTraceId
+          || "none"
+      };
+    }
+    if (mode === "focused") {
+      return {
+        kind: "output",
+        id: (activeOutputId && activeOutputId !== "none") ? activeOutputId : (state.activeOutputBacktraceId || "none")
+      };
+    }
+    if (mode === "blocked") {
+      return {
+        kind: "output",
+        id: (outputBacktracePanel && outputBacktracePanel.dataset.outputFocusBlocked)
+          || state.blockedOutputBacktraceId
+          || "none"
+      };
+    }
+    if (mode === "closed") {
+      return {
+        kind: "requirement-trace",
+        id: activeTraceId || state.activeRequirementTraceId || "none"
+      };
+    }
+    if (mode === "view") {
+      const viewTargets = [
+        ["当前段来源锚点视图", "source"],
+        ["当前段逻辑线路视图", "trace"],
+        ["全局复核视图", "all"]
+      ];
+      const match = viewTargets.find(([label]) => text.includes(label));
+      return { kind: "view", id: match ? match[1] : (state.currentSegmentJumpAction || "all") };
+    }
+    return { kind: "none", id: "none" };
+  }
+
+  function setVisibleOutputStatus(text, explicitTarget) {
     if (!outputBacktracePanel) return;
     let visibleStatus = document.getElementById("logic-output-visible-status");
     if (!visibleStatus) {
@@ -851,20 +898,24 @@
       }
     }
     const nextText = text || "输出依据待命";
-    visibleStatus.dataset.outputVisibleStatus = outputVisibleStatusMode(text);
+    const mode = outputVisibleStatusMode(text);
+    const target = outputVisibleStatusTarget(text || "", mode, explicitTarget);
+    visibleStatus.dataset.outputVisibleStatus = mode;
+    visibleStatus.dataset.outputVisibleTargetKind = target.kind || "none";
+    visibleStatus.dataset.outputVisibleTargetId = target.id || "none";
     visibleStatus.textContent = nextText;
   }
 
-  function setOutputFocusStatus(text) {
+  function setOutputFocusStatus(text, explicitTarget) {
     const status = ensureOutputFocusStatus();
     if (!status) return;
     const nextText = text || "";
     if (status.textContent === nextText) {
-      setVisibleOutputStatus(nextText);
+      setVisibleOutputStatus(nextText, explicitTarget);
       return;
     }
     status.textContent = nextText;
-    setVisibleOutputStatus(nextText);
+    setVisibleOutputStatus(nextText, explicitTarget);
   }
 
   function setCurrentSegmentOutputRevealStatus(traceId) {
@@ -886,7 +937,7 @@
       ["trace", "已切换到当前段逻辑线路视图"],
       ["all", "已切换到全局复核视图"]
     ]);
-    setOutputFocusStatus(actionLabels.get(action) || actionLabels.get("all"));
+    setOutputFocusStatus(actionLabels.get(action) || actionLabels.get("all"), { kind: "view", id: action || "all" });
   }
 
   function focusOutputBacktraceForCircuitNode(nodeId) {
