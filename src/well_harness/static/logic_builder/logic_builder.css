@@ -1987,10 +1987,10 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-current-segment-trust-chain {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 5px;
-  padding: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  margin: 4px 0 5px;
+  padding: 4px;
   border: 1px solid rgba(54, 198, 216, 0.22);
   border-radius: 8px;
   background:
@@ -2001,7 +2001,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-current-segment-trust-chain::before {
   content: "";
   position: absolute;
-  inset: 13px 14px auto;
+  inset: 11px 12px auto;
   height: 1px;
   background: linear-gradient(90deg, rgba(95, 219, 255, 0.10), rgba(104, 234, 186, 0.42), rgba(95, 219, 255, 0.10));
   pointer-events: none;
@@ -2010,20 +2010,20 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   position: relative;
   z-index: 1;
   min-width: 0;
-  min-height: 44px;
+  min-height: 34px;
   overflow: hidden;
   border: 1px solid rgba(115, 221, 255, 0.16);
   border-radius: 6px;
   background: rgba(6, 22, 38, 0.74);
-  padding: 5px 6px 5px 17px;
+  padding: 4px 4px 4px 13px;
 }
 .logic-current-segment-trust-step::before {
   content: "";
   position: absolute;
-  top: 10px;
-  left: 6px;
-  width: 6px;
-  height: 6px;
+  top: 9px;
+  left: 5px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
   background: rgba(104, 234, 186, 0.92);
   box-shadow: 0 0 0 3px rgba(104, 234, 186, 0.12), 0 0 12px rgba(104, 234, 186, 0.36);
@@ -2043,7 +2043,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 }
 .logic-current-segment-trust-step span {
   color: rgba(174, 218, 245, 0.68);
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2051,13 +2051,13 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-current-segment-trust-step strong {
   margin-top: 2px;
   color: #effbff;
-  font-size: 9px;
+  font-size: 8px;
   line-height: 1.1;
 }
 .logic-current-segment-trust-step small {
-  margin-top: 1px;
+  margin-top: 0;
   color: rgba(185, 225, 245, 0.70);
-  font-size: 8px;
+  font-size: 7px;
   line-height: 1.1;
 }
 .logic-current-segment-anchor-jumps {
@@ -4989,7 +4989,7 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
     position: relative;
     z-index: 20;
     display: grid;
-    grid-template-rows: auto auto minmax(100px, 1fr) minmax(0, 128px) minmax(0, 184px);
+    grid-template-rows: auto auto minmax(104px, 1fr) minmax(0, 166px) minmax(0, 152px);
     gap: 7px;
     overflow: hidden;
     border: 1px solid rgba(54, 198, 216, 0.44);
@@ -5010,14 +5010,14 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-current-segment-evidence {
     grid-row: 4;
-    max-height: 132px;
+    max-height: 168px;
     overflow: hidden;
     pointer-events: auto;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-requirement-trace-review {
     grid-row: 5;
-    max-height: 184px;
+    max-height: 152px;
     min-height: 0;
     overflow: hidden;
     padding: 7px;
@@ -5045,6 +5045,41 @@ body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[dat
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-review-matrix-action,
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-output-backtrace-source {
     pointer-events: auto !important;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+    margin-top: 2px;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix article {
+    padding: 2px;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix article > span {
+    font-size: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix article > strong {
+    margin-top: 1px;
+    font-size: 8px;
+    line-height: 1.05;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-global-review-matrix article > small {
+    margin-top: 1px;
+    font-size: 6px;
+    line-height: 1.05;
+  }
+
+  body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-review-matrix-action {
+    margin-top: 1px;
+    border-radius: 4px;
+    font-size: 6px;
+    letter-spacing: 0.02em;
+    padding: 1px 2px;
   }
 
   body[data-logic-interaction-mode="workbench"] .logic-shell[data-trace-platform="requirements-left"] .logic-trust-spine {

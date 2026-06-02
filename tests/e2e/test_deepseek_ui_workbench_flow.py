@@ -118,6 +118,76 @@ def _assert_current_segment_consistency_cue_layout(page: Any, *, align_visible: 
     ) is True
 
 
+def _assert_current_segment_trust_chain_layout(page: Any) -> None:
+    layout = page.evaluate(
+        """() => {
+          const card = document.querySelector("#logic-current-segment-evidence");
+          const chain = document.querySelector("#logic-current-segment-trust-chain");
+          const jumps = document.querySelector("#logic-current-segment-anchor-jumps");
+          const canvas = document.querySelector("#logic-canvas");
+          if (!card || !chain || !jumps || !canvas) return { ok: false, missing: true };
+          const cardBox = card.getBoundingClientRect();
+          const chainBox = chain.getBoundingClientRect();
+          const jumpsBox = jumps.getBoundingClientRect();
+          const canvasBox = canvas.getBoundingClientRect();
+          const chainInsideCard = card.contains(chain)
+            && card.contains(jumps)
+            && chainBox.left >= cardBox.left - 1
+            && chainBox.right <= cardBox.right + 1;
+          const chainIntersectsVisibleCard = Math.min(chainBox.bottom, cardBox.bottom)
+            - Math.max(chainBox.top, cardBox.top) > 0;
+          const chainDoesNotCoverJumps = !(chainBox.left < jumpsBox.right
+            && chainBox.right > jumpsBox.left
+            && chainBox.top < jumpsBox.bottom
+            && chainBox.bottom > jumpsBox.top);
+          const jumpsRemainVisible = jumpsBox.width > 0
+            && jumpsBox.height > 0
+            && jumpsBox.top >= chainBox.top;
+          const canvasRemainsVisible = canvasBox.width > 0 && canvasBox.height > 0;
+          const steps = Array.from(chain.querySelectorAll("[data-trust-chain-step]"));
+          const stepsStayInside = steps.length === 4 && steps.every((step) => {
+            const stepBox = step.getBoundingClientRect();
+            const labels = Array.from(step.querySelectorAll("span, strong, small"));
+            const labelsClipSafely = labels.length === 3 && labels.every((label) => {
+              const style = window.getComputedStyle(label);
+              return style.whiteSpace === "nowrap"
+                && style.overflowX === "hidden"
+                && style.textOverflow === "ellipsis";
+            });
+            return stepBox.width > 0
+              && stepBox.height > 0
+              && stepBox.left >= chainBox.left - 1
+              && stepBox.right <= chainBox.right + 1
+              && stepBox.top >= chainBox.top - 1
+              && labelsClipSafely;
+          });
+          const ok = chainInsideCard
+            && chainIntersectsVisibleCard
+            && chainDoesNotCoverJumps
+            && jumpsRemainVisible
+            && canvasRemainsVisible
+            && stepsStayInside;
+          return {
+            ok,
+            chainInsideCard,
+            chainIntersectsVisibleCard,
+            chainDoesNotCoverJumps,
+            jumpsRemainVisible,
+            canvasRemainsVisible,
+            stepsStayInside,
+            stepCount: steps.length,
+            cardTop: cardBox.top,
+            cardBottom: cardBox.bottom,
+            chainTop: chainBox.top,
+            chainBottom: chainBox.bottom,
+            jumpsTop: jumpsBox.top,
+            jumpsBottom: jumpsBox.bottom,
+          };
+        }"""
+    )
+    assert layout["ok"] is True, layout
+
+
 def _assert_layout_target_uncovered(page: Any, selector: str) -> None:
     assert page.evaluate(
         """(targetSelector) => {
@@ -3614,6 +3684,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain.locator('[data-trust-chain-step="output"]')).to_contain_text("TLS")
         expect(segment_trust_chain.locator('[data-trust-chain-step="review"]')).to_contain_text("10 锚点复核")
         expect(page.locator("#logic-canvas")).to_be_visible()
+        _assert_current_segment_trust_chain_layout(page)
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
         expect(page.locator("#logic-current-segment-anchor")).to_contain_text("节点")
         expect(page.locator("#logic-current-segment-review")).to_contain_text("全局复核")
@@ -3880,6 +3951,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(segment_trust_chain.locator('[data-trust-chain-step="source"]')).to_contain_text("段 02")
         expect(segment_trust_chain.locator('[data-trust-chain-step="output"]')).to_contain_text("ETRAC")
         expect(segment_trust_chain.locator('[data-trust-chain-step="review"]')).to_contain_text("锚点复核")
+        _assert_current_segment_trust_chain_layout(page)
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
         assert (output_impact.get_attribute("data-output-impact-labels") or "") != first_output_impact_labels
         assert (output_impact.get_attribute("data-output-impact-visible-labels") or "") != first_output_impact_visible_labels
