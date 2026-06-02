@@ -2233,7 +2233,7 @@
   function streamedTargetLabel(proposal) {
     if (!proposal) return "等待候选对象";
     const typeLabel = proposal.target_type === "wire" ? "连线" : "节点";
-    const display = proposal.display_label || proposal.target_id || "候选";
+    const display = readableAnnotationTargetDisplayLabel(proposal.target_type, proposal.target_id, proposal.display_label || proposal.target_id || "候选");
     return `${typeLabel} ${display}`;
   }
 
@@ -2360,7 +2360,8 @@
     if (streamedAuthoringQueueNext) {
       if (proposal && queue) {
         const typeLabel = queue.next_candidate_kind === "wire" ? "下一连线" : "下一节点";
-        streamedAuthoringQueueNext.textContent = `${typeLabel} · ${queue.active_target_key || "候选"}`;
+        const nextTargetLabel = readableAnnotationTargetDisplayLabel(proposal.target_type, proposal.target_id, proposal.display_label || queue.active_target_key || "候选");
+        streamedAuthoringQueueNext.textContent = `${typeLabel} · ${nextTargetLabel}`;
       } else if (queue && queue.status === "candidate_queue_completed") {
         streamedAuthoringQueueNext.textContent = "队列完成";
       } else {
@@ -2381,7 +2382,7 @@
         li.dataset.streamReplayEvent = event.event_type || "candidate_edit_event";
         li.dataset.requirementsPatchStatus = event.requirements_document_patch_status || "not_requested";
         const decision = event.event_type === "candidate_edit_committed" ? "已提交" : "已反馈重算";
-        const target = annotationTargetLabel(event.target_type, event.target_id, event.display_label);
+        const target = readableAnnotationTargetDisplayLabel(event.target_type, event.target_id, event.display_label);
         const sourceExcerpt = event.source_excerpt ? ` · 来源：${String(event.source_excerpt).slice(0, 56)}` : "";
         const recalculation = event.event_type === "candidate_edit_revision_requested"
           ? ` · ${streamedCandidateRecalculationStatusLabel(event.candidate_recalculation && event.candidate_recalculation.status)}`
@@ -2403,7 +2404,7 @@
     for (const item of items) {
       const li = document.createElement("li");
       const decision = item.decision === "confirm" ? "已确认" : "已反馈";
-      const target = annotationTargetLabel(item.target_type, item.target_id, item.target_label);
+      const target = readableAnnotationTargetDisplayLabel(item.target_type, item.target_id, item.target_label);
       const docGate = item.requirements_document_edit_requested
         ? (item.requirements_document_edit_authorized ? " · 需求文档候选补丁已授权" : " · 需求文档补丁待授权")
         : "";
@@ -2587,7 +2588,7 @@
     }
     if (streamedAuthoringSource) {
       const anchorIds = Array.isArray(proposal.source_anchor_ids) && proposal.source_anchor_ids.length
-        ? ` · ${proposal.source_anchor_ids.join(" / ")}`
+        ? ` · ${proposal.source_anchor_ids.map((id) => readableSourceAnchorIdentity(id, id)).join(" / ")}`
         : "";
       streamedAuthoringSource.textContent = `${proposal.source_excerpt || "来源片段待补齐"}${anchorIds}`;
       streamedAuthoringSource.dataset.sourceHighlight = "active";
