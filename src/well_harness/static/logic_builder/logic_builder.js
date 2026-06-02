@@ -927,6 +927,17 @@
     return "unverified";
   }
 
+  function outputVisibleStatusVerificationSource(mode, verification) {
+    if (verification === "waiting") return "none";
+    if (verification !== "verified") return "mismatch";
+    if (mode === "expanded") return "reveal-trace";
+    if (mode === "focused") return "active-output";
+    if (mode === "blocked") return "blocked-output";
+    if (mode === "view") return "view-action";
+    if (mode === "closed") return "reveal-trace";
+    return "none";
+  }
+
   function setVisibleOutputStatus(text, explicitTarget) {
     if (!outputBacktracePanel) return;
     let visibleStatus = document.getElementById("logic-output-visible-status");
@@ -949,7 +960,9 @@
     visibleStatus.dataset.outputVisibleTargetKind = target.kind || "none";
     visibleStatus.dataset.outputVisibleTargetId = target.id || "none";
     visibleStatus.textContent = nextText;
-    visibleStatus.dataset.outputVisibleVerification = outputVisibleStatusVerification(mode, target, nextText);
+    const verification = outputVisibleStatusVerification(mode, target, nextText);
+    visibleStatus.dataset.outputVisibleVerification = verification;
+    visibleStatus.dataset.outputVisibleVerificationSource = outputVisibleStatusVerificationSource(mode, verification);
   }
 
   function setOutputFocusStatus(text, explicitTarget) {

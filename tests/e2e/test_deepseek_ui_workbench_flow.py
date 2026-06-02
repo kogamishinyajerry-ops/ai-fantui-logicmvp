@@ -3221,6 +3221,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "none")
         expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "none")
         expect(output_visible_status).to_have_attribute("data-output-visible-verification", "waiting")
+        expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "none")
         expect(output_visible_status).to_contain_text("输出依据待命")
         assert page.evaluate("""() => {
           const panel = document.querySelector("#logic-output-backtrace-panel");
@@ -3337,6 +3338,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
             expect(output_visible_status).to_contain_text("已展开")
             expect(output_visible_status).to_contain_text("全部输出依据")
             expect(output_visible_status).to_contain_text("段 01")
@@ -3366,6 +3368,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "output")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "tls")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "active-output")
             expect(output_visible_status).to_contain_text("已聚焦")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3395,6 +3398,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
             assert "row-logic" not in output_visible_status.inner_text()
             expect(related_output_focus).to_be_focused()
         else:
@@ -3420,6 +3424,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "source")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "view-action")
             expect(output_visible_status).to_contain_text("当前段来源锚点视图")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3448,6 +3453,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
             assert "row-logic" not in output_visible_status.inner_text()
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
@@ -3463,6 +3469,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "view-action")
             expect(output_visible_status).to_contain_text("当前段逻辑线路视图")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3481,6 +3488,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic1")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
             assert "row-logic" not in output_visible_status.inner_text()
             expect(related_output_focus).to_be_focused()
             assert page.evaluate(assert_output_backtrace_related_focus_ring) is True
@@ -3496,6 +3504,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "all")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "view-action")
             expect(output_visible_status).to_contain_text("全局复核视图")
             assert page.evaluate("""() => {
               const status = document.querySelector("#logic-output-focus-status");
@@ -3555,6 +3564,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "requirement-trace")
             expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "row-logic2")
             expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+            expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "reveal-trace")
             expect(output_visible_status).to_contain_text("全部输出依据")
             expect(output_visible_status).to_contain_text("段 02")
             assert "row-logic" not in output_focus_status.inner_text()
@@ -3631,6 +3641,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "output")
         expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "etrac")
         expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+        expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "blocked-output")
         expect(output_visible_status).to_contain_text("非当前段相关输出")
         assert page.evaluate("""() => {
           const visibleStatus = document.querySelector("#logic-output-visible-status");
