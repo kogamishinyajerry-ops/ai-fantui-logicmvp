@@ -634,6 +634,15 @@
     return readableText;
   }
 
+  function setReadableEvidenceText(element, text) {
+    if (!element) return "";
+    const readableText = readableLogicReferenceText(text).replace(/\s+/g, " ").trim();
+    element.textContent = readableText;
+    element.title = readableText;
+    element.setAttribute("aria-label", readableText);
+    return readableText;
+  }
+
   function setSourceTrustSummary(text) {
     const value = text || "来源待确认";
     if (sourceTrustSummary) sourceTrustSummary.textContent = value;
@@ -6110,10 +6119,10 @@
       const summaryText = payload.annotation_batch_summary_zh
         || payload.understanding_zh
         || "AI 已归并本次标注意见。";
-      batchSummary.textContent = readableLogicReferenceText(summaryText);
+      setReadableEvidenceText(batchSummary, summaryText);
     }
     if (batchConflictSummary) {
-      batchConflictSummary.textContent = readableLogicReferenceText(payload.conflict_summary_zh || "未发现冲突。");
+      setReadableEvidenceText(batchConflictSummary, payload.conflict_summary_zh || "未发现冲突。");
     }
     if (batchProposedChanges) {
       batchProposedChanges.innerHTML = "";
@@ -6132,7 +6141,7 @@
       }
     }
     if (batchConfirmationQuestion) {
-      batchConfirmationQuestion.textContent = readableLogicReferenceText(payload.confirmation_question_zh || "请确认是否按本次批注生成修订版逻辑图？");
+      setReadableEvidenceText(batchConfirmationQuestion, payload.confirmation_question_zh || "请确认是否按本次批注生成修订版逻辑图？");
     }
     recordChangeInterpretation(
       payload,

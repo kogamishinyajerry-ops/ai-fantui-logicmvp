@@ -9296,7 +9296,10 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(page.locator("#logic-annotation-submit-state")).to_have_text("AI 已生成结构化修订建议")
         expect(page.locator("#logic-batch-interpretation-panel")).to_be_visible()
         expect(page.locator("#logic-batch-summary")).to_contain_text("2 条标注意见归并")
+        expect(page.locator("#logic-batch-summary")).to_have_attribute("aria-label", re.compile("2 条标注意见归并"))
+        expect(page.locator("#logic-batch-summary")).to_have_attribute("title", re.compile("2 条标注意见归并"))
         expect(page.locator("#logic-batch-conflict-summary")).to_have_text("未发现冲突。")
+        expect(page.locator("#logic-batch-conflict-summary")).to_have_attribute("aria-label", "未发现冲突。")
         expect(page.locator("#logic-batch-proposed-changes li")).to_have_count(2)
         expect(page.locator("#logic-batch-proposed-changes")).to_contain_text("SW1 到 L1")
         expect(page.locator("#logic-batch-proposed-changes")).not_to_contain_text("sw1→logic1")
@@ -9306,17 +9309,22 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(proposed_change_item).not_to_have_attribute("aria-label", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
         expect(proposed_change_item).not_to_have_attribute("title", re.compile("sw1\\s*(?:->|→)\\s*logic1"))
         expect(page.locator("#logic-batch-confirmation-question")).to_contain_text("是否确认")
+        expect(page.locator("#logic-batch-confirmation-question")).to_have_attribute("aria-label", re.compile("是否确认"))
         expect(page.locator("#logic-batch-confirm-update")).to_be_enabled()
         batch_copy_state = page.evaluate("""() => ({
           summary: document.querySelector("#logic-batch-summary")?.textContent || "",
+          summaryAria: document.querySelector("#logic-batch-summary")?.getAttribute("aria-label") || "",
           proposedChanges: document.querySelector("#logic-batch-proposed-changes")?.textContent || "",
           confirmationQuestion: document.querySelector("#logic-batch-confirmation-question")?.textContent || "",
+          confirmationQuestionAria: document.querySelector("#logic-batch-confirmation-question")?.getAttribute("aria-label") || "",
         })""")
         _assert_no_machine_tokens_in_accessible_state(
             batch_copy_state,
             "summary",
+            "summaryAria",
             "proposedChanges",
             "confirmationQuestion",
+            "confirmationQuestionAria",
         )
 
         assert len(captured_requests) == 1
