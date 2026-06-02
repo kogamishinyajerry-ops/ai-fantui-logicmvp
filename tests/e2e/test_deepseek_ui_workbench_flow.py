@@ -848,6 +848,9 @@ def _expect_current_segment_identity_loop_state(
     expect(loop).to_have_attribute("title", re.compile(expected_highlighted_id))
     expect(loop).to_have_attribute("title", re.compile(selected_id))
     expect(loop).to_have_attribute("title", re.compile(expected_source_anchor_id))
+    if expected_inspector_state is not None:
+        expect(loop).to_have_attribute("aria-label", re.compile(expected_inspector_state))
+        expect(loop).to_have_attribute("title", re.compile(expected_inspector_state))
     expect(loop).to_contain_text("身份闭环")
     expect(loop).to_contain_text(current_id)
     expect(loop).to_contain_text(expected_highlighted_id)
