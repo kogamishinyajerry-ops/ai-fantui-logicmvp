@@ -5690,6 +5690,13 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             cue_label="未绑定",
             alignable=False,
         )
+        _expect_current_segment_identity_loop_state(
+            page,
+            state="unbound",
+            current_id="row-logic1",
+            selected_id="none",
+            selected_source="none",
+        )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
         _expect_inspector_trace_state_badge(page, "未绑定")
         _expect_canvas_selected_trace_state_badge(
