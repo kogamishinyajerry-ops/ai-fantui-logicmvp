@@ -3206,6 +3206,18 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_backtrace).to_have_attribute("data-output-total-count", "4")
         expect(output_backtrace).to_have_attribute("data-output-covered-count", "4")
         expect(output_backtrace).to_have_attribute("data-output-coverage-status", "pass")
+        output_focus_status = page.locator("#logic-output-focus-status")
+        expect(output_focus_status).to_have_count(1)
+        expect(output_focus_status).to_have_attribute("aria-live", "polite")
+        expect(output_focus_status).to_have_attribute("aria-atomic", "true")
+        expect(output_focus_status).to_have_attribute("role", "status")
+        assert page.evaluate("""() => {
+          const status = document.querySelector("#logic-output-focus-status");
+          if (!status) return false;
+          const box = status.getBoundingClientRect();
+          const style = window.getComputedStyle(status);
+          return style.position === "absolute" && box.width <= 1 && box.height <= 1;
+        }""") is True
         expect(output_backtrace.locator("[data-output-backtrace-output]")).to_have_count(4)
         assert page.locator('#logic-output-backtrace-list [data-source-count]:not([data-source-count="0"])').count() >= 3
         expect(output_backtrace.locator('[data-output-backtrace-output="tls"]')).to_contain_text("段 01")
@@ -3330,6 +3342,12 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(etrac_output).to_have_attribute("aria-label", re.compile("非当前段相关输出"))
         expect(etrac_output).to_have_attribute("title", re.compile("非当前段相关输出"))
         expect(etrac_output).to_have_class(re.compile("is-output-focus-blocked"))
+        expect(output_focus_status).to_contain_text("ETRAC")
+        expect(output_focus_status).to_contain_text("非当前段相关输出")
+        first_noop_status = output_focus_status.inner_text()
+        page.mouse.click(etrac_output_box["x"] + 12, etrac_output_box["y"] + 12)
+        expect(output_focus_status).to_contain_text("非当前段相关输出")
+        assert output_focus_status.inner_text() != first_noop_status
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "deploy")
         expect(page.locator('[data-demo-node-id="tls115"]')).not_to_have_class(re.compile("is-output-backtrace-focus"))
         expect(page.locator('[data-wire-id="logic3->eec_deploy"]')).to_have_class(re.compile("is-output-backtrace-focus"))
@@ -3343,6 +3361,8 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(etrac_output).not_to_have_attribute("data-output-focus-feedback-label", "非当前段相关输出")
         expect(etrac_output).to_have_attribute("title", "聚焦 ETRAC 输出组")
         expect(etrac_output).not_to_have_class(re.compile("is-output-focus-blocked"))
+        expect(output_focus_status).to_contain_text("TLS")
+        assert "非当前段相关输出" not in output_focus_status.inner_text()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "tls")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
         eec_node = page.locator('[data-demo-node-id="eec_deploy"]')

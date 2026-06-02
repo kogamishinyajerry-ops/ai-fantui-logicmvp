@@ -104,6 +104,8 @@
     requirementsPayload: null,
     activeOutputBacktraceId: "",
     blockedOutputBacktraceId: "",
+    outputFocusLiveMode: "",
+    outputFocusStatusNonce: 0,
     outputBacktraceSourceIndex: new Map(),
     drawingPayload: null,
     timer: null,
@@ -807,6 +809,38 @@
     });
   }
 
+  function ensureOutputFocusStatus() {
+    if (!outputBacktracePanel) return null;
+    let status = document.getElementById("logic-output-focus-status");
+    if (!status) {
+      status = document.createElement("p");
+      status.id = "logic-output-focus-status";
+      status.className = "logic-output-focus-status";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      status.setAttribute("aria-atomic", "true");
+      status.style.position = "absolute";
+      status.style.width = "1px";
+      status.style.height = "1px";
+      status.style.padding = "0";
+      status.style.margin = "-1px";
+      status.style.overflow = "hidden";
+      status.style.clip = "rect(0 0 0 0)";
+      status.style.whiteSpace = "nowrap";
+      status.style.border = "0";
+      outputBacktracePanel.appendChild(status);
+    }
+    return status;
+  }
+
+  function setOutputFocusStatus(text) {
+    const status = ensureOutputFocusStatus();
+    if (!status) return;
+    const nextText = text || "";
+    if (status.textContent === nextText) return;
+    status.textContent = nextText;
+  }
+
   function focusOutputBacktraceForCircuitNode(nodeId) {
     if (!nodeId || !outputBacktracePanel) return;
     const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
@@ -815,11 +849,14 @@
     if (!group) {
       if (candidateGroup) {
         state.blockedOutputBacktraceId = candidateGroup.id;
+        state.outputFocusLiveMode = "blocked";
+        state.outputFocusStatusNonce += 1;
         syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
       }
       return;
     }
     state.blockedOutputBacktraceId = "";
+    state.outputFocusLiveMode = "focused";
     state.activeOutputBacktraceId = group.id;
     syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
   }
@@ -989,6 +1026,23 @@
     outputBacktracePanel.dataset.outputFocusFeedback = state.blockedOutputBacktraceId ? "not-related" : "none";
     outputBacktracePanel.dataset.outputFocusBlocked = state.blockedOutputBacktraceId || "";
     outputBacktracePanel.dataset.outputFocusFeedbackLabel = outputFocusFeedbackLabel;
+    const activeOutputItem = activeOutputId
+      ? outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === activeOutputId)
+      : null;
+    const activeOutputLabelElement = activeOutputItem ? activeOutputItem.querySelector("strong") : null;
+    const activeOutputLabel = activeOutputLabelElement ? activeOutputLabelElement.textContent.trim() : "";
+    const blockedOutputItem = state.blockedOutputBacktraceId
+      ? outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === state.blockedOutputBacktraceId)
+      : null;
+    const blockedOutputLabelElement = blockedOutputItem ? blockedOutputItem.querySelector("strong") : null;
+    const blockedOutputLabel = blockedOutputLabelElement ? blockedOutputLabelElement.textContent.trim() : "";
+    let outputFocusStatusText = "";
+    if (state.outputFocusLiveMode === "blocked" && state.blockedOutputBacktraceId) {
+      outputFocusStatusText = `${blockedOutputLabel || state.blockedOutputBacktraceId}：${outputFocusFeedbackLabel}（${state.outputFocusStatusNonce}）`;
+    } else if (state.outputFocusLiveMode === "focused" && activeOutputLabel) {
+      outputFocusStatusText = `已聚焦 ${activeOutputLabel} 输出组`;
+    }
+    setOutputFocusStatus(outputFocusStatusText);
     const relatedLabels = Array.from(relatedOutputIds)
       .map((outputId) => outputBacktraceItems.find((item) => item.dataset.outputBacktraceOutput === outputId))
       .filter(Boolean)
@@ -1106,6 +1160,7 @@
       const outputItem = sourceElement.closest("[data-output-backtrace-output]");
       state.activeOutputBacktraceId = outputItem ? (outputItem.dataset.outputBacktraceOutput || "") : "";
       state.blockedOutputBacktraceId = "";
+      state.outputFocusLiveMode = "";
       setActiveRequirementTrace(sourceElement.dataset.outputBacktraceSource || "");
     };
     const activateOutputBacktraceFocus = (outputElement) => {
@@ -1114,10 +1169,13 @@
       const relatedIds = new Set(String(outputBacktracePanel.dataset.relatedOutputIds || "").split("|").filter(Boolean));
       if (!relatedIds.has(outputId)) {
         state.blockedOutputBacktraceId = outputId;
+        state.outputFocusLiveMode = "blocked";
+        state.outputFocusStatusNonce += 1;
         syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
         return;
       }
       state.blockedOutputBacktraceId = "";
+      state.outputFocusLiveMode = "focused";
       state.activeOutputBacktraceId = outputId;
       syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
     };
@@ -1258,6 +1316,7 @@
     const nextId = traceId || "";
     state.activeRequirementTraceId = nextId;
     state.blockedOutputBacktraceId = "";
+    state.outputFocusLiveMode = "";
     requirementTracePanel.dataset.activeTraceId = nextId || "none";
     if (trustSpine) trustSpine.dataset.activeTraceId = nextId || "none";
     const traces = Array.from(requirementTraceList.querySelectorAll("[data-requirement-trace-id]"));
