@@ -3916,19 +3916,55 @@ def test_logic_builder_requirement_trace_panel_stays_readable_at_1280(
         expect(matched_node).to_have_attribute("data-canvas-requirement-trace-id", "row-logic1")
         expect(matched_node).to_have_attribute("data-canvas-requirement-trace-evidence", re.compile("段 01"))
         expect(matched_node).to_have_attribute("data-canvas-requirement-trace-evidence", re.compile("生成 L1 控制链"))
-        expect(matched_node).to_have_attribute("data-base-title", re.compile("L1"))
-        expect(matched_node).to_have_attribute("data-base-aria-label", re.compile("L1"))
         expect(matched_node).to_have_attribute("aria-label", re.compile("段 01"))
         expect(matched_node.locator("title")).to_contain_text("段 01")
         expect(matched_wire).to_have_class(re.compile("is-requirement-trace-match"))
         expect(matched_wire).to_have_attribute("data-canvas-requirement-trace-id", "row-logic1")
         expect(matched_wire).to_have_attribute("data-canvas-requirement-trace-evidence", re.compile("生成 L1 控制链"))
-        expect(matched_wire).to_have_attribute("data-base-title", re.compile("sw1"))
-        expect(matched_wire).to_have_attribute("data-base-aria-label", re.compile("sw1"))
         expect(matched_wire).to_have_attribute("aria-label", re.compile("段 01"))
         expect(matched_wire.locator("title")).to_contain_text("生成 L1 控制链")
         expect(page.locator('#logic-requirement-trace-list [data-requirement-trace-id="row-logic1"]')).to_have_count(1)
         expect(page.locator('[data-canvas-requirement-trace-id="row-logic1"]')).not_to_have_count(0)
+        logic2_trace_button = trace_list.locator('[data-requirement-trace-id="row-logic2"] button')
+        logic2_trace_button.click()
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
+        expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
+        logic2_node = page.locator('[data-demo-node-id="logic2"]')
+        logic2_wire = page.locator('[data-wire-id="sw2->logic2"]')
+        old_canvas_trace_cleanup = page.evaluate("""() => {
+          const node = document.querySelector('[data-demo-node-id="logic1"]');
+          const wire = document.querySelector('[data-wire-id="sw1->logic1"]');
+          return {
+            nodeTraceId: node ? node.hasAttribute("data-canvas-requirement-trace-id") : true,
+            nodeTraceEvidence: node ? node.hasAttribute("data-canvas-requirement-trace-evidence") : true,
+            wireTraceId: wire ? wire.hasAttribute("data-canvas-requirement-trace-id") : true,
+            wireTraceEvidence: wire ? wire.hasAttribute("data-canvas-requirement-trace-evidence") : true,
+          };
+        }""")
+        assert old_canvas_trace_cleanup == {
+            "nodeTraceId": False,
+            "nodeTraceEvidence": False,
+            "wireTraceId": False,
+            "wireTraceEvidence": False,
+        }
+        expect(matched_node).not_to_have_attribute("aria-label", re.compile("段 01"))
+        expect(matched_node.locator("title")).not_to_contain_text("段 01")
+        expect(matched_wire).not_to_have_attribute("aria-label", re.compile("段 01"))
+        expect(matched_wire.locator("title")).not_to_contain_text("生成 L1 控制链")
+        expect(logic2_node).to_have_class(re.compile("is-requirement-trace-match"))
+        expect(logic2_node).to_have_attribute("data-canvas-requirement-trace-id", "row-logic2")
+        expect(logic2_node).to_have_attribute("data-canvas-requirement-trace-evidence", re.compile("段 02"))
+        expect(logic2_node).to_have_attribute("data-canvas-requirement-trace-evidence", re.compile("L2"))
+        expect(logic2_node).to_have_attribute("aria-label", re.compile("段 02"))
+        expect(logic2_node.locator("title")).to_contain_text("段 02")
+        expect(logic2_wire).to_have_class(re.compile("is-requirement-trace-match"))
+        expect(logic2_wire).to_have_attribute("data-canvas-requirement-trace-id", "row-logic2")
+        expect(logic2_wire).to_have_attribute("data-canvas-requirement-trace-evidence", re.compile("段 02"))
+        expect(logic2_wire).to_have_attribute("aria-label", re.compile("段 02"))
+        expect(logic2_wire.locator("title")).to_contain_text("段 02")
+        trace_list.locator('[data-requirement-trace-id="row-logic1"] button').click()
+        expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic1")
+        expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic1")
         expect(output_backtrace).to_be_visible()
         expect(output_coverage).to_be_visible()
         expect(output_status).to_be_visible()
