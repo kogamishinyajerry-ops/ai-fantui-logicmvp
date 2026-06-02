@@ -825,12 +825,46 @@
     return status;
   }
 
+  function outputVisibleStatusMode(text) {
+    if (!text) return "idle";
+    if (text.includes("已展开当前需求段全部输出依据")) return "expanded";
+    if (text.includes("已聚焦")) return "focused";
+    if (text.includes("非当前段相关输出")) return "blocked";
+    if (text.includes("已收起")) return "closed";
+    if (text.includes("视图")) return "view";
+    return "idle";
+  }
+
+  function setVisibleOutputStatus(text) {
+    if (!outputBacktracePanel) return;
+    let visibleStatus = document.getElementById("logic-output-visible-status");
+    if (!visibleStatus) {
+      visibleStatus = document.createElement("small");
+      visibleStatus.id = "logic-output-visible-status";
+      visibleStatus.className = "logic-output-visible-status";
+      visibleStatus.setAttribute("aria-hidden", "true");
+      const coverage = document.getElementById("logic-output-backtrace-coverage");
+      if (coverage && coverage.parentElement === outputBacktracePanel) {
+        coverage.insertAdjacentElement("afterend", visibleStatus);
+      } else {
+        outputBacktracePanel.insertBefore(visibleStatus, outputBacktracePanel.firstChild);
+      }
+    }
+    const nextText = text || "输出依据待命";
+    visibleStatus.dataset.outputVisibleStatus = outputVisibleStatusMode(text);
+    visibleStatus.textContent = nextText;
+  }
+
   function setOutputFocusStatus(text) {
     const status = ensureOutputFocusStatus();
     if (!status) return;
     const nextText = text || "";
-    if (status.textContent === nextText) return;
+    if (status.textContent === nextText) {
+      setVisibleOutputStatus(nextText);
+      return;
+    }
     status.textContent = nextText;
+    setVisibleOutputStatus(nextText);
   }
 
   function setCurrentSegmentOutputRevealStatus(traceId) {
