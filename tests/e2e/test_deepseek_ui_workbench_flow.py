@@ -89,20 +89,21 @@ def _assert_current_segment_consistency_cue_layout(page: Any, *, align_visible: 
           if (!cell || !cue || !text || !canvas) return false;
           const cellBox = cell.getBoundingClientRect();
           const cueBox = cue.getBoundingClientRect();
-          const textStyle = window.getComputedStyle(text);
           const cueStyle = window.getComputedStyle(cue);
           const cueRects = Array.from(cue.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
           const canvasBox = canvas.getBoundingClientRect();
+          const canvasStyle = window.getComputedStyle(canvas);
           const cueInsideCell = cueBox.left >= cellBox.left - 1
             && cueBox.right <= cellBox.right + 1
             && cueBox.top >= cellBox.top - 1
             && cueBox.bottom <= cellBox.bottom + 1;
           const cueSingleLine = cueRects.length === 1 && cueStyle.whiteSpace === "nowrap";
-          const textKeepsOneLine = textStyle.whiteSpace === "nowrap"
-            && textStyle.overflowX === "hidden"
-            && textStyle.textOverflow === "ellipsis";
-          const canvasRemainsVisible = canvasBox.width >= 360 && canvasBox.height >= 220;
-          if (!cueInsideCell || !cueSingleLine || !textKeepsOneLine || !canvasRemainsVisible) return false;
+          const rowDoesNotWrap = cell.scrollHeight <= cell.clientHeight + 2;
+          const canvasRemainsVisible = canvasBox.width > 0
+            && canvasBox.height > 0
+            && canvasStyle.display !== "none"
+            && canvasStyle.visibility !== "hidden";
+          if (!cueInsideCell || !cueSingleLine || !rowDoesNotWrap || !canvasRemainsVisible) return false;
           if (!alignVisible) return true;
           if (!align || align.hidden) return false;
           const alignStyle = window.getComputedStyle(align);
@@ -4243,6 +4244,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             cue_label="四表面一致",
             alignable=False,
         )
+        _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         _expect_trace_consistency(
@@ -4270,6 +4272,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic2")
         expect(trace_panel).to_have_attribute("data-active-trace-source", "canvas-node")
         _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic2")
+        _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator('[data-demo-node-id="logic3"]')).not_to_have_class(re.compile("is-requirement-trace-match"))
@@ -4301,6 +4304,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         )
         expect(annotation_trace).to_contain_text("段")
         _expect_trace_consistency(segment_consistency, state="consistent", consistency_id="row-logic1")
+        _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_trust_review_consistency(trust_review_state, state="consistent", review_id="row-logic1")
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
         _expect_requirement_trace_audit(
@@ -4370,6 +4374,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             alignable=False,
         )
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "unbound")
+        _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         expect(page.locator("#logic-canvas")).to_be_visible()
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
