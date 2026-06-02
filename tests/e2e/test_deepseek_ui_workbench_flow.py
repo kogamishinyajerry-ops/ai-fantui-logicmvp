@@ -385,6 +385,95 @@ def _expect_bridge_token_across_trace_surfaces(page: Any) -> None:
     assert bridge_state["ok"] is True, bridge_state
 
 
+def _expect_global_review_counts_across_trace_surfaces(page: Any) -> None:
+    count_state = page.evaluate(
+        """() => {
+          const parseIntOrMissing = (value) => Number.parseInt(String(value ?? "-1"), 10);
+          const chain = document.querySelector("#logic-current-segment-trust-chain");
+          const globalReview = document.querySelector("#logic-current-segment-global-review");
+          const selected = document.querySelector("#logic-selected-target-label");
+          const canvasSource = document.querySelector("#logic-canvas-source");
+          const context = document.querySelector("#logic-context-requirement-trace");
+          const annotation = document.querySelector("#logic-annotation-requirement-trace");
+          if (!chain || !globalReview || !selected || !canvasSource || !context || !annotation) {
+            return { ok: false, reason: "missing-surface" };
+          }
+          const expectedCounts = {
+            output: parseIntOrMissing(chain.dataset.outputCount),
+            reviewAnchor: parseIntOrMissing(chain.dataset.reviewAnchorCount),
+          };
+          const sameCounts = (counts) => counts.output === expectedCounts.output
+            && counts.reviewAnchor === expectedCounts.reviewAnchor;
+          const checkDataCounts = (key, element, outputAttr, reviewAttr, expectedScope, scopeValue) => {
+            const dataCounts = {
+              output: parseIntOrMissing(element.dataset[outputAttr]),
+              reviewAnchor: parseIntOrMissing(element.dataset[reviewAttr]),
+            };
+            return {
+              key,
+              ok: sameCounts(dataCounts) && scopeValue === expectedScope,
+              dataCounts,
+              expectedCounts,
+              dataCountsMatch: sameCounts(dataCounts),
+              visibleCounts: null,
+              visibleCountsMatch: null,
+              visibleRaw: "",
+              scope: scopeValue,
+              expectedScope,
+              scopeMatch: scopeValue === expectedScope,
+            };
+          };
+          const checkVisibleCounts = (base, visibleRaw, visibleCounts) => ({
+            ...base,
+            visibleRaw,
+            visibleCounts,
+            visibleCountsMatch: sameCounts(visibleCounts),
+            ok: base.ok && sameCounts(visibleCounts),
+          });
+          const globalText = globalReview.textContent || "";
+          const globalOutput = (globalText.match(/(\\d+)\\s*输出/) || [])[1];
+          const globalReviewAnchors = (globalText.match(/(\\d+)\\s*复核/) || [])[1];
+          const selectedTail = window.getComputedStyle(selected, "::after").content || "";
+          const selectedCounts = selectedTail.match(/段链\\s*(\\d+)\\/(\\d+)全局/) || [];
+          const contextTail = window.getComputedStyle(context, "::after").content || "";
+          const contextCounts = contextTail.match(/段链\\s*(\\d+)输出\\/(\\d+)全局复核/) || [];
+          const annotationTail = window.getComputedStyle(annotation, "::after").content || "";
+          const annotationCounts = annotationTail.match(/段链\\s*(\\d+)输出\\/(\\d+)全局复核/) || [];
+          const checks = [
+            checkVisibleCounts(
+              checkDataCounts("left-global-review", globalReview, "outputCount", "reviewAnchorCount", "current-segment-to-global", globalReview.dataset.globalReviewScope || ""),
+              globalText,
+              { output: parseIntOrMissing(globalOutput), reviewAnchor: parseIntOrMissing(globalReviewAnchors) },
+            ),
+            checkVisibleCounts(
+              checkDataCounts("canvas-selected", selected, "canvasTrustChainOutputCount", "canvasTrustChainReviewAnchorCount", "current-segment", selected.dataset.canvasTrustChainScope || ""),
+              selectedTail,
+              { output: parseIntOrMissing(selectedCounts[1]), reviewAnchor: parseIntOrMissing(selectedCounts[2]) },
+            ),
+            checkDataCounts("canvas-source-data", canvasSource, "canvasTrustChainOutputCount", "canvasTrustChainReviewAnchorCount", "current-segment", canvasSource.dataset.canvasTrustChainScope || ""),
+            checkVisibleCounts(
+              checkDataCounts("right-context", context, "contextTrustChainOutputCount", "contextTrustChainReviewAnchorCount", "current-segment", context.dataset.contextTrustChainScope || ""),
+              contextTail,
+              { output: parseIntOrMissing(contextCounts[1]), reviewAnchor: parseIntOrMissing(contextCounts[2]) },
+            ),
+            checkVisibleCounts(
+              checkDataCounts("right-annotation", annotation, "annotationTrustChainOutputCount", "annotationTrustChainReviewAnchorCount", "current-segment", annotation.dataset.annotationTrustChainScope || ""),
+              annotationTail,
+              { output: parseIntOrMissing(annotationCounts[1]), reviewAnchor: parseIntOrMissing(annotationCounts[2]) },
+            ),
+          ];
+          return {
+            ok: expectedCounts.output > 0
+              && expectedCounts.reviewAnchor > 0
+              && checks.every((check) => check.ok),
+            expectedCounts,
+            checks,
+          };
+        }"""
+    )
+    assert count_state["ok"] is True, count_state
+
+
 def _assert_layout_target_uncovered(page: Any, selector: str) -> None:
     assert page.evaluate(
         """(targetSelector) => {
@@ -5141,6 +5230,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         )
         _assert_inspector_trace_badge_layout(page, "一致")
         _expect_bridge_token_across_trace_surfaces(page)
+        _expect_global_review_counts_across_trace_surfaces(page)
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
