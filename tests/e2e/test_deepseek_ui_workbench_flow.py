@@ -1041,6 +1041,7 @@ def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
           const badge = active ? active.querySelector(".logic-requirement-trace-text-match") : null;
           const button = active ? active.querySelector("button") : null;
+          const allBadges = Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-text-match"));
           if (!active || !evidence || !identityLoop || !badge || !button) {
             return { ok: false, reason: "missing-row-text-match-surface" };
           }
@@ -1061,12 +1062,22 @@ def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
             && badgeBox.height <= 18;
           const clipped = badge.scrollWidth <= badge.clientWidth + 1
             && badge.scrollHeight <= badge.clientHeight + 1;
+          const visibleBadges = allBadges.filter((item) => {
+            const itemStyle = window.getComputedStyle(item);
+            const itemBox = item.getBoundingClientRect();
+            return itemStyle.display !== "none"
+              && itemStyle.visibility !== "hidden"
+              && itemBox.width > 0
+              && itemBox.height > 0;
+          });
           return {
             ok: ["full-quote", "meaningful-token"].includes(mode)
               && mode === identityMode
               && mode === evidenceMode
               && mode === badgeMode
               && (badge.textContent || "").includes("原文")
+              && visibleBadges.length === 1
+              && visibleBadges[0] === badge
               && insideButton
               && compact
               && clipped
@@ -1081,6 +1092,8 @@ def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
             compact,
             clipped,
             pointerEvents: style.pointerEvents,
+            totalBadges: allBadges.length,
+            visibleBadgeCount: visibleBadges.length,
             badgeBox: {
               width: badgeBox.width,
               height: badgeBox.height,
