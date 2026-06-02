@@ -3871,6 +3871,119 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         page.close()
 
 
+def test_logic_builder_requirement_trace_panel_stays_readable_at_1280(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate(
+            """([requirements, drawing]) => {
+              localStorage.clear();
+              localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
+              localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
+            }""",
+            [REQUIREMENTS_READY, _circuit_view_drawing()],
+        )
+
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        _show_logic_builder_workbench(page)
+        trace_panel = page.locator("#logic-requirement-trace-panel")
+        trace_list = page.locator("#logic-requirement-trace-list")
+        output_backtrace = page.locator("#logic-output-backtrace-panel")
+        output_coverage = page.locator("#logic-output-backtrace-coverage")
+        output_status = page.locator("#logic-output-visible-status")
+        output_list = page.locator("#logic-output-backtrace-list")
+        segment_card = page.locator("#logic-current-segment-evidence")
+        review_matrix = page.locator("#logic-global-review-matrix")
+        trust_spine = page.locator("#logic-trust-spine")
+        canvas = page.locator("#logic-canvas")
+
+        expect(trace_panel).to_be_visible()
+        expect(trace_list).to_be_visible()
+        expect(trace_list.locator(".logic-requirement-trace-item.is-active")).to_have_count(1)
+        expect(trace_list.locator(".logic-requirement-trace-item.is-active")).to_contain_text("L1")
+        expect(trust_spine).to_be_visible()
+        expect(trust_spine).to_have_attribute("data-current-stage", "review")
+        expect(page.locator("#logic-trust-review-state")).to_contain_text("节点")
+        expect(page.locator("#logic-current-segment-title")).to_contain_text("段 01")
+        expect(page.locator("#logic-current-segment-anchor")).to_contain_text("节点")
+        expect(output_backtrace).to_be_visible()
+        expect(output_coverage).to_be_visible()
+        expect(output_status).to_be_visible()
+        expect(output_list).to_be_visible()
+        expect(segment_card).to_be_visible()
+        expect(review_matrix).to_be_visible()
+        expect(canvas).to_be_visible()
+
+        review_matrix.locator('[data-review-filter-action="source"]').click()
+        expect(canvas).to_have_attribute("data-provenance-filter", "source")
+        expect(output_status).to_have_attribute("data-output-visible-status", "view")
+        expect(output_status).to_have_attribute("data-output-visible-target-id", "source")
+        expect(output_status).to_have_attribute("data-output-visible-verification-source", "view-action")
+        review_matrix.locator('[data-review-filter-action="all"]').click()
+        expect(canvas).to_have_attribute("data-provenance-filter", "all")
+        expect(output_status).to_have_attribute("data-output-visible-status", "view")
+        expect(output_status).to_have_attribute("data-output-visible-target-kind", "view")
+        expect(output_status).to_have_attribute("data-output-visible-target-id", "all")
+        expect(output_status).to_have_attribute("data-output-visible-verification", "verified")
+        expect(output_status).to_have_attribute("data-output-visible-verification-source", "view-action")
+        expect(output_backtrace).to_have_attribute("data-output-focus-blocked", "")
+
+        layout_state = page.evaluate("""() => {
+          const byId = (id) => document.querySelector(id);
+          const rect = (el) => {
+            const box = el?.getBoundingClientRect();
+            if (!box) return null;
+            return {
+              left: box.left,
+              right: box.right,
+              top: box.top,
+              bottom: box.bottom,
+              width: box.width,
+              height: box.height,
+            };
+          };
+          const overlap = (a, b) => Boolean(a && b
+            && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+          const panel = rect(byId("#logic-output-backtrace-panel"));
+          const coverage = rect(byId("#logic-output-backtrace-coverage"));
+          const statusEl = byId("#logic-output-visible-status");
+          const status = rect(statusEl);
+          const list = rect(byId("#logic-output-backtrace-list"));
+          const canvas = rect(byId("#logic-canvas"));
+          const tracePanel = rect(byId("#logic-requirement-trace-panel"));
+          const statusStyle = statusEl ? window.getComputedStyle(statusEl) : null;
+          return {
+            ok: Boolean(panel && coverage && status && list && canvas && tracePanel),
+            statusInContentColumn: Boolean(panel && coverage && status
+              && status.left >= coverage.left - 2
+              && status.right <= coverage.right + 2),
+            statusAfterCoverage: Boolean(coverage && status && status.top >= coverage.top - 2),
+            statusBeforeList: Boolean(list && status && status.bottom <= list.top + 2),
+            statusDoesNotOverlapList: !overlap(status, list),
+            statusDoesNotOverlapCanvas: !overlap(status, canvas),
+            tracePanelDoesNotOverlapCanvas: !overlap(tracePanel, canvas),
+            statusKeepsSingleLinePolicy: Boolean(statusStyle
+              && statusStyle.whiteSpace === "nowrap"
+              && statusStyle.overflowX === "hidden"
+              && statusStyle.textOverflow === "ellipsis"),
+            noHorizontalScroll: document.scrollingElement.scrollWidth <= window.innerWidth + 1,
+          };
+        }""")
+        assert layout_state["ok"] is True, layout_state
+        assert layout_state["statusInContentColumn"] is True, layout_state
+        assert layout_state["statusAfterCoverage"] is True, layout_state
+        assert layout_state["statusBeforeList"] is True, layout_state
+        assert layout_state["statusDoesNotOverlapList"] is True, layout_state
+        assert layout_state["statusDoesNotOverlapCanvas"] is True, layout_state
+        assert layout_state["tracePanelDoesNotOverlapCanvas"] is True, layout_state
+        assert layout_state["statusKeepsSingleLinePolicy"] is True, layout_state
+        assert layout_state["noHorizontalScroll"] is True, layout_state
+    finally:
+        page.close()
+
+
 def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
     demo_server: str, browser: Any
 ) -> None:
