@@ -5800,6 +5800,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             inspector_state="matched",
         )
         _expect_trace_identity_coherence_across_surfaces(page)
+        _expect_active_requirement_text_identity_path(page)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-demo-node-id="etrac_540v"]').click()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "unbound")
