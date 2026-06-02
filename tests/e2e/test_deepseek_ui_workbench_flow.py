@@ -5520,6 +5520,13 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             cue_label="四表面一致",
             alignable=False,
         )
+        _expect_current_segment_identity_loop_state(
+            page,
+            state="consistent",
+            current_id="row-logic2",
+            selected_id="row-logic2",
+            selected_source="canvas-node",
+        )
         _assert_current_segment_consistency_cue_layout(page, align_visible=False)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-requirement-trace-id="row-logic3"] button').click()
