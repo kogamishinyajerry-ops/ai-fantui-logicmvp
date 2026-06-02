@@ -363,7 +363,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 .logic-requirement-trace-panel {
   display: none;
   min-width: 0;
-  min-height: 0;
+  min-height: 38px;
 }
 
 .logic-requirement-trace-head {
@@ -460,6 +460,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   grid-column: 2;
   display: inline-flex;
   align-items: center;
+  justify-self: start;
   min-width: 0;
   max-width: 100%;
   gap: 4px;
@@ -915,6 +916,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   color: var(--logic-muted);
   max-width: 180px;
   overflow: hidden;
+  pointer-events: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1850,6 +1852,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   pointer-events: auto;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(38px, auto);
   gap: 4px;
   min-height: 0;
   overflow: hidden;
@@ -1870,7 +1873,9 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
 
 .logic-output-backtrace-coverage {
   grid-column: 2;
+  grid-row: 1;
   display: block;
+  box-sizing: border-box;
   overflow: hidden;
   min-width: 0;
   color: var(--logic-muted);
@@ -1888,12 +1893,19 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   position: relative;
   z-index: 3;
   grid-column: 2;
+  grid-row: 3;
   pointer-events: auto;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 38px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.logic-output-backtrace-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .logic-output-backtrace-list:focus-visible {
@@ -5193,11 +5205,17 @@ body[data-logic-interaction-mode="natural-language"] .logic-shell[data-blueprint
 }
 
 .logic-output-visible-status {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  position: relative;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
-  max-width: 100%;
-  margin: 3px 0 6px;
-  padding: 3px 8px;
+  min-width: 0;
+  max-width: min(100%, 168px);
+  margin: 0;
+  padding: 2px 7px;
   border: 1px solid rgba(137, 177, 212, 0.26);
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(12, 32, 54, 0.82), rgba(18, 47, 76, 0.52));
@@ -5205,8 +5223,9 @@ body[data-logic-interaction-mode="natural-language"] .logic-shell[data-blueprint
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   font-size: 9px;
   letter-spacing: 0.06em;
-  line-height: 1.25;
+  line-height: 1.15;
   overflow: hidden;
+  pointer-events: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

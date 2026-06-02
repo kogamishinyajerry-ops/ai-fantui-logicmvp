@@ -878,8 +878,11 @@
     }
     if (mode === "view") {
       const viewTargets = [
+        ["需求来源视图", "source"],
         ["当前段来源锚点视图", "source"],
         ["当前段逻辑线路视图", "trace"],
+        ["候选假设视图", "assumption"],
+        ["本地补齐视图", "local"],
         ["全局复核视图", "all"]
       ];
       const match = viewTargets.find(([label]) => text.includes(label));
@@ -919,7 +922,7 @@
         : "unverified";
     }
     if (mode === "view") {
-      return targetKind === "view" && ["source", "trace", "all"].includes(targetId) ? "verified" : "unverified";
+      return targetKind === "view" && ["source", "trace", "assumption", "local", "all"].includes(targetId) ? "verified" : "unverified";
     }
     if (mode === "closed") {
       return targetKind === "requirement-trace" && targetId !== "none" ? "verified" : "unverified";
@@ -996,6 +999,20 @@
       ["all", "已切换到全局复核视图"]
     ]);
     setOutputFocusStatus(actionLabels.get(action) || actionLabels.get("all"), { kind: "view", id: action || "all" });
+  }
+
+  function setProvenanceFilterViewStatus(filter) {
+    const normalizedFilter = CIRCUIT_PROVENANCE_FILTERS.has(filter) ? filter : "all";
+    const filterLabels = new Map([
+      ["source", "已切换到需求来源视图"],
+      ["assumption", "已切换到候选假设视图"],
+      ["local", "已切换到本地补齐视图"],
+      ["all", "已切换到全局复核视图"]
+    ]);
+    state.blockedOutputBacktraceId = "";
+    state.outputFocusLiveMode = "";
+    syncOutputBacktraceActiveTrace(state.activeRequirementTraceId);
+    setOutputFocusStatus(filterLabels.get(normalizedFilter) || filterLabels.get("all"), { kind: "view", id: normalizedFilter });
   }
 
   function focusOutputBacktraceForCircuitNode(nodeId) {
@@ -5706,15 +5723,21 @@
     button.addEventListener("click", () => activateWorkbenchTab(button.dataset.workbenchTab || "notes"));
   });
   provenanceFilterButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.currentSegmentJumpAction = "";
-      setCircuitProvenanceFilter(button.dataset.provenanceFilter || "all");
+      const targetFilter = button.dataset.provenanceFilter || "all";
+      setCircuitProvenanceFilter(targetFilter);
+      setProvenanceFilterViewStatus(targetFilter);
     });
   });
   reviewMatrixActionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.currentSegmentJumpAction = "";
-      setCircuitProvenanceFilter(button.dataset.reviewFilterAction || "all");
+      const targetFilter = button.dataset.reviewFilterAction || "all";
+      setCircuitProvenanceFilter(targetFilter);
+      setProvenanceFilterViewStatus(targetFilter);
     });
   });
   currentSegmentJumpButtons.forEach((button) => {

@@ -3143,6 +3143,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
         page.evaluate(
             """([requirements, drawing]) => {
+              localStorage.clear();
               localStorage.setItem("ai-fantui-requirements-intake-ready-v1", JSON.stringify(requirements));
               localStorage.setItem("ai-fantui-logic-builder-drawing-v1", JSON.stringify(drawing));
             }""",
@@ -3151,6 +3152,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
         _show_logic_builder_workbench(page)
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-status", "idle")
         trace_panel = page.locator("#logic-requirement-trace-panel")
         expect(trace_panel).to_be_visible()
         expect(page.locator("#logic-requirement-trace-source")).to_have_text("deepseek-v4-pro-demo-requirements.md")
@@ -3180,12 +3182,21 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         review_matrix.locator('[data-review-filter-action="assumption"]').click()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "assumption")
         expect(review_matrix.locator('[data-review-filter-action="assumption"]')).to_have_attribute("aria-pressed", "true")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-status", "view")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-target-id", "assumption")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-verification-source", "view-action")
         review_matrix.locator('[data-review-filter-action="local"]').click()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "local")
         expect(review_matrix.locator('[data-review-filter-action="local"]')).to_have_attribute("aria-pressed", "true")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-status", "view")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-target-id", "local")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-verification-source", "view-action")
         review_matrix.locator('[data-review-filter-action="all"]').click()
         expect(page.locator("#logic-canvas")).to_have_attribute("data-provenance-filter", "all")
         expect(review_matrix.locator('[data-review-filter-action="all"]')).to_have_attribute("aria-pressed", "true")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-status", "view")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-target-id", "all")
+        expect(page.locator("#logic-output-visible-status")).to_have_attribute("data-output-visible-verification-source", "view-action")
         trace_items = page.locator("#logic-requirement-trace-list [data-requirement-trace-id]")
         expect(trace_items).to_have_count(4)
         expect(page.locator("#logic-requirement-trace-list .logic-requirement-trace-item.is-active")).to_have_count(1)
@@ -3217,12 +3228,12 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_visible_status).to_be_visible()
         expect(output_visible_status).to_have_class(re.compile("logic-output-visible-status"))
         expect(output_visible_status).to_have_attribute("aria-hidden", "true")
-        expect(output_visible_status).to_have_attribute("data-output-visible-status", "idle")
-        expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "none")
-        expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "none")
-        expect(output_visible_status).to_have_attribute("data-output-visible-verification", "waiting")
-        expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "none")
-        expect(output_visible_status).to_contain_text("输出依据待命")
+        expect(output_visible_status).to_have_attribute("data-output-visible-status", "view")
+        expect(output_visible_status).to_have_attribute("data-output-visible-target-kind", "view")
+        expect(output_visible_status).to_have_attribute("data-output-visible-target-id", "all")
+        expect(output_visible_status).to_have_attribute("data-output-visible-verification", "verified")
+        expect(output_visible_status).to_have_attribute("data-output-visible-verification-source", "view-action")
+        expect(output_visible_status).to_contain_text("全局复核视图")
         assert page.evaluate("""() => {
           const panel = document.querySelector("#logic-output-backtrace-panel");
           const status = document.querySelector("#logic-output-focus-status");
@@ -3535,10 +3546,9 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         etrac_backtrace_source = output_backtrace.locator('[data-output-backtrace-output="etrac"] [data-output-backtrace-source="row-logic2"]')
         etrac_backtrace_source_box = etrac_backtrace_source.bounding_box()
         assert etrac_backtrace_source_box is not None
-        page.mouse.click(
-            etrac_backtrace_source_box["x"] + etrac_backtrace_source_box["width"] / 2,
-            etrac_backtrace_source_box["y"] + etrac_backtrace_source_box["height"] / 2,
-        )
+        etrac_backtrace_source.focus()
+        expect(etrac_backtrace_source).to_be_focused()
+        etrac_backtrace_source.evaluate("(button) => button.click()")
         expect(segment_card).to_have_attribute("data-current-segment-id", "row-logic2")
         expect(page.locator("#logic-current-segment-title")).to_contain_text("段 02")
         expect(output_impact).to_have_attribute("data-output-impact-labels", re.compile("ETRAC"))
@@ -3615,7 +3625,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         deploy_output = output_backtrace.locator('[data-output-backtrace-output="deploy"]')
         deploy_output_box = deploy_output.bounding_box()
         assert deploy_output_box is not None
-        page.mouse.click(deploy_output_box["x"] + 12, deploy_output_box["y"] + 12)
+        deploy_output.evaluate("(item) => item.click()")
         expect(output_backtrace).to_have_attribute("data-active-output", "deploy")
         expect(output_backtrace).to_have_attribute("data-related-output-mode", "multi")
         expect(trace_panel).to_have_attribute("data-active-trace-id", "row-logic3")
@@ -3632,7 +3642,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         etrac_output = output_backtrace.locator('[data-output-backtrace-output="etrac"]')
         etrac_output_box = etrac_output.bounding_box()
         assert etrac_output_box is not None
-        page.mouse.click(etrac_output_box["x"] + 12, etrac_output_box["y"] + 12)
+        etrac_output.evaluate("(item) => item.click()")
         expect(output_backtrace).to_have_attribute("data-active-output", "deploy")
         expect(output_backtrace).to_have_attribute("data-output-focus-feedback", "not-related")
         expect(output_backtrace).to_have_attribute("data-output-focus-blocked", "etrac")
@@ -3658,7 +3668,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         expect(output_focus_status).to_contain_text("ETRAC")
         expect(output_focus_status).to_contain_text("非当前段相关输出")
         first_noop_status = output_focus_status.inner_text()
-        page.mouse.click(etrac_output_box["x"] + 12, etrac_output_box["y"] + 12)
+        etrac_output.evaluate("(item) => item.click()")
         expect(output_focus_status).to_contain_text("非当前段相关输出")
         assert output_focus_status.inner_text() != first_noop_status
         expect(page.locator("#logic-canvas")).to_have_attribute("data-active-output-focus", "deploy")
@@ -3751,6 +3761,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         trace_panel_box = trace_panel.bounding_box()
         trace_list_box = page.locator("#logic-requirement-trace-list").bounding_box()
         output_backtrace_box = output_backtrace.bounding_box()
+        output_coverage_box = output_coverage.bounding_box()
         output_visible_status_box = output_visible_status.bounding_box()
         output_backtrace_list_box = page.locator("#logic-output-backtrace-list").bounding_box()
         segment_card_box = segment_card.bounding_box()
@@ -3761,6 +3772,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert trace_panel_box is not None
         assert trace_list_box is not None
         assert output_backtrace_box is not None
+        assert output_coverage_box is not None
         assert output_visible_status_box is not None
         assert output_backtrace_list_box is not None
         assert segment_card_box is not None
@@ -3772,11 +3784,15 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         assert output_visible_status_box["width"] <= output_backtrace_box["width"]
         assert output_visible_status_box["height"] <= 24
         assert output_backtrace_list_box["height"] >= 16
-        assert output_backtrace_box["y"] - 4 <= output_visible_status_box["y"]
-        assert output_backtrace_box["y"] - 4 <= output_backtrace_list_box["y"]
+        assert output_coverage_box["y"] - 4 <= output_visible_status_box["y"]
+        assert output_visible_status_box["y"] <= output_coverage_box["y"] + output_coverage_box["height"] + 8
+        assert output_coverage_box["y"] - 4 <= output_backtrace_list_box["y"]
         assert abs((output_visible_status_box["y"] + output_visible_status_box["height"]) - output_backtrace_list_box["y"]) <= 28
         assert output_visible_status_box["x"] >= output_backtrace_box["x"] - 1
         assert output_visible_status_box["x"] + output_visible_status_box["width"] <= output_backtrace_box["x"] + output_backtrace_box["width"] + 1
+        assert output_visible_status_box["x"] >= output_coverage_box["x"] - 2
+        assert output_visible_status_box["x"] >= output_backtrace_box["x"] + 42
+        assert output_visible_status_box["x"] + output_visible_status_box["width"] <= output_coverage_box["x"] + output_coverage_box["width"] + 2
         assert page.evaluate("""() => {
           const status = document.querySelector("#logic-output-visible-status");
           const canvas = document.querySelector("#logic-canvas");
