@@ -901,9 +901,9 @@ def _expect_current_segment_identity_loop_state(
         expect(loop).to_contain_text(expected_inspector_state)
 
 
-def _expect_active_requirement_text_identity_path(page: Any) -> None:
+def _expect_current_requirement_text_match_closed_loop(page: Any, *, strict_selected_trace: bool = True) -> None:
     path_state = page.evaluate(
-        """() => {
+        """({strictSelectedTrace}) => {
           const active = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
           const evidence = document.querySelector("#logic-current-segment-evidence");
           const summary = document.querySelector("#logic-current-segment-summary");
@@ -971,6 +971,15 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             && rowTextMatchBox.height <= 18;
           const rowTextMatchClipped = rowTextMatchBadge.scrollWidth <= rowTextMatchBadge.clientWidth + 1
             && rowTextMatchBadge.scrollHeight <= rowTextMatchBadge.clientHeight + 1;
+          const visibleRowTextMatchBadges = Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-text-match"))
+            .filter((item) => {
+              const itemStyle = window.getComputedStyle(item);
+              const itemBox = item.getBoundingClientRect();
+              return itemStyle.display !== "none"
+                && itemStyle.visibility !== "hidden"
+                && itemBox.width > 0
+                && itemBox.height > 0;
+            });
           const rightTextMatches = !segmentLabel
             || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
           const matchedCanvasTargets = [...nodeTargets, ...wireTargets].filter(targetMatchesActive);
@@ -982,13 +991,10 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
           const staleCanvasTargets = Array.from(document.querySelectorAll(".logic-circuit-node, .logic-circuit-wire"))
             .filter((target) => !targetMatchesActive(target)
               && (target.dataset.canvasOriginalTextMatch || target.dataset.canvasOriginalTextMatchToken));
-          const checks = [
+          const sharedTextMatchChecks = [
             { key: "identity-highlighted", ok: identityLoop.dataset.highlightedTraceId === activeId, actual: identityLoop.dataset.highlightedTraceId || "", expected: activeId },
             { key: "identity-current", ok: identityLoop.dataset.currentSegmentId === activeId, actual: identityLoop.dataset.currentSegmentId || "", expected: activeId },
-            { key: "selected-current", ok: selected.dataset.canvasTraceConsistencyCurrentId === activeId, actual: selected.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
             { key: "source-current", ok: source.dataset.canvasTraceConsistencyCurrentId === activeId, actual: source.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
-            { key: "context-current", ok: context.dataset.contextRequirementTraceCurrentSegmentId === activeId, actual: context.dataset.contextRequirementTraceCurrentSegmentId || "", expected: activeId },
-            { key: "annotation-current", ok: annotation.dataset.annotationRequirementTraceCurrentSegmentId === activeId, actual: annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected: activeId },
             { key: "evidence-original-text-match", ok: evidence.dataset.currentSegmentTextMatch === quoteSummaryMatchMode, actual: evidence.dataset.currentSegmentTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "identity-loop-text-match", ok: identityLoop.dataset.identityLoopTextMatch === quoteSummaryMatchMode, actual: identityLoop.dataset.identityLoopTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "identity-original-text-match", ok: identityLoop.dataset.originalTextMatch === quoteSummaryMatchMode, actual: identityLoop.dataset.originalTextMatch || "", expected: quoteSummaryMatchMode },
@@ -996,6 +1002,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "row-original-text-match", ok: active.dataset.originalTextMatch === quoteSummaryMatchMode, actual: active.dataset.originalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "row-badge-original-text-match", ok: rowTextMatchBadge.dataset.originalTextMatch === quoteSummaryMatchMode && (rowTextMatchBadge.textContent || "").includes("原文"), actual: `${rowTextMatchBadge.dataset.originalTextMatch || ""} | ${rowTextMatchBadge.textContent || ""}`, expected: quoteSummaryMatchMode },
             { key: "row-badge-layout", ok: rowTextMatchInsideButton && rowTextMatchCompact && rowTextMatchClipped && rowTextMatchStyle.pointerEvents === "none", actual: JSON.stringify({ inside: rowTextMatchInsideButton, compact: rowTextMatchCompact, clipped: rowTextMatchClipped, pointerEvents: rowTextMatchStyle.pointerEvents, width: rowTextMatchBox.width, height: rowTextMatchBox.height }), expected: "inside compact clipped no-pointer" },
+            { key: "row-badge-active-only", ok: visibleRowTextMatchBadges.length === 1 && visibleRowTextMatchBadges[0] === rowTextMatchBadge, actual: String(visibleRowTextMatchBadges.length), expected: "1 active row badge" },
             { key: "canvas-selected-original-text-match", ok: selected.dataset.canvasOriginalTextMatch === quoteSummaryMatchMode, actual: selected.dataset.canvasOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "canvas-source-original-text-match", ok: source.dataset.canvasOriginalTextMatch === quoteSummaryMatchMode, actual: source.dataset.canvasOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "canvas-selected-original-text-match-token", ok: selected.dataset.canvasOriginalTextMatchToken === evidence.dataset.currentSegmentTextMatchToken, actual: selected.dataset.canvasOriginalTextMatchToken || "", expected: evidence.dataset.currentSegmentTextMatchToken || "" },
@@ -1004,6 +1011,11 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "canvas-source-original-text-match-a11y", ok: (source.getAttribute("aria-label") || "").includes("原文命中") && (source.getAttribute("title") || "").includes("原文命中"), actual: `${source.getAttribute("aria-label") || ""} | ${source.getAttribute("title") || ""}`, expected: "原文命中" },
             { key: "matched-canvas-target-original-text-match", ok: matchedCanvasTargetsCarryTextMatch, actual: JSON.stringify(matchedCanvasTargets.map((target) => ({ mode: target.dataset.canvasOriginalTextMatch || "", token: target.dataset.canvasOriginalTextMatchToken || "", aria: target.getAttribute("aria-label") || "", title: target.getAttribute("title") || "" }))), expected: quoteSummaryMatchMode },
             { key: "stale-canvas-target-original-text-match", ok: staleCanvasTargets.length === 0, actual: JSON.stringify(staleCanvasTargets.map((target) => ({ id: target.dataset.demoNodeId || target.dataset.wireId || target.dataset.nodeId || "", mode: target.dataset.canvasOriginalTextMatch || "", token: target.dataset.canvasOriginalTextMatchToken || "" }))), expected: "no stale canvas target text-match data" },
+          ];
+          const strictTraceChecks = strictSelectedTrace ? [
+            { key: "selected-current", ok: selected.dataset.canvasTraceConsistencyCurrentId === activeId, actual: selected.dataset.canvasTraceConsistencyCurrentId || "", expected: activeId },
+            { key: "context-current", ok: context.dataset.contextRequirementTraceCurrentSegmentId === activeId, actual: context.dataset.contextRequirementTraceCurrentSegmentId || "", expected: activeId },
+            { key: "annotation-current", ok: annotation.dataset.annotationRequirementTraceCurrentSegmentId === activeId, actual: annotation.dataset.annotationRequirementTraceCurrentSegmentId || "", expected: activeId },
             { key: "context-original-text-match", ok: context.dataset.contextOriginalTextMatch === quoteSummaryMatchMode, actual: context.dataset.contextOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "annotation-original-text-match", ok: annotation.dataset.annotationOriginalTextMatch === quoteSummaryMatchMode, actual: annotation.dataset.annotationOriginalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "context-original-text-match-token", ok: context.dataset.contextOriginalTextMatchToken === evidence.dataset.currentSegmentTextMatchToken, actual: context.dataset.contextOriginalTextMatchToken || "", expected: evidence.dataset.currentSegmentTextMatchToken || "" },
@@ -1025,12 +1037,15 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             },
             { key: "right-text-segment", ok: rightTextMatches, actual: `${context.textContent || ""} | ${annotation.textContent || ""}`, expected: segmentLabel },
             { key: "canvas-highlight", ok: hasCanvasEvidence, actual: `${nodeMatches} nodes/${wireMatches} wires`, expected: `${nodeIds.length} nodes/${wireIds.length} wires` },
-          ];
+          ] : [];
+          const checks = [...sharedTextMatchChecks, ...strictTraceChecks];
           return {
             ok: activeId.length > 0
               && quote.length > 0
               && nodeIds.length + wireIds.length > 0
               && checks.every((check) => check.ok),
+            helper: "current-requirement-text-match-closed-loop",
+            strictSelectedTrace,
             activeId,
             quote,
             normalizedQuote,
@@ -1047,108 +1062,18 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             wireMatches,
             matchedCanvasTargetCount: matchedCanvasTargets.length,
             staleCanvasTargetCount: staleCanvasTargets.length,
+            sharedTextMatchChecks,
+            strictTraceChecks,
             checks,
           };
-        }"""
+        }""",
+        {"strictSelectedTrace": strict_selected_trace},
     )
     assert path_state["ok"] is True, path_state
     assert path_state["quoteSummaryMatchMode"] in {"full-quote", "meaningful-token"}, path_state
     if path_state["quoteSummaryMatchMode"] == "meaningful-token":
         assert path_state["meaningfulTokens"], path_state
         assert path_state["tokenMatches"], path_state
-
-
-def _expect_active_requirement_row_text_match_badge(page: Any) -> None:
-    row_state = page.evaluate(
-        """() => {
-          const active = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
-          const evidence = document.querySelector("#logic-current-segment-evidence");
-          const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
-          const source = document.querySelector("#logic-canvas-source");
-          const selected = document.querySelector("#logic-selected-target-label");
-          const badge = active ? active.querySelector(".logic-requirement-trace-text-match") : null;
-          const button = active ? active.querySelector("button") : null;
-          const allBadges = Array.from(document.querySelectorAll("#logic-requirement-trace-list .logic-requirement-trace-text-match"));
-          if (!active || !evidence || !identityLoop || !source || !selected || !badge || !button) {
-            return { ok: false, reason: "missing-row-text-match-surface" };
-          }
-          const mode = active.dataset.originalTextMatch || "";
-          const identityMode = identityLoop.dataset.identityLoopTextMatch || "";
-          const evidenceMode = evidence.dataset.currentSegmentTextMatch || "";
-          const evidenceToken = evidence.dataset.currentSegmentTextMatchToken || "";
-          const sourceMode = source.dataset.canvasOriginalTextMatch || "";
-          const selectedMode = selected.dataset.canvasOriginalTextMatch || "";
-          const sourceToken = source.dataset.canvasOriginalTextMatchToken || "";
-          const selectedToken = selected.dataset.canvasOriginalTextMatchToken || "";
-          const badgeMode = badge.dataset.originalTextMatch || "";
-          const sourceA11y = `${source.getAttribute("aria-label") || ""} | ${source.getAttribute("title") || ""}`;
-          const selectedA11y = `${selected.getAttribute("aria-label") || ""} | ${selected.getAttribute("title") || ""}`;
-          const buttonBox = button.getBoundingClientRect();
-          const badgeBox = badge.getBoundingClientRect();
-          const style = window.getComputedStyle(badge);
-          const insideButton = badgeBox.left >= buttonBox.left - 1
-            && badgeBox.right <= buttonBox.right + 1
-            && badgeBox.top >= buttonBox.top - 1
-            && badgeBox.bottom <= buttonBox.bottom + 1;
-          const compact = badgeBox.width > 0
-            && badgeBox.width <= 58
-            && badgeBox.height > 0
-            && badgeBox.height <= 18;
-          const clipped = badge.scrollWidth <= badge.clientWidth + 1
-            && badge.scrollHeight <= badge.clientHeight + 1;
-          const visibleBadges = allBadges.filter((item) => {
-            const itemStyle = window.getComputedStyle(item);
-            const itemBox = item.getBoundingClientRect();
-            return itemStyle.display !== "none"
-              && itemStyle.visibility !== "hidden"
-              && itemBox.width > 0
-              && itemBox.height > 0;
-          });
-          return {
-            ok: ["full-quote", "meaningful-token"].includes(mode)
-              && mode === identityMode
-              && mode === evidenceMode
-              && mode === sourceMode
-              && mode === selectedMode
-              && evidenceToken === sourceToken
-              && evidenceToken === selectedToken
-              && mode === badgeMode
-              && (badge.textContent || "").includes("原文")
-              && sourceA11y.includes("原文命中")
-              && selectedA11y.includes("原文命中")
-              && visibleBadges.length === 1
-              && visibleBadges[0] === badge
-              && insideButton
-              && compact
-              && clipped
-              && style.pointerEvents === "none",
-            activeId: active.dataset.requirementTraceId || "",
-            mode,
-            identityMode,
-            evidenceMode,
-            sourceMode,
-            selectedMode,
-            evidenceToken,
-            sourceToken,
-            selectedToken,
-            sourceA11y,
-            selectedA11y,
-            badgeMode,
-            badgeText: badge.textContent || "",
-            insideButton,
-            compact,
-            clipped,
-            pointerEvents: style.pointerEvents,
-            totalBadges: allBadges.length,
-            visibleBadgeCount: visibleBadges.length,
-            badgeBox: {
-              width: badgeBox.width,
-              height: badgeBox.height,
-            },
-          };
-        }"""
-    )
-    assert row_state["ok"] is True, row_state
 
 
 def _expect_inspector_trace_state_badge(page: Any, expected_label: str) -> None:
@@ -5765,7 +5690,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
         _expect_bridge_token_across_trace_surfaces(page)
         _expect_global_review_counts_across_trace_surfaces(page)
         _expect_trace_identity_coherence_across_surfaces(page)
-        _expect_active_requirement_text_identity_path(page)
+        _expect_current_requirement_text_match_closed_loop(page)
         expect(segment_consistency_cue).to_have_attribute("data-trace-consistency-cue", "consistent")
         expect(trust_review_state).to_have_attribute("data-trace-consistency-review-label", "四表面一致")
         expect(annotation_trace).to_contain_text("段")
@@ -5797,7 +5722,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             selected_source="canvas-node",
             inspector_state="matched",
         )
-        _expect_active_requirement_row_text_match_badge(page)
+        _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         _expect_canvas_selected_trace_state_badge(
             page,
             "分叉",
@@ -6024,7 +5949,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             inspector_state="matched",
         )
         _expect_trace_identity_coherence_across_surfaces(page)
-        _expect_active_requirement_text_identity_path(page)
+        _expect_current_requirement_text_match_closed_loop(page)
         _expect_consistency_align_button(segment_consistency_align, visible=False, enabled=False)
         page.locator('[data-demo-node-id="etrac_540v"]').click()
         expect(context_trace).to_have_attribute("data-context-requirement-trace", "unbound")
@@ -6054,7 +5979,7 @@ def test_logic_builder_requirement_trace_panel_links_source_to_canvas(
             inspector_state="unbound",
         )
         _expect_current_segment_trust_chain_mirror(page, expected_trace_id="row-logic1")
-        _expect_active_requirement_row_text_match_badge(page)
+        _expect_current_requirement_text_match_closed_loop(page, strict_selected_trace=False)
         _expect_inspector_trace_state_badge(page, "未绑定")
         _expect_canvas_selected_trace_state_badge(
             page,
