@@ -1171,8 +1171,9 @@
 
   function syncCurrentSegmentTrustChainInspectorSurfaces() {
     const snapshot = currentSegmentTrustChainSnapshot();
+    const sourceAnchorLabel = readableSourceAnchorIdentity(snapshot.sourceAnchorId, "等待锚点");
     const summary = snapshot.state === "ready"
-      ? `当前段到全局矩阵 · 当前段链路证据 · 原文锚点 ${snapshot.sourceAnchorId} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 全局复核 ${snapshot.reviewAnchorCount}`
+      ? `当前段到全局矩阵 · 当前段链路证据 · 原文锚点 ${sourceAnchorLabel} · ${snapshot.nodeCount} 节点/${snapshot.wireCount} 连线 · 输出 ${snapshot.outputCount} · 全局复核 ${snapshot.reviewAnchorCount}`
       : "当前段到全局矩阵 · 当前段链路证据等待段落";
     const surfaces = [
       { element: logicContextRequirementTrace, prefix: "context" },

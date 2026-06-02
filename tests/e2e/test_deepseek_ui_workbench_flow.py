@@ -623,6 +623,10 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
           });
           const contextMirror = target(context, "context");
           const annotationMirror = target(annotation, "annotation");
+          const accessible = (element) => ({
+            ariaLabel: element.getAttribute("aria-label") || "",
+            title: element.getAttribute("title") || "",
+          });
           const canvasTarget = (element) => ({
             state: element.dataset.canvasTrustChainState || "",
             traceId: element.dataset.canvasTrustChainTraceId || "",
@@ -662,11 +666,17 @@ def _expect_current_segment_trust_chain_mirror(page: Any, *, expected_trace_id: 
             annotation: annotationMirror,
             selected: selectedMirror,
             source: sourceMirror,
+            accessible: {
+              context: accessible(context),
+              annotation: accessible(annotation),
+            },
           };
         }""",
         expected_trace_id,
     )
     assert mirror_state["ok"] is True, mirror_state
+    for surface_state in mirror_state["accessible"].values():
+        _assert_no_machine_tokens_in_accessible_state(surface_state, "ariaLabel", "title")
 
 
 def _expect_trace_identity_coherence_across_surfaces(page: Any) -> None:
