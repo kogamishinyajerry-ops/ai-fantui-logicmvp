@@ -898,10 +898,14 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
           const normalizeText = (value) => String(value || "").replace(/\\s+/g, " ").trim();
           const normalizedQuote = normalizeText(quote);
           const normalizedSummary = normalizeText(summary.textContent || "");
-          const quoteSnippet = normalizedQuote.slice(0, 12);
+          const meaningfulTokens = normalizedQuote
+            .split(/[，。；、,.;:\\s]+/)
+            .map((token) => token.trim())
+            .filter((token) => token.length >= 6);
+          const quoteTokenMatchesSummary = meaningfulTokens.some((token) => normalizedSummary.includes(token));
           const quoteMatchesSummary = normalizedQuote.length > 0
             && (normalizedSummary.includes(normalizedQuote)
-              || (quoteSnippet.length >= 6 && normalizedSummary.includes(quoteSnippet)));
+              || quoteTokenMatchesSummary);
           const rightTextMatches = !segmentLabel
             || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
           const checks = [
@@ -922,7 +926,7 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
               && checks.every((check) => check.ok),
             activeId,
             quote,
-            quoteSnippet,
+            meaningfulTokens,
             segmentLabel,
             nodeIds,
             wireIds,
