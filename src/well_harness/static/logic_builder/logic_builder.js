@@ -597,6 +597,13 @@
     return fallback || annotationTargetLabel(type, id, "") || "未选择";
   }
 
+  function readableLogicReferenceText(text) {
+    return String(text || "").replace(/\b([A-Za-z0-9_]+)\s*(?:->|→)\s*([A-Za-z0-9_]+)\b/g, (match, sourceId, targetId) => {
+      const display = readableAnnotationTargetDisplayLabel("wire", `${sourceId}->${targetId}`, "");
+      return display || match;
+    });
+  }
+
   function setSourceTrustSummary(text) {
     const value = text || "来源待确认";
     if (sourceTrustSummary) sourceTrustSummary.textContent = value;
@@ -5999,7 +6006,7 @@
       } else {
         for (const item of changes) {
           const li = document.createElement("li");
-          li.textContent = item;
+          li.textContent = readableLogicReferenceText(item);
           batchProposedChanges.appendChild(li);
         }
       }
@@ -6164,7 +6171,7 @@
     } else {
       for (const item of changes) {
         const li = document.createElement("li");
-        li.textContent = item;
+        li.textContent = readableLogicReferenceText(item);
         proposedChanges.appendChild(li);
       }
     }

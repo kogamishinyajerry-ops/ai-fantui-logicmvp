@@ -8754,6 +8754,8 @@ def test_logic_builder_annotation_batch_calls_ai_revision_interpreter(
         expect(page.locator("#logic-batch-summary")).to_contain_text("2 条标注意见归并")
         expect(page.locator("#logic-batch-conflict-summary")).to_have_text("未发现冲突。")
         expect(page.locator("#logic-batch-proposed-changes li")).to_have_count(2)
+        expect(page.locator("#logic-batch-proposed-changes")).to_contain_text("SW1 到 L1")
+        expect(page.locator("#logic-batch-proposed-changes")).not_to_contain_text("sw1→logic1")
         expect(page.locator("#logic-batch-confirmation-question")).to_contain_text("是否确认")
         expect(page.locator("#logic-batch-confirm-update")).to_be_enabled()
 
