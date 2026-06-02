@@ -1288,6 +1288,8 @@
         currentSegmentOutputReveal.dataset.outputImpactReveal = "hidden";
         currentSegmentOutputReveal.dataset.hiddenOutputCount = "0";
         currentSegmentOutputReveal.dataset.targetTraceId = "waiting";
+        currentSegmentOutputReveal.setAttribute("aria-expanded", "false");
+        currentSegmentOutputReveal.setAttribute("aria-controls", "logic-output-backtrace-panel");
         currentSegmentOutputReveal.setAttribute("aria-label", "等待输出回溯完整清单");
         currentSegmentOutputReveal.setAttribute("title", "等待输出回溯完整清单");
       }
@@ -1342,6 +1344,8 @@
       currentSegmentOutputReveal.dataset.outputImpactReveal = hasHiddenOutputImpacts ? "ready" : "hidden";
       currentSegmentOutputReveal.dataset.hiddenOutputCount = String(hiddenOutputImpactCount);
       currentSegmentOutputReveal.dataset.targetTraceId = trace.id || trace.sourceId || "active";
+      currentSegmentOutputReveal.setAttribute("aria-expanded", "false");
+      currentSegmentOutputReveal.setAttribute("aria-controls", "logic-output-backtrace-panel");
       currentSegmentOutputReveal.setAttribute("aria-label", hasHiddenOutputImpacts
         ? `查看输出回溯完整清单：${outputImpactLabel}`
         : "当前段没有隐藏的最终输出影响");
@@ -1362,8 +1366,12 @@
     outputBacktracePanel.dataset.revealTraceId = traceId || "none";
     outputBacktracePanel.dataset.revealSource = "current-segment-output-summary";
     outputBacktracePanel.classList.add("is-current-segment-output-revealed");
+    currentSegmentOutputReveal.setAttribute("aria-expanded", "true");
     if (typeof outputBacktracePanel.scrollIntoView === "function") {
       outputBacktracePanel.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+    if (outputBacktraceList && typeof outputBacktraceList.focus === "function") {
+      outputBacktraceList.focus({ preventScroll: true });
     }
   }
 
@@ -1373,6 +1381,7 @@
     outputBacktracePanel.dataset.revealTraceId = "";
     outputBacktracePanel.dataset.revealSource = "";
     outputBacktracePanel.classList.remove("is-current-segment-output-revealed");
+    if (currentSegmentOutputReveal) currentSegmentOutputReveal.setAttribute("aria-expanded", "false");
   }
 
   if (currentSegmentOutputReveal) {
