@@ -424,6 +424,48 @@ button:disabled { cursor: not-allowed; opacity: 0.58; }
   box-shadow: inset 3px 0 0 #2563eb;
 }
 
+.logic-requirement-trace-text-match {
+  display: none;
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 50px;
+  overflow: hidden;
+  border: 1px solid rgba(104, 234, 186, 0.28);
+  border-radius: 999px;
+  background: rgba(104, 234, 186, 0.08);
+  color: rgba(218, 255, 244, 0.92);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 2px 4px;
+  pointer-events: none;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logic-requirement-trace-item.is-active .logic-requirement-trace-text-match {
+  display: block;
+}
+
+.logic-requirement-trace-item.is-active .logic-requirement-trace-copy {
+  padding-right: 55px;
+}
+
+.logic-requirement-trace-text-match[data-original-text-match="meaningful-token"] {
+  border-color: rgba(245, 200, 91, 0.36);
+  background: rgba(245, 200, 91, 0.10);
+  color: #ffe5a3;
+}
+
+.logic-requirement-trace-text-match[data-original-text-match="missing"] {
+  border-color: rgba(255, 180, 168, 0.38);
+  background: rgba(255, 180, 168, 0.10);
+  color: #ffcabf;
+}
+
 .logic-requirement-trace-index {
   display: grid;
   place-items: center;

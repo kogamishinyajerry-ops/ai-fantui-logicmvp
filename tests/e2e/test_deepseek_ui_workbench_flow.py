@@ -909,11 +909,12 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
           const summary = document.querySelector("#logic-current-segment-summary");
           const identityLoop = document.querySelector("#logic-current-segment-identity-loop");
           const textMatchBadge = document.querySelector("#logic-current-segment-identity-text-match");
+          const rowTextMatchBadge = active ? active.querySelector(".logic-requirement-trace-text-match") : null;
           const selected = document.querySelector("#logic-selected-target-label");
           const source = document.querySelector("#logic-canvas-source");
           const context = document.querySelector("#logic-context-requirement-trace");
           const annotation = document.querySelector("#logic-annotation-requirement-trace");
-          if (!active || !evidence || !summary || !identityLoop || !textMatchBadge || !selected || !source || !context || !annotation) {
+          if (!active || !evidence || !summary || !identityLoop || !textMatchBadge || !rowTextMatchBadge || !selected || !source || !context || !annotation) {
             return { ok: false, reason: "missing-surface" };
           }
           let trace = {};
@@ -955,6 +956,21 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             : (quoteTokenMatchesSummary ? "meaningful-token" : "none");
           const quoteMatchesSummary = normalizedQuote.length > 0
             && (fullQuoteMatchesSummary || quoteTokenMatchesSummary);
+          const rowButton = active.querySelector("button");
+          const rowButtonBox = rowButton ? rowButton.getBoundingClientRect() : null;
+          const rowTextMatchBox = rowTextMatchBadge.getBoundingClientRect();
+          const rowTextMatchStyle = window.getComputedStyle(rowTextMatchBadge);
+          const rowTextMatchInsideButton = Boolean(rowButtonBox)
+            && rowTextMatchBox.left >= rowButtonBox.left - 1
+            && rowTextMatchBox.right <= rowButtonBox.right + 1
+            && rowTextMatchBox.top >= rowButtonBox.top - 1
+            && rowTextMatchBox.bottom <= rowButtonBox.bottom + 1;
+          const rowTextMatchCompact = rowTextMatchBox.width > 0
+            && rowTextMatchBox.width <= 58
+            && rowTextMatchBox.height > 0
+            && rowTextMatchBox.height <= 18;
+          const rowTextMatchClipped = rowTextMatchBadge.scrollWidth <= rowTextMatchBadge.clientWidth + 1
+            && rowTextMatchBadge.scrollHeight <= rowTextMatchBadge.clientHeight + 1;
           const rightTextMatches = !segmentLabel
             || ((context.textContent || "").includes(segmentLabel) && (annotation.textContent || "").includes(segmentLabel));
           const checks = [
@@ -968,6 +984,9 @@ def _expect_active_requirement_text_identity_path(page: Any) -> None:
             { key: "identity-loop-text-match", ok: identityLoop.dataset.identityLoopTextMatch === quoteSummaryMatchMode, actual: identityLoop.dataset.identityLoopTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "identity-original-text-match", ok: identityLoop.dataset.originalTextMatch === quoteSummaryMatchMode, actual: identityLoop.dataset.originalTextMatch || "", expected: quoteSummaryMatchMode },
             { key: "badge-original-text-match", ok: textMatchBadge.dataset.originalTextMatch === quoteSummaryMatchMode && (textMatchBadge.textContent || "").includes("原文"), actual: `${textMatchBadge.dataset.originalTextMatch || ""} | ${textMatchBadge.textContent || ""}`, expected: quoteSummaryMatchMode },
+            { key: "row-original-text-match", ok: active.dataset.originalTextMatch === quoteSummaryMatchMode, actual: active.dataset.originalTextMatch || "", expected: quoteSummaryMatchMode },
+            { key: "row-badge-original-text-match", ok: rowTextMatchBadge.dataset.originalTextMatch === quoteSummaryMatchMode && (rowTextMatchBadge.textContent || "").includes("原文"), actual: `${rowTextMatchBadge.dataset.originalTextMatch || ""} | ${rowTextMatchBadge.textContent || ""}`, expected: quoteSummaryMatchMode },
+            { key: "row-badge-layout", ok: rowTextMatchInsideButton && rowTextMatchCompact && rowTextMatchClipped && rowTextMatchStyle.pointerEvents === "none", actual: JSON.stringify({ inside: rowTextMatchInsideButton, compact: rowTextMatchCompact, clipped: rowTextMatchClipped, pointerEvents: rowTextMatchStyle.pointerEvents, width: rowTextMatchBox.width, height: rowTextMatchBox.height }), expected: "inside compact clipped no-pointer" },
             {
               key: "quote-summary",
               ok: quoteMatchesSummary,

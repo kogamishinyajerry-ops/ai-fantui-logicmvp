@@ -1028,6 +1028,27 @@
     };
   }
 
+  function syncRequirementTraceTextMatchBadges(activeTraceElement, match) {
+    if (!requirementTraceList) return;
+    const safeMatch = match || { mode: "waiting", label: "等待", token: "none" };
+    requirementTraceList.querySelectorAll(".logic-requirement-trace-text-match").forEach((badge) => {
+      const row = badge.closest("[data-requirement-trace-id]");
+      const isActive = Boolean(row && row === activeTraceElement);
+      const mode = isActive ? safeMatch.mode : "waiting";
+      const label = isActive ? safeMatch.label : "待选";
+      const token = isActive ? safeMatch.token : "none";
+      badge.dataset.originalTextMatch = mode;
+      badge.dataset.originalTextMatchToken = token;
+      badge.textContent = `原文 ${label}`;
+      badge.setAttribute("aria-label", `需求行原文命中方式：${label}`);
+      badge.setAttribute("title", `需求行原文命中方式：${label}；token ${token}`);
+      if (row) {
+        row.dataset.originalTextMatch = mode;
+        row.dataset.originalTextMatchToken = token;
+      }
+    });
+  }
+
   function syncCurrentSegmentIdentityLoop() {
     if (!currentSegmentIdentityLoop || !currentSegmentEvidence) return;
     const chainSnapshot = currentSegmentTrustChainSnapshot();
@@ -1046,6 +1067,7 @@
     const highlightedTrace = document.querySelector("#logic-requirement-trace-list .logic-requirement-trace-item.is-active");
     const highlightedTraceId = highlightedTrace ? (highlightedTrace.dataset.requirementTraceId || currentId) : currentId;
     const originalTextMatch = currentSegmentOriginalTextMatch(highlightedTrace);
+    syncRequirementTraceTextMatchBadges(highlightedTrace, originalTextMatch);
     const contextSurfaceState = logicContextRequirementTrace
       ? (logicContextRequirementTrace.dataset.contextRequirementTrace || "waiting")
       : "missing";
@@ -2032,6 +2054,7 @@
       button.type = "button";
       button.innerHTML = `
         <span class="logic-requirement-trace-index">${String(index + 1).padStart(2, "0")}</span>
+        <span class="logic-requirement-trace-text-match" data-original-text-match="waiting" aria-hidden="false">原文 待选</span>
         <span class="logic-requirement-trace-copy">
           <strong>${escapeText(item.quote)}</strong>
           <small>${escapeText(item.actions.join("；") || "生成候选节点与连线")}</small>
