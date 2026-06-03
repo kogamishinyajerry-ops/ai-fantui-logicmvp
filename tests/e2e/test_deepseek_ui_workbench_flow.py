@@ -8093,6 +8093,27 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
 
         page.select_option("#logic-circuit-preset-select", "max-reverse")
         expect(page.locator("#logic-circuit-preset-status")).to_contain_text("最大反推")
+        expect(page.locator("#logic-circuit-preset-status")).to_have_attribute(
+            "aria-label", "当前场景：最大反推（展开到位）"
+        )
+        expect(page.locator("#logic-circuit-preset-select")).to_have_attribute(
+            "aria-label", "电路预设：最大反推（展开到位）"
+        )
+        expect(page.locator("#logic-circuit-preset-select")).to_have_attribute(
+            "title", "电路预设：最大反推（展开到位）"
+        )
+        expect(page.locator("#logic-circuit-tra-value")).to_have_attribute(
+            "aria-label", re.compile("^TRA 角度：")
+        )
+        expect(page.locator("#logic-circuit-ra-value")).to_have_attribute(
+            "title", re.compile("^无线电高度：")
+        )
+        expect(page.locator("#logic-core-n1k-value")).to_have_attribute(
+            "aria-label", re.compile("^核心链路 N1K 转速：")
+        )
+        expect(page.locator("#logic-core-vdt-value")).to_have_attribute(
+            "title", re.compile("^核心链路 VDT 展开位置：")
+        )
         expect(page.locator("#logic-circuit-status-badge")).to_have_text("已放出")
         expect(page.locator("#logic-circuit-status-summary")).to_have_text("L4 满足，油门锁释放。油门反向段解锁。")
         expect(page.locator("#logic-circuit-hud-sw1")).to_have_text("闭合")

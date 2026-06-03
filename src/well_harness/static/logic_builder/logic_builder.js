@@ -3120,8 +3120,9 @@
     if (drawerInputs.sw1 && circuitInputs.aircraftOnGround) circuitInputs.aircraftOnGround.checked = drawerInputs.sw1.checked;
     if (drawerInputs.sw2 && circuitInputs.eecEnable) circuitInputs.eecEnable.checked = drawerInputs.sw2.checked;
     state.activeCircuitPreset = "";
-    if (circuitPresetStatus) circuitPresetStatus.textContent = "底部抽屉输入";
+    setReadableCircuitPresetStatus("底部抽屉输入");
     if (circuitPresetSelect) circuitPresetSelect.value = "";
+    updateCircuitPresetSelectReadability("");
     syncDrawerReadouts();
     if (!isDocxTemplateCircuit()) scheduleCircuitEvaluation();
   }
@@ -4010,24 +4011,45 @@
     },
   };
 
+  function setReadableCircuitReadout(element, valueText, label) {
+    if (!element) return;
+    const readableText = label ? `${label}：${valueText}` : valueText;
+    element.textContent = valueText;
+    element.setAttribute("aria-label", readableText);
+    element.setAttribute("title", readableText);
+  }
+
+  function setReadableCircuitPresetStatus(text) {
+    setReadableStatusText(circuitPresetStatus, text);
+  }
+
+  function updateCircuitPresetSelectReadability(label) {
+    if (!circuitPresetSelect) return;
+    const selectedOption = circuitPresetSelect.selectedOptions && circuitPresetSelect.selectedOptions[0];
+    const selectedText = label || (selectedOption && selectedOption.textContent ? selectedOption.textContent.trim() : "");
+    const readableText = selectedText ? `电路预设：${selectedText}` : "电路预设：未选择";
+    circuitPresetSelect.setAttribute("aria-label", readableText);
+    circuitPresetSelect.setAttribute("title", readableText);
+  }
+
   function updateCircuitInputReadouts(snapshot) {
     const request = buildCircuitEvaluationRequest();
     const traText = `${request.tra_deg.toFixed(1)}°`;
     const raText = `${request.radio_altitude_ft.toFixed(0)} ft`;
     const n1kText = `${numInputValue(circuitInputs.n1k, 35).toFixed(0)}%`;
-    if (circuitReadouts.traValue) circuitReadouts.traValue.textContent = traText;
-    if (circuitReadouts.coreTraValue) circuitReadouts.coreTraValue.textContent = traText;
-    if (circuitReadouts.raValue) circuitReadouts.raValue.textContent = raText;
-    if (circuitReadouts.coreRaValue) circuitReadouts.coreRaValue.textContent = raText;
-    if (circuitReadouts.n1kValue) circuitReadouts.n1kValue.textContent = n1kText;
-    if (circuitReadouts.coreN1kValue) circuitReadouts.coreN1kValue.textContent = n1kText;
+    setReadableCircuitReadout(circuitReadouts.traValue, traText, "TRA 角度");
+    setReadableCircuitReadout(circuitReadouts.coreTraValue, traText, "核心链路 TRA 角度");
+    setReadableCircuitReadout(circuitReadouts.raValue, raText, "无线电高度");
+    setReadableCircuitReadout(circuitReadouts.coreRaValue, raText, "核心链路无线电高度");
+    setReadableCircuitReadout(circuitReadouts.n1kValue, n1kText, "N1K 转速");
+    setReadableCircuitReadout(circuitReadouts.coreN1kValue, n1kText, "核心链路 N1K 转速");
     if (circuitReadouts.vdtValue) {
       const hudVdt = snapshot && snapshot.hud && typeof snapshot.hud.deploy_position_percent === "number"
         ? snapshot.hud.deploy_position_percent
         : request.deploy_position_percent;
       const vdtText = `${hudVdt.toFixed(0)}%`;
-      circuitReadouts.vdtValue.textContent = vdtText;
-      if (circuitReadouts.coreVdtValue) circuitReadouts.coreVdtValue.textContent = vdtText;
+      setReadableCircuitReadout(circuitReadouts.vdtValue, vdtText, "VDT 展开位置");
+      setReadableCircuitReadout(circuitReadouts.coreVdtValue, vdtText, "核心链路 VDT 展开位置");
     }
   }
 
@@ -4202,7 +4224,7 @@
     } catch (error) {
       if (circuitStatusBadge) {
         circuitStatusBadge.dataset.state = "fault";
-        circuitStatusBadge.textContent = "错误";
+        setReadableStatusText(circuitStatusBadge, "错误");
       }
       if (circuitStatusSummary) {
         const details = error.payload && error.payload.message ? error.payload.message : error.message;
@@ -4229,8 +4251,9 @@
     if (!preset) return;
     preset.apply();
     state.activeCircuitPreset = key;
-    if (circuitPresetStatus) circuitPresetStatus.textContent = `当前场景：${preset.label}`;
+    setReadableCircuitPresetStatus(`当前场景：${preset.label}`);
     if (circuitPresetSelect && circuitPresetSelect.value !== key) circuitPresetSelect.value = key;
+    updateCircuitPresetSelectReadability(preset.label);
     circuitPresetButtons.forEach((button) => {
       button.setAttribute("aria-pressed", button.dataset.circuitPreset === key ? "true" : "false");
     });
@@ -6863,8 +6886,9 @@
     const eventName = element.type === "checkbox" ? "change" : "input";
     element.addEventListener(eventName, () => {
       state.activeCircuitPreset = "";
-      if (circuitPresetStatus) circuitPresetStatus.textContent = "手动输入";
+      setReadableCircuitPresetStatus("手动输入");
       if (circuitPresetSelect) circuitPresetSelect.value = "";
+      updateCircuitPresetSelectReadability("");
       circuitPresetButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
       scheduleCircuitEvaluation();
       syncDrawerFromCircuitInputs();
