@@ -2868,6 +2868,7 @@
     state.presentationZoom = zoom;
     canvas.style.setProperty("--logic-presentation-zoom", zoom.toFixed(2));
     if (presentationControls) presentationControls.dataset.zoom = zoom.toFixed(2);
+    syncLogicPresentationControlReadability();
     if (state.presentationMode === "circuit-only") {
       applyLogicPresentationLayout();
     }
@@ -2876,6 +2877,37 @@
   function setLogicPresentationZoom(nextZoom) {
     state.presentationZoom = clampNumber(nextZoom, 0.82, 1.22);
     applyLogicPresentationZoom();
+  }
+
+  function setReadableControlButton(element, label) {
+    if (!element) return;
+    element.setAttribute("aria-label", label);
+    element.setAttribute("title", label);
+  }
+
+  function logicPresentationZoomText() {
+    return `${Math.round((state.presentationZoom || 1) * 100)}%`;
+  }
+
+  function syncLogicPresentationControlReadability() {
+    const enabled = state.presentationMode === "circuit-only";
+    const zoomText = logicPresentationZoomText();
+    if (presentationControls) {
+      const controlsText = `纯画布展示控制：当前缩放 ${zoomText}`;
+      presentationControls.setAttribute("aria-label", controlsText);
+      presentationControls.setAttribute("title", controlsText);
+    }
+    if (logicPresentationModeToggle) {
+      logicPresentationModeToggle.setAttribute("aria-pressed", enabled ? "true" : "false");
+      setReadableControlButton(
+        logicPresentationModeToggle,
+        enabled ? "退出纯画布展示模式" : "进入纯画布展示模式",
+      );
+    }
+    setReadableControlButton(presentationExit, "退出纯画布展示模式");
+    setReadableControlButton(presentationZoomOut, `缩小纯画布：当前 ${zoomText}`);
+    setReadableControlButton(presentationZoomReset, `重置纯画布缩放：当前 ${zoomText}`);
+    setReadableControlButton(presentationZoomIn, `放大纯画布：当前 ${zoomText}`);
   }
 
   function drawingContentBounds() {
@@ -2978,6 +3010,7 @@
       logicPresentationModeToggle.setAttribute("aria-label", enabled ? "退出纯画布展示模式" : "进入纯画布展示模式");
       logicPresentationModeToggle.title = enabled ? "退出纯画布" : "纯画布";
     }
+    syncLogicPresentationControlReadability();
     if (enabled) {
       setStreamedAuthoringPanelVisibility(false);
       closeAuxiliaryPanels();
@@ -6927,6 +6960,7 @@
   if (presentationZoomIn) {
     presentationZoomIn.addEventListener("click", () => setLogicPresentationZoom(state.presentationZoom + 0.08));
   }
+  syncLogicPresentationControlReadability();
   if (streamedDocEditRequest) {
     streamedDocEditRequest.addEventListener("change", syncStreamedDocEditControls);
   }

@@ -8102,6 +8102,39 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
             "title", "状态明细 SW / TLS / L1-L4：已收起"
         )
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
+        expect(page.locator("#logic-presentation-mode-toggle")).to_have_attribute(
+            "aria-label", "进入纯画布展示模式"
+        )
+        expect(page.locator("#logic-presentation-mode-toggle")).to_have_attribute(
+            "title", "进入纯画布展示模式"
+        )
+        page.locator("#logic-presentation-mode-toggle").click()
+        expect(page.locator("#logic-presentation-mode-toggle")).to_have_attribute("aria-pressed", "true")
+        expect(page.locator("#logic-presentation-controls")).to_have_attribute(
+            "aria-label", "纯画布展示控制：当前缩放 100%"
+        )
+        expect(page.locator("#logic-presentation-zoom-out")).to_have_attribute(
+            "aria-label", "缩小纯画布：当前 100%"
+        )
+        expect(page.locator("#logic-presentation-zoom-reset")).to_have_attribute(
+            "title", "重置纯画布缩放：当前 100%"
+        )
+        expect(page.locator("#logic-presentation-zoom-in")).to_have_attribute(
+            "aria-label", "放大纯画布：当前 100%"
+        )
+        page.locator("#logic-presentation-zoom-in").click()
+        expect(page.locator("#logic-presentation-controls")).to_have_attribute("data-zoom", "1.08")
+        expect(page.locator("#logic-presentation-zoom-out")).to_have_attribute(
+            "aria-label", "缩小纯画布：当前 108%"
+        )
+        expect(page.locator("#logic-presentation-exit")).to_have_attribute(
+            "title", "退出纯画布展示模式"
+        )
+        page.locator("#logic-presentation-exit").click()
+        expect(page.locator("#logic-presentation-mode-toggle")).to_have_attribute("aria-pressed", "false")
+        expect(page.locator("#logic-presentation-mode-toggle")).to_have_attribute(
+            "aria-label", "进入纯画布展示模式"
+        )
 
         page.select_option("#logic-circuit-preset-select", "max-reverse")
         expect(page.locator("#logic-circuit-preset-status")).to_contain_text("最大反推")
