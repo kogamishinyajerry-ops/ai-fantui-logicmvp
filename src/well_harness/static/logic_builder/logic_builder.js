@@ -409,6 +409,9 @@
   const historyList = $("logic-change-history-list");
   const circuitEvalPanel = $("logic-circuit-eval-panel");
   const logicCircuitInputDetails = $("logic-circuit-input-details");
+  const logicCircuitStatusDetails = $("logic-circuit-status-details");
+  const logicCircuitInputSummary = logicCircuitInputDetails ? logicCircuitInputDetails.querySelector("summary") : null;
+  const logicCircuitStatusDetailsSummary = logicCircuitStatusDetails ? logicCircuitStatusDetails.querySelector("summary") : null;
   const circuitPresetStatus = $("logic-circuit-preset-status");
   const circuitStatusBadge = $("logic-circuit-status-badge");
   const circuitStatusSummary = $("logic-circuit-status-summary");
@@ -4065,6 +4068,28 @@
     });
   }
 
+  function setCircuitDetailsSummaryReadability(summary, label, open) {
+    if (!summary) return;
+    const stateText = open ? "已展开" : "已收起";
+    const readableText = `${label}：${stateText}`;
+    summary.setAttribute("aria-expanded", open ? "true" : "false");
+    summary.setAttribute("aria-label", readableText);
+    summary.setAttribute("title", readableText);
+  }
+
+  function syncCircuitDetailsReadability() {
+    setCircuitDetailsSummaryReadability(
+      logicCircuitInputSummary,
+      "输入调节 TRA / RA / N1K / VDT",
+      Boolean(logicCircuitInputDetails && logicCircuitInputDetails.open),
+    );
+    setCircuitDetailsSummaryReadability(
+      logicCircuitStatusDetailsSummary,
+      "状态明细 SW / TLS / L1-L4",
+      Boolean(logicCircuitStatusDetails && logicCircuitStatusDetails.open),
+    );
+  }
+
   function updateCircuitInputReadouts(snapshot) {
     const request = buildCircuitEvaluationRequest();
     const traText = `${request.tra_deg.toFixed(1)}°`;
@@ -4316,16 +4341,19 @@
     if (circuitEvalPanel) circuitEvalPanel.hidden = !visible;
     if (!visible) {
       if (logicCircuitInputDetails) logicCircuitInputDetails.open = false;
+      if (logicCircuitStatusDetails) logicCircuitStatusDetails.open = false;
       clearTimeout(state.circuitEvaluationTimer);
       state.circuitEvaluationTimer = null;
       state.circuitEvaluationPayload = null;
       state.activeCircuitPreset = "";
+      syncCircuitDetailsReadability();
       updateCircuitEvaluationControls();
       return;
     }
     if (logicCircuitInputDetails) {
       logicCircuitInputDetails.open = window.matchMedia("(min-width: 1100px)").matches;
     }
+    syncCircuitDetailsReadability();
     updateCircuitEvaluationControls();
     updateCircuitInputReadouts(state.circuitEvaluationPayload);
     evaluateCircuitNow();
@@ -6901,6 +6929,12 @@
   }
   if (streamedDocEditRequest) {
     streamedDocEditRequest.addEventListener("change", syncStreamedDocEditControls);
+  }
+  if (logicCircuitInputDetails) {
+    logicCircuitInputDetails.addEventListener("toggle", syncCircuitDetailsReadability);
+  }
+  if (logicCircuitStatusDetails) {
+    logicCircuitStatusDetails.addEventListener("toggle", syncCircuitDetailsReadability);
   }
   if (logicContextCommentShortcut) {
     logicContextCommentShortcut.addEventListener("click", () => {

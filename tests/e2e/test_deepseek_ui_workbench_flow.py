@@ -8089,6 +8089,18 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         expect(page.locator("#logic-canvas-counts")).to_contain_text("20 个电路节点")
         assert page.locator("#logic-circuit-status-details").evaluate("element => element.open") is False
+        expect(page.locator("#logic-circuit-input-details > summary")).to_have_attribute(
+            "aria-expanded", "true"
+        )
+        expect(page.locator("#logic-circuit-input-details > summary")).to_have_attribute(
+            "aria-label", "输入调节 TRA / RA / N1K / VDT：已展开"
+        )
+        expect(page.locator("#logic-circuit-status-details > summary")).to_have_attribute(
+            "aria-expanded", "false"
+        )
+        expect(page.locator("#logic-circuit-status-details > summary")).to_have_attribute(
+            "title", "状态明细 SW / TLS / L1-L4：已收起"
+        )
         expect(page.locator("#logic-workbench-drawers")).to_have_attribute("data-active-tab", "none")
 
         page.select_option("#logic-circuit-preset-select", "max-reverse")
@@ -8143,6 +8155,18 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         )
         expect(page.locator("#logic-circuit-hud-thr-lock")).to_have_attribute(
             "title", "已释放"
+        )
+        page.locator("#logic-circuit-status-details").evaluate(
+            """details => {
+              details.open = true;
+              details.dispatchEvent(new Event("toggle"));
+            }"""
+        )
+        expect(page.locator("#logic-circuit-status-details > summary")).to_have_attribute(
+            "aria-expanded", "true"
+        )
+        expect(page.locator("#logic-circuit-status-details > summary")).to_have_attribute(
+            "aria-label", "状态明细 SW / TLS / L1-L4：已展开"
         )
         expect(page.locator('[data-demo-node-id="thr_lock"]')).to_have_attribute("data-state", "active")
         expect(page.locator('.logic-circuit-wire[data-source="logic4"][data-target="thr_lock"]')).to_have_attribute(
