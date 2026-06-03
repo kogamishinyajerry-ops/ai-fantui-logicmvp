@@ -2521,6 +2521,13 @@
     const enabled = streamedDocEditRequest.checked;
     streamedDocEditAuthorization.disabled = !enabled;
     if (!enabled) streamedDocEditAuthorization.value = "";
+    const requestLabel = enabled ? "请求修改需求文档：是" : "请求修改需求文档：否";
+    const authorizationLabel = enabled ? "需求文档修改授权短语：已启用" : "需求文档修改授权短语：未启用";
+    streamedDocEditRequest.setAttribute("aria-label", requestLabel);
+    streamedDocEditRequest.setAttribute("title", requestLabel);
+    streamedDocEditAuthorization.setAttribute("aria-disabled", enabled ? "false" : "true");
+    streamedDocEditAuthorization.setAttribute("aria-label", authorizationLabel);
+    streamedDocEditAuthorization.setAttribute("title", authorizationLabel);
   }
 
   function syncStreamedAuthoringHighlight() {
@@ -7018,6 +7025,7 @@
   if (streamedDocEditRequest) {
     streamedDocEditRequest.addEventListener("change", syncStreamedDocEditControls);
   }
+  syncStreamedDocEditControls();
   if (logicCircuitInputDetails) {
     logicCircuitInputDetails.addEventListener("toggle", syncCircuitDetailsReadability);
   }
