@@ -3098,7 +3098,8 @@
       filterCommandPalette("");
       commandPaletteFilter.focus();
     }
-    if (commandPaletteStatus) commandPaletteStatus.textContent = "命令面板已打开。";
+    setReadableCommandPaletteStatus("命令面板已打开。");
+    syncCommandPaletteReadability();
     syncPanelStateContract();
   }
 
@@ -3108,8 +3109,33 @@
     if (logicShell && logicShell.dataset.activeAuxPanel === "command-palette") {
       setActiveAuxPanel("none");
     }
-    if (commandPaletteStatus) commandPaletteStatus.textContent = "命令面板空闲。";
+    setReadableCommandPaletteStatus("命令面板空闲。");
+    syncCommandPaletteReadability();
     syncPanelStateContract();
+  }
+
+  function setReadableCommandPaletteStatus(text) {
+    setReadableEvidenceText(commandPaletteStatus, text);
+  }
+
+  function syncCommandPaletteReadability() {
+    const isOpen = Boolean(commandPalette && !commandPalette.hidden);
+    if (commandPaletteOpen) {
+      const openLabel = isOpen ? "命令面板已打开" : "打开命令面板";
+      commandPaletteOpen.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      commandPaletteOpen.setAttribute("aria-label", openLabel);
+      commandPaletteOpen.setAttribute("title", openLabel);
+    }
+    if (commandPaletteClose) {
+      commandPaletteClose.setAttribute("aria-label", "关闭命令面板");
+      commandPaletteClose.setAttribute("title", "关闭命令面板");
+    }
+    if (commandPalette) {
+      const paletteLabel = isOpen ? "命令面板：已打开" : "命令面板：已关闭";
+      commandPalette.setAttribute("aria-label", paletteLabel);
+      commandPalette.setAttribute("title", paletteLabel);
+      commandPalette.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    }
   }
 
   function filterCommandPalette(query) {
@@ -3121,7 +3147,7 @@
       item.hidden = !isVisible;
       if (isVisible) visible += 1;
     });
-    if (commandPaletteStatus) commandPaletteStatus.textContent = `${visible} 个命令可用。`;
+    setReadableCommandPaletteStatus(`${visible} 个命令可用。`);
   }
 
   function togglePanel(which) {
@@ -6843,6 +6869,7 @@
   if (commandPaletteOpen) commandPaletteOpen.addEventListener("click", openCommandPalette);
   if (commandPaletteClose) commandPaletteClose.addEventListener("click", closeCommandPalette);
   if (commandPaletteFilter) commandPaletteFilter.addEventListener("input", () => filterCommandPalette(commandPaletteFilter.value));
+  syncCommandPaletteReadability();
   logicModeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.logicMode || "canvas";
