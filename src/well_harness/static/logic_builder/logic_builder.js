@@ -2807,6 +2807,24 @@
     logicShell.dataset.rightInspectorState = rightInspectorState;
     logicShell.dataset.bottomDrawerState = bottomDrawerState;
     logicShell.dataset.commandPaletteState = commandPaletteState;
+    syncPanelToggleButtonReadability(leftRailState, rightInspectorState);
+  }
+
+  function syncPanelToggleButtonReadability(leftRailState, rightInspectorState) {
+    panelToggleButtons.forEach((button) => {
+      const which = button.dataset.panelToggle || "";
+      const panelName = which === "left" ? "左侧工具栏" : (which === "right" ? "右侧检查器" : "辅助面板");
+      const isExpanded = which === "left"
+        ? leftRailState === "expanded"
+        : (which === "right" ? rightInspectorState === "expanded" : false);
+      const shortLabel = (button.textContent || "").trim();
+      const suffix = shortLabel ? `（${shortLabel}）` : "";
+      const readableText = `${isExpanded ? "收起" : "展开"}${panelName}${suffix}`;
+      button.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+      button.setAttribute("aria-pressed", isExpanded ? "true" : "false");
+      button.setAttribute("aria-label", readableText);
+      button.setAttribute("title", readableText);
+    });
   }
 
   function hideObjectContextDrawer() {
