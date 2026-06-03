@@ -4019,6 +4019,21 @@
     element.setAttribute("title", readableText);
   }
 
+  function setReadableCircuitInputControl(element, valueText, label) {
+    if (!element) return;
+    const readableText = `${label}：${valueText}`;
+    element.setAttribute("aria-label", readableText);
+    element.setAttribute("title", readableText);
+    if (element.type === "range") element.setAttribute("aria-valuetext", valueText);
+  }
+
+  function setReadableCircuitCheckbox(element, label) {
+    if (!element) return;
+    const readableText = `${label}：${element.checked ? "是" : "否"}`;
+    element.setAttribute("aria-label", readableText);
+    element.setAttribute("title", readableText);
+  }
+
   function setReadableCircuitPresetStatus(text) {
     setReadableStatusText(circuitPresetStatus, text);
   }
@@ -4032,6 +4047,24 @@
     circuitPresetSelect.setAttribute("title", readableText);
   }
 
+  function circuitPresetButtonLabel(button) {
+    const key = button && button.dataset ? button.dataset.circuitPreset : "";
+    const preset = key ? logicCircuitPresets[key] : null;
+    return (preset && preset.label) || (button && button.textContent ? button.textContent.trim() : "") || key || "未命名预设";
+  }
+
+  function updateCircuitPresetButtonReadability(activeKey) {
+    circuitPresetButtons.forEach((button) => {
+      const key = button.dataset.circuitPreset || "";
+      const isActive = Boolean(activeKey) && key === activeKey;
+      const label = circuitPresetButtonLabel(button);
+      const readableText = isActive ? `电路预设：${label}（当前）` : `电路预设：${label}`;
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      button.setAttribute("aria-label", readableText);
+      button.setAttribute("title", readableText);
+    });
+  }
+
   function updateCircuitInputReadouts(snapshot) {
     const request = buildCircuitEvaluationRequest();
     const traText = `${request.tra_deg.toFixed(1)}°`;
@@ -4043,6 +4076,13 @@
     setReadableCircuitReadout(circuitReadouts.coreRaValue, raText, "核心链路无线电高度");
     setReadableCircuitReadout(circuitReadouts.n1kValue, n1kText, "N1K 转速");
     setReadableCircuitReadout(circuitReadouts.coreN1kValue, n1kText, "核心链路 N1K 转速");
+    setReadableCircuitInputControl(circuitInputs.tra, traText, "TRA 角度");
+    setReadableCircuitInputControl(circuitInputs.ra, raText, "无线电高度");
+    setReadableCircuitInputControl(circuitInputs.n1k, n1kText, "N1K 转速");
+    setReadableCircuitCheckbox(circuitInputs.engineRunning, "发动机运行");
+    setReadableCircuitCheckbox(circuitInputs.aircraftOnGround, "飞机在地");
+    setReadableCircuitCheckbox(circuitInputs.reverserInhibited, "反推抑制");
+    setReadableCircuitCheckbox(circuitInputs.eecEnable, "EEC 允许");
     if (circuitReadouts.vdtValue) {
       const hudVdt = snapshot && snapshot.hud && typeof snapshot.hud.deploy_position_percent === "number"
         ? snapshot.hud.deploy_position_percent
@@ -4050,6 +4090,7 @@
       const vdtText = `${hudVdt.toFixed(0)}%`;
       setReadableCircuitReadout(circuitReadouts.vdtValue, vdtText, "VDT 展开位置");
       setReadableCircuitReadout(circuitReadouts.coreVdtValue, vdtText, "核心链路 VDT 展开位置");
+      setReadableCircuitInputControl(circuitInputs.vdt, vdtText, "VDT 展开位置");
     }
   }
 
@@ -4254,9 +4295,7 @@
     setReadableCircuitPresetStatus(`当前场景：${preset.label}`);
     if (circuitPresetSelect && circuitPresetSelect.value !== key) circuitPresetSelect.value = key;
     updateCircuitPresetSelectReadability(preset.label);
-    circuitPresetButtons.forEach((button) => {
-      button.setAttribute("aria-pressed", button.dataset.circuitPreset === key ? "true" : "false");
-    });
+    updateCircuitPresetButtonReadability(key);
     updateCircuitInputReadouts(state.circuitEvaluationPayload);
     evaluateCircuitNow();
   }
@@ -6889,7 +6928,7 @@
       setReadableCircuitPresetStatus("手动输入");
       if (circuitPresetSelect) circuitPresetSelect.value = "";
       updateCircuitPresetSelectReadability("");
-      circuitPresetButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
+      updateCircuitPresetButtonReadability("");
       scheduleCircuitEvaluation();
       syncDrawerFromCircuitInputs();
     });
@@ -6900,6 +6939,8 @@
   circuitPresetButtons.forEach((button) => {
     button.addEventListener("click", () => applyCircuitPreset(button.dataset.circuitPreset));
   });
+  updateCircuitPresetButtonReadability(state.activeCircuitPreset);
+  updateCircuitPresetSelectReadability("");
   workbenchTabButtons.forEach((button) => {
     button.addEventListener("click", () => activateWorkbenchTab(button.dataset.workbenchTab || "notes"));
   });

@@ -8102,6 +8102,15 @@ def test_logic_builder_circuit_view_uses_demo_snapshot_presets(demo_server: str,
         expect(page.locator("#logic-circuit-preset-select")).to_have_attribute(
             "title", "电路预设：最大反推（展开到位）"
         )
+        expect(page.locator("#logic-circuit-tra")).to_have_attribute("aria-label", "TRA 角度：-32.0°")
+        expect(page.locator("#logic-circuit-tra")).to_have_attribute("aria-valuetext", "-32.0°")
+        expect(page.locator("#logic-circuit-vdt")).to_have_attribute("title", "VDT 展开位置：100%")
+        expect(page.locator("#logic-circuit-engine-running")).to_have_attribute(
+            "aria-label", "发动机运行：是"
+        )
+        expect(page.locator("#logic-circuit-reverser-inhibited")).to_have_attribute(
+            "title", "反推抑制：否"
+        )
         expect(page.locator("#logic-circuit-tra-value")).to_have_attribute(
             "aria-label", re.compile("^TRA 角度：")
         )
