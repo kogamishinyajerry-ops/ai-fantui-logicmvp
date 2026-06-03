@@ -2571,11 +2571,17 @@
     const isExpanded = Boolean(expanded);
     streamedAuthoringPanel.hidden = !isExpanded;
     streamedAuthoringPanel.dataset.panelVisibility = isExpanded ? "expanded" : "collapsed";
+    const panelLabel = isExpanded ? "候选确认面板：已展开" : "候选确认面板：已收起";
+    streamedAuthoringPanel.setAttribute("aria-hidden", isExpanded ? "false" : "true");
+    streamedAuthoringPanel.setAttribute("aria-label", panelLabel);
+    streamedAuthoringPanel.setAttribute("title", panelLabel);
     if (streamedPanelToggle) {
+      const toggleLabel = isExpanded ? "收起候选确认面板" : "打开候选确认面板";
       streamedPanelToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+      streamedPanelToggle.setAttribute("aria-pressed", isExpanded ? "true" : "false");
       streamedPanelToggle.classList.toggle("is-expanded", isExpanded);
-      streamedPanelToggle.title = isExpanded ? "收起候选确认" : "候选确认";
-      streamedPanelToggle.setAttribute("aria-label", isExpanded ? "收起候选确认面板" : "打开候选确认面板");
+      streamedPanelToggle.title = toggleLabel;
+      streamedPanelToggle.setAttribute("aria-label", toggleLabel);
     }
   }
 
@@ -6987,6 +6993,9 @@
     streamedPanelToggle.addEventListener("click", () => {
       setStreamedAuthoringPanelVisibility(streamedAuthoringPanel ? streamedAuthoringPanel.hidden : true);
     });
+  }
+  if (streamedAuthoringPanel) {
+    setStreamedAuthoringPanelVisibility(!streamedAuthoringPanel.hidden);
   }
   if (logicPresentationModeToggle) {
     logicPresentationModeToggle.addEventListener("click", () => {
